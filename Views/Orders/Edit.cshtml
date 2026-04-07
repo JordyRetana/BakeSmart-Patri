@@ -1,0 +1,66 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    ViewData["Title"] = "Editar pedido";
+}
+<div class="grid grid-2">
+    <div class="card">
+        <h2 style="margin:0;">Editar pedido #1012</h2>
+        <div class="muted" style="margin-top:8px;font-weight:700;line-height:1.6;">
+            Actualizá estado, fecha de entrega y notas.
+        </div>
+
+        <div class="hr"></div>
+
+        <form method="post" action="/Orders/Edit/1012">
+            @Html.AntiForgeryToken()
+
+            <div class="field">
+                <label>Estado</label>
+                <select class="input" name="estado">
+                    <option>Revisión</option>
+                    <option>Confirmado</option>
+                    <option selected>En producción</option>
+                    <option>Listo para entrega</option>
+                    <option>Entregado</option>
+                </select>
+            </div>
+
+            <div class="field" style="margin-top:12px;">
+                <label>Entrega</label>
+                <input class="input" name="entrega" type="date" value="2026-02-18" />
+            </div>
+
+            <div class="field" style="margin-top:12px;">
+                <label>Notas</label>
+                <textarea class="input" name="notas">Sin nueces • mensaje “Feliz cumple” • cobertura suave</textarea>
+            </div>
+
+            <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn" type="submit">Guardar cambios</button>
+                <a class="btn-secondary" href="/Orders/Details/1012">Cancelar</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2 style="margin:0;">Checklist rápido</h2>
+        <div class="hr"></div>
+
+        <div class="card soft">
+            <div style="font-weight:950;">Antes de pasar a “Listo”</div>
+            <div class="muted" style="margin-top:6px;font-weight:700;line-height:1.6;">
+                • Revisar decoración<br />
+                • Confirmar mensaje en el pastel<br />
+                • Empaque y etiqueta
+            </div>
+        </div>
+
+        <div class="card soft" style="margin-top:12px;">
+            <div style="font-weight:950;">Entrega</div>
+            <div class="muted" style="margin-top:6px;font-weight:700;line-height:1.6;">
+                Coordinar ubicación y horario con el cliente.
+            </div>
+        </div>
+    </div>
+</div>

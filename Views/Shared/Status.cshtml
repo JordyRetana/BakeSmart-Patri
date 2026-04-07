@@ -1,0 +1,13 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Estado";
+    var code = (int)(ViewBag.Code ?? 500);
+}
+
+<div class="card">
+    <div class="text-2xl font-extrabold">Estado</div>
+    <div class="muted mt-1">Código HTTP: <b>@code</b></div>
+    <div class="mt-4">
+        <a class="btn" href="/">Volver al inicio</a>
+    </div>
+</div>

@@ -1,0 +1,526 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Pedidos";
+}
+
+<div class="page-shell orders-page">
+    <div class="page-header orders-header">
+        <div>
+            <h1 class="orders-title">
+                <i class="fas fa-clipboard-list"></i>
+                Gestión de pedidos
+            </h1>
+            <p class="text-muted orders-subtitle">
+                Pedidos creados desde web, POS y otros canales, con seguimiento centralizado.
+            </p>
+        </div>
+
+        <div class="orders-filters">
+            <input id="ordersSearch" class="form-control" placeholder="Buscar por cliente o pedido" />
+            <select id="ordersStatus" class="form-control orders-status-filter">
+                <option value="Todos">Todos los estados</option>
+                <option>Pendiente pago</option>
+                <option>Confirmado</option>
+                <option>En producción</option>
+                <option>Listo</option>
+                <option>En camino</option>
+                <option>Entregado</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="grid grid-4 orders-kpi-grid">
+        <div class="card orders-kpi-card">
+            <div class="text-muted">Total pedidos</div>
+            <h2 id="ordersTotal"></h2>
+        </div>
+
+        <div class="card orders-kpi-card">
+            <div class="text-muted">Pendientes de pago</div>
+            <h2 id="ordersPending"></h2>
+        </div>
+
+        <div class="card orders-kpi-card">
+            <div class="text-muted">En producción</div>
+            <h2 id="ordersProduction"></h2>
+        </div>
+
+        <div class="card orders-kpi-card">
+            <div class="text-muted">Ventas cerradas</div>
+            <h2 id="ordersSales"></h2>
+        </div>
+    </div>
+
+    <div class="card orders-table-card">
+        <div class="orders-section-header">
+            <h3 class="orders-section-title">Pedidos</h3>
+        </div>
+
+        <div class="table-container orders-table-wrap">
+            <table class="table orders-table">
+                <thead>
+                    <tr>
+                        <th>Pedido</th>
+                        <th>Cliente</th>
+                        <th>Canal</th>
+                        <th>Entrega</th>
+                        <th>Estado</th>
+                        <th>Pago</th>
+                        <th>Total</th>
+                        <th class="text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .orders-page {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+        .orders-page,
+        .orders-page * {
+            min-width: 0;
+        }
+
+    .orders-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .orders-title {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+    }
+
+        .orders-title i {
+            color: var(--primary);
+        }
+
+    .orders-subtitle {
+        margin: .35rem 0 0;
+    }
+
+    .orders-filters {
+        display: flex;
+        gap: .75rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+        .orders-filters .form-control {
+            min-width: 240px;
+        }
+
+    .orders-status-filter {
+        min-width: 190px !important;
+    }
+
+    .orders-kpi-grid {
+        gap: 1rem;
+    }
+
+    .orders-kpi-card h2 {
+        margin: .35rem 0 0;
+    }
+
+    .orders-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .orders-section-title {
+        margin: 0;
+        font-size: 1.15rem;
+    }
+
+    .orders-table-card {
+        width: 100%;
+        align-self: start;
+    }
+
+    .orders-table-wrap {
+        max-width: 100%;
+        overflow: auto;
+    }
+
+    .orders-table {
+        width: 100%;
+        min-width: 0 !important;
+        table-layout: fixed;
+        margin: 0;
+    }
+
+        .orders-table th,
+        .orders-table td {
+            vertical-align: middle;
+        }
+
+            .orders-table th:nth-child(1),
+            .orders-table td:nth-child(1) {
+                width: 140px;
+            }
+
+            .orders-table th:nth-child(2),
+            .orders-table td:nth-child(2) {
+                width: 220px;
+            }
+
+            .orders-table th:nth-child(3),
+            .orders-table td:nth-child(3) {
+                width: 110px;
+                white-space: nowrap;
+            }
+
+            .orders-table th:nth-child(4),
+            .orders-table td:nth-child(4) {
+                width: 120px;
+                white-space: nowrap;
+            }
+
+            .orders-table th:nth-child(5),
+            .orders-table td:nth-child(5) {
+                width: 140px;
+                white-space: nowrap;
+            }
+
+            .orders-table th:nth-child(6),
+            .orders-table td:nth-child(6) {
+                width: 170px;
+            }
+
+            .orders-table th:nth-child(7),
+            .orders-table td:nth-child(7) {
+                width: 120px;
+                white-space: nowrap;
+            }
+
+            .orders-table th:nth-child(8),
+            .orders-table td:nth-child(8) {
+                width: 210px;
+                text-align: right;
+            }
+
+            .orders-table td:nth-child(1),
+            .orders-table td:nth-child(2),
+            .orders-table td:nth-child(6) {
+                white-space: normal;
+                word-break: break-word;
+            }
+
+        .orders-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: var(--bg-card);
+        }
+
+    .orders-order-meta,
+    .orders-customer-meta {
+        font-size: .8rem;
+        margin-top: .2rem;
+    }
+
+    .orders-payment-cell {
+        display: grid;
+        gap: .35rem;
+    }
+
+    .orders-payment-method {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: fit-content;
+        padding: .28rem .65rem;
+        border-radius: 999px;
+        font-size: .76rem;
+        font-weight: 700;
+        line-height: 1.1;
+        border: 1px solid var(--border);
+        background: var(--bg-alt);
+        color: var(--text);
+    }
+
+        .orders-payment-method.method-cash {
+            background: #dcfce7;
+            border-color: #86efac;
+            color: #166534;
+        }
+
+        .orders-payment-method.method-transfer {
+            background: #dbeafe;
+            border-color: #93c5fd;
+            color: #1d4ed8;
+        }
+
+        .orders-payment-method.method-sinpe {
+            background: #cffafe;
+            border-color: #67e8f9;
+            color: #0f766e;
+        }
+
+        .orders-payment-method.method-card {
+            background: #ede9fe;
+            border-color: #c4b5fd;
+            color: #6d28d9;
+        }
+
+    .orders-actions-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: .5rem;
+    }
+
+        .orders-actions-cell .form-control {
+            min-width: 170px;
+            max-width: 170px;
+        }
+
+        .orders-actions-cell .btn {
+            min-width: 170px;
+        }
+
+    .orders-status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: .3rem .7rem;
+        border-radius: 999px;
+        font-size: .78rem;
+        font-weight: 700;
+        line-height: 1.1;
+        border: 1px solid var(--border);
+        background: var(--bg-alt);
+        color: var(--text);
+    }
+
+        .orders-status-badge.status-pending {
+            background: #fef3c7;
+            border-color: #fcd34d;
+            color: #92400e;
+        }
+
+        .orders-status-badge.status-confirmed {
+            background: #dbeafe;
+            border-color: #93c5fd;
+            color: #1d4ed8;
+        }
+
+        .orders-status-badge.status-production {
+            background: #ede9fe;
+            border-color: #c4b5fd;
+            color: #6d28d9;
+        }
+
+        .orders-status-badge.status-ready {
+            background: #dcfce7;
+            border-color: #86efac;
+            color: #166534;
+        }
+
+        .orders-status-badge.status-route {
+            background: #cffafe;
+            border-color: #67e8f9;
+            color: #0f766e;
+        }
+
+        .orders-status-badge.status-delivered {
+            background: #e5e7eb;
+            border-color: #cbd5e1;
+            color: #334155;
+        }
+
+    .orders-page .card:hover {
+        transform: none;
+        box-shadow: var(--shadow-sm);
+        border-color: var(--border);
+    }
+
+        .orders-page .card:hover::after {
+            opacity: 0;
+        }
+
+    .orders-page .table tbody tr:hover {
+        transform: none;
+        box-shadow: none;
+        background: var(--bg-alt);
+    }
+
+    .orders-page .btn:hover,
+    .orders-page .btn-primary:hover,
+    .orders-page .btn-outline:hover,
+    .orders-page .btn-secondary:hover,
+    .orders-page .btn-ghost:hover {
+        transform: none;
+    }
+
+    .orders-page .form-control:focus,
+    .orders-page input:focus,
+    .orders-page select:focus,
+    .orders-page textarea:focus {
+        transform: none;
+    }
+
+    @@media (max-width: 768px) {
+        .orders-filters {
+            width: 100%;
+        }
+
+            .orders-filters .form-control {
+                width: 100%;
+                min-width: 100%;
+            }
+
+        .orders-table {
+            table-layout: auto;
+            min-width: 1320px !important;
+        }
+    }
+</style>
+
+@section Scripts {
+    <script>
+        (() => {
+            const search = document.getElementById('ordersSearch');
+            const status = document.getElementById('ordersStatus');
+            let pageInitialized = false;
+
+            function getStatusClass(value) {
+                switch (value) {
+                    case 'Pendiente pago': return 'status-pending';
+                    case 'Confirmado': return 'status-confirmed';
+                    case 'En producción': return 'status-production';
+                    case 'Listo': return 'status-ready';
+                    case 'En camino': return 'status-route';
+                    case 'Entregado': return 'status-delivered';
+                    default: return '';
+                }
+            }
+
+            function getPaymentMethodClass(value) {
+                switch ((value || '').toLowerCase()) {
+                    case 'efectivo': return 'method-cash';
+                    case 'transferencia': return 'method-transfer';
+                    case 'sinpe': return 'method-sinpe';
+                    case 'tarjeta': return 'method-card';
+                    default: return '';
+                }
+            }
+
+            function render() {
+                const all = BakeSmartStore.orders.list();
+
+                document.getElementById('ordersTotal').textContent = all.length;
+                document.getElementById('ordersPending').textContent = all.filter(x => x.paymentStatus !== 'Pagado').length;
+                document.getElementById('ordersProduction').textContent = all.filter(x => x.status === 'En producción').length;
+                document.getElementById('ordersSales').textContent = all.filter(x => x.paymentStatus === 'Pagado').length;
+
+                const q = search.value.trim().toLowerCase();
+                const st = status.value;
+
+                const rows = all.filter(o =>
+                    (!q || o.customerName.toLowerCase().includes(q) || String(o.id).includes(q)) &&
+                    (st === 'Todos' || o.status === st)
+                );
+
+                document.getElementById('ordersTable').innerHTML = rows.map(o => `
+                    <tr>
+                        <td>
+                            <strong>#${o.id}</strong>
+                            <div class="text-muted orders-order-meta">${new Date(o.createdAt).toLocaleString('es-CR')}</div>
+                        </td>
+                        <td>
+                            ${o.customerName}
+                            <div class="text-muted orders-customer-meta">${o.customerEmail || '-'}</div>
+                        </td>
+                        <td>${o.channel}</td>
+                        <td>${new Date(o.deliveryDate).toLocaleDateString('es-CR')}</td>
+                        <td>
+                            <span class="orders-status-badge ${getStatusClass(o.status)}">
+                                ${o.status}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="orders-payment-cell">
+                                <span class="badge ${o.paymentStatus === 'Pagado' ? 'badge-success' : 'badge-warning'}">
+                                    ${o.paymentStatus}
+                                </span>
+                                ${o.paymentMethod
+                                    ? `<span class="orders-payment-method ${getPaymentMethodClass(o.paymentMethod)}">${o.paymentMethod}</span>`
+                                    : `<span class="text-muted orders-order-meta">Sin método</span>`}
+                            </div>
+                        </td>
+                        <td>${app.utils.formatCurrency(o.total)}</td>
+                        <td class="text-right">
+                            <div class="orders-actions-cell">
+                                <select onchange="changeStatus(${o.id}, this.value)" class="form-control">
+                                    ${['Pendiente pago','Confirmado','En producción','Listo','En camino','Entregado']
+                                        .map(s => `<option ${s === o.status ? 'selected' : ''}>${s}</option>`)
+                                        .join('')}
+                                </select>
+                                ${o.paymentStatus !== 'Pagado'
+                                    ? `<button class="btn btn-outline btn-sm" onclick="payOrder(${o.id})">Marcar pagado</button>`
+                                    : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `).join('') || `
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">No hay pedidos.</td>
+                    </tr>
+                `;
+            }
+
+            window.changeStatus = (id, value) => {
+                try {
+                    BakeSmartStore.orders.updateStatus(id, value);
+                    if (value === 'En camino') {
+                        app.toast.info('El pedido ya puede visualizarse en el mapa en tiempo real.');
+                    }
+                    render();
+                } catch (error) {
+                    app.toast.error(error.message);
+                }
+            };
+
+            window.payOrder = (id) => {
+                try {
+                    BakeSmartStore.orders.markPaid(id, 'Efectivo');
+                    app.toast.success('Pedido marcado como pagado.');
+                    render();
+                } catch (error) {
+                    app.toast.error(error.message);
+                }
+            };
+
+            search.addEventListener('input', render);
+            status.addEventListener('change', render);
+
+            function initializePage() {
+                if (pageInitialized) return;
+                pageInitialized = true;
+                render();
+            }
+
+            window.addEventListener('load', initializePage, { once: true });
+
+            if (document.readyState === 'complete') {
+                initializePage();
+            }
+        })();
+    </script>
+}

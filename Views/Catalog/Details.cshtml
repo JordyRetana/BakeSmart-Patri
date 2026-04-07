@@ -1,0 +1,746 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var productId = ViewContext.RouteData.Values["id"] != null
+        ? Convert.ToInt32(ViewContext.RouteData.Values["id"])
+        : 1;
+
+    var products = new[] {
+        new {
+            Id = 1,
+            Name = "Red Velvet",
+            Category = "Pasteles",
+            Price = 32000,
+            OldPrice = 35000,
+            Description = "Pastel de terciopelo rojo con capas de crema de queso. Esponjoso, húmedo y delicioso. Un clásico que nunca falla para celebraciones especiales.",
+            LongDescription = "Nuestro Red Velvet es famoso por su color rojo intenso y su sabor suave a chocolate. Las capas de bizcocho son increíblemente esponjosas y están intercaladas con una crema de queso cremosa que equilibra perfectamente el dulce. Cada bocado es una experiencia única.",
+            Image = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            Rating = 5,
+            Reviews = 45,
+            Sizes = new[] { "1kg", "1.5kg", "2kg" },
+            Flavors = new[] { "Clásico", "Doble queso", "Con nueces" },
+            PreparationTime = "24-48 horas",
+            Badge = "Más vendido",
+            BadgeColor = "primary",
+            Benefits = new[] {
+                "Ingredientes frescos y naturales",
+                "Sin conservantes artificiales",
+                "Personalizable con mensaje",
+                "Incluye vela y caja de regalo"
+            },
+            NutritionalInfo = new {
+                Porciones = 12,
+                Calorias = 380,
+                Categoria = "Postre"
+            }
+        },
+        new {
+            Id = 2,
+            Name = "Cheesecake Frutos Rojos",
+            Category = "Postres",
+            Price = 28000,
+            OldPrice = 0,
+            Description = "Cheesecake cremoso con topping de frutos rojos y base de galleta crocante. Un postre elegante y delicioso para cualquier ocasión.",
+            LongDescription = "Nuestro Cheesecake de frutos rojos combina una base de galleta crujiente con una capa de queso crema suave y cremosa, coronado con una generosa capa de frutos rojos frescos y una reducción de frambuesa que le da el toque ácido perfecto. Ideal para los amantes de los postres equilibrados.",
+            Image = "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            Rating = 5,
+            Reviews = 38,
+            Sizes = new[] { "Individual", "Mediano", "Familiar" },
+            Flavors = new[] { "Frambuesa", "Mixto", "Maracuyá" },
+            PreparationTime = "24 horas",
+            Badge = "Recomendado",
+            BadgeColor = "success",
+            Benefits = new[] {
+                "Frutas frescas de temporada",
+                "Base de galleta artesanal",
+                "Sin hornear",
+                "Presentación elegante"
+            },
+            NutritionalInfo = new {
+                Porciones = 8,
+                Calorias = 320,
+                Categoria = "Postre"
+            }
+        },
+        new {
+            Id = 3,
+            Name = "Cupcakes Decorados",
+            Category = "Cupcakes",
+            Price = 18000,
+            OldPrice = 0,
+            Description = "Cupcakes esponjosos con decoración personalizada. Ideales para eventos y celebraciones especiales.",
+            LongDescription = "Nuestros cupcakes son famosos por su textura esponjosa y su decoración artesanal. Cada cupcake es una pequeña obra de arte, decorada a mano con buttercream de colores y detalles personalizados. Perfectos para cumpleaños, baby showers o cualquier celebración.",
+            Image = "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            Rating = 5,
+            Reviews = 52,
+            Sizes = new[] { "6 unidades", "12 unidades", "24 unidades" },
+            Flavors = new[] { "Vainilla", "Chocolate", "Red Velvet" },
+            PreparationTime = "24 horas",
+            Badge = "Especial",
+            BadgeColor = "warning",
+            Benefits = new[] {
+                "Decoración personalizada",
+                "Sabores a elegir",
+                "Ideales para eventos",
+                "Caja de regalo incluida"
+            },
+            NutritionalInfo = new {
+                Porciones = 12,
+                Calorias = 250,
+                Categoria = "Postre"
+            }
+        },
+        new {
+            Id = 4,
+            Name = "Tres Leches",
+            Category = "Pasteles",
+            Price = 24000,
+            OldPrice = 0,
+            Description = "Esponjoso pastel bañado en tres leches, cubierto con merengue suave y canela. Un clásico latinoamericano irresistible.",
+            LongDescription = "El pastel de tres leches es uno de nuestros productos más tradicionales. Un bizcocho esponjoso empapado en una mezcla de tres tipos de leche (evaporada, condensada y crema), cubierto con un suave merengue y espolvoreado con canela. Su textura húmeda y su sabor dulce pero equilibrado lo hacen perfecto para cualquier celebración.",
+            Image = "https://images.unsplash.com/photo-1551024506-0bccd828d307?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            Rating = 5,
+            Reviews = 41,
+            Sizes = new[] { "1kg", "1.5kg", "2kg" },
+            Flavors = new[] { "Clásico", "Con dulce de leche", "Con frutas" },
+            PreparationTime = "24-48 horas",
+            Badge = "Tradicional",
+            BadgeColor = "primary",
+            Benefits = new[] {
+                "Receta tradicional",
+                "Extra húmedo",
+                "Merengue casero",
+                "Perfecto para cumpleaños"
+            },
+            NutritionalInfo = new {
+                Porciones = 12,
+                Calorias = 420,
+                Categoria = "Postre"
+            }
+        },
+        new {
+            Id = 5,
+            Name = "Brownie Clásico",
+            Category = "Postres",
+            Price = 16000,
+            OldPrice = 0,
+            Description = "Brownie de chocolate intenso, húmedo por dentro, con nueces y chispas de chocolate. Un pecado delicioso.",
+            LongDescription = "Nuestro brownie clásico es la definición de chocolate en su máxima expresión. Húmedo por dentro, ligeramente crocante por fuera, cargado de chispas de chocolate y nueces. Cada bocado es una explosión de sabor. Ideal para compartir o para darse un gusto.",
+            Image = "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            Rating = 5,
+            Reviews = 63,
+            Sizes = new[] { "Individual", "Mediano", "Grande" },
+            Flavors = new[] { "Clásico", "Con nueces", "Blanco" },
+            PreparationTime = "12-24 horas",
+            Badge = "Favorito",
+            BadgeColor = "success",
+            Benefits = new[] {
+                "Chocolate belga",
+                "Nueces caramelizadas",
+                "Húmedo y esponjoso",
+                "Sin conservantes"
+            },
+            NutritionalInfo = new {
+                Porciones = 8,
+                Calorias = 380,
+                Categoria = "Postre"
+            }
+        },
+        new {
+            Id = 6,
+            Name = "Galletas Decoradas",
+            Category = "Galletas",
+            Price = 12000,
+            OldPrice = 0,
+            Description = "Galletas de mantequilla con glase real, decoradas a mano. Perfectas para regalo o eventos temáticos.",
+            LongDescription = "Nuestras galletas decoradas son verdaderas obras de arte comestibles. Elaboradas con una receta especial de galleta de mantequilla que mantiene su forma y sabor, decoradas a mano con glase real. Ideales para baby showers, bodas, cumpleaños o simplemente para regalar.",
+            Image = "https://images.unsplash.com/photo-1488477181946-6428a0291777?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            Rating = 5,
+            Reviews = 27,
+            Sizes = new[] { "6 unidades", "12 unidades", "24 unidades" },
+            Flavors = new[] { "Vainilla", "Chocolate", "Limón" },
+            PreparationTime = "48 horas",
+            Badge = "Nuevo",
+            BadgeColor = "primary",
+            Benefits = new[] {
+                "Diseños personalizados",
+                "Glase real artesanal",
+                "Empaque individual",
+                "Ideales para eventos"
+            },
+            NutritionalInfo = new {
+                Porciones = 12,
+                Calorias = 120,
+                Categoria = "Galleta"
+            }
+        },
+        new {
+            Id = 7,
+            Name = "Torta Unicornio",
+            Category = "Tortas",
+            Price = 45000,
+            OldPrice = 0,
+            Description = "Torta decorada con temática unicornio, colores pastel y detalles mágicos. El sueño de cualquier niño.",
+            LongDescription = "La torta unicornio es nuestra especialidad para celebraciones infantiles. Un bizcocho de colores pastel, relleno de crema de mantequilla, decorado con un hermoso unicornio en 3D, melena de colores y detalles mágicos. Cada torta es única y personalizada según los gustos del cumpleañero.",
+            Image = "https://images.unsplash.com/photo-1571115177094-24ec08c6433b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            Rating = 5,
+            Reviews = 19,
+            Sizes = new[] { "2kg", "3kg", "4kg" },
+            Flavors = new[] { "Vainilla", "Chocolate", "Fresa" },
+            PreparationTime = "48-72 horas",
+            Badge = "Especial",
+            BadgeColor = "warning",
+            Benefits = new[] {
+                "Diseño único",
+                "Personajes en 3D",
+                "Colores comestibles",
+                "Incluye kit de unicornio"
+            },
+            NutritionalInfo = new {
+                Porciones = 20,
+                Calorias = 450,
+                Categoria = "Torta"
+            }
+        },
+        new {
+            Id = 8,
+            Name = "Chocolate Caliente",
+            Category = "Bebidas",
+            Price = 3500,
+            OldPrice = 0,
+            Description = "Chocolate caliente artesanal, preparado con chocolate de mesa y especias. Acompañado de una galleta.",
+            LongDescription = "Nuestro chocolate caliente es perfecto para los días fríos. Elaborado con chocolate de mesa de alta calidad, leche cremosa y un toque secreto de especias que lo hacen único. Se sirve con una galleta de mantequilla decorada. Ideal para acompañar cualquiera de nuestros postres.",
+            Image = "https://images.unsplash.com/photo-1542990253-0d0f5be5f0ed?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            Rating = 5,
+            Reviews = 33,
+            Sizes = new[] { "Personal", "Familiar" },
+            Flavors = new[] { "Clásico", "Con canela", "Con crema" },
+            PreparationTime = "15 minutos",
+            Badge = "",
+            BadgeColor = "",
+            Benefits = new[] {
+                "Chocolate artesanal",
+                "Incluye galleta",
+                "Especias naturales",
+                "Crema batida opcional"
+            },
+            NutritionalInfo = new {
+                Porciones = 1,
+                Calorias = 280,
+                Categoria = "Bebida"
+            }
+        }
+    };
+
+    var product = products.FirstOrDefault(p => p.Id == productId);
+    if (product == null)
+    {
+        product = products.First(); 
+    }
+
+    ViewData["Title"] = $"{product.Name} - Detalle del producto";
+}
+
+
+<div class="page-header" style="margin: 2rem 0 2.5rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="width: 5px; height: 40px; background: var(--gradient-primary); border-radius: 5px;"></div>
+            <h1 style="margin: 0; font-size: 2.5rem; display: flex; align-items: center; gap: 0.75rem;">
+                <i class="fas fa-cake-candles" style="color: var(--primary);"></i>
+                @product.Name
+            </h1>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; margin-left: 1.25rem;">
+            <div style="display: flex; color: #fbbf24;">
+                @for (int i = 0; i < product.Rating; i++)
+                {
+                    <i class="fas fa-star"></i>
+                }
+                <span class="text-muted" style="margin-left: 0.5rem;">(@product.Reviews reseñas)</span>
+            </div>
+        </div>
+    </div>
+    <div style="display: flex; gap: 1rem; margin-right: 1.5rem;">
+        <span class="badge badge-primary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+            <i class="fas fa-tag"></i>
+            @product.Category
+        </span>
+    </div>
+</div>
+
+<div style="padding: 0 1.5rem;">
+    <div class="grid grid-2" style="gap: 2rem;">
+        <div>
+            <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 1rem;">
+                <img src="@product.Image"
+                     alt="@product.Name"
+                     style="width: 100%; height: 400px; object-fit: cover;">
+                @if (!string.IsNullOrEmpty(product.Badge))
+                {
+                    <span class="badge badge-@product.BadgeColor" style="position: absolute; top: 1rem; right: 1rem; z-index: 1;">@product.Badge</span>
+                }
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
+                <img src="@product.Image"
+                     alt="Vista 1"
+                     style="width: 100%; height: 80px; object-fit: cover; border-radius: var(--radius); cursor: pointer; border: 2px solid transparent;"
+                     onmouseover="this.style.borderColor='var(--primary)'"
+                     onmouseout="this.style.borderColor='transparent'">
+                <img src="https://images.unsplash.com/photo-1605807646983-377bc5a76493?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&h=200&q=80"
+                     alt="Vista 2"
+                     style="width: 100%; height: 80px; object-fit: cover; border-radius: var(--radius); cursor: pointer; border: 2px solid transparent;"
+                     onmouseover="this.style.borderColor='var(--primary)'"
+                     onmouseout="this.style.borderColor='transparent'">
+                <img src="https://images.unsplash.com/photo-1614707267537-b85aaf00c4b7?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&h=200&q=80"
+                     alt="Vista 3"
+                     style="width: 100%; height: 80px; object-fit: cover; border-radius: var(--radius); cursor: pointer; border: 2px solid transparent;"
+                     onmouseover="this.style.borderColor='var(--primary)'"
+                     onmouseout="this.style.borderColor='transparent'">
+                <img src="https://images.unsplash.com/photo-1586788224331-947f68671cf1?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&h=200&q=80"
+                     alt="Vista 4"
+                     style="width: 100%; height: 80px; object-fit: cover; border-radius: var(--radius); cursor: pointer; border: 2px solid transparent;"
+                     onmouseover="this.style.borderColor='var(--primary)'"
+                     onmouseout="this.style.borderColor='transparent'">
+            </div>
+        </div>
+
+        <div>
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div>
+                        @if (product.OldPrice > product.Price)
+                        {
+                            <span class="text-muted" style="text-decoration: line-through; font-size: 1rem;">₡@product.OldPrice.ToString("N0")</span>
+                        }
+                        <span style="font-weight: 800; font-size: 2.5rem; color: var(--primary); margin-left: 0.5rem;">₡@product.Price.ToString("N0")</span>
+                    </div>
+                    <span class="badge badge-success" style="font-size: 1rem; padding: 0.5rem 1rem;">
+                        <i class="fas fa-check-circle"></i>
+                        Disponible
+                    </span>
+                </div>
+
+                <p style="font-size: 1.1rem; line-height: 1.6; margin-bottom: 1.5rem; color: var(--text);">
+                    @product.Description
+                </p>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label class="input-label" style="display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-weight-scale"></i>
+                        Tamaño
+                    </label>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        @foreach (var size in product.Sizes)
+                        {
+                            <button class="btn btn-outline" style="flex: 1;" onclick="selectSize(this)">
+                                @size
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label class="input-label" style="display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-ice-cream"></i>
+                        Variante
+                    </label>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        @foreach (var flavor in product.Flavors)
+                        {
+                            <button class="btn btn-outline" style="flex: 1;" onclick="selectFlavor(this)">
+                                @flavor
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label class="input-label">
+                        <i class="fas fa-calculator"></i>
+                        Cantidad
+                    </label>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <button class="btn btn-outline btn-sm" style="width: 40px; height: 40px;" onclick="decreaseQuantity()">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <input type="number" class="input" id="quantity" value="1" min="1" style="width: 80px; text-align: center;">
+                        <button class="btn btn-outline btn-sm" style="width: 40px; height: 40px;" onclick="increaseQuantity()">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <span class="text-muted" style="margin-left: 0.5rem;">(máximo 5 unidades)</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label class="input-label">
+                        <i class="fas fa-pen"></i>
+                        Mensaje personalizado
+                    </label>
+                    <input type="text" class="input" id="customMessage" placeholder="Ej: Feliz Cumpleaños, Te amo, etc.">
+                </div>
+
+                <div style="background: var(--bg-alt); padding: 1rem; border-radius: var(--radius); margin-bottom: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div style="width: 40px; height: 40px; background: var(--primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-clock" style="color: var(--primary);"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted">Tiempo de preparación</div>
+                            <div style="font-weight: 700;">@product.PreparationTime</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                    <button class="btn btn-primary btn-lg" style="flex: 2;" onclick="addToCart()">
+                        <i class="fas fa-shopping-cart"></i>
+                        Agregar al carrito
+                    </button>
+                    <button class="btn btn-outline btn-lg" style="flex: 1;" onclick="addToFavorites()">
+                        <i class="far fa-heart"></i>
+                    </button>
+                </div>
+
+                <a href="/Catalog" class="btn btn-ghost" style="width: 100%;">
+                    <i class="fas fa-arrow-left"></i>
+                    Seguir comprando
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top: 2rem;">
+        <div style="display: flex; gap: 1rem; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <button class="btn btn-ghost active" style="border-bottom: 2px solid var(--primary); border-radius: 0;" onclick="showTab('description')">
+                Descripción
+            </button>
+            <button class="btn btn-ghost" onclick="showTab('details')">
+                Detalles
+            </button>
+            <button class="btn btn-ghost" onclick="showTab('nutritional')">
+                Información nutricional
+            </button>
+            <button class="btn btn-ghost" onclick="showTab('reviews')">
+                Reseñas (@product.Reviews)
+            </button>
+        </div>
+
+        <div id="tab-description">
+            <p style="line-height: 1.8; margin-bottom: 1rem;">
+                @product.LongDescription
+            </p>
+
+            <h4 style="margin: 1.5rem 0 1rem 0;">Beneficios</h4>
+            <ul style="list-style: none; padding: 0;">
+                @foreach (var benefit in product.Benefits)
+                {
+                    <li style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                        <span>@benefit</span>
+                    </li>
+                }
+            </ul>
+        </div>
+
+        <div id="tab-details" style="display: none;">
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                <div>
+                    <h4>Especificaciones</h4>
+                    <table style="width: 100%;">
+                        <tr>
+                            <td class="text-muted">Categoría</td>
+                            <td><strong>@product.Category</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Tamaños disponibles</td>
+                            <td><strong>@string.Join(", ", product.Sizes)</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Sabores</td>
+                            <td><strong>@string.Join(", ", product.Flavors)</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Tiempo de preparación</td>
+                            <td><strong>@product.PreparationTime</strong></td>
+                        </tr>
+                    </table>
+                </div>
+                <div>
+                    <h4>Ingredientes</h4>
+                    <p class="text-muted">
+                        @if (product.Id == 1)
+                        {
+                            <span>Harina de trigo, huevos, mantequilla, azúcar, leche, cacao, queso crema, vainilla, colorante natural rojo.</span>
+                        }
+                        else if (product.Id == 2)
+                        {
+                            <span>Queso crema, galleta, mantequilla, azúcar, frutos rojos, frambuesa, limón.</span>
+                        }
+                        else if (product.Id == 3)
+                        {
+                            <span>Harina, huevos, mantequilla, azúcar, leche, vainilla, colorantes naturales.</span>
+                        }
+                        else if (product.Id == 4)
+                        {
+                            <span>Harina, huevos, leche evaporada, leche condensada, crema de leche, merengue, canela.</span>
+                        }
+                        else if (product.Id == 5)
+                        {
+                            <span>Chocolate, mantequilla, huevos, azúcar, harina, nueces, chispas de chocolate.</span>
+                        }
+                        else if (product.Id == 6)
+                        {
+                            <span>Harina, mantequilla, azúcar, huevos, glase real, colorantes naturales.</span>
+                        }
+                        else if (product.Id == 7)
+                        {
+                            <span>Harina, huevos, mantequilla, azúcar, leche, crema de mantequilla, colorantes comestibles.</span>
+                        }
+                        else
+                        {
+                            <span>Chocolate, leche, crema, canela, especias, galleta de mantequilla.</span>
+                        }
+                    </p>
+                    <p class="text-muted" style="margin-top: 1rem;">*Puede contener trazas de nueces y otros frutos secos.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-nutritional" style="display: none;">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
+                <div class="card" style="background: var(--bg-alt);">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">@product.NutritionalInfo.Porciones</div>
+                    <div class="text-muted">Porciones</div>
+                </div>
+                <div class="card" style="background: var(--bg-alt);">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">@product.NutritionalInfo.Calorias</div>
+                    <div class="text-muted">Calorías x porción</div>
+                </div>
+                <div class="card" style="background: var(--bg-alt);">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">@product.NutritionalInfo.Categoria</div>
+                    <div class="text-muted">Categoría</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-reviews" style="display: none;">
+            <div style="display: flex; gap: 2rem; align-items: center; margin-bottom: 2rem; flex-wrap: wrap;">
+                <div style="text-align: center;">
+                    <div style="font-size: 3rem; font-weight: 800; color: var(--primary);">4.9</div>
+                    <div style="display: flex; gap: 0.25rem; color: #fbbf24;">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                    </div>
+                    <div class="text-muted">@product.Reviews reseñas</div>
+                </div>
+
+                <div style="flex: 1;">
+                    <div style="margin-bottom: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span>5 estrellas</span>
+                            <div class="progress" style="flex: 1; height: 8px;">
+                                <div class="progress-bar" style="width: 85%;"></div>
+                            </div>
+                            <span>85%</span>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span>4 estrellas</span>
+                            <div class="progress" style="flex: 1; height: 8px;">
+                                <div class="progress-bar" style="width: 10%;"></div>
+                            </div>
+                            <span>10%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="background: var(--bg-alt);">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                    <div style="width: 40px; height: 40px; background: var(--gradient-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">MG</div>
+                    <div>
+                        <div style="font-weight: 700;">María Gómez</div>
+                        <div style="display: flex; gap: 0.25rem; color: #fbbf24;">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-muted">¡Excelente! Pedí este pastel para el cumpleaños de mi hija y fue un éxito total. Muy esponjoso y con el punto perfecto de dulce.</p>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top: 3rem;">
+        <h3 style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
+            <i class="fas fa-heart" style="color: var(--danger);"></i>
+            También te puede gustar
+        </h3>
+
+        <div class="grid grid-4" style="gap: 1rem;">
+            @{
+                var relatedProducts = products.Where(p => p.Id != product.Id).Take(4).ToList();
+            }
+            @foreach (var related in relatedProducts)
+            {
+                <a href="/Catalog/Details/@related.Id" class="card" style="text-decoration: none;">
+                    <img src="@related.Image"
+                         alt="@related.Name"
+                         style="width: 100%; height: 120px; object-fit: cover; border-radius: var(--radius); margin-bottom: 0.5rem;">
+                    <div style="font-weight: 600;">@related.Name</div>
+                    <div style="color: var(--primary); font-weight: 700;">₡@related.Price.ToString("N0")</div>
+                </a>
+            }
+        </div>
+    </div>
+</div>
+
+<div id="cartModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 10000;">
+    <div class="card" style="max-width: 400px; width: 90%; text-align: center;">
+        <div style="font-size: 3rem; color: var(--success); margin-bottom: 1rem;">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <h3 style="margin-bottom: 0.5rem;">¡Agregado al carrito!</h3>
+        <p class="text-muted" style="margin-bottom: 1.5rem;">@product.Name se agregó correctamente</p>
+        <div style="display: flex; gap: 1rem;">
+            <a href="/Catalog" class="btn btn-outline btn-block">
+                Seguir comprando
+            </a>
+            <a href="/Orders/Create" class="btn btn-primary btn-block">
+                Ver carrito
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    let selectedSize = '@product.Sizes.First()';
+    let selectedFlavor = '@product.Flavors.First()';
+
+    function selectSize(btn) {
+        document.querySelectorAll('[onclick*="selectSize"]').forEach(b => {
+            b.classList.remove('btn-primary');
+            b.classList.add('btn-outline');
+        });
+        btn.classList.remove('btn-outline');
+        btn.classList.add('btn-primary');
+        selectedSize = btn.textContent.trim();
+    }
+
+    function selectFlavor(btn) {
+        document.querySelectorAll('[onclick*="selectFlavor"]').forEach(b => {
+            b.classList.remove('btn-primary');
+            b.classList.add('btn-outline');
+        });
+        btn.classList.remove('btn-outline');
+        btn.classList.add('btn-primary');
+        selectedFlavor = btn.textContent.trim();
+    }
+
+    function decreaseQuantity() {
+        const input = document.getElementById('quantity');
+        const value = parseInt(input.value);
+        if (value > 1) {
+            input.value = value - 1;
+        }
+    }
+
+    function increaseQuantity() {
+        const input = document.getElementById('quantity');
+        const value = parseInt(input.value);
+        if (value < 5) {
+            input.value = value + 1;
+        }
+    }
+
+    function addToCart() {
+        const quantity = document.getElementById('quantity').value;
+        const message = document.getElementById('customMessage').value;
+
+        document.getElementById('cartModal').style.display = 'flex';
+
+        setTimeout(() => {
+            document.getElementById('cartModal').style.display = 'none';
+        }, 3000);
+    }
+
+    function addToFavorites() {
+        const btn = event.currentTarget;
+        const icon = btn.querySelector('i');
+        if (icon.classList.contains('far')) {
+            icon.classList.remove('far');
+            icon.classList.add('fas');
+            icon.style.color = '#ec4899';
+            if (typeof app !== 'undefined' && app.toast) {
+                app.toast.show('Agregado a favoritos ❤️', 'success');
+            }
+        }
+    }
+
+    function showTab(tab) {
+        document.getElementById('tab-description').style.display = 'none';
+        document.getElementById('tab-details').style.display = 'none';
+        document.getElementById('tab-nutritional').style.display = 'none';
+        document.getElementById('tab-reviews').style.display = 'none';
+
+        document.querySelectorAll('[onclick*="showTab"]').forEach(btn => {
+            btn.classList.remove('active');
+            btn.style.borderBottom = 'none';
+        });
+
+        document.getElementById(`tab-${tab}`).style.display = 'block';
+
+        event.target.style.borderBottom = '2px solid var(--primary)';
+        event.target.classList.add('active');
+    }
+
+    window.onload = function() {
+        const sizeButtons = document.querySelectorAll('[onclick*="selectSize"]');
+        if (sizeButtons.length > 0) {
+            sizeButtons[0]?.click();
+        }
+
+        const flavorButtons = document.querySelectorAll('[onclick*="selectFlavor"]');
+        if (flavorButtons.length > 0) {
+            flavorButtons[0]?.click();
+        }
+    }
+
+    window.onclick = function(event) {
+        const modal = document.getElementById('cartModal');
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    }
+</script>
+
+<style>
+    .btn-ghost.active {
+        color: var(--primary);
+        font-weight: 600;
+    }
+
+    .tab-content {
+        transition: all 0.3s ease;
+    }
+
+    .dark .btn-ghost.active {
+        color: var(--primary-light);
+    }
+
+    .badge-primary {
+        background: var(--primary-light);
+        color: var(--primary-dark);
+    }
+
+    .badge-success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .badge-warning {
+        background: #fef3c7;
+        color: #92400e;
+    }
+</style>

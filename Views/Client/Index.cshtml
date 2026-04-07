@@ -1,0 +1,495 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Mi panel";
+    var nameLabel = User?.Identity?.Name ?? "Cliente";
+}
+
+<div class="page-shell client-dashboard-page client-dashboard-page--loading" id="clientDashboardPage">
+    <div class="page-header client-dashboard-header">
+        <div>
+            <h1 class="client-dashboard-title">
+                <i class="fas fa-smile"></i>
+                Hola, @nameLabel
+            </h1>
+            <p class="text-muted client-dashboard-subtitle">
+                Desde aquí puedes registrar pedidos, pagar, seguir entregas y editar tu perfil.
+            </p>
+        </div>
+
+        <div class="client-dashboard-actions">
+            <a href="/Client/Orders" class="btn btn-primary">
+                <i class="fas fa-box"></i>
+                Mis pedidos
+            </a>
+            <a href="/Client/Track" class="btn btn-outline">
+                <i class="fas fa-map-location-dot"></i>
+                Seguimiento
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-3 client-dashboard-kpis">
+        <div class="card client-dashboard-kpi-card">
+            <div class="text-muted">Pedidos del cliente</div>
+            <h2 id="clientOrderCount"></h2>
+        </div>
+
+        <div class="card client-dashboard-kpi-card">
+            <div class="text-muted">Total gastado</div>
+            <h2 id="clientSpent"></h2>
+        </div>
+
+        <div class="card client-dashboard-kpi-card">
+            <div class="text-muted">Pedidos activos</div>
+            <h2 id="clientActive"></h2>
+        </div>
+    </div>
+
+    <div class="client-dashboard-main-grid">
+        <div class="card client-dashboard-order-card">
+            <div class="client-dashboard-section-header">
+                <h3 class="client-dashboard-section-title">Pedido rápido desde el sitio web</h3>
+            </div>
+
+            <form id="quickOrderForm" class="client-dashboard-form">
+                <div class="client-dashboard-form-grid">
+                    <div class="client-dashboard-form-block">
+                        <label>Nombre</label>
+                        <input class="form-control" name="customerName" value="@nameLabel" required />
+                    </div>
+
+                    <div class="client-dashboard-form-block">
+                        <label>Correo</label>
+                        <input class="form-control"
+                               name="customerEmail"
+                               type="email"
+                               value="@(User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "cliente@demo.com")"
+                               required />
+                    </div>
+                </div>
+
+                <div class="client-dashboard-form-grid">
+                    <div class="client-dashboard-form-block">
+                        <label>Teléfono</label>
+                        <input class="form-control" name="customerPhone" value="88883333" required />
+                    </div>
+
+                    <div class="client-dashboard-form-block">
+                        <label>Fecha de entrega</label>
+                        <input class="form-control" name="deliveryDate" type="date" required />
+                    </div>
+                </div>
+
+                <div class="client-dashboard-form-block">
+                    <label>Dirección de entrega</label>
+                    <input class="form-control"
+                           name="address"
+                           value="Escazú, San José"
+                           placeholder="Ej: Escazú, Centro Educativo El Carmelo o Ciudad de Panamá"
+                           required />
+                    <div class="field-hint">La ruta sale siempre desde Sagrada Familia.</div>
+                </div>
+
+                <div class="client-dashboard-product-grid">
+                    <div class="client-dashboard-form-block">
+                        <label>Producto</label>
+                        <select class="form-control" name="productId" id="quickOrderProduct"></select>
+                    </div>
+
+                    <div class="client-dashboard-form-block">
+                        <label>Cantidad</label>
+                        <input class="form-control" name="quantity" type="number" min="1" value="1" required />
+                    </div>
+
+                    <div class="client-dashboard-form-block">
+                        <label>Método de pago</label>
+                        <select class="form-control" name="paymentMethod">
+                            <option>Pendiente</option>
+                            <option>Efectivo</option>
+                            <option>SINPE Móvil</option>
+                            <option>Tarjeta</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="client-dashboard-form-block">
+                    <label>Notas</label>
+                    <textarea class="form-control" name="notes" rows="3" placeholder="Detalles del pedido"></textarea>
+                </div>
+
+                <button class="btn btn-primary client-dashboard-submit-btn" type="submit" id="quickOrderSubmitBtn">
+                    <i class="fas fa-paper-plane"></i>
+                    Registrar pedido
+                </button>
+            </form>
+        </div>
+
+        <div class="card client-dashboard-miniorders-card">
+            <div class="client-dashboard-section-header">
+                <h3 class="client-dashboard-section-title">Últimos pedidos</h3>
+            </div>
+
+            <div class="table-container client-dashboard-table-wrap">
+                <table class="table client-dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Pedido</th>
+                            <th>Estado</th>
+                            <th>Pago</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clientMiniOrders"></tbody>
+                </table>
+            </div>
+
+            <div class="client-dashboard-footer-actions">
+                <a href="/Client/Profile" class="btn btn-outline">
+                    <i class="fas fa-user-pen"></i>
+                    Editar perfil
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .client-dashboard-page {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        transition: opacity .18s ease, transform .18s ease;
+    }
+
+        .client-dashboard-page,
+        .client-dashboard-page * {
+            min-width: 0;
+        }
+
+    .client-dashboard-page--loading {
+        opacity: 0;
+        transform: translateY(4px);
+        pointer-events: none;
+    }
+
+    .client-dashboard-page--ready {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+
+    .client-dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .client-dashboard-title {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+    }
+
+        .client-dashboard-title i {
+            color: var(--primary);
+        }
+
+    .client-dashboard-subtitle {
+        margin: .35rem 0 0;
+    }
+
+    .client-dashboard-actions {
+        display: flex;
+        gap: .75rem;
+        flex-wrap: wrap;
+    }
+
+    .client-dashboard-kpis {
+        gap: 1rem;
+    }
+
+    .client-dashboard-kpi-card h2 {
+        margin: .35rem 0 0;
+    }
+
+    .client-dashboard-main-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(340px, .85fr);
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .client-dashboard-order-card,
+    .client-dashboard-miniorders-card {
+        align-self: start;
+    }
+
+    .client-dashboard-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .client-dashboard-section-title {
+        margin: 0;
+        font-size: 1.15rem;
+    }
+
+    .client-dashboard-form {
+        display: grid;
+        gap: .95rem;
+    }
+
+    .client-dashboard-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .client-dashboard-product-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .client-dashboard-form-block {
+        display: grid;
+        gap: .35rem;
+    }
+
+        .client-dashboard-form-block label {
+            margin: 0;
+            font-size: .82rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+    .client-dashboard-submit-btn {
+        width: 100%;
+    }
+
+    .client-dashboard-table-wrap {
+        max-width: 100%;
+        overflow: auto;
+    }
+
+    .client-dashboard-table {
+        width: 100%;
+        min-width: 0 !important;
+        table-layout: fixed;
+        margin: 0;
+    }
+
+        .client-dashboard-table th:nth-child(1),
+        .client-dashboard-table td:nth-child(1) {
+            width: 44%;
+        }
+
+        .client-dashboard-table th:nth-child(2),
+        .client-dashboard-table td:nth-child(2) {
+            width: 19%;
+            white-space: nowrap;
+        }
+
+        .client-dashboard-table th:nth-child(3),
+        .client-dashboard-table td:nth-child(3) {
+            width: 19%;
+            white-space: nowrap;
+        }
+
+        .client-dashboard-table th:nth-child(4),
+        .client-dashboard-table td:nth-child(4) {
+            width: 18%;
+            white-space: nowrap;
+        }
+
+        .client-dashboard-table td:nth-child(1) {
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .client-dashboard-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: var(--bg-card);
+        }
+
+    .client-dashboard-footer-actions {
+        margin-top: 1rem;
+    }
+
+    .client-dashboard-page .card:hover {
+        transform: none;
+        box-shadow: var(--shadow-sm);
+        border-color: var(--border);
+    }
+
+        .client-dashboard-page .card:hover::after {
+            opacity: 0;
+        }
+
+    .client-dashboard-page .table tbody tr:hover {
+        transform: none;
+        box-shadow: none;
+        background: var(--bg-alt);
+    }
+
+    .client-dashboard-page .btn:hover,
+    .client-dashboard-page .btn-primary:hover,
+    .client-dashboard-page .btn-outline:hover,
+    .client-dashboard-page .btn-secondary:hover,
+    .client-dashboard-page .btn-ghost:hover {
+        transform: none;
+    }
+
+    .client-dashboard-page .form-control:focus,
+    .client-dashboard-page input:focus,
+    .client-dashboard-page select:focus,
+    .client-dashboard-page textarea:focus {
+        transform: none;
+    }
+
+    @@media (max-width: 1200px) {
+        .client-dashboard-main-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .client-dashboard-actions {
+            width: 100%;
+        }
+
+            .client-dashboard-actions .btn {
+                width: 100%;
+            }
+
+        .client-dashboard-form-grid,
+        .client-dashboard-product-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .client-dashboard-table {
+            table-layout: auto;
+            min-width: 760px !important;
+        }
+    }
+</style>
+
+@section Scripts {
+    <script>
+        (() => {
+            const page = document.getElementById('clientDashboardPage');
+            const userEmail = document.body.dataset.userEmail || 'cliente@demo.com';
+            const form = document.getElementById('quickOrderForm');
+            const productSelect = document.getElementById('quickOrderProduct');
+            const submitBtn = document.getElementById('quickOrderSubmitBtn');
+
+            let pageInitialized = false;
+            let productsLoaded = false;
+
+            function showPage() {
+                page.classList.remove('client-dashboard-page--loading');
+                page.classList.add('client-dashboard-page--ready');
+            }
+
+            function fillProductsOnce() {
+                if (productsLoaded) return;
+
+                const products = BakeSmartStore.inventory.list().filter(p => p.active && p.stock > 0);
+                productSelect.innerHTML = products.map(p =>
+                    `<option value="${p.id}">${p.description} - ${app.utils.formatCurrency(p.price)}</option>`
+                ).join('');
+
+                productsLoaded = true;
+            }
+
+            function renderSummary() {
+                const orders = BakeSmartStore.orders.byClient(userEmail);
+                const total = orders.reduce((acc, x) => acc + x.total, 0);
+
+                document.getElementById('clientOrderCount').textContent = orders.length;
+                document.getElementById('clientSpent').textContent = app.utils.formatCurrency(total);
+                document.getElementById('clientActive').textContent = orders.filter(x => x.status !== 'Entregado').length;
+
+                document.getElementById('clientMiniOrders').innerHTML = orders.slice(0, 5).map(o => `
+                    <tr>
+                        <td>
+                            <strong>#${o.id}</strong>
+                            <div class="text-muted" style="font-size:.8rem;">${o.items.map(i => i.name).join(', ')}</div>
+                        </td>
+                        <td>
+                            <span class="badge badge-primary">${o.status}</span>
+                        </td>
+                        <td>
+                            <span class="badge ${o.paymentStatus === 'Pagado' ? 'badge-success' : 'badge-warning'}">
+                                ${o.paymentStatus}
+                            </span>
+                        </td>
+                        <td>${app.utils.formatCurrency(o.total)}</td>
+                    </tr>
+                `).join('') || `
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">No tienes pedidos aún.</td>
+                    </tr>
+                `;
+            }
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const data = Object.fromEntries(new FormData(form).entries());
+
+                try {
+                    submitBtn.disabled = true;
+
+                    const paymentStatus = data.paymentMethod === 'Pendiente' ? 'Pendiente' : 'Pagado';
+
+                    BakeSmartStore.orders.create({
+                        ...data,
+                        channel: 'Web',
+                        paymentStatus,
+                        items: [{ productId: Number(data.productId), quantity: Number(data.quantity) }]
+                    });
+
+                    app.toast.success('Pedido registrado correctamente.');
+                    renderSummary();
+                    form.quantity.value = 1;
+                    form.notes.value = '';
+                } catch (error) {
+                    app.toast.error(error.message);
+                } finally {
+                    submitBtn.disabled = false;
+                }
+            });
+
+            function initializePage() {
+                if (pageInitialized) return;
+                pageInitialized = true;
+
+                const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+                form.deliveryDate.value = tomorrow;
+
+                fillProductsOnce();
+                renderSummary();
+
+                requestAnimationFrame(() => {
+                    showPage();
+                });
+            }
+
+            if (document.readyState === 'complete') {
+                initializePage();
+            } else {
+                window.addEventListener('load', initializePage, { once: true });
+            }
+        })();
+    </script>
+}

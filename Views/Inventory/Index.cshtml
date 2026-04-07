@@ -1,0 +1,697 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Inventario";
+}
+
+<div class="page-shell inventory-page">
+    <div class="page-header inventory-header">
+        <div>
+            <h1 class="inventory-title">
+                <i class="fas fa-boxes-stacked"></i>
+                Gestión de inventario
+            </h1>
+            <p class="text-muted inventory-subtitle">
+                CRUD, filtros y movimientos conectados a pedidos y POS.
+            </p>
+        </div>
+
+        <div class="page-actions inventory-actions">
+            <input id="inventorySearch" class="form-control" placeholder="Buscar por código o descripción" />
+            <select id="inventoryCategory" class="form-control inventory-category"></select>
+            <button type="button" id="inventoryQuickActions" class="btn btn-primary">
+                <i class="fas fa-bolt"></i>
+                Acciones rápidas
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-4 inventory-kpi-grid">
+        <div class="card inventory-kpi-card">
+            <div class="text-muted">Productos</div>
+            <h2 id="invTotal"></h2>
+        </div>
+        <div class="card inventory-kpi-card">
+            <div class="text-muted">Activos</div>
+            <h2 id="invActive"></h2>
+        </div>
+        <div class="card inventory-kpi-card">
+            <div class="text-muted">Stock bajo (≤5)</div>
+            <h2 id="invLow"></h2>
+        </div>
+        <div class="card inventory-kpi-card">
+            <div class="text-muted">Inconsistencias</div>
+            <h2 id="invNegative"></h2>
+        </div>
+    </div>
+
+    <div class="card inventory-history-preview-card">
+        <div class="inventory-panel-header">
+            <div>
+                <h3 class="inventory-panel-title">Últimos movimientos</h3>
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="openInventoryQuickActions('history')">
+                Ver historial completo
+            </button>
+        </div>
+
+        <div class="table-container table-container--soft inventory-table-wrap inventory-table-wrap-preview">
+            <table class="table inventory-table inventory-preview-table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Producto</th>
+                        <th>Movimiento</th>
+                        <th>Cantidad</th>
+                        <th>Responsable</th>
+                    </tr>
+                </thead>
+                <tbody id="movementPreviewTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <template id="inventoryProductTemplate">
+        <div class="inventory-modal-shell">
+            <div class="inventory-modal-head">
+                <h3 class="inventory-modal-title">Producto</h3>
+            </div>
+
+            <form id="inventoryForm" class="inventory-modal-form">
+                <input type="hidden" name="id" />
+
+                <div>
+                    <label>Código</label>
+                    <input class="form-control" name="code" required />
+                </div>
+
+                <div>
+                    <label>Precio</label>
+                    <input class="form-control" name="price" type="number" min="0" step="0.01" required />
+                </div>
+
+                <div class="inventory-modal-full">
+                    <label>Descripción</label>
+                    <input class="form-control" name="description" required />
+                </div>
+
+                <div>
+                    <label>Categoría</label>
+                    <input class="form-control" name="category" required />
+                </div>
+
+                <div>
+                    <label>Subcategoría</label>
+                    <input class="form-control" name="subcategory" />
+                </div>
+
+                <div>
+                    <label>Cantidad</label>
+                    <input class="form-control" name="stock" type="number" min="0" required />
+                </div>
+
+                <div class="inventory-modal-actions">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-save"></i>
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </template>
+
+    <template id="inventoryMovementTemplate">
+        <div class="inventory-modal-shell">
+            <div class="inventory-modal-head">
+                <h3 class="inventory-modal-title">Movimiento rápido</h3>
+            </div>
+
+            <form id="movementForm" class="inventory-modal-form">
+                <div class="inventory-modal-full">
+                    <label>Producto</label>
+                    <select class="form-control" name="productId" id="movementProduct"></select>
+                </div>
+
+                <div>
+                    <label>Tipo</label>
+                    <select class="form-control" name="type">
+                        <option value="ENTRADA">Entrada</option>
+                        <option value="SALIDA">Salida</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label>Cantidad</label>
+                    <input class="form-control" name="quantity" type="number" min="1" placeholder="Cantidad" />
+                </div>
+
+                <div class="inventory-modal-full">
+                    <label>Nota</label>
+                    <input class="form-control" name="note" placeholder="Nota" />
+                </div>
+
+                <div class="inventory-modal-actions inventory-modal-full">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-check-circle"></i>
+                        Registrar movimiento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </template>
+
+    <template id="inventoryHistoryTemplate">
+        <div class="inventory-modal-shell inventory-modal-shell-wide">
+            <div class="inventory-modal-head">
+                <h3 class="inventory-modal-title">Historial de inventario</h3>
+            </div>
+
+            <div class="compact-table-wrap inventory-history-modal-table">
+                <table class="table inventory-table table--wide">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Producto</th>
+                            <th>Movimiento</th>
+                            <th>Cantidad</th>
+                            <th>Responsable</th>
+                            <th>Nota</th>
+                        </tr>
+                    </thead>
+                    <tbody id="movementTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </template>
+
+    <div class="card inventory-products-card">
+        <div class="inventory-panel-header">
+            <div>
+                <h3 class="inventory-panel-title">Productos</h3>
+            </div>
+        </div>
+
+        <div class="table-container inventory-table-wrap">
+            <table class="table inventory-table inventory-products-table">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th>Categoría</th>
+                        <th>Precio</th>
+                        <th>Cantidad</th>
+                        <th>Estado</th>
+                        <th class="text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .inventory-page {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+        .inventory-page,
+        .inventory-page * {
+            min-width: 0;
+        }
+
+    .inventory-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .inventory-title {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+    }
+
+        .inventory-title i {
+            color: var(--primary);
+        }
+
+    .inventory-subtitle {
+        margin: .35rem 0 0;
+    }
+
+    .inventory-actions {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        flex-wrap: wrap;
+    }
+
+        .inventory-actions .form-control {
+            min-width: 240px;
+        }
+
+    .inventory-category {
+        min-width: 190px !important;
+    }
+
+    .inventory-kpi-grid {
+        gap: 1rem;
+    }
+
+    .inventory-kpi-card h2 {
+        margin: .35rem 0 0;
+    }
+
+    .inventory-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .inventory-panel-title {
+        margin: 0;
+        font-size: 1.15rem;
+    }
+
+    .inventory-table-wrap {
+        max-width: 100%;
+        overflow: auto;
+    }
+
+    .inventory-table-wrap-preview {
+        max-height: 360px;
+    }
+
+    .inventory-table {
+        width: 100%;
+        min-width: 0 !important;
+        margin: 0;
+    }
+
+    .inventory-products-table {
+        table-layout: fixed;
+    }
+
+        .inventory-products-table th:nth-child(1),
+        .inventory-products-table td:nth-child(1) {
+            width: 110px;
+            white-space: nowrap;
+        }
+
+        .inventory-products-table th:nth-child(2),
+        .inventory-products-table td:nth-child(2) {
+            width: auto;
+        }
+
+        .inventory-products-table th:nth-child(3),
+        .inventory-products-table td:nth-child(3) {
+            width: 130px;
+            white-space: nowrap;
+        }
+
+        .inventory-products-table th:nth-child(4),
+        .inventory-products-table td:nth-child(4) {
+            width: 110px;
+            white-space: nowrap;
+        }
+
+        .inventory-products-table th:nth-child(5),
+        .inventory-products-table td:nth-child(5) {
+            width: 110px;
+            white-space: nowrap;
+        }
+
+        .inventory-products-table th:nth-child(6),
+        .inventory-products-table td:nth-child(6) {
+            width: 110px;
+            white-space: nowrap;
+        }
+
+        .inventory-products-table th:nth-child(7),
+        .inventory-products-table td:nth-child(7) {
+            width: 190px;
+            white-space: nowrap;
+            text-align: right;
+        }
+
+        .inventory-products-table td:nth-child(2) {
+            white-space: normal;
+            word-break: break-word;
+        }
+
+    .inventory-preview-table th,
+    .inventory-preview-table td {
+        white-space: nowrap;
+    }
+
+    .inventory-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--bg-card);
+    }
+
+    .inventory-products-card,
+    .inventory-history-preview-card {
+        align-self: start;
+        width: 100%;
+    }
+
+    .inventory-modal-shell {
+        padding: .35rem;
+    }
+
+    .inventory-modal-shell-wide {
+        padding: .25rem;
+    }
+
+    .inventory-modal-head {
+        margin-bottom: 1rem;
+    }
+
+    .inventory-modal-title {
+        margin: 0;
+        font-size: 1.2rem;
+    }
+
+    .inventory-modal-form {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .inventory-modal-full {
+        grid-column: 1 / -1;
+    }
+
+    .inventory-modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: end;
+    }
+
+    .inventory-history-modal-table {
+        max-height: 65vh;
+    }
+
+    .inventory-page .card:hover {
+        transform: none;
+        box-shadow: var(--shadow-sm);
+        border-color: var(--border);
+    }
+
+        .inventory-page .card:hover::after {
+            opacity: 0;
+        }
+
+    .inventory-page .table tbody tr:hover {
+        transform: none;
+        box-shadow: none;
+        background: var(--bg-alt);
+    }
+
+    .inventory-page .btn:hover,
+    .inventory-page .btn-primary:hover,
+    .inventory-page .btn-outline:hover,
+    .inventory-page .btn-secondary:hover,
+    .inventory-page .btn-ghost:hover {
+        transform: none;
+    }
+
+    .inventory-page .form-control:focus,
+    .inventory-page input:focus,
+    .inventory-page select:focus,
+    .inventory-page textarea:focus {
+        transform: none;
+    }
+
+    @@media (max-width: 900px) {
+        .inventory-modal-form {
+            grid-template-columns: 1fr;
+        }
+
+        .inventory-modal-full {
+            grid-column: auto;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .inventory-actions {
+            width: 100%;
+        }
+
+            .inventory-actions .form-control,
+            .inventory-actions .btn {
+                width: 100%;
+                min-width: 100%;
+            }
+
+        .inventory-products-table {
+            table-layout: auto;
+            min-width: 900px !important;
+        }
+    }
+</style>
+
+@section Scripts {
+    <script>
+        (() => {
+            const store = BakeSmartStore;
+            const search = document.getElementById('inventorySearch');
+            const category = document.getElementById('inventoryCategory');
+            const quickButton = document.getElementById('inventoryQuickActions');
+
+            let categoriesInitialized = false;
+
+            function getCategories() {
+                return ['Todas', ...new Set(store.inventory.list().map(p => p.category).filter(Boolean))];
+            }
+
+            function initializeCategories() {
+                if (categoriesInitialized) return;
+
+                const available = getCategories();
+                category.innerHTML = available.map(c => `<option value="${c}">${c}</option>`).join('');
+                category.value = 'Todas';
+                category.dataset.selected = 'Todas';
+                categoriesInitialized = true;
+            }
+
+            function refreshCategoriesIfNeeded() {
+                const available = getCategories();
+                const currentOptions = Array.from(category.options).map(o => o.value);
+
+                if (available.join('|') !== currentOptions.join('|')) {
+                    const selected = category.value || 'Todas';
+                    category.innerHTML = available.map(c => `<option value="${c}">${c}</option>`).join('');
+                    category.value = available.includes(selected) ? selected : 'Todas';
+                    category.dataset.selected = category.value;
+                }
+            }
+
+            function bindProductForm() {
+                const form = document.getElementById('inventoryForm');
+                if (!form) return;
+
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const data = Object.fromEntries(new FormData(form).entries());
+
+                    try {
+                        if (data.id) {
+                            store.inventory.update(data.id, data);
+                        } else {
+                            store.inventory.add(data);
+                        }
+
+                        app.toast.success('Inventario actualizado.');
+                        app.modal.close();
+                        refreshAll();
+                    } catch (error) {
+                        app.toast.error(error.message);
+                    }
+                });
+            }
+
+            function bindMovementForm() {
+                const movementForm = document.getElementById('movementForm');
+                const movementProduct = document.getElementById('movementProduct');
+                if (!movementForm || !movementProduct) return;
+
+                movementProduct.innerHTML = store.inventory.list()
+                    .map(p => `<option value="${p.id}">${p.code} - ${p.description}</option>`)
+                    .join('');
+
+                movementForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const data = Object.fromEntries(new FormData(movementForm).entries());
+
+                    try {
+                        store.inventory.move(data.productId, data.type, data.quantity, data.note);
+                        app.toast.success('Movimiento registrado.');
+                        app.modal.close();
+                        refreshAll();
+                    } catch (error) {
+                        app.toast.error(error.message);
+                    }
+                });
+            }
+
+            function renderProducts() {
+                const all = store.inventory.list();
+
+                document.getElementById('invTotal').textContent = all.length;
+                document.getElementById('invActive').textContent = all.filter(x => x.active).length;
+                document.getElementById('invLow').textContent = all.filter(x => x.stock <= 5).length;
+                document.getElementById('invNegative').textContent = all.filter(x => x.stock < 0).length;
+
+                refreshCategoriesIfNeeded();
+
+                const q = search.value.trim().toLowerCase();
+                const c = category.value || 'Todas';
+
+                const rows = all.filter(p =>
+                    (!q || p.code.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)) &&
+                    (c === 'Todas' || p.category === c)
+                );
+
+                document.getElementById('inventoryTable').innerHTML = rows.map(p => `
+                    <tr>
+                        <td><strong>${p.code}</strong></td>
+                        <td>
+                            ${p.description}
+                            <div class="text-muted" style="font-size:.8rem;">${p.subcategory || 'Sin subcategoría'}</div>
+                        </td>
+                        <td>${p.category}</td>
+                        <td>${app.utils.formatCurrency(p.price)}</td>
+                        <td>
+                            <span class="badge ${p.stock <= 5 ? 'badge-warning' : 'badge-success'}">${p.stock}</span>
+                        </td>
+                        <td>
+                            <span class="badge ${p.active ? 'badge-success' : 'badge-warning'}">
+                                ${p.active ? 'Activo' : 'Inactivo'}
+                            </span>
+                        </td>
+                        <td class="text-right">
+                            <button class="btn btn-outline btn-sm" onclick="editProduct(${p.id})">Editar</button>
+                            <button class="btn btn-outline btn-sm" onclick="toggleProduct(${p.id})">
+                                ${p.active ? 'Desactivar' : 'Activar'}
+                            </button>
+                        </td>
+                    </tr>
+                `).join('') || `
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">No hay productos para mostrar.</td>
+                    </tr>
+                `;
+            }
+
+            function renderMovements() {
+                const rows = store.inventory.history();
+                const preview = rows.slice(0, 6);
+
+                document.getElementById('movementPreviewTable').innerHTML = preview.map(m => `
+                    <tr>
+                        <td>${new Date(m.createdAt).toLocaleString('es-CR')}</td>
+                        <td>${m.code}</td>
+                        <td><span class="badge badge-info">${m.type}</span></td>
+                        <td>${m.quantity}</td>
+                        <td>${m.responsible}</td>
+                    </tr>
+                `).join('') || `
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No hay movimientos registrados.</td>
+                    </tr>
+                `;
+
+                const historyTable = document.getElementById('movementTable');
+                if (historyTable) {
+                    historyTable.innerHTML = rows.map(m => `
+                        <tr>
+                            <td>${new Date(m.createdAt).toLocaleString('es-CR')}</td>
+                            <td>${m.code}</td>
+                            <td><span class="badge badge-info">${m.type}</span></td>
+                            <td>${m.quantity}</td>
+                            <td>${m.responsible}</td>
+                            <td>${m.note || '-'}</td>
+                        </tr>
+                    `).join('') || `
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">No hay movimientos registrados.</td>
+                        </tr>
+                    `;
+                }
+            }
+
+            function refreshAll() {
+                renderProducts();
+                renderMovements();
+            }
+
+            window.openInventoryQuickActions = (section = 'product') => {
+                const templates = {
+                    product: { title: 'Producto', selector: '#inventoryProductTemplate', maxWidth: '980px' },
+                    movement: { title: 'Movimiento', selector: '#inventoryMovementTemplate', maxWidth: '980px' },
+                    history: { title: 'Historial de inventario', selector: '#inventoryHistoryTemplate', maxWidth: '1280px' }
+                };
+
+                const selected = templates[section] || templates.product;
+                const template = document.querySelector(selected.selector);
+
+                app.modal.open({
+                    title: selected.title,
+                    maxWidth: selected.maxWidth,
+                    content: template ? template.innerHTML : ''
+                });
+
+                if (section === 'product') bindProductForm();
+                if (section === 'movement') bindMovementForm();
+                if (section === 'history') renderMovements();
+            };
+
+            window.editProduct = (id) => {
+                openInventoryQuickActions('product');
+
+                const item = store.inventory.list().find(x => x.id === id);
+                const form = document.getElementById('inventoryForm');
+                if (!item || !form) return;
+
+                for (const [key, value] of Object.entries(item)) {
+                    const input = form.querySelector(`[name="${key}"]`);
+                    if (input) input.value = value;
+                }
+            };
+
+            window.toggleProduct = (id) => {
+                try {
+                    store.inventory.toggle(id);
+                    renderProducts();
+                    app.toast.info('Estado del producto actualizado.');
+                } catch (error) {
+                    app.toast.error(error.message);
+                }
+            };
+
+            quickButton.addEventListener('click', () => openInventoryQuickActions('product'));
+
+            search.addEventListener('input', renderProducts);
+
+            category.addEventListener('change', () => {
+                category.dataset.selected = category.value;
+                renderProducts();
+            });
+
+            initializeCategories();
+            renderProducts();
+            renderMovements();
+        })();
+    </script>
+}

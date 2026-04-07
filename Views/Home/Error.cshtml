@@ -1,0 +1,36 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Error";
+}
+
+<div style="min-height: 60vh; display: flex; align-items: center; justify-content: center;">
+    <div style="text-align: center; max-width: 500px;">
+        <div style="font-size: 8rem; font-weight: 800; background: linear-gradient(135deg, var(--danger), var(--warning)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1;">
+            500
+        </div>
+
+        <h2 style="margin: 1rem 0;">¡Algo salió mal!</h2>
+
+        <p class="text-muted" style="margin-bottom: 2rem;">
+            Ha ocurrido un error inesperado. Nuestro equipo ha sido notificado y estamos trabajando para solucionarlo.
+        </p>
+
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+            <a href="/" class="btn-primary">
+                <i class="fas fa-home"></i>
+                Ir al inicio
+            </a>
+            <button class="btn-outline" onclick="window.location.reload()">
+                <i class="fas fa-sync-alt"></i>
+                Reintentar
+            </button>
+        </div>
+
+        <div style="margin-top: 3rem; padding: 1rem; background: var(--bg-alt); border-radius: var(--radius);">
+            <p class="text-muted" style="margin: 0; font-size: 0.875rem;">
+                <i class="fas fa-info-circle"></i>
+                Si el problema persiste, contacta a soporte: support@bakesmart.com
+            </p>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,900 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Punto de venta";
+}
+
+<div class="page-shell pos-page">
+    <div class="page-header pos-header">
+        <div>
+            <h1 class="pos-title">
+                <i class="fas fa-cash-register"></i>
+                Punto de venta
+            </h1>
+            <p class="text-muted pos-subtitle">
+                Apertura y cierre de caja, búsqueda de productos, carrito y confirmación de venta.
+            </p>
+        </div>
+
+        <div class="pos-search-box">
+            <input id="posSearch" class="form-control" placeholder="Buscar por código o nombre" />
+        </div>
+    </div>
+
+    <div class="grid grid-4 pos-summary-grid">
+        <div class="card pos-summary-card">
+            <span class="text-muted">Caja activa</span>
+            <h2 id="posSessionStatus"></h2>
+        </div>
+
+        <div class="card pos-summary-card">
+            <span class="text-muted">Ventas del turno</span>
+            <h2 id="posSessionSales"></h2>
+        </div>
+
+        <div class="card pos-summary-card">
+            <span class="text-muted">Productos disponibles</span>
+            <h2 id="posProductsCount"></h2>
+        </div>
+
+        <div class="card pos-summary-card">
+            <span class="text-muted">Métodos de pago activos</span>
+            <h2 id="posMethodsCount"></h2>
+        </div>
+    </div>
+
+    <div class="pos-layout">
+        <aside class="card pos-side-card">
+            <div class="pos-panel-header">
+                <div>
+                    <div class="pos-panel-eyebrow">Caja</div>
+                    <h3 class="pos-panel-title">Control de caja</h3>
+                </div>
+                <span class="status-chip pos-box-chip" id="posBoxChip">Sin turno</span>
+            </div>
+
+            <div id="posSessionPanel"></div>
+
+            <div class="hr"></div>
+
+            <div class="pos-panel-header pos-panel-header--compact">
+                <div>
+                    <div class="pos-panel-eyebrow">Cobro</div>
+                    <h4 class="pos-panel-title-sm">Formas de pago</h4>
+                </div>
+            </div>
+
+            <div id="paymentMethodsPanel" class="payment-methods-panel"></div>
+        </aside>
+
+        <section class="card pos-main-card">
+            <div class="pos-main-grid">
+                <section class="pos-products-section">
+                    <div class="pos-panel-header">
+                        <div>
+                            <div class="pos-panel-eyebrow">Inventario de venta</div>
+                            <h3 class="pos-panel-title">Productos</h3>
+                        </div>
+                        <span class="badge badge-primary">
+                            <span id="posProductsBadgeCount">0</span>&nbsp;items
+                        </span>
+                    </div>
+
+                    <div class="table-container pos-products-table-wrapper">
+                        <table class="table pos-products-table">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Producto</th>
+                                    <th>Precio</th>
+                                    <th>Stock</th>
+                                    <th class="text-right">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="posProductsTable"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="pos-cart-section">
+                    <div class="pos-panel-header">
+                        <div>
+                            <div class="pos-panel-eyebrow">Venta actual</div>
+                            <h3 class="pos-panel-title">Carrito actual</h3>
+                        </div>
+                        <span class="badge badge-info" id="posCartItemsBadge">0 productos</span>
+                    </div>
+
+                    <div id="posCart" class="pos-cart-list"></div>
+
+                    <div class="hr"></div>
+
+                    <form id="posCheckoutForm" class="pos-checkout-form">
+                        <div class="pos-form-block">
+                            <label>Cliente</label>
+                            <input class="form-control" name="customerName" placeholder="Cliente de mostrador" />
+                        </div>
+
+                        <div class="pos-form-block">
+                            <label>Correo</label>
+                            <input class="form-control" name="customerEmail" placeholder="correo@cliente.com" />
+                        </div>
+
+                        <div class="pos-form-block">
+                            <label>Teléfono</label>
+                            <input class="form-control" name="customerPhone" placeholder="Teléfono" />
+                        </div>
+
+                        <div class="pos-form-block">
+                            <label>Método de pago</label>
+                            <select class="form-control" name="paymentMethod" id="posPaymentMethod"></select>
+                        </div>
+
+                        <div class="pos-form-block">
+                            <label>Descuento adicional</label>
+                            <input class="form-control" type="number" min="0" step="0.01" name="discountRate" value="0" placeholder="Ej. 0.05" />
+                        </div>
+
+                        <button class="btn btn-primary pos-submit-btn" type="submit">
+                            <i class="fas fa-check-circle"></i>
+                            Confirmar venta
+                        </button>
+                    </form>
+                </section>
+            </div>
+        </section>
+    </div>
+
+    <div class="card pos-history-card">
+        <div class="pos-panel-header">
+            <div>
+                <div class="pos-panel-eyebrow">Auditoría</div>
+                <h3 class="pos-panel-title">Historial de cajas</h3>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="table table--wide">
+                <thead>
+                    <tr>
+                        <th>Caja</th>
+                        <th>Apertura</th>
+                        <th>Cierre</th>
+                        <th>Responsable</th>
+                        <th>Total ventas</th>
+                        <th>Diferencia</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="posSessionsTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .page-shell.pos-page {
+        max-width: 1500px;
+    }
+
+    .pos-page {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+        .pos-page,
+        .pos-page * {
+            min-width: 0;
+        }
+
+    .pos-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .pos-title {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+    }
+
+        .pos-title i {
+            color: var(--primary);
+        }
+
+    .pos-subtitle {
+        margin: .35rem 0 0;
+        max-width: 760px;
+    }
+
+    .pos-search-box {
+        width: 100%;
+        max-width: 310px;
+    }
+
+    .pos-summary-grid {
+        gap: 1rem;
+    }
+
+    .pos-summary-card,
+    .pos-side-card,
+    .pos-main-card {
+        padding: 1rem;
+        height: auto;
+        align-self: start;
+    }
+
+    .pos-history-card {
+        padding: 1rem;
+        width: 100%;
+        align-self: stretch;
+    }
+
+    .pos-summary-card h2 {
+        margin: .35rem 0 0;
+    }
+
+    .pos-layout {
+        display: grid;
+        grid-template-columns: 320px minmax(0, 1fr);
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .pos-main-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(350px, .9fr);
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .pos-panel-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .pos-panel-header--compact {
+        margin-bottom: .75rem;
+    }
+
+    .pos-panel-eyebrow {
+        font-size: .75rem;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: var(--text-muted);
+        margin-bottom: .2rem;
+        font-weight: 700;
+    }
+
+    .pos-panel-title {
+        margin: 0;
+        font-size: 1.15rem;
+    }
+
+    .pos-panel-title-sm {
+        margin: 0;
+        font-size: 1rem;
+    }
+
+    .pos-box-chip {
+        flex-shrink: 0;
+    }
+
+    .payment-methods-panel {
+        display: grid;
+        gap: .75rem;
+    }
+
+    .payment-method-card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: .9rem;
+        background: var(--bg-card);
+    }
+
+    .payment-method-row {
+        display: flex;
+    }
+
+    .payment-method-row-between {
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .payment-method-name {
+        font-weight: 700;
+        margin-bottom: .2rem;
+    }
+
+    .payment-method-account {
+        color: var(--text-light);
+        font-size: .92rem;
+    }
+
+    .pos-products-section,
+    .pos-cart-section {
+        align-self: start;
+        min-width: 0;
+    }
+
+    .pos-products-table-wrapper {
+        max-height: 360px;
+        overflow: auto;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--bg-card);
+        box-shadow: none;
+    }
+
+    .pos-products-table {
+        width: 100%;
+        min-width: 0 !important;
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin: 0;
+    }
+
+        .pos-products-table th,
+        .pos-products-table td {
+            padding: .85rem .85rem;
+            vertical-align: middle;
+        }
+
+            .pos-products-table th:nth-child(1),
+            .pos-products-table td:nth-child(1) {
+                width: 112px;
+                white-space: nowrap;
+            }
+
+            .pos-products-table th:nth-child(2),
+            .pos-products-table td:nth-child(2) {
+                width: auto;
+                white-space: normal;
+                word-break: break-word;
+            }
+
+            .pos-products-table th:nth-child(3),
+            .pos-products-table td:nth-child(3) {
+                width: 110px;
+                white-space: nowrap;
+            }
+
+            .pos-products-table th:nth-child(4),
+            .pos-products-table td:nth-child(4) {
+                width: 78px;
+                white-space: nowrap;
+            }
+
+            .pos-products-table th:nth-child(5),
+            .pos-products-table td:nth-child(5) {
+                width: 108px;
+                white-space: nowrap;
+                text-align: right;
+            }
+
+        .pos-products-table thead th {
+            position: sticky;
+            top: 0;
+            background: var(--bg-card);
+            z-index: 1;
+        }
+
+        .pos-products-table .btn-sm {
+            padding: .45rem .75rem;
+            font-size: .74rem;
+            min-width: 88px;
+        }
+
+    .pos-cart-section {
+        border: 1px solid color-mix(in srgb, var(--border) 78%, var(--primary) 22%);
+        border-radius: 18px;
+        padding: 1rem;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--bg-card) 94%, white 6%), var(--bg-card));
+    }
+
+    .pos-cart-list {
+        display: grid;
+        gap: .75rem;
+        min-height: 0;
+    }
+
+    .pos-cart-empty {
+        padding: .2rem 0 .65rem;
+    }
+
+    .pos-cart-item {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: .85rem;
+        background: var(--bg-card);
+    }
+
+    .pos-cart-item-header,
+    .pos-cart-item-footer,
+    .pos-total-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .pos-cart-item-footer {
+        align-items: center;
+        margin-top: .75rem;
+    }
+
+    .pos-cart-actions {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .pos-cart-totals {
+        padding-top: .5rem;
+        display: grid;
+        gap: .45rem;
+    }
+
+    .pos-total-row.total-final {
+        font-size: 1.05rem;
+    }
+
+    .pos-checkout-form {
+        display: grid;
+        gap: .8rem;
+    }
+
+    .pos-form-block {
+        display: grid;
+        gap: .35rem;
+    }
+
+        .pos-form-block label {
+            margin: 0;
+            font-size: .8rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+    .pos-submit-btn {
+        width: 100%;
+        margin-top: .15rem;
+    }
+
+    .session-status-card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: .95rem;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--bg-card) 92%, white 8%), var(--bg-card));
+    }
+
+    .session-status-title {
+        font-size: .82rem;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: var(--text-muted);
+        margin-bottom: .35rem;
+        font-weight: 700;
+    }
+
+    .session-status-value {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--text);
+    }
+
+    .session-inline-actions {
+        display: flex;
+        gap: .75rem;
+        flex-wrap: wrap;
+        margin-top: .85rem;
+        align-items: center;
+    }
+
+        .session-inline-actions .form-control {
+            max-width: 190px;
+        }
+
+    
+    .pos-page .card:hover {
+        transform: none;
+        box-shadow: var(--shadow-sm);
+        border-color: var(--border);
+    }
+
+        .pos-page .card:hover::after {
+            opacity: 0;
+        }
+
+    .pos-page .table tbody tr:hover {
+        transform: none;
+        box-shadow: none;
+        background: var(--bg-alt);
+    }
+
+    .pos-page .btn:hover,
+    .pos-page .btn-primary:hover,
+    .pos-page .btn-outline:hover,
+    .pos-page .btn-secondary:hover,
+    .pos-page .btn-ghost:hover {
+        transform: none;
+    }
+
+    .pos-page .form-control:focus,
+    .pos-page input:focus,
+    .pos-page select:focus,
+    .pos-page textarea:focus {
+        transform: none;
+    }
+
+    @@media (max-width: 1380px) {
+        .pos-main-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media (max-width: 1100px) {
+        .pos-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .page-shell.pos-page {
+            max-width: 100%;
+        }
+
+        .pos-search-box {
+            max-width: 100%;
+        }
+
+        .pos-header {
+            align-items: stretch;
+        }
+
+        .pos-products-table th,
+        .pos-products-table td {
+            padding: .75rem .8rem;
+        }
+
+        .pos-products-table {
+            table-layout: auto;
+            min-width: 720px !important;
+        }
+    }
+</style>
+
+@section Scripts {
+    <script>
+        (() => {
+            const store = BakeSmartStore;
+            const searchInput = document.getElementById('posSearch');
+            const checkoutForm = document.getElementById('posCheckoutForm');
+            const cart = [];
+            const fmt = app.utils.formatCurrency;
+
+            const getConfig = () => store.pos.config();
+            const getActiveSession = () => store.pos.activeSession();
+            const getProducts = () => store.pos.searchProducts(searchInput.value);
+
+            function renderSummary() {
+                const session = getActiveSession();
+                const products = getProducts();
+                const methods = getConfig().paymentMethods.filter(x => x.active);
+
+                document.getElementById('posSessionStatus').textContent = session ? `#${session.id}` : 'Sin abrir';
+                document.getElementById('posSessionSales').textContent = fmt(session?.totalSales || 0);
+                document.getElementById('posProductsCount').textContent = products.length;
+                document.getElementById('posMethodsCount').textContent = methods.length;
+                document.getElementById('posProductsBadgeCount').textContent = products.length;
+
+                const boxChip = document.getElementById('posBoxChip');
+                boxChip.textContent = session ? 'Turno activo' : 'Sin turno';
+            }
+
+            function renderSessionPanel() {
+                const session = getActiveSession();
+                const container = document.getElementById('posSessionPanel');
+
+                if (session) {
+                    container.innerHTML = `
+                        <div class="session-status-card">
+                            <div class="session-status-title">Responsable</div>
+                            <div class="session-status-value">${session.userName}</div>
+                            <div class="text-muted" style="margin-top:.35rem;">Apertura: ${new Date(session.openedAt).toLocaleString('es-CR')}</div>
+
+                            <div class="session-inline-actions">
+                                <input id="declaredCash" class="form-control" type="number" min="0" placeholder="Efectivo contado" />
+                                <button class="btn btn-outline" type="button" onclick="closeSession()">Cerrar caja</button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div class="session-status-card">
+                            <div class="session-status-title">Estado actual</div>
+                            <div class="session-status-value">No hay turno abierto</div>
+
+                            <div class="session-inline-actions">
+                                <input id="openingAmount" class="form-control" type="number" min="0" placeholder="Monto apertura" />
+                                <button class="btn btn-primary" type="button" onclick="openSession()">Abrir caja</button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                renderPaymentMethods();
+            }
+
+            function renderPaymentMethods() {
+                const methods = getConfig().paymentMethods;
+                const paymentPanel = document.getElementById('paymentMethodsPanel');
+                const paymentSelect = document.getElementById('posPaymentMethod');
+
+                paymentPanel.innerHTML = methods.map(method => `
+                    <div class="payment-method-card">
+                        <div class="payment-method-row payment-method-row-between">
+                            <div>
+                                <div class="payment-method-name">${method.name}</div>
+                                <div class="payment-method-account">Cuenta: ${method.account}</div>
+                            </div>
+                            <span class="badge ${method.active ? 'badge-success' : 'badge-warning'}">
+                                ${method.active ? 'Activo' : 'Inactivo'}
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+
+                paymentSelect.innerHTML = methods
+                    .filter(method => method.active)
+                    .map(method => `<option value="${method.name}">${method.name}</option>`)
+                    .join('');
+            }
+
+            function renderProducts() {
+                const products = getProducts();
+                const tableBody = document.getElementById('posProductsTable');
+
+                if (!products.length) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">No se encontraron productos.</td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tableBody.innerHTML = products.map(product => `
+                    <tr>
+                        <td>${product.code}</td>
+                        <td>${product.description}</td>
+                        <td>${fmt(product.price)}</td>
+                        <td>${product.stock}</td>
+                        <td class="text-right">
+                            <button class="btn btn-outline btn-sm" type="button" onclick="addToCart(${product.id})">
+                                Agregar
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            function renderCart() {
+                const cartContainer = document.getElementById('posCart');
+                document.getElementById('posCartItemsBadge').textContent = `${cart.length} producto${cart.length === 1 ? '' : 's'}`;
+
+                if (!cart.length) {
+                    cartContainer.innerHTML = `<div class="text-muted pos-cart-empty">Aún no has agregado productos.</div>`;
+                    return;
+                }
+
+                const subtotal = cart.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
+                const tax = subtotal * getConfig().iva;
+                const total = subtotal + tax;
+
+                cartContainer.innerHTML = `
+                    ${cart.map(item => `
+                        <div class="pos-cart-item">
+                            <div class="pos-cart-item-header">
+                                <div>
+                                    <strong>${item.name}</strong>
+                                    <div class="text-muted">${item.code}</div>
+                                </div>
+                                <button class="btn btn-outline btn-sm" type="button" onclick="removeCartItem(${item.productId})">
+                                    Quitar
+                                </button>
+                            </div>
+
+                            <div class="pos-cart-item-footer">
+                                <div class="pos-cart-actions">
+                                    <button class="btn btn-outline btn-sm" type="button" onclick="changeQty(${item.productId}, -1)">-</button>
+                                    <span>${item.quantity}</span>
+                                    <button class="btn btn-outline btn-sm" type="button" onclick="changeQty(${item.productId}, 1)">+</button>
+                                </div>
+                                <span style="font-weight:700;">${fmt(item.quantity * item.unitPrice)}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+
+                    <div class="pos-cart-totals">
+                        <div class="pos-total-row">
+                            <span>Subtotal</span>
+                            <strong>${fmt(subtotal)}</strong>
+                        </div>
+                        <div class="pos-total-row">
+                            <span>IVA</span>
+                            <strong>${fmt(tax)}</strong>
+                        </div>
+                        <div class="pos-total-row total-final">
+                            <span>Total</span>
+                            <strong>${fmt(total)}</strong>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function renderSessionsTable() {
+                const sessions = store.pos.sessions();
+                const tableBody = document.getElementById('posSessionsTable');
+
+                if (!sessions.length) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">No hay historial de cajas.</td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tableBody.innerHTML = sessions.map(session => `
+                    <tr>
+                        <td>#${session.id}</td>
+                        <td>${new Date(session.openedAt).toLocaleString('es-CR')}</td>
+                        <td>${session.closedAt ? new Date(session.closedAt).toLocaleString('es-CR') : '-'}</td>
+                        <td>${session.userName}</td>
+                        <td>${fmt(session.totalSales || 0)}</td>
+                        <td>${fmt(session.difference || 0)}</td>
+                        <td>
+                            <span class="badge ${session.status === 'ACTIVO' ? 'badge-success' : 'badge-info'}">
+                                ${session.status}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            window.addToCart = (productId) => {
+                const product = store.inventory.list().find(x => x.id === productId);
+                if (!product) return;
+
+                const existingItem = cart.find(x => x.productId === productId);
+
+                if (existingItem) {
+                    if (existingItem.quantity >= product.stock) {
+                        app.toast.warning('No hay más stock disponible.');
+                        return;
+                    }
+
+                    existingItem.quantity++;
+                } else {
+                    cart.push({
+                        productId: product.id,
+                        code: product.code,
+                        name: product.description,
+                        quantity: 1,
+                        unitPrice: product.price
+                    });
+                }
+
+                renderCart();
+            };
+
+            window.changeQty = (productId, delta) => {
+                const item = cart.find(x => x.productId === productId);
+                const product = store.inventory.list().find(x => x.id === productId);
+
+                if (!item || !product) return;
+
+                const newQuantity = item.quantity + delta;
+
+                if (newQuantity <= 0) {
+                    removeCartItem(productId);
+                    return;
+                }
+
+                if (newQuantity > product.stock) {
+                    app.toast.warning('La cantidad supera el stock.');
+                    return;
+                }
+
+                item.quantity = newQuantity;
+                renderCart();
+            };
+
+            window.removeCartItem = (productId) => {
+                const index = cart.findIndex(x => x.productId === productId);
+                if (index >= 0) {
+                    cart.splice(index, 1);
+                    renderCart();
+                }
+            };
+
+            window.openSession = () => {
+                try {
+                    const amount = document.getElementById('openingAmount')?.value || 0;
+                    store.pos.openSession(amount, document.body.dataset.userEmail || 'staff@demo.com');
+                    app.toast.success('Caja abierta correctamente.');
+                    renderAll();
+                } catch (error) {
+                    app.toast.error(error.message);
+                }
+            };
+
+            window.closeSession = () => {
+                try {
+                    const session = getActiveSession();
+                    if (!session) return;
+
+                    const declared = document.getElementById('declaredCash')?.value || 0;
+                    const result = store.pos.closeSession(session.id, declared);
+
+                    app.toast.info(`Caja cerrada. Diferencia: ${fmt(result.difference)}`);
+                    renderAll();
+                } catch (error) {
+                    app.toast.error(error.message);
+                }
+            };
+
+            checkoutForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+
+                try {
+                    if (!cart.length) {
+                        throw new Error('Agrega productos al carrito antes de cobrar.');
+                    }
+
+                    const formData = Object.fromEntries(new FormData(checkoutForm).entries());
+
+                    store.pos.sell({
+                        ...formData,
+                        items: cart.map(item => ({
+                            productId: item.productId,
+                            quantity: item.quantity
+                        }))
+                    });
+
+                    cart.splice(0, cart.length);
+                    checkoutForm.reset();
+
+                    app.toast.success('Venta registrada correctamente.');
+                    renderAll();
+                } catch (error) {
+                    app.toast.error(error.message);
+                }
+            });
+
+            searchInput.addEventListener('input', () => {
+                renderProducts();
+                renderSummary();
+            });
+
+            function renderAll() {
+                renderSummary();
+                renderSessionPanel();
+                renderProducts();
+                renderCart();
+                renderSessionsTable();
+            }
+
+            renderAll();
+        })();
+    </script>
+}

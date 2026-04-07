@@ -1,0 +1,49 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Roles";
+}
+<div class="page-shell">
+    <div class="page-header" style="margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+        <div>
+            <h1 style="margin:0; display:flex; align-items:center; gap:.75rem;"><i class="fas fa-shield-alt" style="color:var(--primary);"></i> Roles y permisos</h1>
+            <p class="text-muted" style="margin:.35rem 0 0;">Resumen funcional de accesos para Admin, Staff y Cliente.</p>
+        </div>
+        <a class="btn btn-outline" href="/Users"><i class="fas fa-arrow-left"></i> Volver a usuarios</a>
+    </div>
+    <div id="rolesGrid" class="grid grid-3" style="gap:1rem;"></div>
+    <div class="card" style="margin-top:1rem;">
+        <h3 style="margin-top:0;">Matriz de funcionalidades</h3>
+        <div class="table-container">
+            <table class="table">
+                <thead><tr><th>Funcionalidad</th><th>Admin</th><th>Staff</th><th>Cliente</th></tr></thead>
+                <tbody id="rolesMatrix"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@section Scripts {
+<script>
+(() => {
+    const roles = BakeSmartStore.roles.list();
+    const all = [...new Set(roles.flatMap(r => r.permissions))].sort();
+    document.getElementById('rolesGrid').innerHTML = roles.map(r => `
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.75rem;">
+                <h3 style="margin:0;">${r.name}</h3>
+                <span class="badge badge-primary">${r.permissions.length} permisos</span>
+            </div>
+            <p class="text-muted">${r.description}</p>
+            <div style="display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1rem;">
+                ${r.permissions.map(p => `<span class="badge ${r.name === 'Cliente' ? 'badge-info' : 'badge-success'}">${p}</span>`).join('')}
+            </div>
+        </div>
+    `).join('');
+    document.getElementById('rolesMatrix').innerHTML = all.map(feature => `
+        <tr>
+            <td>${feature}</td>
+            ${roles.map(r => `<td>${r.permissions.includes(feature) ? '<i class="fas fa-check" style="color:var(--success);"></i>' : '<i class="fas fa-xmark" style="color:var(--danger);"></i>'}</td>`).join('')}
+        </tr>
+    `).join('');
+})();
+</script>
+}

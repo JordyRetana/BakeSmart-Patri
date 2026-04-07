@@ -1,0 +1,58 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Acceso Denegado";
+}
+
+<div style="min-height: 60vh; display: flex; align-items: center; justify-content: center;">
+    <div style="text-align: center; max-width: 500px;">
+        <div style="font-size: 8rem; font-weight: 800; background: linear-gradient(135deg, var(--warning), var(--danger)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1;">
+            403
+        </div>
+
+        <h2 style="margin: 1rem 0;">Acceso Denegado</h2>
+
+        <p class="text-muted" style="margin-bottom: 2rem;">
+            No tienes permisos para acceder a esta sección. Si crees que esto es un error, contacta al administrador.
+        </p>
+
+        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <a href="/" class="btn-primary">
+                <i class="fas fa-home"></i>
+                Ir al inicio
+            </a>
+            <a href="/Account/Login" class="btn-outline">
+                <i class="fas fa-sign-in-alt"></i>
+                Cambiar usuario
+            </a>
+        </div>
+
+        <div style="margin-top: 3rem;">
+            <div class="card" style="text-align: left;">
+                <h4 style="margin-bottom: 0.5rem;">Tu perfil actual:</h4>
+                @if (User?.Identity?.IsAuthenticated ?? false)
+                {
+                    <p><strong>Usuario:</strong> @User.Identity.Name</p>
+                    <p>
+                        <strong>Roles:</strong>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <span class="badge badge-primary">Admin</span>
+                        }
+                        @if (User.IsInRole("Staff"))
+                        {
+                            <span class="badge badge-info">Staff</span>
+                        }
+                        @if (User.IsInRole("Cliente"))
+                        {
+                            <span class="badge badge-success">Cliente</span>
+                        }
+                    </p>
+                }
+                else
+                {
+                    <p class="text-muted">No has iniciado sesión</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>

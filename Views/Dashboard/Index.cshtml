@@ -1,0 +1,54 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Dashboard";
+}
+<div class="page-shell">
+    <div class="page-header" style="margin-bottom:1.5rem;">
+        <h1 style="margin:0; display:flex; align-items:center; gap:.75rem;"><i class="fas fa-chart-line" style="color:var(--primary);"></i> Dashboard operativo</h1>
+        <p class="text-muted" style="margin:.35rem 0 0;">Resumen vivo conectado a inventario, pedidos, POS, reportes y contabilidad.</p>
+    </div>
+    <div class="grid grid-4" style="gap:1rem; margin-bottom:1rem;">
+        <div class="card"><div class="text-muted">Pedidos</div><h2 id="dbOrders" style="margin:0;"></h2></div>
+        <div class="card"><div class="text-muted">Ventas</div><h2 id="dbSales" style="margin:0;"></h2></div>
+        <div class="card"><div class="text-muted">Stock bajo</div><h2 id="dbLowStock" style="margin:0;"></h2></div>
+        <div class="card"><div class="text-muted">Usuarios activos</div><h2 id="dbUsers" style="margin:0;"></h2></div>
+    </div>
+    <div class="grid grid-2" style="gap:1rem; align-items:start;">
+        <div class="card">
+            <h3 style="margin-top:0;">Pedidos recientes</h3>
+            <div class="table-container">
+                <table class="table">
+                    <thead><tr><th>Pedido</th><th>Cliente</th><th>Estado</th><th>Total</th></tr></thead>
+                    <tbody id="dbOrdersTable"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card">
+            <h3 style="margin-top:0;">Alertas rápidas</h3>
+            <div id="dbAlerts" style="display:grid; gap:.75rem;"></div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+<script>
+(() => {
+    const orders = BakeSmartStore.orders.list();
+    const sales = BakeSmartStore.reports.sales('', '');
+    const inventory = BakeSmartStore.reports.inventory();
+    const users = BakeSmartStore.reports.users();
+    document.getElementById('dbOrders').textContent = orders.length;
+    document.getElementById('dbSales').textContent = app.utils.formatCurrency(sales.totalIncome);
+    document.getElementById('dbLowStock').textContent = inventory.lowStock;
+    document.getElementById('dbUsers').textContent = users.activeUsers;
+    document.getElementById('dbOrdersTable').innerHTML = orders.slice(0,6).map(o => `
+        <tr><td>#${o.id}</td><td>${o.customerName}</td><td><span class="badge badge-primary">${o.status}</span></td><td>${app.utils.formatCurrency(o.total)}</td></tr>
+    `).join('');
+    const alerts = [];
+    if (inventory.lowStock) alerts.push(`${inventory.lowStock} productos tienen stock bajo.`);
+    if (orders.some(o => o.paymentStatus !== 'Pagado')) alerts.push(`Hay ${orders.filter(o => o.paymentStatus !== 'Pagado').length} pedidos con pago pendiente.`);
+    if (BakeSmartStore.pos.activeSession()) alerts.push(`La caja #${BakeSmartStore.pos.activeSession().id} está activa.`);
+    if (!alerts.length) alerts.push('No hay alertas críticas en este momento.');
+    document.getElementById('dbAlerts').innerHTML = alerts.map(a => `<div class="card soft" style="padding:1rem;">${a}</div>`).join('');
+})();
+</script>
+}

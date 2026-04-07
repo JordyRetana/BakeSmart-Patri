@@ -1,0 +1,357 @@
+﻿@{
+    var title = ViewData["Title"] as string ?? "BakeSmart Patri";
+    var isAuth = User?.Identity?.IsAuthenticated ?? false;
+    var isAdmin = User?.IsInRole("Admin") ?? false;
+    var isStaff = User?.IsInRole("Staff") ?? false;
+    var isClient = User?.IsInRole("Cliente") ?? false;
+
+    string userInitials = "U";
+    string userName = "Usuario";
+
+    if (isAuth && User?.Identity?.Name != null)
+    {
+        userName = User.Identity.Name;
+        var names = userName.Split(' ');
+        userInitials = names.Length > 0 ? names[0].Substring(0, 1).ToUpper() : "U";
+        if (names.Length > 1) userInitials += names[1].Substring(0, 1).ToUpper();
+    }
+
+    
+    var currentPath = Context.Request.Path.ToString().ToLower();
+    string welcomeMessage = "";
+    string welcomeType = "info";
+    var enablePageLoader = currentPath == "/" || currentPath == "/home/index" || currentPath.StartsWith("/dashboard") || currentPath.StartsWith("/catalog") || currentPath.StartsWith("/reports");
+
+    if (currentPath == "/" || currentPath == "/home/index")
+    {
+        welcomeMessage = "👋 ¡Bienvenido a BakeSmart Patri! La mejor repostería inteligente";
+        welcomeType = "success";
+    }
+    else if (currentPath.StartsWith("/catalog"))
+    {
+        welcomeMessage = "🍰 ¡Descubre nuestro delicioso catálogo de productos!";
+        welcomeType = "info";
+    }
+    else if (currentPath.StartsWith("/orders"))
+    {
+        welcomeMessage = "📦 Aquí puedes gestionar todos tus pedidos";
+        welcomeType = "warning";
+    }
+    else if (currentPath.StartsWith("/client"))
+    {
+        welcomeMessage = "👤 Bienvenido a tu panel personal de cliente";
+        welcomeType = "success";
+    }
+    else if (currentPath.StartsWith("/dashboard"))
+    {
+        welcomeMessage = "📊 Panel de administración - Bienvenido";
+        welcomeType = "primary";
+    }
+    else if (currentPath.StartsWith("/inventory"))
+    {
+        welcomeMessage = "📦 Gestiona tu inventario de manera eficiente";
+        welcomeType = "info";
+    }
+    else if (currentPath.StartsWith("/production"))
+    {
+        welcomeMessage = "👨‍🍳 Controla tu producción de repostería";
+        welcomeType = "warning";
+    }
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@title - BakeSmart Patri | Repostería Inteligente</title>
+    <meta name="description" content="BakeSmart Patri - Sistema de gestión para reposterías. Pedidos, producción, inventario y más." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        
+        @@keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @@keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        @@keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @@keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
+        }
+
+        
+        .dark-mode-script {
+            display: none;
+        }
+    </style>
+</head>
+<body class="app-body page-ready" data-page="@currentPath" data-user-email="@(User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "")">
+    @if (enablePageLoader)
+    {
+        <div id="pageLoader" class="page-loader" aria-hidden="true">
+            <div class="page-loader__content">
+                <div class="loader-badge">
+                    <span class="loader-gear loader-gear--lg"><i class="fas fa-gear"></i></span>
+                    <span class="loader-gear loader-gear--sm"><i class="fas fa-cake-candles"></i></span>
+                </div>
+                <div class="page-loader__title">BakeSmart Patri</div>
+                <div class="page-loader__text">Preparando una experiencia más dinámica…</div>
+            </div>
+        </div>
+    }
+
+    <div class="app-background" aria-hidden="true">
+        <span class="bg-orb bg-orb--one"></span>
+        <span class="bg-orb bg-orb--two"></span>
+        <span class="bg-orb bg-orb--three"></span>
+        <div class="bg-grid"></div>
+        <div class="bg-floating-icons">
+            <i class="fas fa-gear gear-float gear-float--one"></i>
+            <i class="fas fa-cookie-bite gear-float gear-float--two"></i>
+            <i class="fas fa-cake-candles gear-float gear-float--three"></i>
+            <i class="fas fa-chart-pie gear-float gear-float--four"></i>
+        </div>
+        <div id="bgParticles" class="bg-particles"></div>
+    </div>
+
+    <div class="cursor-glow" aria-hidden="true"></div>
+    
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <div class="navbar-logo">
+                    <img src="~/img/logo.png" alt="BakeSmart Patri" onerror="this.style.display='none'" />
+                </div>
+                <span style="font-weight: 700; font-size: 1.25rem; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">BakeSmart Patri</span>
+            </div>
+
+            <div class="navbar-menu">
+                <a class="navbar-link" data-nav href="/">
+                    <i class="fas fa-home" style="margin-right: 0.25rem;"></i> Inicio
+                </a>
+                <a class="navbar-link" data-nav href="/Catalog">
+                    <i class="fas fa-cake-candles" style="margin-right: 0.25rem;"></i> Catálogo
+                </a>
+
+                @if (isAuth && isClient)
+                {
+                    <a class="navbar-link" data-nav href="/Client">
+                        <i class="fas fa-user" style="margin-right: 0.25rem;"></i> Mi Panel
+                    </a>
+                    <a class="navbar-link" data-nav href="/Client/Orders">
+                        <i class="fas fa-box" style="margin-right: 0.25rem;"></i> Mis Pedidos
+                    </a>
+                }
+
+                @if (isAuth && (isAdmin || isStaff))
+                {
+                    <a class="navbar-link" data-nav href="/Dashboard">
+                        <i class="fas fa-chart-line" style="margin-right: 0.25rem;"></i> Dashboard
+                    </a>
+
+                    <div class="dropdown">
+                        <span class="dropdown-toggle">
+                            <i class="fas fa-store" style="margin-right: 0.25rem;"></i> Operación
+                            <i class="fas fa-chevron-down" style="font-size: 0.75rem; margin-left: 0.25rem;"></i>
+                        </span>
+                        <div class="dropdown-menu">
+                            <a class="dropdown-item" href="/Orders">
+                                <i class="fas fa-clipboard-list" style="width: 20px; margin-right: 0.5rem;"></i> Pedidos
+                            </a>
+                            <a class="dropdown-item" href="/Production">
+                                <i class="fas fa-utensils" style="width: 20px; margin-right: 0.5rem;"></i> Producción
+                            </a>
+                            <a class="dropdown-item" href="/Inventory">
+                                <i class="fas fa-boxes" style="width: 20px; margin-right: 0.5rem;"></i> Inventario
+                            </a>
+                            <a class="dropdown-item" href="/Pos">
+                                <i class="fas fa-cash-register" style="width: 20px; margin-right: 0.5rem;"></i> Punto de Venta
+                            </a>
+                            <a class="dropdown-item" href="/Reports">
+                                <i class="fas fa-chart-bar" style="width: 20px; margin-right: 0.5rem;"></i> Reportes
+                            </a>
+                            @if (isAdmin)
+                            {
+                                <div style="border-top: 1px solid var(--border); margin: 0.5rem 0;"></div>
+                                <a class="dropdown-item" href="/Users">
+                                    <i class="fas fa-users" style="width: 20px; margin-right: 0.5rem;"></i> Usuarios
+                                </a>
+                                <a class="dropdown-item" href="/Roles">
+                                    <i class="fas fa-shield" style="width: 20px; margin-right: 0.5rem;"></i> Roles
+                                </a>
+                                <a class="dropdown-item" href="/Accounting">
+                                    <i class="fas fa-calculator" style="width: 20px; margin-right: 0.5rem;"></i> Contabilidad
+                                </a>
+                                <a class="dropdown-item" href="/Marketing">
+                                    <i class="fas fa-megaphone" style="width: 20px; margin-right: 0.5rem;"></i> Marketing
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="navbar-actions" style="display: flex; align-items: center; gap: 1rem;">
+                <button class="btn btn-ghost btn-sm theme-toggle" onclick="window.app.theme.toggle()" style="border-radius: 50%; width: 40px; height: 40px; padding: 0;">
+                    <i class="fas fa-moon"></i>
+                </button>
+
+                @if (isAuth)
+                {
+                    <div class="user-profile">
+                        <div class="user-avatar">@userInitials</div>
+                        <div class="user-info">
+                            <div class="user-name">@userName</div>
+                            <div class="user-role">
+                                @if (isAdmin)
+                                {
+                                    <text>Administrador</text>
+                                }
+                                else if (isStaff)
+                                {
+                                    <text>Staff</text>
+                                }
+                                else
+                                {
+                                    <text>Cliente</text>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post" action="/Account/Logout" style="display: inline;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-outline btn-sm">
+                            <i class="fas fa-sign-out-alt" style="margin-right: 0.25rem;"></i> Salir
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <a href="/Account/Login" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt" style="margin-right: 0.5rem;"></i> Iniciar Sesión
+                    </a>
+                }
+            </div>
+        </div>
+    </nav>
+
+    
+    <main class="app-main page-enter">
+        @RenderBody()
+    </main>
+
+    
+    <footer class="footer">
+        <div class="footer-content">
+            <div>
+                <h4 class="footer-title">
+                    <i class="fas fa-crown" style="margin-right: 0.5rem;"></i> BakeSmart Patri
+                </h4>
+                <p style="color: rgba(255,255,255,0.7); font-size: 0.875rem; line-height: 1.6; margin-bottom: 1.5rem;">
+                    Transformando la gestión de reposterías con tecnología inteligente y diseño moderno.
+                </p>
+                <div style="display: flex; gap: 1rem;">
+                    <a href="#" style="color: white; font-size: 1.25rem;"><i class="fab fa-facebook"></i></a>
+                    <a href="#" style="color: white; font-size: 1.25rem;"><i class="fab fa-instagram"></i></a>
+                    <a href="#" style="color: white; font-size: 1.25rem;"><i class="fab fa-whatsapp"></i></a>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="footer-title">Productos</h4>
+                <ul class="footer-links">
+                    <li><a href="/Catalog"><i class="fas fa-chevron-right" style="font-size: 0.75rem; margin-right: 0.5rem;"></i> Catálogo completo</a></li>
+                    <li><a href="/Catalog/Details/1"><i class="fas fa-chevron-right" style="font-size: 0.75rem; margin-right: 0.5rem;"></i> Pasteles personalizados</a></li>
+                    <li><a href="/Catalog/Details/2"><i class="fas fa-chevron-right" style="font-size: 0.75rem; margin-right: 0.5rem;"></i> Cupcakes</a></li>
+                    <li><a href="/Catalog/Details/3"><i class="fas fa-chevron-right" style="font-size: 0.75rem; margin-right: 0.5rem;"></i> Postres especiales</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="footer-title">Soporte</h4>
+                <ul class="footer-links">
+                    <li><a href="/Home/About"><i class="fas fa-chevron-right" style="font-size: 0.75rem; margin-right: 0.5rem;"></i> Acerca de</a></li>
+                    <li><a href="/Home/Contact"><i class="fas fa-chevron-right" style="font-size: 0.75rem; margin-right: 0.5rem;"></i> Contacto</a></li>
+                    <li><a href="/Home/Terms"><i class="fas fa-chevron-right" style="font-size: 0.75rem; margin-right: 0.5rem;"></i> Términos y condiciones</a></li>
+                    <li><a href="/Home/Privacy"><i class="fas fa-chevron-right" style="font-size: 0.75rem; margin-right: 0.5rem;"></i> Política de privacidad</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="footer-title">Contacto</h4>
+                <ul class="footer-links">
+                    <li><i class="fas fa-phone" style="width: 20px; margin-right: 0.5rem;"></i> +506 8888-8888</li>
+                    <li><i class="fas fa-envelope" style="width: 20px; margin-right: 0.5rem;"></i> info@bakesmart.com</li>
+                    <li><i class="fas fa-map-marker-alt" style="width: 20px; margin-right: 0.5rem;"></i> San José, Costa Rica</li>
+                    <li><i class="fas fa-clock" style="width: 20px; margin-right: 0.5rem;"></i> Lun-Vie: 8am - 6pm</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>© 2026 BakeSmart Patri. Todos los derechos reservados. Diseñado con <i class="fas fa-heart" style="color: var(--secondary);"></i> para reposteros.</p>
+        </div>
+    </footer>
+
+    
+    <div id="toastContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;"></div>
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/bakesmart-store.js" asp-append-version="true"></script>
+
+    
+    @if (!string.IsNullOrEmpty(welcomeMessage))
+    {
+        <script>
+            (function() {
+                
+                document.addEventListener('DOMContentLoaded', function() {
+                    if (window.app && window.app.toast) {
+                        window.app.toast.show('@welcomeMessage', '@welcomeType');
+                    }
+                });
+            })();
+        </script>
+    }
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

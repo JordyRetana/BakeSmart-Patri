@@ -1,0 +1,432 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Producción";
+}
+
+
+<div class="page-header" style="margin: 2rem 0 2.5rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="width: 5px; height: 40px; background: var(--gradient-primary); border-radius: 5px;"></div>
+            <h1 style="margin: 0; font-size: 2.5rem; display: flex; align-items: center; gap: 0.75rem;">
+                <i class="fas fa-utensils" style="color: var(--primary);"></i>
+                Producción
+            </h1>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; margin-left: 1.25rem;">
+            <i class="fas fa-cog fa-spin" style="color: var(--primary);"></i>
+            <p class="text-muted" style="margin: 0; font-size: 0.95rem;">
+                Gestiona la cola de producción y el estado de los pedidos
+            </p>
+        </div>
+    </div>
+    <div style="display: flex; gap: 1rem; margin-right: 1.5rem;">
+        <span class="badge badge-info" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+            <i class="fas fa-calendar-day"></i>
+            @DateTime.Now.ToString("dddd, dd MMM", new System.Globalization.CultureInfo("es-ES"))
+        </span>
+    </div>
+</div>
+
+
+<div style="padding: 0 1.5rem;">
+    
+    <div class="grid grid-4" style="margin-bottom: 2rem;">
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 2rem; color: var(--warning); margin-bottom: 0.5rem;">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div style="font-size: 1.5rem; font-weight: 700;">3</div>
+            <div class="text-muted">Pendientes</div>
+        </div>
+
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 2rem; color: var(--info); margin-bottom: 0.5rem;">
+                <i class="fas fa-cog fa-spin"></i>
+            </div>
+            <div style="font-size: 1.5rem; font-weight: 700;">5</div>
+            <div class="text-muted">En proceso</div>
+        </div>
+
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 2rem; color: var(--success); margin-bottom: 0.5rem;">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div style="font-size: 1.5rem; font-weight: 700;">2</div>
+            <div class="text-muted">Hoy</div>
+        </div>
+
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 2rem; color: var(--danger); margin-bottom: 0.5rem;">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div style="font-size: 1.5rem; font-weight: 700;">1</div>
+            <div class="text-muted">Atrasados</div>
+        </div>
+    </div>
+
+    
+    <div class="grid grid-3" style="gap: 1.5rem; align-items: start;">
+        
+        <div class="card">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="margin: 0; display: flex; align-items: center;">
+                    <span style="width: 12px; height: 12px; background: var(--warning); display: inline-block; border-radius: 50%; margin-right: 0.5rem;"></span>
+                    Pendientes
+                </h3>
+                <span class="badge badge-warning">3</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1rem;" class="kanban-column">
+                <div class="card" draggable="true" style="cursor: move; border-left: 4px solid var(--warning);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <strong>#1014 - Andrea M.</strong>
+                        <span class="badge badge-warning">Pendiente pago</span>
+                    </div>
+                    <div>Cheesecake Frutos Rojos</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                        <span class="text-muted"><i class="fas fa-calendar"></i> 20/02</span>
+                        <button class="btn btn-primary btn-sm" onclick="startProduction(1014)">
+                            <i class="fas fa-play"></i> Iniciar
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card" draggable="true" style="cursor: move; border-left: 4px solid var(--info);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <strong>#1016 - Carlos R.</strong>
+                        <span class="badge badge-info">Confirmado</span>
+                    </div>
+                    <div>Brownie Clásico</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                        <span class="text-muted"><i class="fas fa-calendar"></i> 21/02</span>
+                        <button class="btn btn-primary btn-sm" onclick="startProduction(1016)">
+                            <i class="fas fa-play"></i> Iniciar
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card" draggable="true" style="cursor: move; border-left: 4px solid var(--info);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <strong>#1017 - Laura S.</strong>
+                        <span class="badge badge-info">Confirmado</span>
+                    </div>
+                    <div>Cupcakes (24 uni)</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                        <span class="text-muted"><i class="fas fa-calendar"></i> 22/02</span>
+                        <button class="btn btn-primary btn-sm" onclick="startProduction(1017)">
+                            <i class="fas fa-play"></i> Iniciar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <div class="card">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="margin: 0; display: flex; align-items: center;">
+                    <span style="width: 12px; height: 12px; background: var(--info); display: inline-block; border-radius: 50%; margin-right: 0.5rem;"></span>
+                    En Producción
+                </h3>
+                <span class="badge badge-info">5</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1rem;" class="kanban-column">
+                <div class="card" style="border-left: 4px solid var(--primary);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <strong>#1012 - María G.</strong>
+                        <span class="badge badge-success">Horneado</span>
+                    </div>
+                    <div>Red Velvet 1.5kg</div>
+                    <div class="progress" style="margin: 0.5rem 0;">
+                        <div class="progress-bar" style="width: 60%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="text-muted">60%</span>
+                        <div>
+                            <button class="btn btn-ghost btn-sm" onclick="updateProgress(1012)" title="Actualizar progreso">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="border-left: 4px solid var(--warning);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <strong>#1015 - Luis P.</strong>
+                        <span class="badge badge-warning">Decoración</span>
+                    </div>
+                    <div>Torta Unicornio</div>
+                    <div class="progress" style="margin: 0.5rem 0;">
+                        <div class="progress-bar" style="width: 75%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="text-muted">75%</span>
+                        <button class="btn btn-ghost btn-sm" onclick="updateProgress(1015)" title="Actualizar progreso">
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card" style="border-left: 4px solid var(--success);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <strong>#1013 - Clínica SF</strong>
+                        <span class="badge badge-success">Empaque</span>
+                    </div>
+                    <div>120 Cupcakes</div>
+                    <div class="progress" style="margin: 0.5rem 0;">
+                        <div class="progress-bar" style="width: 90%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="text-muted">90%</span>
+                        <button class="btn btn-success btn-sm" onclick="completeProduction(1013)" title="Completar">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <div class="card">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="margin: 0; display: flex; align-items: center;">
+                    <span style="width: 12px; height: 12px; background: var(--success); display: inline-block; border-radius: 50%; margin-right: 0.5rem;"></span>
+                    Completados Hoy
+                </h3>
+                <span class="badge badge-success">2</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="card" style="background: #d1fae5; border: 1px solid #a7f3d0;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <strong>#1009 - Miguel A.</strong>
+                        <span class="badge badge-success">Entregado</span>
+                    </div>
+                    <div>Tres Leches</div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                        <i class="fas fa-clock text-muted" style="font-size: 0.75rem;"></i>
+                        <span class="text-muted">Completado: 10:30 AM</span>
+                    </div>
+                </div>
+
+                <div class="card" style="background: #d1fae5; border: 1px solid #a7f3d0;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <strong>#1010 - Ana S.</strong>
+                        <span class="badge badge-success">Entregado</span>
+                    </div>
+                    <div>Galletas Decoradas</div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                        <i class="fas fa-clock text-muted" style="font-size: 0.75rem;"></i>
+                        <span class="text-muted">Completado: 2:15 PM</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="card" style="margin-top: 2rem;">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-clock" style="color: var(--primary);"></i>
+                Programación del día
+            </h3>
+            <span class="badge badge-info">@DateTime.Now.ToString("dd/MM/yyyy")</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 80px; font-weight: 700; color: var(--primary);">8:00 AM</div>
+                <div style="flex: 1; height: 2px; background: var(--border); position: relative;">
+                    <div style="position: absolute; top: -6px; left: 0; width: 12px; height: 12px; background: var(--primary); border-radius: 50%; box-shadow: 0 0 0 2px var(--primary-light);"></div>
+                </div>
+                <div style="width: 200px; background: var(--bg-alt); padding: 0.5rem; border-radius: var(--radius);">Inicio de jornada</div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 80px; font-weight: 700; color: var(--warning);">9:30 AM</div>
+                <div style="flex: 1; height: 2px; background: var(--border); position: relative;">
+                    <div style="position: absolute; top: -6px; left: 25%; width: 12px; height: 12px; background: var(--warning); border-radius: 50%; box-shadow: 0 0 0 2px #fef3c7;"></div>
+                </div>
+                <div style="width: 200px; background: var(--bg-alt); padding: 0.5rem; border-radius: var(--radius);">Revisión de pedidos</div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 80px; font-weight: 700; color: var(--success);">11:00 AM</div>
+                <div style="flex: 1; height: 2px; background: var(--border); position: relative;">
+                    <div style="position: absolute; top: -6px; left: 45%; width: 12px; height: 12px; background: var(--success); border-radius: 50%; box-shadow: 0 0 0 2px #d1fae5;"></div>
+                </div>
+                <div style="width: 200px; background: var(--bg-alt); padding: 0.5rem; border-radius: var(--radius);">Entrega #1012</div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 80px; font-weight: 700; color: var(--info);">2:00 PM</div>
+                <div style="flex: 1; height: 2px; background: var(--border); position: relative;">
+                    <div style="position: absolute; top: -6px; left: 70%; width: 12px; height: 12px; background: var(--info); border-radius: 50%; box-shadow: 0 0 0 2px #dbeafe;"></div>
+                </div>
+                <div style="width: 200px; background: var(--bg-alt); padding: 0.5rem; border-radius: var(--radius);">Inicio producción #1015</div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 80px; font-weight: 700; color: var(--danger);">4:00 PM</div>
+                <div style="flex: 1; height: 2px; background: var(--border); position: relative;">
+                    <div style="position: absolute; top: -6px; left: 90%; width: 12px; height: 12px; background: var(--danger); border-radius: 50%; box-shadow: 0 0 0 2px #fee2e2;"></div>
+                </div>
+                <div style="width: 200px; background: var(--bg-alt); padding: 0.5rem; border-radius: var(--radius);">Entrega #1013</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function startProduction(orderId) {
+        if (typeof app !== 'undefined' && app.modal) {
+            app.modal.create({
+                title: 'Iniciar producción',
+                message: `¿Iniciar producción del pedido #${orderId}?`,
+                confirmText: 'Iniciar',
+                onConfirm: () => {
+                    if (app.toast) {
+                        app.toast.success(`Producción iniciada para pedido #${orderId}`);
+                    } else {
+                        alert(`Producción iniciada para pedido #${orderId}`);
+                    }
+                }
+            });
+        } else {
+            if (confirm(`¿Iniciar producción del pedido #${orderId}?`)) {
+                alert(`Producción iniciada para pedido #${orderId}`);
+            }
+        }
+    }
+
+    function updateProgress(orderId) {
+        if (typeof app !== 'undefined' && app.toast) {
+            app.toast.info(`Actualizando progreso del pedido #${orderId}`);
+        } else {
+            alert(`Actualizando progreso del pedido #${orderId}`);
+        }
+    }
+
+    function completeProduction(orderId) {
+        if (typeof app !== 'undefined' && app.modal) {
+            app.modal.create({
+                title: 'Completar producción',
+                message: `¿Marcar como completado el pedido #${orderId}?`,
+                confirmText: 'Completar',
+                onConfirm: () => {
+                    if (app.toast) {
+                        app.toast.success(`Pedido #${orderId} completado`);
+                    } else {
+                        alert(`Pedido #${orderId} completado`);
+                    }
+                }
+            });
+        } else {
+            if (confirm(`¿Marcar como completado el pedido #${orderId}?`)) {
+                alert(`Pedido #${orderId} completado`);
+            }
+        }
+    }
+
+    function reorderQueue() {
+        if (typeof app !== 'undefined' && app.toast) {
+            app.toast.info('Reordenando cola de producción...');
+            setTimeout(() => {
+                app.toast.success('Cola reordenada por prioridad');
+            }, 1000);
+        } else {
+            alert('Reordenando cola de producción...');
+        }
+    }
+
+    function printProduction() {
+        if (typeof app !== 'undefined' && app.toast) {
+            app.toast.info('Preparando impresión...');
+            setTimeout(() => {
+                app.toast.success('Lista enviada a imprimir');
+            }, 1000);
+        } else {
+            alert('Preparando impresión...');
+        }
+    }
+
+    
+    const draggables = document.querySelectorAll('[draggable="true"]');
+    const containers = document.querySelectorAll('.kanban-column');
+
+    draggables.forEach(draggable => {
+        draggable.addEventListener('dragstart', () => {
+            draggable.classList.add('dragging');
+        });
+
+        draggable.addEventListener('dragend', () => {
+            draggable.classList.remove('dragging');
+        });
+    });
+
+    containers.forEach(container => {
+        container.addEventListener('dragover', e => {
+            e.preventDefault();
+            const draggable = document.querySelector('.dragging');
+            if (draggable) {
+                container.appendChild(draggable);
+            }
+        });
+    });
+</script>
+
+<style>
+    
+    .dragging {
+        opacity: 0.5;
+        transform: scale(0.98);
+    }
+
+    .kanban-column {
+        min-height: 200px;
+    }
+
+    [draggable="true"] {
+        user-select: none;
+    }
+
+    
+    .badge-success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .badge-warning {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge-info {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    
+    .dark .badge-success {
+        background: rgba(16, 185, 129, 0.2);
+        color: #10b981;
+    }
+
+    .dark .badge-warning {
+        background: rgba(245, 158, 11, 0.2);
+        color: #f59e0b;
+    }
+
+    .dark .badge-info {
+        background: rgba(59, 130, 246, 0.2);
+        color: #3b82f6;
+    }
+
+    .dark [style*="background: #d1fae5"] {
+        background: rgba(16, 185, 129, 0.1) !important;
+        border-color: rgba(16, 185, 129, 0.3) !important;
+    }
+</style>

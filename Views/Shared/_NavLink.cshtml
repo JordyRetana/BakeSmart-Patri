@@ -1,0 +1,17 @@
+﻿@model dynamic
+@{
+    string text = Model.Text;
+    string url = Model.Url;
+    string icon = Model.Icon;
+
+    var current = Context.Request.Path.Value?.ToLowerInvariant() ?? "";
+    var isActive = url.ToLowerInvariant() == current;
+}
+<a href="@url"
+   class="flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm border
+          @(isActive
+               ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-950 dark:border-white"
+               : "border-transparent hover:border-slate-200 dark:hover:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900")">
+    <span class="w-8 h-8 rounded-2xl flex items-center justify-center bg-slate-100 dark:bg-slate-900">@icon</span>
+    <span class="font-medium">@text</span>
+</a>

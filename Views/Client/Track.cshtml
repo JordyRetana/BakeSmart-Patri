@@ -1,0 +1,826 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Seguimiento";
+}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+<div class="page-shell track-page track-page--loading" id="trackPage">
+    <div class="page-header track-header">
+        <div>
+            <h1 class="track-title">
+                <i class="fas fa-route"></i>
+                Seguimiento inteligente del pedido
+            </h1>
+            <p class="text-muted track-subtitle">
+                Las salidas parten desde Sagrada Familia y el mapa diferencia entregas locales y rutas internacionales con una trayectoria visual más clara.
+            </p>
+        </div>
+
+        <div class="track-toolbar">
+            <select id="trackOrderSelect" class="form-control track-select"></select>
+            <select id="trackPresetSelect" class="form-control track-select-secondary"></select>
+        </div>
+    </div>
+
+    <div class="grid grid-4 track-kpis">
+        <div class="card metric-card">
+            <div class="text-muted">Pedido</div>
+            <h2 id="trackOrderId"></h2>
+        </div>
+        <div class="card metric-card">
+            <div class="text-muted">Estado</div>
+            <h2 id="trackStatus"></h2>
+        </div>
+        <div class="card metric-card">
+            <div class="text-muted">Tipo de ruta</div>
+            <h2 id="trackRouteType"></h2>
+        </div>
+        <div class="card metric-card">
+            <div class="text-muted">Destino</div>
+            <h2 id="trackDestinationCountry"></h2>
+        </div>
+    </div>
+
+    <div class="track-layout">
+        <div class="card track-map-card">
+            <div class="track-map-header">
+                <div>
+                    <h3 class="track-section-title">Trayectoria visual</h3>
+                    <div id="trackMeta" class="text-muted track-map-meta">Calculando ruta…</div>
+                </div>
+
+                <div class="map-legend">
+                    <span><i class="fas fa-store"></i> Origen</span>
+                    <span><i class="fas fa-motorcycle"></i> Entrega local</span>
+                    <span><i class="fas fa-plane"></i> Ruta internacional</span>
+                    <span><i class="fas fa-location-dot"></i> Destino</span>
+                </div>
+            </div>
+
+            <div id="deliveryMap" class="delivery-map"></div>
+        </div>
+
+        <div class="track-side-stack">
+            <div class="card">
+                <div class="track-side-header">
+                    <h3 class="track-section-title">Progreso del pedido</h3>
+                    <button class="btn btn-primary btn-sm" id="simulateRoute" type="button">
+                        <i class="fas fa-truck-fast"></i>
+                        Simular avance
+                    </button>
+                </div>
+                <div id="trackingTimeline" class="tracking-timeline"></div>
+            </div>
+
+            <div class="card">
+                <h3 class="track-section-title track-summary-title">Resumen logístico</h3>
+                <div id="trackingSummary" class="tracking-summary text-muted"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .track-page {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        transition: opacity .18s ease, transform .18s ease;
+    }
+
+    .track-page,
+    .track-page * {
+        min-width: 0;
+    }
+
+    .track-page--loading {
+        opacity: 0;
+        transform: translateY(4px);
+        pointer-events: none;
+    }
+
+    .track-page--ready {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+
+    .track-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .track-title {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+    }
+
+    .track-title i {
+        color: var(--primary);
+    }
+
+    .track-subtitle {
+        margin: .35rem 0 0;
+    }
+
+    .track-kpis {
+        gap: 1rem;
+        margin-bottom: 0;
+    }
+
+    .track-kpis .metric-card h2 {
+        margin: .35rem 0 0;
+    }
+
+    .track-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.7fr) minmax(320px, .9fr);
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .track-map-card,
+    .track-side-stack > .card {
+        align-self: start;
+    }
+
+    .track-side-stack {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .track-map-header,
+    .track-side-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .track-section-title {
+        margin: 0;
+        font-size: 1.15rem;
+    }
+
+    .track-map-meta {
+        margin-top: .35rem;
+    }
+
+    .track-summary-title {
+        margin-bottom: 1rem;
+    }
+
+    .track-toolbar {
+        display: flex;
+        gap: .75rem;
+        flex-wrap: wrap;
+    }
+
+    .track-select,
+    .track-select-secondary {
+        min-width: 260px;
+    }
+
+    .delivery-map {
+        height: 560px;
+        border-radius: 22px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(191,219,254,.35), rgba(255,255,255,.8));
+    }
+
+    .map-legend {
+        display: flex;
+        gap: .75rem;
+        flex-wrap: wrap;
+    }
+
+    .map-legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: .45rem;
+        padding: .45rem .7rem;
+        border-radius: 999px;
+        background: var(--bg-alt);
+        border: 1px solid var(--border);
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    .tracking-timeline {
+        display: grid;
+        gap: .95rem;
+    }
+
+    .timeline-item {
+        display: grid;
+        grid-template-columns: 42px 1fr;
+        gap: .85rem;
+        align-items: start;
+    }
+
+    .timeline-dot {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: var(--shadow-sm);
+        color: white;
+    }
+
+    .timeline-done .timeline-dot { background: linear-gradient(135deg, #10b981, #059669); }
+    .timeline-current .timeline-dot { background: linear-gradient(135deg, #8b5cf6, #ec4899); }
+    .timeline-pending .timeline-dot { background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
+
+    .timeline-title {
+        font-weight: 700;
+        margin-bottom: .15rem;
+    }
+
+    .tracking-summary {
+        display: grid;
+        gap: .8rem;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: .9rem 1rem;
+        border-radius: 16px;
+        background: color-mix(in srgb, var(--bg-alt) 82%, white 18%);
+        border: 1px solid var(--border);
+    }
+
+    .summary-row span {
+        color: var(--text-muted);
+        font-size: .8rem;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+    }
+
+    .summary-row strong {
+        color: var(--text);
+        text-align: right;
+    }
+
+    .leaflet-container {
+        font: inherit;
+    }
+
+    .leaflet-control-zoom {
+        border: none !important;
+        box-shadow: 0 14px 28px rgba(15, 23, 42, .12) !important;
+        border-radius: 16px !important;
+        overflow: hidden;
+    }
+
+    .leaflet-control-zoom a {
+        width: 36px !important;
+        height: 36px !important;
+        line-height: 36px !important;
+        color: var(--text) !important;
+        background: rgba(255,255,255,.94) !important;
+        border: none !important;
+    }
+
+    .leaflet-popup-content-wrapper,
+    .leaflet-popup-tip {
+        background: var(--bg-card);
+        color: var(--text);
+    }
+
+    .track-page .card:hover {
+        transform: none;
+        box-shadow: var(--shadow-sm);
+        border-color: var(--border);
+    }
+
+    .track-page .card:hover::after {
+        opacity: 0;
+    }
+
+    .track-page .btn:hover,
+    .track-page .btn-primary:hover,
+    .track-page .btn-outline:hover,
+    .track-page .btn-secondary:hover,
+    .track-page .btn-ghost:hover {
+        transform: none;
+    }
+
+    .leaflet-div-icon {
+        background: transparent;
+        border: none;
+    }
+
+    .map-pin-wrap {
+        position: relative;
+        width: 58px;
+        height: 58px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .map-pin-core {
+        position: relative;
+        z-index: 2;
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        border: 4px solid rgba(255,255,255,.96);
+        box-shadow:
+            0 18px 36px rgba(15, 23, 42, .18),
+            0 4px 12px rgba(15, 23, 42, .12);
+        font-size: 1rem;
+    }
+
+    .map-pin-pulse {
+        position: absolute;
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        z-index: 1;
+        animation: trackPulse 2s ease-out infinite;
+        opacity: .42;
+    }
+
+    .map-pin-origin .map-pin-core {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    }
+
+    .map-pin-origin .map-pin-pulse {
+        background: rgba(139, 92, 246, .22);
+    }
+
+    .map-pin-destination .map-pin-core {
+        background: linear-gradient(135deg, #f97316, #ea580c);
+    }
+
+    .map-pin-destination .map-pin-pulse {
+        background: rgba(249, 115, 22, .22);
+    }
+
+    .map-pin-courier .map-pin-core {
+        background: linear-gradient(135deg, #10b981, #0f766e);
+    }
+
+    .map-pin-courier .map-pin-pulse {
+        background: rgba(16, 185, 129, .22);
+    }
+
+    .map-pin-plane .map-pin-core {
+        background: linear-gradient(135deg, #0ea5e9, #2563eb);
+    }
+
+    .map-pin-plane .map-pin-pulse {
+        background: rgba(14, 165, 233, .22);
+    }
+
+    .map-pin-static .map-pin-pulse {
+        animation: none;
+        opacity: .22;
+        transform: scale(1.14);
+    }
+
+    .map-pin-moving .map-pin-pulse {
+        animation-duration: 1.35s;
+        opacity: .48;
+    }
+
+    @@keyframes trackPulse {
+        0% {
+            transform: scale(.88);
+            opacity: .46;
+        }
+        72% {
+            transform: scale(1.68);
+            opacity: 0;
+        }
+        100% {
+            transform: scale(1.68);
+            opacity: 0;
+        }
+    }
+
+    @@media (max-width: 1080px) {
+        .track-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .track-toolbar {
+            width: 100%;
+        }
+
+        .track-select,
+        .track-select-secondary {
+            min-width: 100%;
+        }
+
+        .delivery-map {
+            height: 420px;
+        }
+
+        .summary-row {
+            flex-direction: column;
+        }
+
+        .summary-row strong {
+            text-align: left;
+        }
+    }
+</style>
+
+@section Scripts {
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(() => {
+    const page = document.getElementById('trackPage');
+    const origin = BakeSmartStore.geo.origin();
+    const presetSelect = document.getElementById('trackPresetSelect');
+    const orderSelect = document.getElementById('trackOrderSelect');
+    const simulateButton = document.getElementById('simulateRoute');
+    const userEmail = document.body.dataset.userEmail || 'cliente@demo.com';
+
+    const presetOptions = [
+        { id: 'auto', name: 'Destino real del pedido', country: '—' },
+        ...BakeSmartStore.geo.presets().map(p => ({ id: p.id, name: p.name, country: p.country }))
+    ];
+
+    let map;
+    let markers = [];
+    let layers = [];
+    let animationTimer = null;
+    let activeOrderId = null;
+    let activeAnimatedMarker = null;
+    let pageInitialized = false;
+
+    function showPage() {
+        page.classList.remove('track-page--loading');
+        page.classList.add('track-page--ready');
+    }
+
+    function createPinHtml(iconClass, extraClass = '', staticPulse = false) {
+        return `
+            <div class="map-pin-wrap ${extraClass} ${staticPulse ? 'map-pin-static' : 'map-pin-moving'}">
+                <div class="map-pin-pulse"></div>
+                <div class="map-pin-core">
+                    <i class="fas ${iconClass}"></i>
+                </div>
+            </div>
+        `;
+    }
+
+    const icons = {
+        origin: L.divIcon({
+            className: 'map-pin-origin',
+            html: createPinHtml('fa-store', 'map-pin-origin', true),
+            iconSize: [58, 58],
+            iconAnchor: [29, 29],
+            popupAnchor: [0, -24]
+        }),
+        destination: L.divIcon({
+            className: 'map-pin-destination',
+            html: createPinHtml('fa-location-dot', 'map-pin-destination', true),
+            iconSize: [58, 58],
+            iconAnchor: [29, 29],
+            popupAnchor: [0, -24]
+        }),
+        courier: L.divIcon({
+            className: 'map-pin-courier',
+            html: createPinHtml('fa-motorcycle', 'map-pin-courier'),
+            iconSize: [58, 58],
+            iconAnchor: [29, 29],
+            popupAnchor: [0, -24]
+        }),
+        plane: L.divIcon({
+            className: 'map-pin-plane',
+            html: createPinHtml('fa-plane', 'map-pin-plane'),
+            iconSize: [58, 58],
+            iconAnchor: [29, 29],
+            popupAnchor: [0, -24]
+        })
+    };
+
+    function getOrders() {
+        const own = BakeSmartStore.orders.byClient(userEmail);
+        return own.length ? own : BakeSmartStore.orders.list();
+    }
+
+    function ensureMap() {
+        if (map) return map;
+
+        map = L.map('deliveryMap', {
+            zoomControl: true,
+            worldCopyJump: true,
+            preferCanvas: true
+        }).setView([origin.lat, origin.lng], 10);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            subdomains: 'abcd',
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap &copy; CARTO'
+        }).addTo(map);
+
+        return map;
+    }
+
+    function clearVisuals() {
+        markers.forEach(m => m.remove());
+        layers.forEach(l => l.remove());
+        markers = [];
+        layers = [];
+
+        if (animationTimer) {
+            clearInterval(animationTimer);
+            animationTimer = null;
+        }
+
+        if (activeAnimatedMarker) {
+            activeAnimatedMarker.remove();
+            activeAnimatedMarker = null;
+        }
+    }
+
+    function interpolate(start, end, t) {
+        return [
+            start[0] + ((end[0] - start[0]) * t),
+            start[1] + ((end[1] - start[1]) * t)
+        ];
+    }
+
+    function curveBetween(start, end, isInternational, bendDirection = 1) {
+        const steps = isInternational ? 64 : 26;
+        const dx = end[1] - start[1];
+        const dy = end[0] - start[0];
+        const distance = Math.sqrt((dx * dx) + (dy * dy)) || 0.001;
+
+        const mid = [
+            (start[0] + end[0]) / 2,
+            (start[1] + end[1]) / 2
+        ];
+
+        const perpendicular = [-(dx / distance), dy / distance];
+        const bend = isInternational
+            ? Math.min(Math.max(distance * 0.16, 0.18), 0.55)
+            : Math.min(Math.max(distance * 0.06, 0.01), 0.035);
+
+        const control = [
+            mid[0] + (perpendicular[0] * bend * bendDirection),
+            mid[1] + (perpendicular[1] * bend * bendDirection)
+        ];
+
+        const points = [];
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const lat = ((1 - t) * (1 - t) * start[0]) + (2 * (1 - t) * t * control[0]) + (t * t * end[0]);
+            const lng = ((1 - t) * (1 - t) * start[1]) + (2 * (1 - t) * t * control[1]) + (t * t * end[1]);
+            points.push([lat, lng]);
+        }
+
+        return points;
+    }
+
+    function buildLocalRoute(start, end, progressStep) {
+        const operationPoint = interpolate(start, end, 0.45);
+        operationPoint[0] += 0.012;
+        operationPoint[1] -= 0.01;
+
+        const firstLeg = curveBetween(start, operationPoint, false, -1);
+        const secondLeg = curveBetween(operationPoint, end, false, 1);
+        const combined = [...firstLeg, ...secondLeg.slice(1)];
+
+        const normalized = Math.min(Math.max((progressStep || 0) / 4, 0.12), 0.94);
+        const courierIndex = Math.min(combined.length - 1, Math.max(0, Math.round(normalized * (combined.length - 1))));
+
+        return {
+            operationPoint,
+            firstLeg,
+            secondLeg,
+            combined,
+            courierLatLng: combined[courierIndex]
+        };
+    }
+
+    function animateMarker(points, icon) {
+        if (!points.length) return;
+
+        activeAnimatedMarker = L.marker(points[0], { icon }).addTo(map);
+
+        let index = 0;
+        animationTimer = setInterval(() => {
+            index = (index + 1) % points.length;
+            activeAnimatedMarker.setLatLng(points[index]);
+        }, 120);
+    }
+
+    function activePreset(order) {
+        const presetId = presetSelect.value;
+
+        if (!presetId || presetId === 'auto') {
+            return BakeSmartStore.geo.resolveDestination(order.address, {
+                lat: order.tracking.destinationLat,
+                lng: order.tracking.destinationLng
+            });
+        }
+
+        const preset = BakeSmartStore.geo.presets().find(p => p.id === presetId);
+        return BakeSmartStore.geo.resolveDestination(preset?.name || order.address, preset || {});
+    }
+
+    function renderTimeline(order, destination) {
+        const currentStep = order.tracking.currentStep || 0;
+        const isInternational = destination.country !== 'Costa Rica';
+        const extraLabel = isInternational ? 'Salida aérea internacional' : 'Ruta terrestre metropolitana';
+        const steps = [...order.tracking.steps];
+
+        if (!steps.includes(extraLabel)) {
+            steps.splice(4, 0, extraLabel);
+        }
+
+        document.getElementById('trackingTimeline').innerHTML = steps.map((step, index) => {
+            const normalizedCurrent = isInternational && currentStep >= 3 ? currentStep + 1 : currentStep;
+            const state = index < normalizedCurrent ? 'done' : index === normalizedCurrent ? 'current' : 'pending';
+            const icon = state === 'done' ? 'fa-check' : state === 'current' ? 'fa-bolt' : 'fa-clock';
+
+            return `
+                <div class="timeline-item timeline-${state}">
+                    <div class="timeline-dot"><i class="fas ${icon}"></i></div>
+                    <div class="timeline-content">
+                        <div class="timeline-title">${step}</div>
+                        <div class="text-muted">${state === 'done' ? 'Completado' : state === 'current' ? 'Estado actual' : 'Pendiente'}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderOrder(orderId) {
+        const orders = getOrders();
+        const order = orders.find(x => Number(x.id) === Number(orderId)) || orders[0];
+        if (!order) return;
+
+        activeOrderId = order.id;
+
+        const destination = activePreset(order);
+        const isInternational = destination.country !== 'Costa Rica';
+        const routeType = isInternational ? 'Trayectoria aérea' : 'Trayecto local';
+        const mapInstance = ensureMap();
+
+        document.getElementById('trackOrderId').textContent = `#${order.id}`;
+        document.getElementById('trackStatus').textContent = order.status;
+        document.getElementById('trackRouteType').textContent = routeType;
+        document.getElementById('trackDestinationCountry').textContent = destination.country;
+        document.getElementById('trackMeta').textContent = `${origin.city}, ${origin.country} → ${destination.name}, ${destination.country}`;
+
+        clearVisuals();
+
+        const startLatLng = [origin.lat, origin.lng];
+        const destinationLatLng = [destination.lat, destination.lng];
+        const flightPath = curveBetween(startLatLng, destinationLatLng, true, -1);
+        const localRoute = buildLocalRoute(startLatLng, destinationLatLng, order.tracking.currentStep || 0);
+
+        const originMarker = L.marker(startLatLng, { icon: icons.origin }).addTo(mapInstance).bindPopup(origin.name);
+        const destinationMarker = L.marker(destinationLatLng, { icon: icons.destination }).addTo(mapInstance).bindPopup(destination.name);
+
+        markers.push(originMarker, destinationMarker);
+
+        if (isInternational) {
+            const routeShadow = L.polyline(flightPath, {
+                color: '#c4b5fd',
+                weight: 10,
+                opacity: .20,
+                smoothFactor: 1.4
+            }).addTo(mapInstance);
+
+            const route = L.polyline(flightPath, {
+                color: '#8b5cf6',
+                weight: 4,
+                dashArray: '10 14',
+                opacity: .95,
+                smoothFactor: 1.4
+            }).addTo(mapInstance);
+
+            layers.push(routeShadow, route);
+            animateMarker(flightPath, icons.plane);
+        } else {
+            const operationMarker = L.marker(localRoute.operationPoint, {
+                icon: icons.courier
+            }).addTo(mapInstance).bindPopup('Operación local');
+
+            const firstLeg = L.polyline(localRoute.firstLeg, {
+                color: '#f59e0b',
+                weight: 4,
+                opacity: .82,
+                dashArray: '6 10',
+                smoothFactor: 1.2
+            }).addTo(mapInstance);
+
+            const secondLeg = L.polyline(localRoute.secondLeg, {
+                color: '#10b981',
+                weight: 4,
+                opacity: .95,
+                smoothFactor: 1.2
+            }).addTo(mapInstance);
+
+            markers.push(operationMarker);
+            layers.push(firstLeg, secondLeg);
+            animateMarker(localRoute.secondLeg, icons.courier);
+        }
+
+        const fitPoints = isInternational
+            ? [startLatLng, destinationLatLng, ...flightPath]
+            : localRoute.combined;
+
+        mapInstance.fitBounds(L.latLngBounds(fitPoints), { padding: [48, 48] });
+
+        requestAnimationFrame(() => {
+            mapInstance.invalidateSize(true);
+        });
+
+        renderTimeline(order, destination);
+
+        document.getElementById('trackingSummary').innerHTML = `
+            <div class="summary-row"><span>Origen</span><strong>${origin.name}</strong></div>
+            <div class="summary-row"><span>Cliente</span><strong>${order.customerName}</strong></div>
+            <div class="summary-row"><span>Dirección</span><strong>${order.address}</strong></div>
+            <div class="summary-row"><span>Destino visual</span><strong>${destination.name}</strong></div>
+            <div class="summary-row"><span>Modalidad</span><strong>${routeType}</strong></div>
+            <div class="summary-row"><span>Entrega</span><strong>${new Date(order.deliveryDate).toLocaleDateString('es-CR')}</strong></div>
+            <div class="summary-row"><span>Productos</span><strong>${order.items.map(i => `${i.quantity} x ${i.name}`).join(', ')}</strong></div>
+            <div class="summary-row"><span>Pago</span><strong>${order.paymentStatus} (${order.paymentMethod || 'Pendiente'})</strong></div>
+        `;
+    }
+
+    function renderSelector() {
+        const orders = getOrders();
+
+        orderSelect.innerHTML = orders.map(o =>
+            `<option value="${o.id}">#${o.id} · ${o.customerName} · ${o.status}</option>`
+        ).join('');
+
+        presetSelect.innerHTML = presetOptions.map(p =>
+            `<option value="${p.id}">${p.name}${p.country && p.country !== '—' ? ` · ${p.country}` : ''}</option>`
+        ).join('');
+
+        renderOrder(orders[0]?.id);
+    }
+
+    orderSelect.addEventListener('change', () => renderOrder(orderSelect.value));
+    presetSelect.addEventListener('change', () => renderOrder(orderSelect.value));
+
+    simulateButton.addEventListener('click', () => {
+        try {
+            const current = BakeSmartStore.orders.list().find(x => x.id === Number(activeOrderId));
+            if (!current) return;
+
+            if (current.status === 'Listo') {
+                BakeSmartStore.orders.updateStatus(current.id, 'En camino');
+            }
+
+            BakeSmartStore.orders.simulateTracking(current.id);
+            app.toast.info('Ubicación del pedido actualizada.');
+            renderOrder(current.id);
+        } catch (error) {
+            app.toast.error(error.message);
+        }
+    });
+
+    function initializePage() {
+        if (pageInitialized) return;
+        pageInitialized = true;
+
+        renderSelector();
+
+        requestAnimationFrame(() => {
+            showPage();
+            if (map) {
+                map.invalidateSize(true);
+            }
+        });
+    }
+
+    if (document.readyState === 'complete') {
+        initializePage();
+    } else {
+        window.addEventListener('load', initializePage, { once: true });
+    }
+})();
+</script>
+}

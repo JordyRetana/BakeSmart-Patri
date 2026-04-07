@@ -1,0 +1,160 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Reportes";
+}
+<div class="page-shell">
+    <div class="page-header" style="margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+        <div>
+            <h1 style="margin:0; display:flex; align-items:center; gap:.75rem;"><i class="fas fa-chart-column" style="color:var(--primary);"></i> Reportería operativa y administrativa</h1>
+            <p class="text-muted" style="margin:.35rem 0 0;">Ventas, inventario, usuarios, pedidos, promociones y cierres de caja con exportación CSV.</p>
+        </div>
+        <div class="grid grid-2" style="gap:.75rem;">
+            <input id="reportStart" class="form-control" type="date" />
+            <input id="reportEnd" class="form-control" type="date" />
+        </div>
+    </div>
+
+    <div class="grid grid-3" style="gap:1rem; margin-bottom:1rem;">
+        <div class="card"><div class="text-muted">Bitácora de reportes</div><h2 id="reportAuditCount" style="margin:0;"></h2></div>
+        <div class="card"><div class="text-muted">Usuarios activos</div><h2 id="reportUsersKpi" style="margin:0;"></h2></div>
+        <div class="card"><div class="text-muted">Pedidos del periodo</div><h2 id="reportOrdersKpi" style="margin:0;"></h2></div>
+    </div>
+
+    <div class="grid grid-3" style="gap:1rem;">
+        <div class="card">
+            <h3 style="margin-top:0;">Ventas</h3>
+            <p class="text-muted">Consulta por rango, total de ingresos y exportable.</p>
+            <button class="btn btn-primary" onclick="loadReport('sales')">Ver reporte</button>
+        </div>
+        <div class="card">
+            <h3 style="margin-top:0;">Inventario</h3>
+            <p class="text-muted">Existencias, bajo stock e inconsistencias.</p>
+            <button class="btn btn-primary" onclick="loadReport('inventory')">Ver reporte</button>
+        </div>
+        <div class="card">
+            <h3 style="margin-top:0;">Usuarios</h3>
+            <p class="text-muted">Listado de usuarios y cantidad de activos.</p>
+            <button class="btn btn-primary" onclick="loadReport('users')">Ver reporte</button>
+        </div>
+        <div class="card">
+            <h3 style="margin-top:0;">Promociones</h3>
+            <p class="text-muted">Promociones activas y fechas.</p>
+            <button class="btn btn-primary" onclick="loadReport('promotions')">Ver reporte</button>
+        </div>
+        <div class="card">
+            <h3 style="margin-top:0;">Cierres de caja</h3>
+            <p class="text-muted">Fechas de cierre, responsables y ventas.</p>
+            <button class="btn btn-primary" onclick="loadReport('cashClosures')">Ver reporte</button>
+        </div>
+        <div class="card">
+            <h3 style="margin-top:0;">Pedidos</h3>
+            <p class="text-muted">Historial de pedidos por rango.</p>
+            <button class="btn btn-primary" onclick="loadReport('orders')">Ver reporte</button>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:1rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+            <div>
+                <h3 id="reportTitle" style="margin:0;">Selecciona un reporte</h3>
+                <div id="reportMeta" class="text-muted" style="margin-top:.35rem;">Todavía no hay datos cargados.</div>
+            </div>
+            <button id="exportReportBtn" class="btn btn-outline" disabled><i class="fas fa-file-csv"></i> Exportar CSV</button>
+        </div>
+        <div class="table-container" style="margin-top:1rem;">
+            <table class="table">
+                <thead id="reportHead"></thead>
+                <tbody id="reportBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@section Scripts {
+<script>
+(() => {
+    let currentRows = [];
+    let currentName = '';
+
+    function dates() {
+        return {
+            start: document.getElementById('reportStart').value,
+            end: document.getElementById('reportEnd').value
+        };
+    }
+
+    function renderKpis() {
+        document.getElementById('reportAuditCount').textContent = BakeSmartStore.logs().filter(x => x.type.includes('REPORTE') || x.type.includes('EXPORTAR')).length;
+        document.getElementById('reportUsersKpi').textContent = BakeSmartStore.reports.users().activeUsers;
+        document.getElementById('reportOrdersKpi').textContent = BakeSmartStore.orders.list().length;
+    }
+
+    function drawTable(title, rows, meta) {
+        currentRows = rows;
+        currentName = title.toLowerCase().replaceAll(' ', '_');
+        document.getElementById('reportTitle').textContent = title;
+        document.getElementById('reportMeta').textContent = meta;
+        const headers = Object.keys(rows[0] || {});
+        document.getElementById('reportHead').innerHTML = headers.length ? `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>` : '';
+        document.getElementById('reportBody').innerHTML = rows.length ? rows.map(row => `<tr>${headers.map(h => `<td>${row[h] ?? ''}</td>`).join('')}</tr>`).join('') : `<tr><td class="text-center text-muted">No existen datos para este reporte.</td></tr>`;
+        document.getElementById('exportReportBtn').disabled = !rows.length;
+    }
+
+    window.loadReport = (type) => {
+        try {
+            const { start, end } = dates();
+            if (start && end && new Date(end) < new Date(start)) throw new Error('La fecha final no puede ser menor a la inicial.');
+            switch (type) {
+                case 'sales': {
+                    const r = BakeSmartStore.reports.sales(start, end);
+                    drawTable('Reporte de ventas', r.rows, `Ingresos: ${app.utils.formatCurrency(r.totalIncome)} | Transacciones: ${r.totalTransactions}`);
+                    break;
+                }
+                case 'inventory': {
+                    const r = BakeSmartStore.reports.inventory();
+                    drawTable('Reporte de inventario', r.rows, `Stock bajo: ${r.lowStock} | Inconsistencias: ${r.negativeStock}`);
+                    break;
+                }
+                case 'users': {
+                    const r = BakeSmartStore.reports.users();
+                    drawTable('Reporte de usuarios', r.rows, `Usuarios activos: ${r.activeUsers}`);
+                    break;
+                }
+                case 'promotions': {
+                    const r = BakeSmartStore.reports.promotions(start, end);
+                    drawTable('Reporte de promociones', r.rows, `Promociones activas: ${r.activePromotions}`);
+                    break;
+                }
+                case 'cashClosures': {
+                    const r = BakeSmartStore.reports.cashClosures(start, end);
+                    drawTable('Reporte de cierres de caja', r.rows, `Total ventas en cierres: ${app.utils.formatCurrency(r.totalSales)}`);
+                    break;
+                }
+                case 'orders': {
+                    const r = BakeSmartStore.reports.orders(start, end);
+                    drawTable('Reporte de pedidos', r.rows, `Cantidad de pedidos: ${r.totalOrders}`);
+                    break;
+                }
+            }
+            renderKpis();
+        } catch (error) {
+            app.toast.error(error.message);
+        }
+    };
+
+    document.getElementById('exportReportBtn').addEventListener('click', () => {
+        try {
+            BakeSmartStore.reports.exportCsv(`${currentName || 'reporte'}.csv`, currentRows);
+            app.toast.success('Reporte exportado.');
+            renderKpis();
+        } catch (error) {
+            app.toast.error(error.message);
+        }
+    });
+
+    const today = new Date().toISOString().slice(0,10);
+    document.getElementById('reportEnd').value = today;
+    document.getElementById('reportStart').value = new Date(Date.now() - 30*86400000).toISOString().slice(0,10);
+    renderKpis();
+})();
+</script>
+}

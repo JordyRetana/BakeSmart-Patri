@@ -1,0 +1,301 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Nuevo Pedido";
+}
+
+<div style="max-width: 800px; margin: 0 auto;">
+    
+    <div style="margin-bottom: 2rem;">
+        <h1 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-plus-circle" style="color: var(--primary);"></i>
+            Nuevo Pedido
+        </h1>
+        <p class="text-muted">Completa los datos para crear un nuevo pedido</p>
+    </div>
+
+    
+    <div class="steps" style="margin-bottom: 3rem;">
+        <div class="step active">
+            <div class="step-number">1</div>
+            <div class="step-title">Datos básicos</div>
+        </div>
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-title">Productos</div>
+        </div>
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-title">Confirmación</div>
+        </div>
+    </div>
+
+    
+    <form method="post" action="/Orders/Create" id="orderForm">
+        @Html.AntiForgeryToken()
+
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <h3 style="margin-bottom: 1.5rem;">Información del cliente</h3>
+
+            <div class="grid grid-2">
+                <div class="input-group">
+                    <label class="input-label">
+                        <i class="fas fa-user"></i>
+                        Nombre completo *
+                    </label>
+                    <input type="text" class="input" name="cliente" required placeholder="Ej: María Gómez">
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">
+                        <i class="fas fa-phone"></i>
+                        Teléfono *
+                    </label>
+                    <input type="tel" class="input" name="telefono" required placeholder="+506 8888-8888">
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">
+                        <i class="fas fa-envelope"></i>
+                        Email *
+                    </label>
+                    <input type="email" class="input" name="email" required placeholder="cliente@email.com">
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">
+                        <i class="fas fa-id-card"></i>
+                        Cédula / Pasaporte
+                    </label>
+                    <input type="text" class="input" name="identificacion" placeholder="1-2345-6789">
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <h3 style="margin-bottom: 1.5rem;">Detalles del pedido</h3>
+
+            <div class="grid grid-2">
+                <div class="input-group">
+                    <label class="input-label">
+                        <i class="fas fa-cake-candles"></i>
+                        Producto *
+                    </label>
+                    <select class="input" name="productoId" required id="productSelect">
+                        <option value="">Seleccionar producto</option>
+                        <option value="1">Red Velvet 1.5kg - ₡32,000</option>
+                        <option value="2">Cheesecake Frutos Rojos - ₡28,000</option>
+                        <option value="3">Cupcakes (caja x12) - ₡18,000</option>
+                        <option value="4">Tres Leches - ₡24,000</option>
+                        <option value="5">Brownie Clásico - ₡16,000</option>
+                        <option value="6">Galletas Decoradas (x12) - ₡12,000</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">
+                        <i class="fas fa-weight-scale"></i>
+                        Tamaño / Porciones
+                    </label>
+                    <select class="input" name="tamaño" id="sizeSelect">
+                        <option value="">Seleccionar</option>
+                        <option value="pequeño">Pequeño (8-10 porciones)</option>
+                        <option value="mediano">Mediano (12-15 porciones)</option>
+                        <option value="grande">Grande (20-25 porciones)</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">
+                        <i class="fas fa-calendar"></i>
+                        Fecha de entrega *
+                    </label>
+                    <input type="date" class="input" name="entrega" required min="@DateTime.Now.ToString("yyyy-MM-dd")">
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">
+                        <i class="fas fa-clock"></i>
+                        Hora de entrega
+                    </label>
+                    <input type="time" class="input" name="hora" value="14:00">
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <h3 style="margin-bottom: 1.5rem;">Personalización</h3>
+
+            <div class="grid grid-2">
+                <div class="input-group">
+                    <label class="input-label">
+                        <i class="fas fa-paint-brush"></i>
+                        Sabor / Variante
+                    </label>
+                    <select class="input" name="sabor">
+                        <option value="">Seleccionar</option>
+                        <option value="chocolate">Chocolate</option>
+                        <option value="vainilla">Vainilla</option>
+                        <option value="fresa">Fresa</option>
+                        <option value="mixto">Mixto</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">
+                        <i class="fas fa-palette"></i>
+                        Color de decoración
+                    </label>
+                    <input type="color" class="input" name="color" style="height: 45px; padding: 0.25rem;" value="#ec4899">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">
+                    <i class="fas fa-message"></i>
+                    Mensaje personalizado
+                </label>
+                <input type="text" class="input" name="mensaje" placeholder="Ej: Feliz cumpleaños María">
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">
+                    <i class="fas fa-clipboard"></i>
+                    Notas adicionales
+                </label>
+                <textarea class="input" name="notas" rows="3" placeholder="Alergias, instrucciones especiales, etc."></textarea>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <h3 style="margin-bottom: 1.5rem;">Entrega y pago</h3>
+
+            <div class="grid grid-2">
+                <div class="input-group">
+                    <label class="input-label">
+                        <i class="fas fa-truck"></i>
+                        Método de entrega
+                    </label>
+                    <select class="input" name="metodoEntrega">
+                        <option value="domicilio">A domicilio (+₡3,000)</option>
+                        <option value="retiro">Retiro en tienda</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">
+                        <i class="fas fa-credit-card"></i>
+                        Método de pago
+                    </label>
+                    <select class="input" name="metodoPago">
+                        <option value="efectivo">Efectivo</option>
+                        <option value="tarjeta">Tarjeta de crédito/débito</option>
+                        <option value="sinpe">Sinpe Móvil</option>
+                        <option value="transferencia">Transferencia bancaria</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">
+                    <i class="fas fa-map-pin"></i>
+                    Dirección de entrega
+                </label>
+                <textarea class="input" name="direccion" rows="2" placeholder="Dirección completa"></textarea>
+            </div>
+        </div>
+
+        
+        <div class="card" style="background: var(--gradient-primary); color: white; margin-bottom: 1.5rem;">
+            <h3 style="color: white; margin-bottom: 1rem;">Resumen del pedido</h3>
+
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Subtotal:</span>
+                    <span id="subtotal">₡0</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Envío:</span>
+                    <span id="envio">₡0</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 1.25rem; font-weight: 700; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.3);">
+                    <span>Total:</span>
+                    <span id="total">₡0</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <a href="/Orders" class="btn-outline btn-lg">
+                <i class="fas fa-times"></i>
+                Cancelar
+            </a>
+            <button type="submit" class="btn-primary btn-lg">
+                <i class="fas fa-save"></i>
+                Guardar pedido
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    
+    const prices = {
+        1: 32000,
+        2: 28000,
+        3: 18000,
+        4: 24000,
+        5: 16000,
+        6: 12000
+    };
+
+    
+    function updateSummary() {
+        const productId = document.getElementById('productSelect').value;
+        const metodoEntrega = document.querySelector('select[name="metodoEntrega"]').value;
+
+        let subtotal = 0;
+        if (productId && prices[productId]) {
+            subtotal = prices[productId];
+        }
+
+        let envio = metodoEntrega === 'domicilio' ? 3000 : 0;
+        let total = subtotal + envio;
+
+        document.getElementById('subtotal').textContent = `₡${subtotal.toLocaleString()}`;
+        document.getElementById('envio').textContent = envio > 0 ? `₡${envio.toLocaleString()}` : 'Gratis';
+        document.getElementById('total').textContent = `₡${total.toLocaleString()}`;
+    }
+
+    
+    document.getElementById('productSelect').addEventListener('change', updateSummary);
+    document.querySelector('select[name="metodoEntrega"]').addEventListener('change', updateSummary);
+
+    
+    document.getElementById('orderForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const rules = {
+            cliente: ['required'],
+            telefono: ['required'],
+            email: ['required', 'email'],
+            productoId: ['required'],
+            entrega: ['required']
+        };
+
+        const errors = app.validate.form(this, rules);
+
+        if (errors.length > 0) {
+            errors.forEach(error => {
+                app.toast.error(error.message);
+            });
+        } else {
+            app.toast.success('Pedido creado exitosamente');
+            setTimeout(() => {
+                this.submit();
+            }, 1500);
+        }
+    });
+
+    
+    updateSummary();
+</script>
