@@ -485,6 +485,13 @@
 
     app.motion = {
         init() {
+            const operationalPage = document.querySelector('.dashboard-page, .production-page, .orders-page, .inventory-page, .pos-page, .accounting-page, .marketing-page, .users-workspace');
+            if (operationalPage) {
+                document.body.classList.add('no-heavy-motion');
+                this.hideLoader();
+                return;
+            }
+
             this.decorateCards();
             this.decorateStats();
             this.revealOnScroll();

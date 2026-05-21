@@ -12,7 +12,7 @@
                 Seguimiento inteligente del pedido
             </h1>
             <p class="text-muted track-subtitle">
-                Las salidas parten desde Sagrada Familia y el mapa diferencia entregas locales y rutas internacionales con una trayectoria visual más clara.
+                Las salidas parten desde Sagrada Familia y el mapa diferencia entregas locales e internacionales con una trayectoria visual más clara.
             </p>
         </div>
 
@@ -46,7 +46,7 @@
             <div class="track-map-header">
                 <div>
                     <h3 class="track-section-title">Trayectoria visual</h3>
-                    <div id="trackMeta" class="text-muted track-map-meta">Calculando ruta…</div>
+                    <div id="trackMeta" class="text-muted track-map-meta">Calculando ruta...</div>
                 </div>
 
                 <div class="map-legend">
@@ -139,7 +139,7 @@
 
     .track-layout {
         display: grid;
-        grid-template-columns: minmax(0, 1.7fr) minmax(320px, .9fr);
+        grid-template-columns: minmax(0, 1.55fr) minmax(340px, .85fr);
         gap: 1rem;
         align-items: start;
     }
@@ -147,6 +147,11 @@
     .track-map-card,
     .track-side-stack > .card {
         align-self: start;
+    }
+
+    .track-map-card {
+        padding: 1rem;
+        overflow: hidden;
     }
 
     .track-side-stack {
@@ -188,12 +193,13 @@
         min-width: 260px;
     }
 
-    .delivery-map {
-        height: 560px;
-        border-radius: 22px;
+    .track-page .delivery-map {
+        height: 540px;
+        border-radius: 18px;
         overflow: hidden;
         border: 1px solid var(--border);
-        background: linear-gradient(180deg, rgba(191,219,254,.35), rgba(255,255,255,.8));
+        background: #eef2f7;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,.45);
     }
 
     .map-legend {
@@ -202,7 +208,7 @@
         flex-wrap: wrap;
     }
 
-    .map-legend span {
+    .track-page .map-legend span {
         display: inline-flex;
         align-items: center;
         gap: .45rem;
@@ -224,6 +230,17 @@
         grid-template-columns: 42px 1fr;
         gap: .85rem;
         align-items: start;
+        position: relative;
+    }
+
+    .timeline-item:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        left: 20px;
+        top: 48px;
+        bottom: -12px;
+        width: 2px;
+        background: var(--border);
     }
 
     .timeline-dot {
@@ -235,6 +252,8 @@
         justify-content: center;
         box-shadow: var(--shadow-sm);
         color: white;
+        position: relative;
+        z-index: 1;
     }
 
     .timeline-done .timeline-dot { background: linear-gradient(135deg, #10b981, #059669); }
@@ -278,14 +297,14 @@
         font: inherit;
     }
 
-    .leaflet-control-zoom {
+    .track-page .leaflet-control-zoom {
         border: none !important;
         box-shadow: 0 14px 28px rgba(15, 23, 42, .12) !important;
         border-radius: 16px !important;
         overflow: hidden;
     }
 
-    .leaflet-control-zoom a {
+    .track-page .leaflet-control-zoom a {
         width: 36px !important;
         height: 36px !important;
         line-height: 36px !important;
@@ -318,88 +337,98 @@
         transform: none;
     }
 
-    .leaflet-div-icon {
+    .track-page .leaflet-div-icon {
         background: transparent;
         border: none;
     }
 
-    .map-pin-wrap {
+    .track-pin-wrap {
         position: relative;
-        width: 58px;
-        height: 58px;
+        width: 42px;
+        height: 42px;
         display: flex;
         align-items: center;
         justify-content: center;
     }
 
-    .map-pin-core {
+    .track-pin-core {
         position: relative;
         z-index: 2;
-        width: 46px;
-        height: 46px;
+        width: 34px;
+        height: 34px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         color: #fff;
-        border: 4px solid rgba(255,255,255,.96);
+        border: 3px solid rgba(255,255,255,.96);
         box-shadow:
-            0 18px 36px rgba(15, 23, 42, .18),
-            0 4px 12px rgba(15, 23, 42, .12);
-        font-size: 1rem;
+            0 12px 24px rgba(15, 23, 42, .18),
+            0 3px 10px rgba(15, 23, 42, .12);
+        font-size: .82rem;
     }
 
-    .map-pin-pulse {
+    .track-pin-pulse {
         position: absolute;
-        width: 46px;
-        height: 46px;
+        width: 34px;
+        height: 34px;
         border-radius: 50%;
         z-index: 1;
         animation: trackPulse 2s ease-out infinite;
         opacity: .42;
     }
 
-    .map-pin-origin .map-pin-core {
+    .track-pin-origin .track-pin-core {
         background: linear-gradient(135deg, #8b5cf6, #7c3aed);
     }
 
-    .map-pin-origin .map-pin-pulse {
+    .track-pin-origin .track-pin-pulse {
         background: rgba(139, 92, 246, .22);
     }
 
-    .map-pin-destination .map-pin-core {
+    .track-pin-destination .track-pin-core {
         background: linear-gradient(135deg, #f97316, #ea580c);
     }
 
-    .map-pin-destination .map-pin-pulse {
+    .track-pin-destination .track-pin-pulse {
         background: rgba(249, 115, 22, .22);
     }
 
-    .map-pin-courier .map-pin-core {
+    .track-pin-courier .track-pin-core {
         background: linear-gradient(135deg, #10b981, #0f766e);
     }
 
-    .map-pin-courier .map-pin-pulse {
+    .track-pin-courier .track-pin-pulse {
         background: rgba(16, 185, 129, .22);
     }
 
-    .map-pin-plane .map-pin-core {
+    .track-pin-plane .track-pin-core {
         background: linear-gradient(135deg, #0ea5e9, #2563eb);
     }
 
-    .map-pin-plane .map-pin-pulse {
+    .track-pin-plane .track-pin-pulse {
         background: rgba(14, 165, 233, .22);
     }
 
-    .map-pin-static .map-pin-pulse {
+    .track-pin-static .track-pin-pulse {
         animation: none;
         opacity: .22;
         transform: scale(1.14);
     }
 
-    .map-pin-moving .map-pin-pulse {
+    .track-pin-moving .track-pin-pulse {
         animation-duration: 1.35s;
         opacity: .48;
+    }
+
+    .track-page .leaflet-marker-icon {
+        background: transparent !important;
+        border: none !important;
+    }
+
+    body.dark .track-page .delivery-map {
+        border-color: #475569;
+        filter: saturate(.85) brightness(.9);
     }
 
     @@keyframes trackPulse {
@@ -433,7 +462,7 @@
             min-width: 100%;
         }
 
-        .delivery-map {
+        .track-page .delivery-map {
             height: 420px;
         }
 
@@ -459,7 +488,7 @@
     const userEmail = document.body.dataset.userEmail || 'cliente@demo.com';
 
     const presetOptions = [
-        { id: 'auto', name: 'Destino real del pedido', country: '—' },
+        { id: 'auto', name: 'Destino real del pedido', country: '-' },
         ...BakeSmartStore.geo.presets().map(p => ({ id: p.id, name: p.name, country: p.country }))
     ];
 
@@ -478,9 +507,9 @@
 
     function createPinHtml(iconClass, extraClass = '', staticPulse = false) {
         return `
-            <div class="map-pin-wrap ${extraClass} ${staticPulse ? 'map-pin-static' : 'map-pin-moving'}">
-                <div class="map-pin-pulse"></div>
-                <div class="map-pin-core">
+            <div class="track-pin-wrap ${extraClass} ${staticPulse ? 'track-pin-static' : 'track-pin-moving'}">
+                <div class="track-pin-pulse"></div>
+                <div class="track-pin-core">
                     <i class="fas ${iconClass}"></i>
                 </div>
             </div>
@@ -489,32 +518,32 @@
 
     const icons = {
         origin: L.divIcon({
-            className: 'map-pin-origin',
-            html: createPinHtml('fa-store', 'map-pin-origin', true),
-            iconSize: [58, 58],
-            iconAnchor: [29, 29],
-            popupAnchor: [0, -24]
+            className: 'track-marker-icon',
+            html: createPinHtml('fa-store', 'track-pin-origin', true),
+            iconSize: [42, 42],
+            iconAnchor: [21, 21],
+            popupAnchor: [0, -18]
         }),
         destination: L.divIcon({
-            className: 'map-pin-destination',
-            html: createPinHtml('fa-location-dot', 'map-pin-destination', true),
-            iconSize: [58, 58],
-            iconAnchor: [29, 29],
-            popupAnchor: [0, -24]
+            className: 'track-marker-icon',
+            html: createPinHtml('fa-location-dot', 'track-pin-destination', true),
+            iconSize: [42, 42],
+            iconAnchor: [21, 21],
+            popupAnchor: [0, -18]
         }),
         courier: L.divIcon({
-            className: 'map-pin-courier',
-            html: createPinHtml('fa-motorcycle', 'map-pin-courier'),
-            iconSize: [58, 58],
-            iconAnchor: [29, 29],
-            popupAnchor: [0, -24]
+            className: 'track-marker-icon',
+            html: createPinHtml('fa-motorcycle', 'track-pin-courier'),
+            iconSize: [42, 42],
+            iconAnchor: [21, 21],
+            popupAnchor: [0, -18]
         }),
         plane: L.divIcon({
-            className: 'map-pin-plane',
-            html: createPinHtml('fa-plane', 'map-pin-plane'),
-            iconSize: [58, 58],
-            iconAnchor: [29, 29],
-            popupAnchor: [0, -24]
+            className: 'track-marker-icon',
+            html: createPinHtml('fa-plane', 'track-pin-plane'),
+            iconSize: [42, 42],
+            iconAnchor: [21, 21],
+            popupAnchor: [0, -18]
         })
     };
 
@@ -687,7 +716,7 @@
         document.getElementById('trackStatus').textContent = order.status;
         document.getElementById('trackRouteType').textContent = routeType;
         document.getElementById('trackDestinationCountry').textContent = destination.country;
-        document.getElementById('trackMeta').textContent = `${origin.city}, ${origin.country} → ${destination.name}, ${destination.country}`;
+        document.getElementById('trackMeta').textContent = `${origin.city}, ${origin.country} -> ${destination.name}, ${destination.country}`;
 
         clearVisuals();
 
@@ -696,21 +725,21 @@
         const flightPath = curveBetween(startLatLng, destinationLatLng, true, -1);
         const localRoute = buildLocalRoute(startLatLng, destinationLatLng, order.tracking.currentStep || 0);
 
-        const originMarker = L.marker(startLatLng, { icon: icons.origin }).addTo(mapInstance).bindPopup(origin.name);
-        const destinationMarker = L.marker(destinationLatLng, { icon: icons.destination }).addTo(mapInstance).bindPopup(destination.name);
+        const originMarker = L.marker(startLatLng, { icon: icons.origin }).addTo(mapInstance).bindPopup(`${origin.name}<br>${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)}`);
+        const destinationMarker = L.marker(destinationLatLng, { icon: icons.destination }).addTo(mapInstance).bindPopup(`${destination.name}<br>${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)}`);
 
         markers.push(originMarker, destinationMarker);
 
         if (isInternational) {
             const routeShadow = L.polyline(flightPath, {
-                color: '#c4b5fd',
+                color: '#7c3aed',
                 weight: 10,
-                opacity: .20,
+                opacity: .16,
                 smoothFactor: 1.4
             }).addTo(mapInstance);
 
             const route = L.polyline(flightPath, {
-                color: '#8b5cf6',
+                color: '#6d28d9',
                 weight: 4,
                 dashArray: '10 14',
                 opacity: .95,
@@ -761,6 +790,7 @@
             <div class="summary-row"><span>Cliente</span><strong>${order.customerName}</strong></div>
             <div class="summary-row"><span>Dirección</span><strong>${order.address}</strong></div>
             <div class="summary-row"><span>Destino visual</span><strong>${destination.name}</strong></div>
+            <div class="summary-row"><span>Latitud / longitud</span><strong>${destination.lat.toFixed(5)}, ${destination.lng.toFixed(5)}</strong></div>
             <div class="summary-row"><span>Modalidad</span><strong>${routeType}</strong></div>
             <div class="summary-row"><span>Entrega</span><strong>${new Date(order.deliveryDate).toLocaleDateString('es-CR')}</strong></div>
             <div class="summary-row"><span>Productos</span><strong>${order.items.map(i => `${i.quantity} x ${i.name}`).join(', ')}</strong></div>
@@ -776,7 +806,7 @@
         ).join('');
 
         presetSelect.innerHTML = presetOptions.map(p =>
-            `<option value="${p.id}">${p.name}${p.country && p.country !== '—' ? ` · ${p.country}` : ''}</option>`
+            `<option value="${p.id}">${p.name}${p.country && p.country !== '-' ? ` · ${p.country}` : ''}</option>`
         ).join('');
 
         renderOrder(orders[0]?.id);

@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using BakeSmartPatri.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddScoped<SqlStore>();
 
 
 builder.Services

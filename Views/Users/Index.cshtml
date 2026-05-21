@@ -10,6 +10,7 @@
         </div>
         <div class="page-actions">
             <input id="userSearch" class="form-control" placeholder="Buscar por nombre, correo o teléfono" style="min-width:260px;" />
+            <button type="button" id="resetStoreUsers" class="btn btn-outline"><i class="fas fa-rotate-left"></i> Restaurar demo</button>
             <button type="button" id="openUserQuickActions" class="btn btn-primary"><i class="fas fa-user-plus"></i> Acciones rápidas</button>
         </div>
     </div>
@@ -20,8 +21,8 @@
         <div class="card"><div class="text-muted">Roles disponibles</div><h2 id="rolesCount" style="margin:0;"></h2></div>
     </div>
 
-    <div class="grid grid-2" style="gap:1rem; align-items:start;">
-        <div class="card">
+    <div class="users-workspace">
+        <div class="card users-action-card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; gap:1rem; flex-wrap:wrap;">
                 <div>
                     <h3 style="margin:0;">Acciones rápidas</h3>
@@ -43,7 +44,7 @@
             </div>
         </div>
 
-        <div class="card">
+        <div class="card users-roles-card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; gap:1rem; flex-wrap:wrap;">
                 <h3 style="margin:0;">Matriz rápida de roles</h3>
                 <a class="btn btn-outline btn-sm" href="/Roles">Ver detalle de roles</a>
@@ -92,6 +93,38 @@
         </div>
     </div>
 </div>
+
+<style>
+    .users-workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .users-action-card,
+    .users-roles-card {
+        width: 100%;
+    }
+
+    .users-roles-card #rolePreview {
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    @@media (min-width: 1180px) {
+        .users-workspace {
+            grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .page-actions,
+        .page-actions .form-control,
+        .page-actions .btn {
+            width: 100%;
+        }
+    }
+</style>
 
 @section Scripts {
 <script>
@@ -214,7 +247,7 @@
         }
     };
 
-    document.getElementById('resetStoreUsers').addEventListener('click', () => {
+    document.getElementById('resetStoreUsers')?.addEventListener('click', () => {
         store.reset();
         app.toast.info('Se restauró la data demo completa.');
         renderRoles();

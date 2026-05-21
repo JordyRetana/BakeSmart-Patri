@@ -2,49 +2,320 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Mis pedidos";
 }
-<div class="page-shell">
-    <div class="page-header" style="margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+
+<div class="page-shell client-orders-page">
+    <div class="page-header client-orders-header">
         <div>
-            <h1 style="margin:0; display:flex; align-items:center; gap:.75rem;"><i class="fas fa-box-open" style="color:var(--primary);"></i> Mis pedidos</h1>
-            <p class="text-muted" style="margin:.35rem 0 0;">Consulta historial, filtra estados y paga pedidos pendientes.</p>
+            <h1 class="client-orders-title">
+                <i class="fas fa-box-open"></i>
+                Mis pedidos
+            </h1>
+            <p class="text-muted client-orders-subtitle">Consulta entregas, pagos y productos sin depender de una tabla apretada.</p>
         </div>
-        <div style="display:flex; gap:.75rem; flex-wrap:wrap;">
+
+        <div class="client-orders-actions">
             <input id="clientOrderSearch" class="form-control" placeholder="Buscar pedido o producto" />
-            <a href="/Client/Track" class="btn btn-primary"><i class="fas fa-map-location-dot"></i> Seguimiento</a>
+            <select id="clientStatusFilter" class="form-control">
+                <option value="">Todos los estados</option>
+                <option>Recibido</option>
+                <option>En producción</option>
+                <option>Listo</option>
+                <option>En camino</option>
+                <option>Entregado</option>
+            </select>
+            <a href="/Client/Track" class="btn btn-primary">
+                <i class="fas fa-map-location-dot"></i>
+                Seguimiento
+            </a>
         </div>
     </div>
-    <div class="card">
-        <div class="table-container">
-            <table class="table">
-                <thead><tr><th>Pedido</th><th>Productos</th><th>Estado</th><th>Entrega</th><th>Pago</th><th>Total</th><th></th></tr></thead>
-                <tbody id="clientOrdersTable"></tbody>
-            </table>
+
+    <div class="grid grid-4 client-orders-kpis">
+        <div class="card metric-card">
+            <div class="text-muted">Pedidos</div>
+            <h2 id="clientOrdersCount">0</h2>
+        </div>
+        <div class="card metric-card">
+            <div class="text-muted">Activos</div>
+            <h2 id="clientOrdersActive">0</h2>
+        </div>
+        <div class="card metric-card">
+            <div class="text-muted">Pendiente de pago</div>
+            <h2 id="clientOrdersPending">0</h2>
+        </div>
+        <div class="card metric-card">
+            <div class="text-muted">Total</div>
+            <h2 id="clientOrdersTotal">₡0</h2>
         </div>
     </div>
+
+    <div class="client-orders-list" id="clientOrdersList"></div>
 </div>
+
+<style>
+    .client-orders-page {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .client-orders-page,
+    .client-orders-page * {
+        min-width: 0;
+    }
+
+    .client-orders-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .client-orders-title {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+    }
+
+    .client-orders-title i {
+        color: var(--primary);
+    }
+
+    .client-orders-subtitle {
+        margin: .35rem 0 0;
+    }
+
+    .client-orders-actions {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) minmax(180px, .75fr) auto;
+        gap: .75rem;
+        align-items: center;
+        min-width: min(100%, 680px);
+    }
+
+    .client-orders-kpis {
+        gap: 1rem;
+        margin: 0;
+    }
+
+    .client-orders-list {
+        display: grid;
+        gap: .9rem;
+    }
+
+    .client-order-card {
+        padding: 1.1rem;
+    }
+
+    .client-order-card:hover {
+        transform: none;
+        box-shadow: var(--shadow-sm);
+        border-color: var(--border);
+    }
+
+    .client-order-card:hover::after {
+        opacity: 0;
+    }
+
+    .client-order-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .client-order-id {
+        display: flex;
+        align-items: center;
+        gap: .65rem;
+        margin: 0;
+        font-size: 1.05rem;
+    }
+
+    .client-order-id i {
+        color: var(--primary);
+    }
+
+    .client-order-statuses {
+        display: flex;
+        gap: .5rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .client-order-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) repeat(3, minmax(150px, .6fr));
+        gap: .75rem;
+        align-items: stretch;
+    }
+
+    .client-order-field {
+        padding: .85rem;
+        border-radius: 14px;
+        background: var(--bg-alt);
+        border: 1px solid var(--border);
+    }
+
+    .client-order-field span {
+        display: block;
+        margin-bottom: .25rem;
+        color: var(--text-muted);
+        font-size: .76rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+    }
+
+    .client-order-field strong {
+        color: var(--text);
+    }
+
+    .client-order-bottom {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+
+    .client-order-buttons {
+        display: flex;
+        gap: .55rem;
+        flex-wrap: wrap;
+    }
+
+    .client-empty-state {
+        padding: 2rem;
+        text-align: center;
+    }
+
+    body.dark .client-order-field {
+        background: #111827;
+        border-color: #334155;
+    }
+
+    @@media (max-width: 1100px) {
+        .client-order-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .client-orders-actions {
+            grid-template-columns: 1fr;
+            width: 100%;
+        }
+
+        .client-orders-actions .btn {
+            width: 100%;
+        }
+
+        .client-order-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .client-order-statuses,
+        .client-order-buttons {
+            justify-content: flex-start;
+            width: 100%;
+        }
+    }
+</style>
+
 @section Scripts {
     <script>
         (() => {
             const userEmail = document.body.dataset.userEmail || 'cliente@demo.com';
             const search = document.getElementById('clientOrderSearch');
+            const statusFilter = document.getElementById('clientStatusFilter');
+            const list = document.getElementById('clientOrdersList');
+
+            function badgeForPayment(status) {
+                return status === 'Pagado' ? 'badge-success' : 'badge-warning';
+            }
+
+            function itemsLabel(order) {
+                return order.items.map(i => `${i.quantity} x ${i.name}`).join(', ');
+            }
+
+            function filteredOrders() {
+                const q = search.value.trim().toLowerCase();
+                const status = statusFilter.value;
+
+                return BakeSmartStore.orders.byClient(userEmail).filter(order => {
+                    const matchesQuery = !q
+                        || String(order.id).includes(q)
+                        || order.customerName.toLowerCase().includes(q)
+                        || itemsLabel(order).toLowerCase().includes(q);
+                    const matchesStatus = !status || order.status === status;
+                    return matchesQuery && matchesStatus;
+                });
+            }
 
             function render() {
-                const q = search.value.trim().toLowerCase();
-                const rows = BakeSmartStore.orders.byClient(userEmail).filter(o => !q || String(o.id).includes(q) || o.items.some(i => i.name.toLowerCase().includes(q)));
-                document.getElementById('clientOrdersTable').innerHTML = rows.map(o => `
-                    <tr>
-                        <td><strong>#${o.id}</strong><div class="text-muted" style="font-size:.8rem;">${new Date(o.createdAt).toLocaleString('es-CR')}</div></td>
-                        <td>${o.items.map(i => `${i.quantity} x ${i.name}`).join('<br>')}</td>
-                        <td><span class="badge badge-primary">${o.status}</span></td>
-                        <td>${new Date(o.deliveryDate).toLocaleDateString('es-CR')}</td>
-                        <td><span class="badge ${o.paymentStatus === 'Pagado' ? 'badge-success' : 'badge-warning'}">${o.paymentStatus}</span></td>
-                        <td>${app.utils.formatCurrency(o.total)}</td>
-                        <td class="text-right">
-                            ${o.paymentStatus !== 'Pagado' ? `<button class="btn btn-outline btn-sm" onclick="payClientOrder(${o.id})">Pagar</button>` : ''}
-                            <a class="btn btn-outline btn-sm" href="/Client/Track">Ver mapa</a>
-                        </td>
-                    </tr>
-                `).join('') || `<tr><td colspan="7" class="text-center text-muted">No hay pedidos registrados.</td></tr>`;
+                const allOrders = BakeSmartStore.orders.byClient(userEmail);
+                const rows = filteredOrders();
+                const pendingTotal = allOrders
+                    .filter(order => order.paymentStatus !== 'Pagado')
+                    .reduce((acc, order) => acc + order.total, 0);
+
+                document.getElementById('clientOrdersCount').textContent = allOrders.length;
+                document.getElementById('clientOrdersActive').textContent = allOrders.filter(order => order.status !== 'Entregado').length;
+                document.getElementById('clientOrdersPending').textContent = app.utils.formatCurrency(pendingTotal);
+                document.getElementById('clientOrdersTotal').textContent = app.utils.formatCurrency(allOrders.reduce((acc, order) => acc + order.total, 0));
+
+                list.innerHTML = rows.map(order => `
+                    <article class="card client-order-card">
+                        <div class="client-order-top">
+                            <div>
+                                <h3 class="client-order-id"><i class="fas fa-receipt"></i> Pedido #${order.id}</h3>
+                                <div class="text-muted">${new Date(order.createdAt).toLocaleString('es-CR')}</div>
+                            </div>
+                            <div class="client-order-statuses">
+                                <span class="badge badge-primary">${order.status}</span>
+                                <span class="badge ${badgeForPayment(order.paymentStatus)}">${order.paymentStatus}</span>
+                            </div>
+                        </div>
+
+                        <div class="client-order-grid">
+                            <div class="client-order-field">
+                                <span>Productos</span>
+                                <strong>${itemsLabel(order)}</strong>
+                            </div>
+                            <div class="client-order-field">
+                                <span>Entrega</span>
+                                <strong>${new Date(order.deliveryDate).toLocaleDateString('es-CR')}</strong>
+                            </div>
+                            <div class="client-order-field">
+                                <span>Método</span>
+                                <strong>${order.paymentMethod || 'Pendiente'}</strong>
+                            </div>
+                            <div class="client-order-field">
+                                <span>Total</span>
+                                <strong>${app.utils.formatCurrency(order.total)}</strong>
+                            </div>
+                        </div>
+
+                        <div class="client-order-bottom">
+                            <div class="text-muted">${order.address}</div>
+                            <div class="client-order-buttons">
+                                ${order.paymentStatus !== 'Pagado' ? `<button class="btn btn-primary btn-sm" onclick="payClientOrder(${order.id})"><i class="fas fa-credit-card"></i> Pagar</button>` : ''}
+                                <a class="btn btn-outline btn-sm" href="/Client/Track"><i class="fas fa-route"></i> Ver seguimiento</a>
+                            </div>
+                        </div>
+                    </article>
+                `).join('') || `
+                    <div class="card client-empty-state">
+                        <h3>No hay pedidos con esos filtros</h3>
+                        <p class="text-muted">Prueba con otro estado o registra un pedido desde el panel del cliente.</p>
+                        <a href="/Client" class="btn btn-primary"><i class="fas fa-plus"></i> Nuevo pedido</a>
+                    </div>
+                `;
             }
 
             window.payClientOrder = (id) => {
@@ -58,6 +329,7 @@
             };
 
             search.addEventListener('input', render);
+            statusFilter.addEventListener('change', render);
             render();
         })();
     </script>

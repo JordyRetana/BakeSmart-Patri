@@ -1,159 +1,137 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Mi panel";
+    ViewData["Title"] = "Mi perfil";
     var nameLabel = User?.Identity?.Name ?? "Cliente";
+    var emailLabel = User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "cliente@demo.com";
 }
 
-<div class="page-shell client-dashboard-page">
-    <div class="page-header client-dashboard-header">
+<div class="page-shell client-profile-page">
+    <div class="page-header client-profile-header">
         <div>
-            <h1 class="client-dashboard-title">
-                <i class="fas fa-smile"></i>
-                Hola, @nameLabel
+            <h1 class="client-profile-title">
+                <i class="fas fa-user-pen"></i>
+                Mi perfil
             </h1>
-            <p class="text-muted client-dashboard-subtitle">
-                Desde aquí puedes registrar pedidos, pagar, seguir entregas y editar tu perfil.
-            </p>
+            <p class="text-muted client-profile-subtitle">Mantén tus datos de entrega listos para que cada pedido salga con menos pasos.</p>
         </div>
 
-        <div class="client-dashboard-actions">
-            <a href="/Client/Orders" class="btn btn-primary">
+        <div class="client-profile-actions">
+            <a href="/Client/Orders" class="btn btn-outline">
                 <i class="fas fa-box"></i>
                 Mis pedidos
             </a>
-            <a href="/Client/Track" class="btn btn-outline">
-                <i class="fas fa-map-location-dot"></i>
+            <a href="/Client/Track" class="btn btn-primary">
+                <i class="fas fa-route"></i>
                 Seguimiento
             </a>
         </div>
     </div>
 
-    <div class="grid grid-3 client-dashboard-kpis">
-        <div class="card client-dashboard-kpi-card">
-            <div class="text-muted">Pedidos del cliente</div>
-            <h2 id="clientOrderCount"></h2>
-        </div>
-
-        <div class="card client-dashboard-kpi-card">
-            <div class="text-muted">Total gastado</div>
-            <h2 id="clientSpent"></h2>
-        </div>
-
-        <div class="card client-dashboard-kpi-card">
-            <div class="text-muted">Pedidos activos</div>
-            <h2 id="clientActive"></h2>
-        </div>
-    </div>
-
-    <div class="client-dashboard-main-grid">
-        <div class="card client-dashboard-order-card">
-            <div class="client-dashboard-section-header">
-                <h3 class="client-dashboard-section-title">Pedido rápido desde el sitio web</h3>
+    <div class="client-profile-layout">
+        <section class="card client-profile-card">
+            <div class="client-profile-avatar-wrap">
+                <div class="client-profile-avatar" id="profileInitials">CL</div>
+                <div>
+                    <h2 id="profileNameTitle">@nameLabel</h2>
+                    <p class="text-muted" id="profileEmailTitle">@emailLabel</p>
+                </div>
             </div>
 
-            <form id="quickOrderForm" class="client-dashboard-form">
-                <div class="client-dashboard-form-grid">
-                    <div class="client-dashboard-form-block">
-                        <label>Nombre</label>
-                        <input class="form-control" name="customerName" value="@nameLabel" required />
+            <div class="client-profile-stats">
+                <div>
+                    <span>Pedidos</span>
+                    <strong id="profileOrdersCount">0</strong>
+                </div>
+                <div>
+                    <span>Activos</span>
+                    <strong id="profileActiveOrders">0</strong>
+                </div>
+                <div>
+                    <span>Total</span>
+                    <strong id="profileSpent">₡0</strong>
+                </div>
+            </div>
+
+            <div class="client-profile-address-box">
+                <span>Dirección predeterminada</span>
+                <strong id="profileDefaultAddress">Escazú, San José</strong>
+            </div>
+        </section>
+
+        <section class="card client-profile-form-card">
+            <div class="client-profile-section-header">
+                <h3>Datos del cliente</h3>
+                <span class="badge badge-primary">Local</span>
+            </div>
+
+            <form id="clientProfileForm" class="client-profile-form">
+                <div class="client-profile-form-grid">
+                    <div class="form-group">
+                        <label>Nombre completo</label>
+                        <input class="form-control" name="name" value="@nameLabel" required />
                     </div>
-                    <div class="client-dashboard-form-block">
+                    <div class="form-group">
                         <label>Correo</label>
-                        <input class="form-control" name="customerEmail" type="email" value="@(User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "cliente@demo.com")" required />
+                        <input class="form-control" name="email" type="email" value="@emailLabel" required />
                     </div>
                 </div>
 
-                <div class="client-dashboard-form-grid">
-                    <div class="client-dashboard-form-block">
+                <div class="client-profile-form-grid">
+                    <div class="form-group">
                         <label>Teléfono</label>
-                        <input class="form-control" name="customerPhone" value="88883333" required />
+                        <input class="form-control" name="phone" value="8888-3333" required />
                     </div>
-                    <div class="client-dashboard-form-block">
-                        <label>Fecha de entrega</label>
-                        <input class="form-control" name="deliveryDate" type="date" required />
-                    </div>
-                </div>
-
-                <div class="client-dashboard-form-block">
-                    <label>Dirección de entrega</label>
-                    <input class="form-control" name="address" value="Escazú, San José" placeholder="Ej: Escazú, Centro Educativo El Carmelo o Ciudad de Panamá" required />
-                    <div class="field-hint">La ruta sale siempre desde Sagrada Familia.</div>
-                </div>
-
-                <div class="client-dashboard-product-grid">
-                    <div class="client-dashboard-form-block">
-                        <label>Producto</label>
-                        <select class="form-control" name="productId" id="quickOrderProduct"></select>
-                    </div>
-                    <div class="client-dashboard-form-block">
-                        <label>Cantidad</label>
-                        <input class="form-control" name="quantity" type="number" min="1" value="1" required />
-                    </div>
-                    <div class="client-dashboard-form-block">
-                        <label>Método de pago</label>
+                    <div class="form-group">
+                        <label>Método de pago preferido</label>
                         <select class="form-control" name="paymentMethod">
-                            <option>Pendiente</option>
-                            <option>Efectivo</option>
                             <option>SINPE Móvil</option>
                             <option>Tarjeta</option>
+                            <option>Efectivo</option>
+                            <option>Pendiente</option>
                         </select>
                     </div>
                 </div>
 
-                <div class="client-dashboard-form-block">
-                    <label>Notas</label>
-                    <textarea class="form-control" name="notes" rows="3" placeholder="Detalles del pedido"></textarea>
+                <div class="form-group">
+                    <label>Dirección frecuente</label>
+                    <input class="form-control" name="address" value="Escazú, San José" required />
                 </div>
 
-                <button class="btn btn-primary client-dashboard-submit-btn" type="submit">
-                    <i class="fas fa-paper-plane"></i>
-                    Registrar pedido
+                <div class="form-group">
+                    <label>Notas para entregas</label>
+                    <textarea class="form-control" name="notes" rows="3" placeholder="Ej: llamar al llegar, dejar en recepción, horario preferido."></textarea>
+                </div>
+
+                <button class="btn btn-primary client-profile-save" type="submit">
+                    <i class="fas fa-floppy-disk"></i>
+                    Guardar perfil
                 </button>
             </form>
-        </div>
-
-        <div class="card client-dashboard-miniorders-card">
-            <div class="client-dashboard-section-header">
-                <h3 class="client-dashboard-section-title">Últimos pedidos</h3>
-            </div>
-
-            <div class="table-container client-dashboard-table-wrap">
-                <table class="table client-dashboard-table">
-                    <thead>
-                        <tr>
-                            <th>Pedido</th>
-                            <th>Estado</th>
-                            <th>Pago</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody id="clientMiniOrders"></tbody>
-                </table>
-            </div>
-
-            <div class="client-dashboard-footer-actions">
-                <a href="/Client/Profile" class="btn btn-outline">
-                    <i class="fas fa-user-pen"></i>
-                    Editar perfil
-                </a>
-            </div>
-        </div>
+        </section>
     </div>
+
+    <section class="card client-profile-history-card">
+        <div class="client-profile-section-header">
+            <h3>Últimos movimientos</h3>
+            <a href="/Client/Orders" class="btn btn-outline btn-sm">Ver todos</a>
+        </div>
+        <div id="profileRecentOrders" class="client-profile-history"></div>
+    </section>
 </div>
 
 <style>
-    .client-dashboard-page {
-        display: flex;
-        flex-direction: column;
+    .client-profile-page {
+        display: grid;
         gap: 1rem;
     }
 
-        .client-dashboard-page,
-        .client-dashboard-page * {
-            min-width: 0;
-        }
+    .client-profile-page,
+    .client-profile-page * {
+        min-width: 0;
+    }
 
-    .client-dashboard-header {
+    .client-profile-header,
+    .client-profile-section-header {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
@@ -161,199 +139,177 @@
         flex-wrap: wrap;
     }
 
-    .client-dashboard-title {
+    .client-profile-title {
         margin: 0;
         display: flex;
         align-items: center;
         gap: .75rem;
     }
 
-        .client-dashboard-title i {
-            color: var(--primary);
-        }
+    .client-profile-title i {
+        color: var(--primary);
+    }
 
-    .client-dashboard-subtitle {
+    .client-profile-subtitle {
         margin: .35rem 0 0;
     }
 
-    .client-dashboard-actions {
+    .client-profile-actions {
         display: flex;
         gap: .75rem;
         flex-wrap: wrap;
     }
 
-    .client-dashboard-kpis {
-        gap: 1rem;
-    }
-
-    .client-dashboard-kpi-card h2 {
-        margin: .35rem 0 0;
-    }
-
-    .client-dashboard-main-grid {
+    .client-profile-layout {
         display: grid;
-        grid-template-columns: minmax(0, 1.15fr) minmax(340px, .85fr);
+        grid-template-columns: minmax(280px, .75fr) minmax(0, 1.25fr);
         gap: 1rem;
         align-items: start;
     }
 
-    .client-dashboard-order-card,
-    .client-dashboard-miniorders-card {
-        align-self: start;
+    .client-profile-card,
+    .client-profile-form-card,
+    .client-profile-history-card {
+        padding: 1.15rem;
     }
 
-    .client-dashboard-section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 1rem;
-        flex-wrap: wrap;
-        margin-bottom: 1rem;
-    }
-
-    .client-dashboard-section-title {
-        margin: 0;
-        font-size: 1.15rem;
-    }
-
-    .client-dashboard-form {
-        display: grid;
-        gap: .95rem;
-    }
-
-    .client-dashboard-form-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 1rem;
-    }
-
-    .client-dashboard-product-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 1rem;
-    }
-
-    .client-dashboard-form-block {
-        display: grid;
-        gap: .35rem;
-    }
-
-        .client-dashboard-form-block label {
-            margin: 0;
-            font-size: .82rem;
-            font-weight: 700;
-            color: var(--text);
-        }
-
-    .client-dashboard-submit-btn {
-        width: 100%;
-    }
-
-    .client-dashboard-table-wrap {
-        max-width: 100%;
-        overflow: auto;
-    }
-
-    .client-dashboard-table {
-        width: 100%;
-        min-width: 0 !important;
-        table-layout: fixed;
-        margin: 0;
-    }
-
-        .client-dashboard-table th:nth-child(1),
-        .client-dashboard-table td:nth-child(1) {
-            width: 44%;
-        }
-
-        .client-dashboard-table th:nth-child(2),
-        .client-dashboard-table td:nth-child(2) {
-            width: 19%;
-            white-space: nowrap;
-        }
-
-        .client-dashboard-table th:nth-child(3),
-        .client-dashboard-table td:nth-child(3) {
-            width: 19%;
-            white-space: nowrap;
-        }
-
-        .client-dashboard-table th:nth-child(4),
-        .client-dashboard-table td:nth-child(4) {
-            width: 18%;
-            white-space: nowrap;
-        }
-
-        .client-dashboard-table td:nth-child(1) {
-            white-space: normal;
-            word-break: break-word;
-        }
-
-        .client-dashboard-table thead th {
-            position: sticky;
-            top: 0;
-            z-index: 1;
-            background: var(--bg-card);
-        }
-
-    .client-dashboard-footer-actions {
-        margin-top: 1rem;
-    }
-
-    .client-dashboard-page .card:hover {
+    .client-profile-card:hover,
+    .client-profile-form-card:hover,
+    .client-profile-history-card:hover {
         transform: none;
         box-shadow: var(--shadow-sm);
         border-color: var(--border);
     }
 
-        .client-dashboard-page .card:hover::after {
-            opacity: 0;
-        }
+    .client-profile-card:hover::after,
+    .client-profile-form-card:hover::after,
+    .client-profile-history-card:hover::after {
+        opacity: 0;
+    }
 
-    .client-dashboard-page .table tbody tr:hover {
-        transform: none;
-        box-shadow: none;
+    .client-profile-avatar-wrap {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .client-profile-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: #fff;
+        font-weight: 800;
+        font-size: 1.25rem;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .client-profile-avatar-wrap h2 {
+        margin: 0;
+        font-size: 1.3rem;
+    }
+
+    .client-profile-avatar-wrap p {
+        margin: .2rem 0 0;
+    }
+
+    .client-profile-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: .6rem;
+        margin-bottom: .9rem;
+    }
+
+    .client-profile-stats div,
+    .client-profile-address-box,
+    .client-profile-history-item {
+        padding: .85rem;
+        border-radius: 14px;
         background: var(--bg-alt);
+        border: 1px solid var(--border);
     }
 
-    .client-dashboard-page .btn:hover,
-    .client-dashboard-page .btn-primary:hover,
-    .client-dashboard-page .btn-outline:hover,
-    .client-dashboard-page .btn-secondary:hover,
-    .client-dashboard-page .btn-ghost:hover {
-        transform: none;
+    .client-profile-stats span,
+    .client-profile-address-box span {
+        display: block;
+        margin-bottom: .25rem;
+        color: var(--text-muted);
+        font-size: .74rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
     }
 
-    .client-dashboard-page .form-control:focus,
-    .client-dashboard-page input:focus,
-    .client-dashboard-page select:focus,
-    .client-dashboard-page textarea:focus {
-        transform: none;
+    .client-profile-stats strong,
+    .client-profile-address-box strong {
+        color: var(--text);
     }
 
-    @@media (max-width: 1200px) {
-        .client-dashboard-main-grid {
+    .client-profile-form {
+        display: grid;
+        gap: .95rem;
+        margin-top: 1rem;
+    }
+
+    .client-profile-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .client-profile-form label {
+        font-weight: 700;
+        font-size: .82rem;
+        color: var(--text);
+    }
+
+    .client-profile-save {
+        width: 100%;
+    }
+
+    .client-profile-history {
+        display: grid;
+        gap: .75rem;
+        margin-top: 1rem;
+    }
+
+    .client-profile-history-item {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .client-profile-history-item strong {
+        color: var(--text);
+    }
+
+    body.dark .client-profile-stats div,
+    body.dark .client-profile-address-box,
+    body.dark .client-profile-history-item {
+        background: #111827;
+        border-color: #334155;
+    }
+
+    @@media (max-width: 980px) {
+        .client-profile-layout {
             grid-template-columns: 1fr;
         }
     }
 
-    @@media (max-width: 768px) {
-        .client-dashboard-actions {
+    @@media (max-width: 680px) {
+        .client-profile-actions,
+        .client-profile-actions .btn {
             width: 100%;
         }
 
-            .client-dashboard-actions .btn {
-                width: 100%;
-            }
-
-        .client-dashboard-form-grid,
-        .client-dashboard-product-grid {
+        .client-profile-form-grid,
+        .client-profile-stats,
+        .client-profile-history-item {
             grid-template-columns: 1fr;
-        }
-
-        .client-dashboard-table {
-            table-layout: auto;
-            min-width: 760px !important;
         }
     }
 </style>
@@ -361,85 +317,78 @@
 @section Scripts {
     <script>
         (() => {
-            const userEmail = document.body.dataset.userEmail || 'cliente@demo.com';
-            const form = document.getElementById('quickOrderForm');
-            const productSelect = document.getElementById('quickOrderProduct');
-            let pageInitialized = false;
+            const userEmail = document.body.dataset.userEmail || '@emailLabel';
+            const form = document.getElementById('clientProfileForm');
+            const storageKey = `bakesmart.client.profile.${userEmail}`;
+
+            function initials(name) {
+                return name
+                    .split(' ')
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map(part => part[0])
+                    .join('')
+                    .toUpperCase() || 'CL';
+            }
+
+            function profileFromForm() {
+                return Object.fromEntries(new FormData(form).entries());
+            }
+
+            function applyProfile(profile) {
+                if (!profile) return;
+                Object.entries(profile).forEach(([key, value]) => {
+                    if (form.elements[key]) form.elements[key].value = value;
+                });
+            }
 
             function render() {
-                const products = BakeSmartStore.inventory.list().filter(p => p.active && p.stock > 0);
-                productSelect.innerHTML = products.map(p =>
-                    `<option value="${p.id}">${p.description} - ${app.utils.formatCurrency(p.price)}</option>`
-                ).join('');
-
+                const profile = profileFromForm();
                 const orders = BakeSmartStore.orders.byClient(userEmail);
-                const total = orders.reduce((acc, x) => acc + x.total, 0);
+                const total = orders.reduce((acc, order) => acc + order.total, 0);
 
-                document.getElementById('clientOrderCount').textContent = orders.length;
-                document.getElementById('clientSpent').textContent = app.utils.formatCurrency(total);
-                document.getElementById('clientActive').textContent = orders.filter(x => x.status !== 'Entregado').length;
+                document.getElementById('profileInitials').textContent = initials(profile.name);
+                document.getElementById('profileNameTitle').textContent = profile.name;
+                document.getElementById('profileEmailTitle').textContent = profile.email;
+                document.getElementById('profileDefaultAddress').textContent = profile.address;
+                document.getElementById('profileOrdersCount').textContent = orders.length;
+                document.getElementById('profileActiveOrders').textContent = orders.filter(order => order.status !== 'Entregado').length;
+                document.getElementById('profileSpent').textContent = app.utils.formatCurrency(total);
 
-                document.getElementById('clientMiniOrders').innerHTML = orders.slice(0, 5).map(o => `
-                    <tr>
-                        <td>
-                            <strong>#${o.id}</strong>
-                            <div class="text-muted" style="font-size:.8rem;">${o.items.map(i => i.name).join(', ')}</div>
-                        </td>
-                        <td>
-                            <span class="badge badge-primary">${o.status}</span>
-                        </td>
-                        <td>
-                            <span class="badge ${o.paymentStatus === 'Pagado' ? 'badge-success' : 'badge-warning'}">
-                                ${o.paymentStatus}
-                            </span>
-                        </td>
-                        <td>${app.utils.formatCurrency(o.total)}</td>
-                    </tr>
+                document.getElementById('profileRecentOrders').innerHTML = orders.slice(0, 4).map(order => `
+                    <div class="client-profile-history-item">
+                        <div>
+                            <strong>#${order.id} · ${order.items.map(item => item.name).join(', ')}</strong>
+                            <div class="text-muted">${order.status} · ${new Date(order.deliveryDate).toLocaleDateString('es-CR')}</div>
+                        </div>
+                        <span class="badge ${order.paymentStatus === 'Pagado' ? 'badge-success' : 'badge-warning'}">${order.paymentStatus}</span>
+                    </div>
                 `).join('') || `
-                    <tr>
-                        <td colspan="4" class="text-center text-muted">No tienes pedidos aún.</td>
-                    </tr>
+                    <div class="client-profile-history-item">
+                        <div>
+                            <strong>Aún no tienes pedidos</strong>
+                            <div class="text-muted">Cuando registres uno, aparecerá aquí.</div>
+                        </div>
+                        <a href="/Client" class="btn btn-primary btn-sm">Crear pedido</a>
+                    </div>
                 `;
             }
 
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
+            try {
+                applyProfile(JSON.parse(localStorage.getItem(storageKey) || 'null'));
+            } catch {
+                localStorage.removeItem(storageKey);
+            }
 
-                const data = Object.fromEntries(new FormData(form).entries());
-
-                try {
-                    const paymentStatus = data.paymentMethod === 'Pendiente' ? 'Pendiente' : 'Pagado';
-
-                    BakeSmartStore.orders.create({
-                        ...data,
-                        channel: 'Web',
-                        paymentStatus,
-                        items: [{ productId: Number(data.productId), quantity: Number(data.quantity) }]
-                    });
-
-                    app.toast.success('Pedido registrado correctamente.');
-                    render();
-                    form.quantity.value = 1;
-                    form.notes.value = '';
-                } catch (error) {
-                    app.toast.error(error.message);
-                }
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                localStorage.setItem(storageKey, JSON.stringify(profileFromForm()));
+                app.toast.success('Perfil actualizado para este navegador.');
+                render();
             });
 
-            function initializePage() {
-                if (pageInitialized) return;
-                pageInitialized = true;
-
-                const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-                form.deliveryDate.value = tomorrow;
-                render();
-            }
-
-            window.addEventListener('load', initializePage, { once: true });
-
-            if (document.readyState === 'complete') {
-                initializePage();
-            }
+            form.addEventListener('input', render);
+            render();
         })();
     </script>
 }

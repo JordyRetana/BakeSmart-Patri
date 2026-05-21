@@ -1,13 +1,42 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using BakeSmartPatri.Data;
+using Microsoft.AspNetCore.Mvc;
 
 namespace BakeSmartPatri.Controllers;
 
 [Route("api")]
 public class ApiController : Controller
 {
-    [HttpGet("dashboard")]
-    public IActionResult Dashboard()
+    private readonly SqlStore _sqlStore;
+
+    public ApiController(SqlStore sqlStore)
     {
+        _sqlStore = sqlStore;
+    }
+
+    [HttpGet("health")]
+    public async Task<IActionResult> Health()
+    {
+        try
+        {
+            return Json(await _sqlStore.HealthAsync());
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new
+            {
+                enabled = true,
+                status = "error",
+                message = ex.Message
+            });
+        }
+    }
+
+    [HttpGet("dashboard")]
+    public async Task<IActionResult> Dashboard()
+    {
+        if (_sqlStore.IsEnabled)
+            return Json(await _sqlStore.DashboardAsync());
+
         return Json(new
         {
             kpis = new[]
@@ -21,8 +50,11 @@ public class ApiController : Controller
     }
 
     [HttpGet("orders")]
-    public IActionResult Orders()
+    public async Task<IActionResult> Orders()
     {
+        if (_sqlStore.IsEnabled)
+            return Json(await _sqlStore.OrdersAsync());
+
         var rows = new[]
         {
             new { id=1012, cliente="María Gómez", producto="Cake Red Velvet (1.5kg)", estado="En Producción", entrega="2026-02-18", total=32000, canal="Web" },
@@ -34,8 +66,11 @@ public class ApiController : Controller
     }
 
     [HttpGet("inventory")]
-    public IActionResult Inventory()
+    public async Task<IActionResult> Inventory()
     {
+        if (_sqlStore.IsEnabled)
+            return Json(await _sqlStore.InventoryAsync());
+
         var rows = new[]
         {
             new { sku="HAR-001", item="Harina 000", unidad="kg", stock=8, min=10, costo=900, proveedor="Distribuidora Central" },

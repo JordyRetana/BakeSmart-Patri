@@ -3,8 +3,8 @@
     ViewData["Title"] = "Producción";
 }
 
-
-<div class="page-header" style="margin: 2rem 0 2.5rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+<div class="page-shell production-page">
+<div class="page-header production-header">
     <div>
         <div style="display: flex; align-items: center; gap: 0.75rem;">
             <div style="width: 5px; height: 40px; background: var(--gradient-primary); border-radius: 5px;"></div>
@@ -20,7 +20,7 @@
             </p>
         </div>
     </div>
-    <div style="display: flex; gap: 1rem; margin-right: 1.5rem;">
+    <div class="production-date-chip">
         <span class="badge badge-info" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
             <i class="fas fa-calendar-day"></i>
             @DateTime.Now.ToString("dddd, dd MMM", new System.Globalization.CultureInfo("es-ES"))
@@ -29,14 +29,14 @@
 </div>
 
 
-<div style="padding: 0 1.5rem;">
+<div class="production-content">
     
-    <div class="grid grid-4" style="margin-bottom: 2rem;">
+    <div class="grid grid-4 production-kpi-grid">
         <div class="card" style="text-align: center;">
             <div style="font-size: 2rem; color: var(--warning); margin-bottom: 0.5rem;">
                 <i class="fas fa-clock"></i>
             </div>
-            <div style="font-size: 1.5rem; font-weight: 700;">3</div>
+            <div id="prodPendingCount" style="font-size: 1.5rem; font-weight: 700;">0</div>
             <div class="text-muted">Pendientes</div>
         </div>
 
@@ -44,7 +44,7 @@
             <div style="font-size: 2rem; color: var(--info); margin-bottom: 0.5rem;">
                 <i class="fas fa-cog fa-spin"></i>
             </div>
-            <div style="font-size: 1.5rem; font-weight: 700;">5</div>
+            <div id="prodActiveCount" style="font-size: 1.5rem; font-weight: 700;">0</div>
             <div class="text-muted">En proceso</div>
         </div>
 
@@ -52,7 +52,7 @@
             <div style="font-size: 2rem; color: var(--success); margin-bottom: 0.5rem;">
                 <i class="fas fa-check-circle"></i>
             </div>
-            <div style="font-size: 1.5rem; font-weight: 700;">2</div>
+            <div id="prodDoneCount" style="font-size: 1.5rem; font-weight: 700;">0</div>
             <div class="text-muted">Hoy</div>
         </div>
 
@@ -60,25 +60,25 @@
             <div style="font-size: 2rem; color: var(--danger); margin-bottom: 0.5rem;">
                 <i class="fas fa-exclamation-triangle"></i>
             </div>
-            <div style="font-size: 1.5rem; font-weight: 700;">1</div>
+            <div id="prodLateCount" style="font-size: 1.5rem; font-weight: 700;">0</div>
             <div class="text-muted">Atrasados</div>
         </div>
     </div>
 
     
-    <div class="grid grid-3" style="gap: 1.5rem; align-items: start;">
+    <div class="production-board">
         
-        <div class="card">
+        <div class="card production-lane production-lane--pending">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h3 style="margin: 0; display: flex; align-items: center;">
                     <span style="width: 12px; height: 12px; background: var(--warning); display: inline-block; border-radius: 50%; margin-right: 0.5rem;"></span>
                     Pendientes
                 </h3>
-                <span class="badge badge-warning">3</span>
+                <span id="prodPendingBadge" class="badge badge-warning">0</span>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 1rem;" class="kanban-column">
-                <div class="card" draggable="true" style="cursor: move; border-left: 4px solid var(--warning);">
+            <div id="prodPendingList" style="display: flex; flex-direction: column; gap: 1rem;" class="kanban-column">
+                <div class="card production-ticket" draggable="true" style="cursor: move; border-left: 4px solid var(--warning);">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                         <strong>#1014 - Andrea M.</strong>
                         <span class="badge badge-warning">Pendiente pago</span>
@@ -92,7 +92,7 @@
                     </div>
                 </div>
 
-                <div class="card" draggable="true" style="cursor: move; border-left: 4px solid var(--info);">
+                <div class="card production-ticket" draggable="true" style="cursor: move; border-left: 4px solid var(--info);">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                         <strong>#1016 - Carlos R.</strong>
                         <span class="badge badge-info">Confirmado</span>
@@ -106,7 +106,7 @@
                     </div>
                 </div>
 
-                <div class="card" draggable="true" style="cursor: move; border-left: 4px solid var(--info);">
+                <div class="card production-ticket" draggable="true" style="cursor: move; border-left: 4px solid var(--info);">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                         <strong>#1017 - Laura S.</strong>
                         <span class="badge badge-info">Confirmado</span>
@@ -123,17 +123,17 @@
         </div>
 
         
-        <div class="card">
+        <div class="card production-lane production-lane--active">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h3 style="margin: 0; display: flex; align-items: center;">
                     <span style="width: 12px; height: 12px; background: var(--info); display: inline-block; border-radius: 50%; margin-right: 0.5rem;"></span>
                     En Producción
                 </h3>
-                <span class="badge badge-info">5</span>
+                <span id="prodActiveBadge" class="badge badge-info">0</span>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 1rem;" class="kanban-column">
-                <div class="card" style="border-left: 4px solid var(--primary);">
+            <div id="prodActiveList" style="display: flex; flex-direction: column; gap: 1rem;" class="kanban-column">
+                <div class="card production-ticket" style="border-left: 4px solid var(--primary);">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                         <strong>#1012 - María G.</strong>
                         <span class="badge badge-success">Horneado</span>
@@ -152,7 +152,7 @@
                     </div>
                 </div>
 
-                <div class="card" style="border-left: 4px solid var(--warning);">
+                <div class="card production-ticket" style="border-left: 4px solid var(--warning);">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                         <strong>#1015 - Luis P.</strong>
                         <span class="badge badge-warning">Decoración</span>
@@ -169,7 +169,7 @@
                     </div>
                 </div>
 
-                <div class="card" style="border-left: 4px solid var(--success);">
+                <div class="card production-ticket" style="border-left: 4px solid var(--success);">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                         <strong>#1013 - Clínica SF</strong>
                         <span class="badge badge-success">Empaque</span>
@@ -189,17 +189,17 @@
         </div>
 
         
-        <div class="card">
+        <div class="card production-lane production-lane--done">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h3 style="margin: 0; display: flex; align-items: center;">
                     <span style="width: 12px; height: 12px; background: var(--success); display: inline-block; border-radius: 50%; margin-right: 0.5rem;"></span>
                     Completados Hoy
                 </h3>
-                <span class="badge badge-success">2</span>
+                <span id="prodDoneBadge" class="badge badge-success">0</span>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 1rem;">
-                <div class="card" style="background: #d1fae5; border: 1px solid #a7f3d0;">
+            <div id="prodDoneList" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="card production-ticket" style="background: #d1fae5; border: 1px solid #a7f3d0;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                         <strong>#1009 - Miguel A.</strong>
                         <span class="badge badge-success">Entregado</span>
@@ -211,7 +211,7 @@
                     </div>
                 </div>
 
-                <div class="card" style="background: #d1fae5; border: 1px solid #a7f3d0;">
+                <div class="card production-ticket" style="background: #d1fae5; border: 1px solid #a7f3d0;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                         <strong>#1010 - Ana S.</strong>
                         <span class="badge badge-success">Entregado</span>
@@ -227,7 +227,7 @@
     </div>
 
     
-    <div class="card" style="margin-top: 2rem;">
+    <div class="card production-schedule-card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
             <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
                 <i class="fas fa-clock" style="color: var(--primary);"></i>
@@ -236,7 +236,7 @@
             <span class="badge badge-info">@DateTime.Now.ToString("dd/MM/yyyy")</span>
         </div>
 
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div id="productionSchedule" style="display: flex; flex-direction: column; gap: 1rem;">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <div style="width: 80px; font-weight: 700; color: var(--primary);">8:00 AM</div>
                 <div style="flex: 1; height: 2px; background: var(--border); position: relative;">
@@ -279,106 +279,284 @@
         </div>
     </div>
 </div>
+</div>
 
+@section Scripts {
 <script>
-    function startProduction(orderId) {
-        if (typeof app !== 'undefined' && app.modal) {
-            app.modal.create({
-                title: 'Iniciar producción',
-                message: `¿Iniciar producción del pedido #${orderId}?`,
-                confirmText: 'Iniciar',
-                onConfirm: () => {
-                    if (app.toast) {
-                        app.toast.success(`Producción iniciada para pedido #${orderId}`);
-                    } else {
-                        alert(`Producción iniciada para pedido #${orderId}`);
-                    }
-                }
-            });
-        } else {
-            if (confirm(`¿Iniciar producción del pedido #${orderId}?`)) {
-                alert(`Producción iniciada para pedido #${orderId}`);
-            }
-        }
+(() => {
+    const store = window.BakeSmartStore;
+    const fmtDate = (value) => new Date(value).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit' });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const statusMeta = {
+        'Pendiente pago': { badge: 'badge-warning', border: 'var(--warning)', action: 'Cobrar', next: 'Confirmado', icon: 'fa-money-bill-wave', progress: 10 },
+        'Confirmado': { badge: 'badge-info', border: 'var(--info)', action: 'Iniciar', next: 'En producción', icon: 'fa-play', progress: 25 },
+        'En producción': { badge: 'badge-primary', border: 'var(--primary)', action: 'Listo', next: 'Listo', icon: 'fa-arrow-right', progress: 60 },
+        'Listo': { badge: 'badge-success', border: 'var(--success)', action: 'Enviar', next: 'En camino', icon: 'fa-truck', progress: 82 },
+        'En camino': { badge: 'badge-info', border: 'var(--info)', action: 'Entregar', next: 'Entregado', icon: 'fa-check', progress: 92 },
+        'Entregado': { badge: 'badge-success', border: 'var(--success)', action: '', next: '', icon: 'fa-check', progress: 100 }
+    };
+
+    function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
     }
 
-    function updateProgress(orderId) {
-        if (typeof app !== 'undefined' && app.toast) {
-            app.toast.info(`Actualizando progreso del pedido #${orderId}`);
-        } else {
-            alert(`Actualizando progreso del pedido #${orderId}`);
-        }
+    function primaryItem(order) {
+        if (!order.items?.length) return 'Pedido personalizado';
+        const [first, ...rest] = order.items;
+        return `${first.name}${rest.length ? ` +${rest.length}` : ''}`;
     }
 
-    function completeProduction(orderId) {
-        if (typeof app !== 'undefined' && app.modal) {
-            app.modal.create({
-                title: 'Completar producción',
-                message: `¿Marcar como completado el pedido #${orderId}?`,
-                confirmText: 'Completar',
-                onConfirm: () => {
-                    if (app.toast) {
-                        app.toast.success(`Pedido #${orderId} completado`);
-                    } else {
-                        alert(`Pedido #${orderId} completado`);
-                    }
-                }
-            });
-        } else {
-            if (confirm(`¿Marcar como completado el pedido #${orderId}?`)) {
-                alert(`Pedido #${orderId} completado`);
-            }
-        }
+    function ticket(order, mode = 'active') {
+        const meta = statusMeta[order.status] || statusMeta.Confirmado;
+        const canPay = order.paymentStatus !== 'Pagado';
+        const isDone = order.status === 'Entregado';
+        const action = canPay
+            ? `<button class="btn btn-outline btn-sm" onclick="payProductionOrder(${order.id})"><i class="fas fa-money-bill-wave"></i> Cobrar</button>`
+            : (!isDone ? `<button class="btn btn-primary btn-sm" onclick="moveProductionOrder(${order.id}, '${meta.next}')"><i class="fas ${meta.icon}"></i> ${meta.action}</button>` : '');
+
+        return `
+            <div class="card production-ticket" draggable="${mode !== 'done'}" style="cursor:${mode !== 'done' ? 'move' : 'default'}; border-left:4px solid ${meta.border};">
+                <div style="display:flex; justify-content:space-between; gap:.75rem; margin-bottom:.5rem; align-items:start;">
+                    <strong>#${order.id} - ${order.customerName}</strong>
+                    <span class="badge ${meta.badge}">${order.status}</span>
+                </div>
+                <div>${primaryItem(order)}</div>
+                ${mode !== 'pending' ? `
+                    <div class="progress" style="margin:.65rem 0;">
+                        <div class="progress-bar" style="width:${meta.progress}%;"></div>
+                    </div>
+                ` : ''}
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:.75rem; margin-top:.65rem;">
+                    <span class="text-muted"><i class="fas fa-calendar"></i> ${fmtDate(order.deliveryDate)}</span>
+                    ${action || `<span class="badge badge-success">Completado</span>`}
+                </div>
+            </div>
+        `;
     }
 
-    function reorderQueue() {
-        if (typeof app !== 'undefined' && app.toast) {
-            app.toast.info('Reordenando cola de producción...');
-            setTimeout(() => {
-                app.toast.success('Cola reordenada por prioridad');
-            }, 1000);
-        } else {
-            alert('Reordenando cola de producción...');
-        }
+    function scheduleRow(order, index) {
+        const colors = ['var(--primary)', 'var(--warning)', 'var(--success)', 'var(--info)', 'var(--danger)'];
+        const color = colors[index % colors.length];
+        const hour = `${8 + index}:00 ${index < 4 ? 'AM' : 'PM'}`;
+        return `
+            <div class="production-schedule-row">
+                <div class="production-schedule-time" style="color:${color};">${hour}</div>
+                <div class="production-schedule-line">
+                    <span style="left:${Math.min(index * 18, 90)}%; background:${color};"></span>
+                </div>
+                <div class="production-schedule-label">#${order.id} · ${primaryItem(order)}</div>
+            </div>
+        `;
     }
 
-    function printProduction() {
-        if (typeof app !== 'undefined' && app.toast) {
-            app.toast.info('Preparando impresión...');
-            setTimeout(() => {
-                app.toast.success('Lista enviada a imprimir');
-            }, 1000);
-        } else {
-            alert('Preparando impresión...');
-        }
-    }
-
-    
-    const draggables = document.querySelectorAll('[draggable="true"]');
-    const containers = document.querySelectorAll('.kanban-column');
-
-    draggables.forEach(draggable => {
-        draggable.addEventListener('dragstart', () => {
-            draggable.classList.add('dragging');
+    function renderProduction() {
+        const orders = store.orders.list();
+        const pending = orders.filter(o => ['Pendiente pago', 'Confirmado'].includes(o.status));
+        const active = orders.filter(o => ['En producción', 'Listo', 'En camino'].includes(o.status));
+        const done = orders.filter(o => o.status === 'Entregado');
+        const late = orders.filter(o => {
+            const delivery = new Date(o.deliveryDate);
+            delivery.setHours(0, 0, 0, 0);
+            return delivery < today && o.status !== 'Entregado';
         });
 
-        draggable.addEventListener('dragend', () => {
-            draggable.classList.remove('dragging');
-        });
-    });
+        setText('prodPendingCount', pending.length);
+        setText('prodActiveCount', active.length);
+        setText('prodDoneCount', done.length);
+        setText('prodLateCount', late.length);
+        setText('prodPendingBadge', pending.length);
+        setText('prodActiveBadge', active.length);
+        setText('prodDoneBadge', done.length);
 
-    containers.forEach(container => {
-        container.addEventListener('dragover', e => {
-            e.preventDefault();
-            const draggable = document.querySelector('.dragging');
-            if (draggable) {
-                container.appendChild(draggable);
-            }
-        });
-    });
+        document.getElementById('prodPendingList').innerHTML = pending.map(o => ticket(o, 'pending')).join('') || `<div class="text-muted">No hay pedidos pendientes.</div>`;
+        document.getElementById('prodActiveList').innerHTML = active.map(o => ticket(o, 'active')).join('') || `<div class="text-muted">No hay pedidos en producción.</div>`;
+        document.getElementById('prodDoneList').innerHTML = done.slice(0, 8).map(o => ticket(o, 'done')).join('') || `<div class="text-muted">Aún no hay pedidos completados.</div>`;
+        document.getElementById('productionSchedule').innerHTML = orders.slice(0, 5).map(scheduleRow).join('') || `<div class="text-muted">No hay programación para hoy.</div>`;
+    }
+
+    window.payProductionOrder = (orderId) => {
+        try {
+            store.orders.markPaid(orderId, 'Efectivo');
+            app.toast.success(`Pedido #${orderId} cobrado y confirmado.`);
+            renderProduction();
+        } catch (error) {
+            app.toast.error(error.message);
+        }
+    };
+
+    window.moveProductionOrder = (orderId, nextStatus) => {
+        try {
+            store.orders.updateStatus(orderId, nextStatus);
+            app.toast.success(`Pedido #${orderId} ahora está en ${nextStatus}.`);
+            renderProduction();
+        } catch (error) {
+            app.toast.error(error.message);
+        }
+    };
+
+    window.startProduction = (orderId) => window.moveProductionOrder(orderId, 'En producción');
+    window.updateProgress = (orderId) => window.moveProductionOrder(orderId, 'Listo');
+    window.completeProduction = (orderId) => window.moveProductionOrder(orderId, 'Entregado');
+
+    renderProduction();
+})();
 </script>
+}
 
 <style>
+    .production-page {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        max-width: 1480px;
+    }
+
+        .production-page,
+        .production-page * {
+            min-width: 0;
+        }
+
+    .production-header {
+        align-items: center;
+        margin-bottom: 0;
+    }
+
+    .production-date-chip {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .production-content {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .production-kpi-grid {
+        gap: 1rem;
+        margin-bottom: 0;
+    }
+
+    .production-board {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+        align-items: start;
+    }
+
+    .production-lane {
+        padding: 1.25rem;
+    }
+
+    .production-lane .kanban-column,
+    .production-lane > div:last-child {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1rem !important;
+        align-items: stretch;
+    }
+
+    .production-ticket {
+        height: 100%;
+        padding: 1rem;
+    }
+
+    .production-schedule-card {
+        margin-top: 0;
+    }
+
+    .production-schedule-row {
+        display: grid;
+        grid-template-columns: 82px minmax(80px, 1fr) minmax(180px, 260px);
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .production-schedule-time {
+        font-weight: 800;
+    }
+
+    .production-schedule-line {
+        height: 2px;
+        background: var(--border);
+        position: relative;
+    }
+
+    .production-schedule-line span {
+        position: absolute;
+        top: -6px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        box-shadow: 0 0 0 2px var(--primary-light);
+    }
+
+    .production-schedule-label {
+        background: var(--bg-alt);
+        padding: .65rem .8rem;
+        border-radius: var(--radius);
+        font-weight: 700;
+    }
+
+    .production-page .card:hover {
+        transform: none;
+        box-shadow: var(--shadow-sm);
+        border-color: var(--border);
+    }
+
+    .production-page .card:hover::after {
+        opacity: 0;
+    }
+
+    .production-page .btn:hover,
+    .production-page .btn-primary:hover,
+    .production-page .btn-outline:hover,
+    .production-page .btn-secondary:hover,
+    .production-page .btn-ghost:hover,
+    .production-page .form-control:focus,
+    .production-page input:focus,
+    .production-page select:focus,
+    .production-page textarea:focus {
+        transform: none;
+    }
+
+    @@media (min-width: 1180px) {
+        .production-board {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+
+        .production-lane--done {
+            grid-column: 1 / -1;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .production-header {
+            align-items: flex-start;
+        }
+
+        .production-date-chip {
+            width: 100%;
+        }
+
+        .production-lane .kanban-column,
+        .production-lane > div:last-child {
+            grid-template-columns: 1fr;
+        }
+
+        .production-schedule-row {
+            grid-template-columns: 1fr;
+            gap: .5rem;
+        }
+
+        .production-schedule-line {
+            display: none;
+        }
+    }
+
     
     .dragging {
         opacity: 0.5;

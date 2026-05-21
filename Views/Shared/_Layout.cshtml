@@ -20,7 +20,7 @@
     var currentPath = Context.Request.Path.ToString().ToLower();
     string welcomeMessage = "";
     string welcomeType = "info";
-    var enablePageLoader = currentPath == "/" || currentPath == "/home/index" || currentPath.StartsWith("/dashboard") || currentPath.StartsWith("/catalog") || currentPath.StartsWith("/reports");
+    var enablePageLoader = false;
 
     if (currentPath == "/" || currentPath == "/home/index")
     {
@@ -344,7 +344,9 @@
             (function() {
                 
                 document.addEventListener('DOMContentLoaded', function() {
-                    if (window.app && window.app.toast) {
+                    const toastKey = 'bakesmart.welcome.' + '@currentPath';
+                    if (!sessionStorage.getItem(toastKey) && window.app && window.app.toast) {
+                        sessionStorage.setItem(toastKey, '1');
                         window.app.toast.show('@welcomeMessage', '@welcomeType');
                     }
                 });

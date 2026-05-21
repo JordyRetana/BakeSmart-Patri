@@ -11,7 +11,7 @@
                 Gestión de inventario
             </h1>
             <p class="text-muted inventory-subtitle">
-                CRUD, filtros y movimientos conectados a pedidos y POS.
+                Materias primas, productos terminados, empaques y movimientos conectados a pedidos y POS.
             </p>
         </div>
 
@@ -20,7 +20,11 @@
             <select id="inventoryCategory" class="form-control inventory-category"></select>
             <button type="button" id="inventoryQuickActions" class="btn btn-primary">
                 <i class="fas fa-bolt"></i>
-                Acciones rápidas
+                Nuevo producto
+            </button>
+            <button type="button" id="inventoryMovementActions" class="btn btn-outline">
+                <i class="fas fa-right-left"></i>
+                Movimiento
             </button>
         </div>
     </div>
@@ -35,12 +39,35 @@
             <h2 id="invActive"></h2>
         </div>
         <div class="card inventory-kpi-card">
-            <div class="text-muted">Stock bajo (≤5)</div>
+            <div class="text-muted">Stock bajo</div>
             <h2 id="invLow"></h2>
         </div>
         <div class="card inventory-kpi-card">
-            <div class="text-muted">Inconsistencias</div>
+            <div class="text-muted">Materias primas</div>
             <h2 id="invNegative"></h2>
+        </div>
+    </div>
+
+    <div class="card inventory-presets-card">
+        <div class="inventory-panel-header">
+            <div>
+                <h3 class="inventory-panel-title">Alta rápida de materia prima</h3>
+                <p class="text-muted" style="margin:.35rem 0 0;">Plantillas comunes para registrar inventario real de repostería.</p>
+            </div>
+        </div>
+        <div class="inventory-preset-grid">
+            <button type="button" class="inventory-preset-btn" onclick="openIngredientPreset('MP-HAR-', 'Harina pastelera', 'Secos', 'kg', 25, 15, 950)">
+                <i class="fas fa-wheat-awn"></i><span>Harina</span><small>kg</small>
+            </button>
+            <button type="button" class="inventory-preset-btn" onclick="openIngredientPreset('MP-AZU-', 'Azúcar blanca', 'Secos', 'kg', 20, 10, 780)">
+                <i class="fas fa-cubes-stacked"></i><span>Azúcar</span><small>kg</small>
+            </button>
+            <button type="button" class="inventory-preset-btn" onclick="openIngredientPreset('MP-MAN-', 'Mantequilla sin sal', 'Lácteos', 'kg', 8, 5, 4200)">
+                <i class="fas fa-cheese"></i><span>Mantequilla</span><small>kg</small>
+            </button>
+            <button type="button" class="inventory-preset-btn" onclick="openIngredientPreset('EMP-CAJ-', 'Caja para entregas', 'Cajas', 'unidad', 50, 20, 420, 'Empaque', 'Empaques')">
+                <i class="fas fa-box"></i><span>Cajas</span><small>unidad</small>
+            </button>
         </div>
     </div>
 
@@ -61,7 +88,7 @@
                         <th>Fecha</th>
                         <th>Producto</th>
                         <th>Movimiento</th>
-                        <th>Cantidad</th>
+                <th>Cantidad</th>
                         <th>Responsable</th>
                     </tr>
                 </thead>
@@ -73,7 +100,7 @@
     <template id="inventoryProductTemplate">
         <div class="inventory-modal-shell">
             <div class="inventory-modal-head">
-                <h3 class="inventory-modal-title">Producto</h3>
+                <h3 class="inventory-modal-title">Producto o materia prima</h3>
             </div>
 
             <form id="inventoryForm" class="inventory-modal-form">
@@ -87,6 +114,29 @@
                 <div>
                     <label>Precio</label>
                     <input class="form-control" name="price" type="number" min="0" step="0.01" required />
+                </div>
+
+                <div>
+                    <label>Tipo</label>
+                    <select class="form-control" name="type">
+                        <option>Materia prima</option>
+                        <option>Producto terminado</option>
+                        <option>Empaque</option>
+                        <option>Insumo operativo</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label>Unidad</label>
+                    <select class="form-control" name="unit">
+                        <option>kg</option>
+                        <option>g</option>
+                        <option>L</option>
+                        <option>ml</option>
+                        <option>unidad</option>
+                        <option>caja</option>
+                        <option>paquete</option>
+                    </select>
                 </div>
 
                 <div class="inventory-modal-full">
@@ -106,7 +156,12 @@
 
                 <div>
                     <label>Cantidad</label>
-                    <input class="form-control" name="stock" type="number" min="0" required />
+                    <input class="form-control" name="stock" type="number" min="0" step="0.01" required />
+                </div>
+
+                <div>
+                    <label>Stock mínimo</label>
+                    <input class="form-control" name="minStock" type="number" min="0" step="0.01" value="5" required />
                 </div>
 
                 <div class="inventory-modal-actions">
@@ -141,7 +196,7 @@
 
                 <div>
                     <label>Cantidad</label>
-                    <input class="form-control" name="quantity" type="number" min="1" placeholder="Cantidad" />
+                    <input class="form-control" name="quantity" type="number" min="0.01" step="0.01" placeholder="Cantidad" />
                 </div>
 
                 <div class="inventory-modal-full">
@@ -170,11 +225,12 @@
                     <thead>
                         <tr>
                             <th>Fecha</th>
-                            <th>Producto</th>
-                            <th>Movimiento</th>
-                            <th>Cantidad</th>
-                            <th>Responsable</th>
-                            <th>Nota</th>
+                        <th>Producto</th>
+                        <th>Movimiento</th>
+                        <th>Cantidad</th>
+                        <th>Unidad</th>
+                        <th>Responsable</th>
+                        <th>Nota</th>
                         </tr>
                     </thead>
                     <tbody id="movementTable"></tbody>
@@ -196,9 +252,11 @@
                     <tr>
                         <th>Código</th>
                         <th>Descripción</th>
+                        <th>Tipo</th>
                         <th>Categoría</th>
-                        <th>Precio</th>
+                        <th>Costo / precio</th>
                         <th>Cantidad</th>
+                        <th>Mínimo</th>
                         <th>Estado</th>
                         <th class="text-right">Acciones</th>
                     </tr>
@@ -311,35 +369,47 @@
             width: auto;
         }
 
-        .inventory-products-table th:nth-child(3),
-        .inventory-products-table td:nth-child(3) {
-            width: 130px;
-            white-space: nowrap;
-        }
+            .inventory-products-table th:nth-child(3),
+            .inventory-products-table td:nth-child(3) {
+                width: 150px;
+                white-space: nowrap;
+            }
 
-        .inventory-products-table th:nth-child(4),
-        .inventory-products-table td:nth-child(4) {
-            width: 110px;
-            white-space: nowrap;
-        }
+            .inventory-products-table th:nth-child(4),
+            .inventory-products-table td:nth-child(4) {
+                width: 130px;
+                white-space: nowrap;
+            }
 
-        .inventory-products-table th:nth-child(5),
-        .inventory-products-table td:nth-child(5) {
-            width: 110px;
-            white-space: nowrap;
-        }
+            .inventory-products-table th:nth-child(5),
+            .inventory-products-table td:nth-child(5) {
+                width: 110px;
+                white-space: nowrap;
+            }
 
-        .inventory-products-table th:nth-child(6),
-        .inventory-products-table td:nth-child(6) {
-            width: 110px;
-            white-space: nowrap;
-        }
+            .inventory-products-table th:nth-child(6),
+            .inventory-products-table td:nth-child(6) {
+                width: 110px;
+                white-space: nowrap;
+            }
 
-        .inventory-products-table th:nth-child(7),
-        .inventory-products-table td:nth-child(7) {
-            width: 190px;
-            white-space: nowrap;
-            text-align: right;
+            .inventory-products-table th:nth-child(7),
+            .inventory-products-table td:nth-child(7) {
+                width: 110px;
+                white-space: nowrap;
+            }
+
+            .inventory-products-table th:nth-child(8),
+            .inventory-products-table td:nth-child(8) {
+                width: 110px;
+                white-space: nowrap;
+            }
+
+            .inventory-products-table th:nth-child(9),
+            .inventory-products-table td:nth-child(9) {
+                width: 190px;
+                white-space: nowrap;
+                text-align: right;
         }
 
         .inventory-products-table td:nth-child(2) {
@@ -363,6 +433,45 @@
     .inventory-history-preview-card {
         align-self: start;
         width: 100%;
+    }
+
+    .inventory-preset-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: .75rem;
+    }
+
+    .inventory-preset-btn {
+        display: grid;
+        grid-template-columns: 34px 1fr auto;
+        align-items: center;
+        gap: .65rem;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--bg-card);
+        color: var(--text);
+        padding: .9rem;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .inventory-preset-btn i {
+        color: var(--primary);
+    }
+
+    .inventory-preset-btn small {
+        color: var(--text-muted);
+    }
+
+    .inventory-type-chip {
+        display: inline-flex;
+        padding: .28rem .65rem;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--bg-alt);
+        font-size: .76rem;
+        font-weight: 800;
+        color: var(--text);
     }
 
     .inventory-modal-shell {
@@ -456,7 +565,7 @@
 
         .inventory-products-table {
             table-layout: auto;
-            min-width: 900px !important;
+            min-width: 1120px !important;
         }
     }
 </style>
@@ -468,6 +577,7 @@
             const search = document.getElementById('inventorySearch');
             const category = document.getElementById('inventoryCategory');
             const quickButton = document.getElementById('inventoryQuickActions');
+            const movementButton = document.getElementById('inventoryMovementActions');
 
             let categoriesInitialized = false;
 
@@ -527,7 +637,7 @@
                 if (!movementForm || !movementProduct) return;
 
                 movementProduct.innerHTML = store.inventory.list()
-                    .map(p => `<option value="${p.id}">${p.code} - ${p.description}</option>`)
+                    .map(p => `<option value="${p.id}">${p.code} - ${p.description} (${p.stock} ${p.unit || 'unidad'})</option>`)
                     .join('');
 
                 movementForm.addEventListener('submit', (e) => {
@@ -550,8 +660,8 @@
 
                 document.getElementById('invTotal').textContent = all.length;
                 document.getElementById('invActive').textContent = all.filter(x => x.active).length;
-                document.getElementById('invLow').textContent = all.filter(x => x.stock <= 5).length;
-                document.getElementById('invNegative').textContent = all.filter(x => x.stock < 0).length;
+                document.getElementById('invLow').textContent = all.filter(x => Number(x.stock) <= Number(x.minStock ?? 5)).length;
+                document.getElementById('invNegative').textContent = all.filter(x => x.type === 'Materia prima').length;
 
                 refreshCategoriesIfNeeded();
 
@@ -568,13 +678,15 @@
                         <td><strong>${p.code}</strong></td>
                         <td>
                             ${p.description}
-                            <div class="text-muted" style="font-size:.8rem;">${p.subcategory || 'Sin subcategoría'}</div>
+                            <div class="text-muted" style="font-size:.8rem;">${p.subcategory || 'Sin subcategoría'} · ${p.unit || 'unidad'}</div>
                         </td>
+                        <td><span class="inventory-type-chip">${p.type || 'Producto terminado'}</span></td>
                         <td>${p.category}</td>
                         <td>${app.utils.formatCurrency(p.price)}</td>
                         <td>
-                            <span class="badge ${p.stock <= 5 ? 'badge-warning' : 'badge-success'}">${p.stock}</span>
+                            <span class="badge ${Number(p.stock) <= Number(p.minStock ?? 5) ? 'badge-warning' : 'badge-success'}">${p.stock} ${p.unit || ''}</span>
                         </td>
+                        <td>${p.minStock ?? 5} ${p.unit || ''}</td>
                         <td>
                             <span class="badge ${p.active ? 'badge-success' : 'badge-warning'}">
                                 ${p.active ? 'Activo' : 'Inactivo'}
@@ -589,7 +701,7 @@
                     </tr>
                 `).join('') || `
                     <tr>
-                        <td colspan="7" class="text-center text-muted">No hay productos para mostrar.</td>
+                        <td colspan="9" class="text-center text-muted">No hay productos para mostrar.</td>
                     </tr>
                 `;
             }
@@ -603,7 +715,7 @@
                         <td>${new Date(m.createdAt).toLocaleString('es-CR')}</td>
                         <td>${m.code}</td>
                         <td><span class="badge badge-info">${m.type}</span></td>
-                        <td>${m.quantity}</td>
+                        <td>${m.quantity} ${m.unit || ''}</td>
                         <td>${m.responsible}</td>
                     </tr>
                 `).join('') || `
@@ -620,12 +732,13 @@
                             <td>${m.code}</td>
                             <td><span class="badge badge-info">${m.type}</span></td>
                             <td>${m.quantity}</td>
+                            <td>${m.unit || '-'}</td>
                             <td>${m.responsible}</td>
                             <td>${m.note || '-'}</td>
                         </tr>
                     `).join('') || `
                         <tr>
-                            <td colspan="6" class="text-center text-muted">No hay movimientos registrados.</td>
+                            <td colspan="7" class="text-center text-muted">No hay movimientos registrados.</td>
                         </tr>
                     `;
                 }
@@ -638,7 +751,7 @@
 
             window.openInventoryQuickActions = (section = 'product') => {
                 const templates = {
-                    product: { title: 'Producto', selector: '#inventoryProductTemplate', maxWidth: '980px' },
+                    product: { title: 'Producto o materia prima', selector: '#inventoryProductTemplate', maxWidth: '980px' },
                     movement: { title: 'Movimiento', selector: '#inventoryMovementTemplate', maxWidth: '980px' },
                     history: { title: 'Historial de inventario', selector: '#inventoryHistoryTemplate', maxWidth: '1280px' }
                 };
@@ -670,6 +783,24 @@
                 }
             };
 
+            window.openIngredientPreset = (codePrefix, description, subcategory, unit, stock, minStock, price, type = 'Materia prima', categoryName = 'Ingredientes') => {
+                openInventoryQuickActions('product');
+
+                const form = document.getElementById('inventoryForm');
+                if (!form) return;
+
+                const next = String(Date.now()).slice(-3);
+                form.code.value = `${codePrefix}${next}`.toUpperCase();
+                form.description.value = description;
+                form.type.value = type;
+                form.unit.value = unit;
+                form.category.value = categoryName;
+                form.subcategory.value = subcategory;
+                form.price.value = price;
+                form.stock.value = stock;
+                form.minStock.value = minStock;
+            };
+
             window.toggleProduct = (id) => {
                 try {
                     store.inventory.toggle(id);
@@ -681,6 +812,7 @@
             };
 
             quickButton.addEventListener('click', () => openInventoryQuickActions('product'));
+            movementButton.addEventListener('click', () => openInventoryQuickActions('movement'));
 
             search.addEventListener('input', renderProducts);
 

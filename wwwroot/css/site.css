@@ -2325,3 +2325,127 @@ body.dark .page-loader__content {
         min-width: min(280px, 88vw);
     }
 }
+
+body.no-heavy-motion .page-enter,
+body.no-heavy-motion .card,
+body.no-heavy-motion .table-container,
+body.no-heavy-motion .page-header {
+    animation: none !important;
+    transition-duration: .12s !important;
+}
+
+body.no-heavy-motion .reveal-on-scroll {
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+body.dark .card,
+body.dark .table-container,
+body.dark .app-modal-card,
+body.dark .quick-panel-card,
+body.dark .payment-method-card,
+body.dark .session-status-card,
+body.dark .inventory-preset-btn,
+body.dark .inventory-type-chip,
+body.dark .dashboard-alert,
+body.dark .dashboard-list-item,
+body.dark .dashboard-shortcuts a {
+    background: #1f2937;
+    border-color: #475569;
+    color: #f9fafb;
+}
+
+body.dark .page-header {
+    background: linear-gradient(135deg, rgba(139, 92, 246, .24), rgba(236, 72, 153, .16));
+    border-color: rgba(167, 139, 250, .34);
+}
+
+body.dark .table th,
+body.dark .table thead th,
+body.dark .inventory-table thead th,
+body.dark .orders-table thead th,
+body.dark .marketing-table thead th,
+body.dark .accounting-table thead th,
+body.dark .pos-products-table thead th {
+    background: #111827;
+    color: #e5e7eb;
+    border-color: #475569;
+}
+
+body.dark .table td {
+    border-color: #374151;
+    color: #f3f4f6;
+}
+
+body.dark .table tbody tr:hover,
+body.dark .orders-page .table tbody tr:hover,
+body.dark .inventory-page .table tbody tr:hover,
+body.dark .marketing-page .table tbody tr:hover,
+body.dark .accounting-page .table tbody tr:hover,
+body.dark .pos-page .table tbody tr:hover {
+    background: #243244;
+}
+
+body.dark .badge {
+    background: #243244;
+    color: #f8fafc;
+    border-color: #64748b;
+}
+
+body.dark .badge-primary {
+    background: rgba(167, 139, 250, .22);
+    color: #ddd6fe;
+    border-color: #a78bfa;
+}
+
+body.dark .badge-success {
+    background: rgba(16, 185, 129, .2);
+    color: #a7f3d0;
+    border-color: #34d399;
+}
+
+body.dark .badge-warning {
+    background: rgba(245, 158, 11, .22);
+    color: #fde68a;
+    border-color: #f59e0b;
+}
+
+body.dark .badge-danger {
+    background: rgba(239, 68, 68, .2);
+    color: #fecaca;
+    border-color: #f87171;
+}
+
+body.dark .badge-info {
+    background: rgba(59, 130, 246, .22);
+    color: #bfdbfe;
+    border-color: #60a5fa;
+}
+
+body.dark .form-control,
+body.dark input.form-control,
+body.dark select.form-control,
+body.dark textarea.form-control {
+    background: #111827;
+    color: #f9fafb;
+    border-color: #64748b;
+}
+
+body.dark .form-control::placeholder {
+    color: #94a3b8;
+}
+
+body.dark .text-muted,
+body.dark p {
+    color: #cbd5e1 !important;
+}
+
+body.dark .btn-outline {
+    border-color: #a78bfa;
+    color: #ddd6fe;
+}
+
+body.dark .btn-outline:hover {
+    background: #7c3aed;
+    color: #fff;
+}

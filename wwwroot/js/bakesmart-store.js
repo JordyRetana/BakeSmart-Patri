@@ -12,25 +12,53 @@
     name: 'BakeSmart Patri · Sagrada Familia',
     city: 'Sagrada Familia',
     country: 'Costa Rica',
-    lat: 9.9141,
-    lng: -84.0739,
+    lat: 9.9142,
+    lng: -84.0734,
     code: 'CR-SF'
   };
 
   const DESTINATION_PRESETS = [
-    { id: 'escuela', name: 'Centro Educativo El Carmelo', city: 'Sagrada Familia', country: 'Costa Rica', lat: 9.9157, lng: -84.0702, keywords: ['escuela', 'colegio', 'centro educativo', 'carmelo'] },
-    { id: 'escazu', name: 'Escazú Centro', city: 'Escazú', country: 'Costa Rica', lat: 9.9186, lng: -84.1394, keywords: ['escazu', 'escazú'] },
-    { id: 'santa-ana', name: 'Santa Ana Centro', city: 'Santa Ana', country: 'Costa Rica', lat: 9.9326, lng: -84.1827, keywords: ['santa ana'] },
-    { id: 'curridabat', name: 'Curridabat', city: 'Curridabat', country: 'Costa Rica', lat: 9.9118, lng: -84.0341, keywords: ['curridabat'] },
+    { id: 'sagrada-familia', name: 'Sagrada Familia', city: 'San José', country: 'Costa Rica', lat: 9.9139, lng: -84.0737, keywords: ['sagrada familia', 'hatillo centro'] },
+    { id: 'escuela', name: 'Centro Educativo El Carmelo', city: 'San José', country: 'Costa Rica', lat: 9.9160, lng: -84.0704, keywords: ['escuela', 'colegio', 'centro educativo', 'carmelo'] },
+    { id: 'san-jose-centro', name: 'San José Centro', city: 'San José', country: 'Costa Rica', lat: 9.9325, lng: -84.0796, keywords: ['san jose centro', 'san josé centro', 'centro de san jose', 'centro de san josé', 'avenida central'] },
+    { id: 'escazu', name: 'Escazú Centro', city: 'Escazú', country: 'Costa Rica', lat: 9.9187, lng: -84.1399, keywords: ['escazu', 'escazú'] },
+    { id: 'santa-ana', name: 'Santa Ana Centro', city: 'Santa Ana', country: 'Costa Rica', lat: 9.9327, lng: -84.1828, keywords: ['santa ana'] },
+    { id: 'curridabat', name: 'Curridabat Centro', city: 'Curridabat', country: 'Costa Rica', lat: 9.9117, lng: -84.0342, keywords: ['curridabat'] },
     { id: 'cartago', name: 'Cartago Centro', city: 'Cartago', country: 'Costa Rica', lat: 9.8644, lng: -83.9194, keywords: ['cartago'] },
     { id: 'heredia', name: 'Heredia Centro', city: 'Heredia', country: 'Costa Rica', lat: 9.9981, lng: -84.1165, keywords: ['heredia'] },
     { id: 'alajuela', name: 'Alajuela Centro', city: 'Alajuela', country: 'Costa Rica', lat: 10.0163, lng: -84.2116, keywords: ['alajuela'] },
-    { id: 'panama-city', name: 'Ciudad de Panamá', city: 'Ciudad de Panamá', country: 'Panamá', lat: 8.9943, lng: -79.5188, keywords: ['panama', 'panamá', 'panama city', 'ciudad de panamá', 'ciudad de panama'] }
+    { id: 'desamparados', name: 'Desamparados Centro', city: 'Desamparados', country: 'Costa Rica', lat: 9.8969, lng: -84.0620, keywords: ['desamparados'] },
+    { id: 'pavas', name: 'Pavas', city: 'San José', country: 'Costa Rica', lat: 9.9499, lng: -84.1334, keywords: ['pavas', 'rohrmoser'] },
+    { id: 'la-sabana', name: 'La Sabana', city: 'San José', country: 'Costa Rica', lat: 9.9369, lng: -84.1066, keywords: ['sabana', 'la sabana', 'estadio nacional'] },
+    { id: 'moravia', name: 'Moravia Centro', city: 'Moravia', country: 'Costa Rica', lat: 9.9614, lng: -84.0488, keywords: ['moravia'] },
+    { id: 'tibas', name: 'Tibás Centro', city: 'Tibás', country: 'Costa Rica', lat: 9.9607, lng: -84.0781, keywords: ['tibas', 'tibás'] },
+    { id: 'guadalupe', name: 'Guadalupe', city: 'Goicoechea', country: 'Costa Rica', lat: 9.9477, lng: -84.0560, keywords: ['guadalupe', 'goicoechea'] },
+    { id: 'panama-city', name: 'Ciudad de Panamá', city: 'Ciudad de Panamá', country: 'Panamá', lat: 8.9824, lng: -79.5199, keywords: ['panama', 'panamá', 'panama city', 'ciudad de panamá', 'ciudad de panama'] }
   ];
 
+  function normalizeText(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+
+  function validLatLng(lat, lng) {
+    const nLat = Number(lat);
+    const nLng = Number(lng);
+    return Number.isFinite(nLat)
+      && Number.isFinite(nLng)
+      && nLat >= -90
+      && nLat <= 90
+      && nLng >= -180
+      && nLng <= 180;
+  }
+
   function resolveDestination(address, fallback = {}) {
-    const source = String(address || '').trim().toLowerCase();
-    const matched = DESTINATION_PRESETS.find(item => item.keywords.some(keyword => source.includes(keyword)));
+    const source = normalizeText(address);
+    const matched = DESTINATION_PRESETS.find(item => item.keywords.some(keyword => source.includes(normalizeText(keyword))));
     if (matched) {
       return {
         name: matched.name,
@@ -45,20 +73,32 @@
 
     const fallbackLat = Number(fallback.lat);
     const fallbackLng = Number(fallback.lng);
-    const hasFallbackCoords = Number.isFinite(fallbackLat) && Number.isFinite(fallbackLng);
+    const hasFallbackCoords = validLatLng(fallbackLat, fallbackLng);
+    const panamaFallback = DESTINATION_PRESETS.find(item => item.id === 'panama-city');
+    const sanJoseFallback = DESTINATION_PRESETS.find(item => item.id === 'san-jose-centro');
+    const fallbackPreset = source.includes('panam') ? panamaFallback : sanJoseFallback;
     return {
       name: String(address || 'Destino del cliente').trim() || 'Destino del cliente',
-      city: hasFallbackCoords ? 'Destino personalizado' : 'San José',
+      city: hasFallbackCoords ? 'Destino personalizado' : fallbackPreset.city,
       country: source.includes('panam') ? 'Panamá' : 'Costa Rica',
-      lat: hasFallbackCoords ? fallbackLat : 9.9180,
-      lng: hasFallbackCoords ? fallbackLng : -84.1390,
+      lat: hasFallbackCoords ? fallbackLat : fallbackPreset.lat,
+      lng: hasFallbackCoords ? fallbackLng : fallbackPreset.lng,
       routeMode: source.includes('panam') ? 'air' : 'ground',
       isInternational: source.includes('panam')
     };
   }
 
+  function progressPoint(order, destination) {
+    const step = Math.max(0, Math.min(4, Number(order?.tracking?.currentStep || 0)));
+    const ratioByStep = [0, 0.18, 0.38, 0.68, 1][step] ?? 0;
+    return {
+      lat: ORIGIN_HUB.lat + ((destination.lat - ORIGIN_HUB.lat) * ratioByStep),
+      lng: ORIGIN_HUB.lng + ((destination.lng - ORIGIN_HUB.lng) * ratioByStep)
+    };
+  }
+
   const seed = {
-    version: 3,
+    version: 5,
     config: {
       iva: 0.13,
       frequentCustomerDiscount: 0.05,
@@ -85,11 +125,15 @@
       { id: 204, fullName: 'Clínica Santa Ana', email: 'compras@clinicasantana.com', phone: '22225555', address: 'Santa Ana, San José', frequent: true, totalSpent: 228000 }
     ],
     products: [
-      { id: 301, code: 'PAST-001', description: 'Cake Red Velvet 1.5kg', category: 'Pasteles', subcategory: 'Personalizado', price: 32000, stock: 10, active: true, createdAt: '2026-02-01T10:00:00Z' },
-      { id: 302, code: 'PAST-002', description: 'Cheesecake Frutos Rojos', category: 'Postres', subcategory: 'Cheesecake', price: 28000, stock: 8, active: true, createdAt: '2026-02-01T10:10:00Z' },
-      { id: 303, code: 'CUP-003', description: 'Cupcakes Caja 12', category: 'Cupcakes', subcategory: 'Caja', price: 18000, stock: 20, active: true, createdAt: '2026-02-01T10:20:00Z' },
-      { id: 304, code: 'GAL-004', description: 'Galletas Decoradas', category: 'Galletas', subcategory: 'Eventos', price: 12000, stock: 25, active: true, createdAt: '2026-02-01T10:30:00Z' },
-      { id: 305, code: 'BROW-005', description: 'Brownie Gourmet', category: 'Postres', subcategory: 'Brownie', price: 8500, stock: 0, active: true, createdAt: '2026-02-01T10:40:00Z' }
+      { id: 301, code: 'PAST-001', description: 'Cake Red Velvet 1.5kg', type: 'Producto terminado', unit: 'unidad', category: 'Pasteles', subcategory: 'Personalizado', price: 32000, stock: 10, minStock: 3, active: true, createdAt: '2026-02-01T10:00:00Z' },
+      { id: 302, code: 'PAST-002', description: 'Cheesecake Frutos Rojos', type: 'Producto terminado', unit: 'unidad', category: 'Postres', subcategory: 'Cheesecake', price: 28000, stock: 8, minStock: 3, active: true, createdAt: '2026-02-01T10:10:00Z' },
+      { id: 303, code: 'CUP-003', description: 'Cupcakes Caja 12', type: 'Producto terminado', unit: 'caja', category: 'Cupcakes', subcategory: 'Caja', price: 18000, stock: 20, minStock: 6, active: true, createdAt: '2026-02-01T10:20:00Z' },
+      { id: 304, code: 'GAL-004', description: 'Galletas Decoradas', type: 'Producto terminado', unit: 'paquete', category: 'Galletas', subcategory: 'Eventos', price: 12000, stock: 25, minStock: 8, active: true, createdAt: '2026-02-01T10:30:00Z' },
+      { id: 305, code: 'BROW-005', description: 'Brownie Gourmet', type: 'Producto terminado', unit: 'unidad', category: 'Postres', subcategory: 'Brownie', price: 8500, stock: 0, minStock: 5, active: true, createdAt: '2026-02-01T10:40:00Z' },
+      { id: 306, code: 'MP-HAR-001', description: 'Harina pastelera', type: 'Materia prima', unit: 'kg', category: 'Ingredientes', subcategory: 'Secos', price: 950, stock: 42.5, minStock: 15, active: true, createdAt: '2026-02-01T10:50:00Z' },
+      { id: 307, code: 'MP-AZU-001', description: 'Azúcar blanca', type: 'Materia prima', unit: 'kg', category: 'Ingredientes', subcategory: 'Secos', price: 780, stock: 31, minStock: 12, active: true, createdAt: '2026-02-01T10:55:00Z' },
+      { id: 308, code: 'MP-MAN-001', description: 'Mantequilla sin sal', type: 'Materia prima', unit: 'kg', category: 'Ingredientes', subcategory: 'Lácteos', price: 4200, stock: 8.5, minStock: 6, active: true, createdAt: '2026-02-01T11:00:00Z' },
+      { id: 309, code: 'EMP-CAJ-012', description: 'Caja para cupcakes x12', type: 'Empaque', unit: 'unidad', category: 'Empaques', subcategory: 'Cajas', price: 420, stock: 60, minStock: 20, active: true, createdAt: '2026-02-01T11:05:00Z' }
     ],
     inventoryMovements: [],
     orders: [
@@ -162,6 +206,26 @@
   }
 
   function bootstrap(state) {
+    state.products = (state.products || []).map((product) => ({
+      type: product.category === 'Ingredientes' ? 'Materia prima' : 'Producto terminado',
+      unit: 'unidad',
+      minStock: 5,
+      ...product
+    }));
+
+    const rawDefaults = [
+      { id: 306, code: 'MP-HAR-001', description: 'Harina pastelera', type: 'Materia prima', unit: 'kg', category: 'Ingredientes', subcategory: 'Secos', price: 950, stock: 42.5, minStock: 15, active: true, createdAt: '2026-02-01T10:50:00Z' },
+      { id: 307, code: 'MP-AZU-001', description: 'Azúcar blanca', type: 'Materia prima', unit: 'kg', category: 'Ingredientes', subcategory: 'Secos', price: 780, stock: 31, minStock: 12, active: true, createdAt: '2026-02-01T10:55:00Z' },
+      { id: 308, code: 'MP-MAN-001', description: 'Mantequilla sin sal', type: 'Materia prima', unit: 'kg', category: 'Ingredientes', subcategory: 'Lácteos', price: 4200, stock: 8.5, minStock: 6, active: true, createdAt: '2026-02-01T11:00:00Z' },
+      { id: 309, code: 'EMP-CAJ-012', description: 'Caja para cupcakes x12', type: 'Empaque', unit: 'unidad', category: 'Empaques', subcategory: 'Cajas', price: 420, stock: 60, minStock: 20, active: true, createdAt: '2026-02-01T11:05:00Z' }
+    ];
+
+    rawDefaults.forEach((item) => {
+      if (!state.products.some(product => product.code === item.code)) {
+        state.products.push(clone(item));
+      }
+    });
+
     if (!state.inventoryMovements.length) {
       state.products.forEach((product) => {
         state.inventoryMovements.push({
@@ -170,6 +234,7 @@
           code: product.code,
           type: 'CREACION',
           quantity: product.stock,
+          unit: product.unit || 'unidad',
           responsible: 'Sistema',
           createdAt: product.createdAt || nowIso(),
           note: 'Carga inicial'
@@ -206,7 +271,8 @@
       });
     }
     state.orders = state.orders.map((order) => {
-      const destination = resolveDestination(order.address, { lat: order?.tracking?.destinationLat, lng: order?.tracking?.destinationLng });
+      const destination = resolveDestination(order.address);
+      const progress = progressPoint(order, destination);
       order.tracking = Object.assign({
         currentLat: ORIGIN_HUB.lat,
         currentLng: ORIGIN_HUB.lng,
@@ -218,14 +284,19 @@
         originLabel: ORIGIN_HUB.name
       }, order.tracking || {});
 
-      if (!Number.isFinite(Number(order.tracking.currentLat))) order.tracking.currentLat = ORIGIN_HUB.lat;
-      if (!Number.isFinite(Number(order.tracking.currentLng))) order.tracking.currentLng = ORIGIN_HUB.lng;
-      order.tracking.destinationLat = Number.isFinite(Number(order.tracking.destinationLat)) ? Number(order.tracking.destinationLat) : destination.lat;
-      order.tracking.destinationLng = Number.isFinite(Number(order.tracking.destinationLng)) ? Number(order.tracking.destinationLng) : destination.lng;
-      order.tracking.routeMode = order.tracking.routeMode || destination.routeMode;
-      order.tracking.destinationCountry = order.tracking.destinationCountry || destination.country;
-      order.tracking.destinationLabel = order.tracking.destinationLabel || destination.name;
-      order.tracking.originLabel = order.tracking.originLabel || ORIGIN_HUB.name;
+      order.tracking.destinationLat = destination.lat;
+      order.tracking.destinationLng = destination.lng;
+      order.tracking.routeMode = destination.routeMode;
+      order.tracking.destinationCountry = destination.country;
+      order.tracking.destinationLabel = destination.name;
+      order.tracking.originLabel = ORIGIN_HUB.name;
+
+      if (!validLatLng(order.tracking.currentLat, order.tracking.currentLng)
+        || order.tracking.currentStep < 3
+        || order.tracking.currentStep >= 4) {
+        order.tracking.currentLat = progress.lat;
+        order.tracking.currentLng = progress.lng;
+      }
       return order;
     });
 
@@ -241,6 +312,7 @@
 
   function migrate(parsed) {
     const merged = Object.assign({}, clone(seed), parsed || {});
+    merged.version = seed.version;
     bootstrap(merged);
     write(merged);
     return merged;
@@ -390,19 +462,22 @@
       add(input) {
         const code = String(input.code || '').trim().toUpperCase();
         const description = String(input.description || '').trim();
+        const type = String(input.type || 'Producto terminado').trim();
+        const unit = String(input.unit || 'unidad').trim();
         const category = String(input.category || '').trim();
         const subcategory = String(input.subcategory || '').trim();
         const price = Number(input.price || 0);
         const stock = Number(input.stock || 0);
+        const minStock = Number(input.minStock || 0);
         if (!code || !description || !category || price <= 0 || stock < 0) throw new Error('Completa correctamente los campos del producto.');
         const state = read();
         if (state.products.some(p => p.code === code)) throw new Error('El producto ya existe.');
         const product = {
-          id: nextNumericId(state.products, 300), code, description, category, subcategory, price, stock,
+          id: nextNumericId(state.products, 300), code, description, type, unit, category, subcategory, price, stock, minStock,
           active: true, createdAt: nowIso()
         };
         state.products.push(product);
-        state.inventoryMovements.push({ id: randId('mov'), productId: product.id, code, type: 'CREACION', quantity: stock, responsible: api.currentUser()?.email || 'Sistema', createdAt: nowIso(), note: 'Producto registrado' });
+        state.inventoryMovements.push({ id: randId('mov'), productId: product.id, code, type: 'CREACION', quantity: stock, unit, responsible: api.currentUser()?.email || 'Sistema', createdAt: nowIso(), note: 'Producto registrado' });
         addLog(state, 'CREACION_PRODUCTO', `Producto ${code} creado`, api.currentUser()?.email || 'Sistema');
         write(state);
         return clone(product);
@@ -413,16 +488,19 @@
         if (!product) throw new Error('El producto no existe.');
         const code = String(input.code || '').trim().toUpperCase();
         const description = String(input.description || '').trim();
+        const type = String(input.type || product.type || 'Producto terminado').trim();
+        const unit = String(input.unit || product.unit || 'unidad').trim();
         const category = String(input.category || '').trim();
         const subcategory = String(input.subcategory || '').trim();
         const price = Number(input.price || 0);
         const stock = Number(input.stock || 0);
+        const minStock = Number(input.minStock || 0);
         if (!code || !description || !category || price <= 0 || stock < 0) throw new Error('Hay valores inválidos en el producto.');
         if (state.products.some(p => Number(p.id) !== Number(id) && p.code === code)) throw new Error('Ya existe otro producto con ese código.');
         const changes = [];
         if (product.stock !== stock) changes.push(`stock ${product.stock}→${stock}`);
-        Object.assign(product, { code, description, category, subcategory, price, stock });
-        state.inventoryMovements.push({ id: randId('mov'), productId: product.id, code, type: 'ACTUALIZACION', quantity: stock, responsible: api.currentUser()?.email || 'Sistema', createdAt: nowIso(), note: changes.join(', ') || 'Edición general' });
+        Object.assign(product, { code, description, type, unit, category, subcategory, price, stock, minStock });
+        state.inventoryMovements.push({ id: randId('mov'), productId: product.id, code, type: 'ACTUALIZACION', quantity: stock, unit, responsible: api.currentUser()?.email || 'Sistema', createdAt: nowIso(), note: changes.join(', ') || 'Edición general' });
         addLog(state, 'EDICION_PRODUCTO', `Producto ${code} editado`, api.currentUser()?.email || 'Sistema');
         write(state);
         return clone(product);
@@ -445,8 +523,8 @@
         if (!product) throw new Error('Producto no encontrado.');
         if (type === 'SALIDA' && qty > product.stock) throw new Error('No hay suficiente stock para la salida.');
         product.stock = type === 'ENTRADA' ? product.stock + qty : product.stock - qty;
-        state.inventoryMovements.push({ id: randId('mov'), productId: product.id, code: product.code, type, quantity: qty, responsible: api.currentUser()?.email || 'Sistema', createdAt: nowIso(), note });
-        addLog(state, type === 'ENTRADA' ? 'ENTRADA_INVENTARIO' : 'SALIDA_INVENTARIO', `${type} ${qty} de ${product.code}`, api.currentUser()?.email || 'Sistema');
+        state.inventoryMovements.push({ id: randId('mov'), productId: product.id, code: product.code, type, quantity: qty, unit: product.unit || 'unidad', responsible: api.currentUser()?.email || 'Sistema', createdAt: nowIso(), note });
+        addLog(state, type === 'ENTRADA' ? 'ENTRADA_INVENTARIO' : 'SALIDA_INVENTARIO', `${type} ${qty} ${product.unit || 'unidad'} de ${product.code}`, api.currentUser()?.email || 'Sistema');
         write(state);
         return clone(product);
       }
@@ -472,7 +550,7 @@
           if (quantity <= 0) throw new Error('La cantidad debe ser mayor que cero.');
           if (quantity > product.stock) throw new Error(`No hay stock suficiente para ${product.description}.`);
           product.stock -= quantity;
-          state.inventoryMovements.push({ id: randId('mov'), productId: product.id, code: product.code, type: 'SALIDA', quantity, responsible: api.currentUser()?.email || customerEmail, createdAt: nowIso(), note: 'Salida por pedido' });
+          state.inventoryMovements.push({ id: randId('mov'), productId: product.id, code: product.code, type: 'SALIDA', quantity, unit: product.unit || 'unidad', responsible: api.currentUser()?.email || customerEmail, createdAt: nowIso(), note: 'Salida por pedido' });
           return { productId: product.id, code: product.code, name: product.description, quantity, unitPrice: product.price };
         });
         let customer = state.customers.find(c => c.email.toLowerCase() === customerEmail);
@@ -666,12 +744,13 @@
           paymentMethod: method.name,
           discountRate: Number(input.discountRate || 0)
         });
-        const session = state.cashSessions.find(s => s.status === 'ACTIVO');
+        const updatedState = read();
+        const session = updatedState.cashSessions.find(s => s.status === 'ACTIVO');
         if (session) {
           session.totalSales += order.total;
-          write(state);
+          addLog(updatedState, 'VENTA', `Venta POS del pedido #${order.id}`, api.currentUser()?.email || 'Sistema');
+          write(updatedState);
         }
-        addLog(state, 'VENTA', `Venta POS del pedido #${order.id}`, api.currentUser()?.email || 'Sistema');
         return order;
       }
     },
@@ -747,7 +826,7 @@
       },
       inventory() {
         const rows = read().products;
-        return { rows: clone(rows), lowStock: rows.filter(x => x.stock <= 5).length, negativeStock: rows.filter(x => x.stock < 0).length };
+        return { rows: clone(rows), lowStock: rows.filter(x => Number(x.stock) <= Number(x.minStock ?? 5)).length, negativeStock: rows.filter(x => x.stock < 0).length };
       },
       promotions(startDate, endDate) {
         const rows = api.reports.rangeFilter(read().promotions, startDate, endDate, 'startDate');
