@@ -1,0 +1,116 @@
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 16px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+    color: var(--text);
+}
+
+h1 {
+    font-size: 3rem;
+    letter-spacing: -0.02em;
+}
+
+h2 {
+    font-size: 2.25rem;
+    letter-spacing: -0.01em;
+}
+
+h3 {
+    font-size: 1.5rem;
+}
+
+h4 {
+    font-size: 1.25rem;
+}
+
+h5 {
+    font-size: 1.125rem;
+}
+
+h6 {
+    font-size: 1rem;
+}
+
+p {
+    margin-bottom: 1rem;
+    color: var(--text-light);
+}
+
+a {
+    color: var(--primary);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+a:hover {
+        color: var(--secondary);
+    }
+
+textarea.form-control {
+    min-height: 110px;
+    resize: vertical;
+}
+
+label {
+    display: inline-block;
+    margin-bottom: .45rem;
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    color: var(--text);
+}
+
+body.app-body {
+    position: relative;
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at top left, rgba(236, 72, 153, 0.10), transparent 28%),
+        radial-gradient(circle at 82% 12%, rgba(139, 92, 246, 0.14), transparent 24%),
+        linear-gradient(180deg, color-mix(in srgb, var(--bg) 92%, white 8%), var(--bg));
+    overflow-x: hidden;
+}
+
+body.cursor-active .cursor-glow {
+    opacity: 1;
+}
+
+body.no-heavy-motion .page-enter,
+body.no-heavy-motion .card,
+body.no-heavy-motion .table-container,
+body.no-heavy-motion .page-header {
+    animation: none !important;
+    transition-duration: .12s !important;
+}
+
+body.no-heavy-motion .reveal-on-scroll {
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+html {
+    overflow-x: hidden;
+}
+
+body {
+    min-width: 0;
+}
+
+img,
+svg,
+canvas,
+video {
+    max-width: 100%;
+}

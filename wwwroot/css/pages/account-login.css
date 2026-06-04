@@ -1,0 +1,144 @@
+.login-page-shell {
+    max-width: 500px;
+    margin: 2rem auto;
+    display: grid;
+    gap: 1rem;
+}
+
+.login-card,
+.login-help-card {
+    width: 100%;
+}
+
+.login-card {
+    text-align: center;
+}
+
+.login-hero {
+    margin-bottom: 2rem;
+}
+
+.login-logo-wrap {
+    width: 84px;
+    height: 84px;
+    background: var(--gradient-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    box-shadow: var(--shadow-md);
+}
+
+.login-logo-wrap i {
+    font-size: 2rem;
+    color: white;
+}
+
+.login-title {
+    margin: 0;
+}
+
+.login-subtitle {
+    margin: .5rem 0 0;
+}
+
+.login-alert {
+    margin-bottom: 1rem;
+    text-align: left;
+}
+
+.login-form {
+    text-align: left;
+}
+
+.input-label {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+}
+
+.login-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.login-remember {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.login-forgot {
+    font-size: .875rem;
+}
+
+.login-submit-btn {
+    margin-bottom: 1rem;
+}
+
+.login-help-row {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.login-help-row i {
+    color: var(--primary);
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.login-help-row p {
+    margin: 0;
+}
+
+.login-help-row p + p {
+    margin-top: .25rem;
+    font-size: .875rem;
+}
+
+.login-card:hover,
+.login-help-card:hover {
+    transform: none;
+    box-shadow: var(--shadow-sm);
+    border-color: var(--border);
+}
+
+.login-card:hover::after,
+.login-help-card:hover::after {
+    opacity: 0;
+}
+
+@media (max-width: 640px) {
+    .login-page-shell {
+        margin: 1rem auto;
+        padding: 0 1rem;
+    }
+
+    .login-options {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 430px) {
+    .login-card,
+    .login-help-card {
+        padding: 1rem !important;
+    }
+
+    .login-logo-wrap {
+        width: 68px;
+        height: 68px;
+    }
+
+    .login-submit-btn,
+    .login-help-card .btn {
+        width: 100%;
+    }
+}

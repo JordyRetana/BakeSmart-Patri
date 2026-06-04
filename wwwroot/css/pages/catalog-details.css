@@ -1,0 +1,53 @@
+.btn-ghost.active {
+        color: var(--primary);
+        font-weight: 600;
+    }
+
+    .tab-content {
+        transition: all 0.3s ease;
+    }
+
+    .dark .btn-ghost.active {
+        color: var(--primary-light);
+    }
+
+    .badge-primary {
+        background: var(--primary-light);
+        color: var(--primary-dark);
+    }
+
+    .badge-success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .badge-warning {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+/* Responsive product details */
+@media (max-width: 768px) {
+    .tab-content .grid,
+    .container .grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .container img {
+        max-height: 360px;
+        object-fit: cover;
+    }
+
+    #cartModal > div,
+    #cartModal .card {
+        width: calc(100vw - 1rem) !important;
+        max-width: calc(100vw - 1rem) !important;
+        max-height: calc(100dvh - 1rem);
+        overflow: auto;
+    }
+
+    .btn,
+    button {
+        width: 100%;
+    }
+}

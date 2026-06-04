@@ -1,0 +1,40 @@
+.roles-page,
+.roles-page * {
+    min-width: 0;
+}
+
+.roles-page .table-container {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.roles-page .table {
+    min-width: 720px;
+}
+
+@media (max-width: 768px) {
+    .roles-page .grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .roles-page .card {
+        padding: 1rem !important;
+    }
+
+    .roles-page .btn,
+    .roles-page input,
+    .roles-page select {
+        width: 100%;
+    }
+}
+
+@media (max-width: 520px) {
+    .roles-page .page-header .btn {
+        width: 100%;
+    }
+
+    .roles-page .badge {
+        white-space: normal;
+    }
+}

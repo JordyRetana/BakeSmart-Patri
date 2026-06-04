@@ -1,23 +1,23 @@
-﻿@{
+@model BakeSmartPatri.Models.CatalogIndexViewModel
+@{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Inicio";
     var isAuth = User?.Identity?.IsAuthenticated ?? false;
     var isAdmin = User?.IsInRole("Admin") ?? false;
     var isStaff = User?.IsInRole("Staff") ?? false;
     var isClient = User?.IsInRole("Cliente") ?? false;
+    var culture = new System.Globalization.CultureInfo("es-CR");
+    var featured = Model.Products.Take(3).ToList();
+    var gallery = Model.Products.Take(4).ToList();
 }
 
 @if (!isAuth)
 {
-    
     <section class="hero-section" style="background: linear-gradient(135deg, #fff9f9 0%, #fff5f8 100%); padding: 3rem 0; position: relative; overflow: hidden;">
-        <div class="dark-mode-sensitive" style="position: absolute; top: -100px; right: -100px; width: 400px; height: 400px; background: radial-gradient(circle, rgba(236, 72, 153, 0.05) 0%, transparent 70%); border-radius: 50%;"></div>
-        <div class="dark-mode-sensitive" style="position: absolute; bottom: -100px; left: -100px; width: 400px; height: 400px; background: radial-gradient(circle, rgba(139, 92, 246, 0.05) 0%, transparent 70%); border-radius: 50%;"></div>
-
         <div class="container" style="position: relative; z-index: 1;">
             <div style="max-width: 900px; margin: 0 auto; text-align: center;">
                 <span class="badge badge-primary" style="font-size: 1rem; padding: 0.5rem 1.5rem; margin-bottom: 1.5rem; border-radius: 9999px;">
-                    🧁 Bienvenidos a BakeSmart Patri
+                    Bienvenidos a BakeSmart Patri
                 </span>
 
                 <h1 style="font-size: 3.5rem; font-weight: 800; line-height: 1.2; margin-bottom: 1rem;">
@@ -27,7 +27,7 @@
                 </h1>
 
                 <p style="font-size: 1.25rem; color: var(--text-light); margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto;">
-                    Pastelería artesanal con amor y tradición. Cada creación está hecha con los mejores ingredientes y mucho corazón.
+                    Pasteleria artesanal con amor y tradicion. Cada creacion esta hecha con los mejores ingredientes y mucho corazon.
                 </p>
 
                 <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 3rem;">
@@ -37,148 +37,76 @@
                     </a>
                     <a href="/Account/Login" class="btn btn-outline btn-lg">
                         <i class="fas fa-user"></i>
-                        Iniciar sesión
+                        Iniciar sesion
                     </a>
                 </div>
 
                 <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
-                    <div style="width: 120px; height: 120px; border-radius: 30px; overflow: hidden; box-shadow: var(--shadow); transform: rotate(-5deg);">
-                        <img src="https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&h=200&q=80"
-                             alt="Pastel"
-                             style="width: 100%; height: 100%; object-fit: cover;">
-                    </div>
-                    <div style="width: 120px; height: 120px; border-radius: 30px; overflow: hidden; box-shadow: var(--shadow); transform: rotate(2deg);">
-                        <img src="https://images.unsplash.com/photo-1533134242443-d4fd215305ad?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&h=200&q=80"
-                             alt="Cheesecake"
-                             style="width: 100%; height: 100%; object-fit: cover;">
-                    </div>
-                    <div style="width: 120px; height: 120px; border-radius: 30px; overflow: hidden; box-shadow: var(--shadow); transform: rotate(-3deg);">
-                        <img src="https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&h=200&q=80"
-                             alt="Cupcakes"
-                             style="width: 100%; height: 100%; object-fit: cover;">
-                    </div>
-                    <div style="width: 120px; height: 120px; border-radius: 30px; overflow: hidden; box-shadow: var(--shadow); transform: rotate(5deg);">
-                        <img src="https://images.unsplash.com/photo-1488477181946-6428a0291777?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&h=200&q=80"
-                             alt="Galletas"
-                             style="width: 100%; height: 100%; object-fit: cover;">
-                    </div>
-                </div>
-
-                <div style="display: flex; justify-content: center; gap: 2rem; margin-top: 3rem; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <div style="width: 32px; height: 32px; background: var(--primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-leaf" style="color: var(--primary); font-size: 0.875rem;"></i>
+                    @foreach (var product in gallery)
+                    {
+                        var rotation = product.Id % 2 == 0 ? "rotate(2deg)" : "rotate(-5deg)";
+                        <div style="width: 120px; height: 120px; border-radius: 30px; overflow: hidden; box-shadow: var(--shadow); transform: @rotation;">
+                            <img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';" style="width: 100%; height: 100%; object-fit: cover;">
                         </div>
-                        <span class="text-muted">Ingredientes frescos</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <div style="width: 32px; height: 32px; background: var(--secondary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-heart" style="color: var(--secondary); font-size: 0.875rem;"></i>
-                        </div>
-                        <span class="text-muted">Hecho con amor</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <div style="width: 32px; height: 32px; background: #d1fae5; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-truck" style="color: var(--success); font-size: 0.875rem;"></i>
-                        </div>
-                        <span class="text-muted">Entrega a domicilio</span>
-                    </div>
+                    }
                 </div>
             </div>
         </div>
     </section>
 
-    
     <section style="padding: 4rem 0; background: white;" class="stats-section">
         <div class="container">
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
                 <div class="card" style="padding: 1.5rem; text-align: center; border: none; box-shadow: var(--shadow-sm);">
-                    <div style="font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem;">🎂</div>
-                    <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary);">500+</div>
-                    <div class="text-muted" style="font-size: 0.875rem;">Pasteles horneados</div>
+                    <div style="font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem;"><i class="fas fa-cake-candles"></i></div>
+                    <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary);">@Model.Products.Count</div>
+                    <div class="text-muted" style="font-size: 0.875rem;">Productos disponibles</div>
                 </div>
                 <div class="card" style="padding: 1.5rem; text-align: center; border: none; box-shadow: var(--shadow-sm);">
-                    <div style="font-size: 2rem; color: var(--secondary); margin-bottom: 0.5rem;">😊</div>
-                    <div style="font-size: 1.75rem; font-weight: 700; color: var(--secondary);">200+</div>
-                    <div class="text-muted" style="font-size: 0.875rem;">Clientes felices</div>
+                    <div style="font-size: 2rem; color: var(--secondary); margin-bottom: 0.5rem;"><i class="fas fa-layer-group"></i></div>
+                    <div style="font-size: 1.75rem; font-weight: 700; color: var(--secondary);">@Model.Categories.Count</div>
+                    <div class="text-muted" style="font-size: 0.875rem;">Categorias</div>
                 </div>
                 <div class="card" style="padding: 1.5rem; text-align: center; border: none; box-shadow: var(--shadow-sm);">
-                    <div style="font-size: 2rem; color: var(--success); margin-bottom: 0.5rem;">🚚</div>
-                    <div style="font-size: 1.75rem; font-weight: 700; color: var(--success);">300+</div>
-                    <div class="text-muted" style="font-size: 0.875rem;">Entregas a tiempo</div>
+                    <div style="font-size: 2rem; color: var(--success); margin-bottom: 0.5rem;"><i class="fas fa-truck"></i></div>
+                    <div style="font-size: 1.75rem; font-weight: 700; color: var(--success);">CR</div>
+                    <div class="text-muted" style="font-size: 0.875rem;">Entregas locales</div>
                 </div>
                 <div class="card" style="padding: 1.5rem; text-align: center; border: none; box-shadow: var(--shadow-sm);">
-                    <div style="font-size: 2rem; color: var(--warning); margin-bottom: 0.5rem;">⭐</div>
+                    <div style="font-size: 2rem; color: var(--warning); margin-bottom: 0.5rem;"><i class="fas fa-star"></i></div>
                     <div style="font-size: 1.75rem; font-weight: 700; color: var(--warning);">4.9</div>
-                    <div class="text-muted" style="font-size: 0.875rem;">Calificación</div>
+                    <div class="text-muted" style="font-size: 0.875rem;">Calificacion</div>
                 </div>
             </div>
         </div>
     </section>
 
-    
     <section style="padding: 4rem 0; background: #fafafa;" class="featured-section">
         <div class="container">
             <div style="text-align: center; margin-bottom: 3rem;">
-                <span class="badge badge-primary" style="margin-bottom: 1rem;">🍰 Lo más popular</span>
+                <span class="badge badge-primary" style="margin-bottom: 1rem;">Lo mas popular</span>
                 <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">Nuestros favoritos</h2>
-                <p class="text-muted" style="max-width: 500px; margin: 0 auto;">Los productos que más aman nuestros clientes</p>
+                <p class="text-muted" style="max-width: 500px; margin: 0 auto;">Los productos que mas aman nuestros clientes</p>
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
-                
-                <div class="card" style="padding: 1rem;">
-                    <img src="https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250&q=80"
-                         alt="Red Velvet"
-                         style="width: 100%; height: 180px; object-fit: cover; border-radius: var(--radius); margin-bottom: 1rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <h3 style="margin: 0; font-size: 1.25rem;">Red Velvet</h3>
-                        <span class="badge badge-primary" style="font-size: 0.75rem;">Más vendido</span>
+                @foreach (var product in featured)
+                {
+                    <div class="card" style="padding: 1rem;">
+                        <img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';" style="width: 100%; height: 180px; object-fit: cover; border-radius: var(--radius); margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: .75rem; margin-bottom: 0.5rem;">
+                            <h3 style="margin: 0; font-size: 1.25rem;">@product.Name</h3>
+                            <span class="badge badge-primary" style="font-size: 0.75rem;">@product.Category</span>
+                        </div>
+                        <p class="text-muted" style="font-size: 0.875rem; margin-bottom: 1rem;">@product.Description</p>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; font-size: 1.25rem; color: var(--primary);">@product.UnitPrice.ToString("C0", culture)</span>
+                            <a href="/Catalog/Details/@product.Id" class="btn btn-primary btn-sm">
+                                <i class="fas fa-eye"></i> Ver
+                            </a>
+                        </div>
                     </div>
-                    <p class="text-muted" style="font-size: 0.875rem; margin-bottom: 1rem;">Pastel de terciopelo rojo con crema de queso</p>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: 700; font-size: 1.25rem; color: var(--primary);">₡32,000</span>
-                        <a href="/Catalog/Details/1" class="btn btn-primary btn-sm">
-                            <i class="fas fa-eye"></i> Ver
-                        </a>
-                    </div>
-                </div>
-
-                
-                <div class="card" style="padding: 1rem;">
-                    <img src="https://images.unsplash.com/photo-1533134242443-d4fd215305ad?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250&q=80"
-                         alt="Cheesecake"
-                         style="width: 100%; height: 180px; object-fit: cover; border-radius: var(--radius); margin-bottom: 1rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <h3 style="margin: 0; font-size: 1.25rem;">Cheesecake</h3>
-                        <span class="badge badge-success" style="font-size: 0.75rem;">Recomendado</span>
-                    </div>
-                    <p class="text-muted" style="font-size: 0.875rem; margin-bottom: 1rem;">Cheesecake de frutos rojos con base crocante</p>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: 700; font-size: 1.25rem; color: var(--primary);">₡28,000</span>
-                        <a href="/Catalog/Details/2" class="btn btn-primary btn-sm">
-                            <i class="fas fa-eye"></i> Ver
-                        </a>
-                    </div>
-                </div>
-
-                
-                <div class="card" style="padding: 1rem;">
-                    <img src="https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250&q=80"
-                         alt="Cupcakes"
-                         style="width: 100%; height: 180px; object-fit: cover; border-radius: var(--radius); margin-bottom: 1rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <h3 style="margin: 0; font-size: 1.25rem;">Cupcakes</h3>
-                        <span class="badge badge-warning" style="font-size: 0.75rem;">Especial</span>
-                    </div>
-                    <p class="text-muted" style="font-size: 0.875rem; margin-bottom: 1rem;">Cupcakes decorados, caja de 12 unidades</p>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: 700; font-size: 1.25rem; color: var(--primary);">₡18,000</span>
-                        <a href="/Catalog/Details/3" class="btn btn-primary btn-sm">
-                            <i class="fas fa-eye"></i> Ver
-                        </a>
-                    </div>
-                </div>
+                }
             </div>
 
             <div style="text-align: center; margin-top: 2rem;">
@@ -189,289 +117,74 @@
         </div>
     </section>
 
-    
-    <section style="padding: 4rem 0;">
-        <div class="container">
-            <div style="text-align: center; margin-bottom: 3rem;">
-                <span class="badge badge-primary" style="margin-bottom: 1rem;">💬 Testimonios</span>
-                <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">Lo que dicen de nosotros</h2>
-                <p class="text-muted">La opinión de nuestros clientes nos impulsa a mejorar cada día</p>
-            </div>
-
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
-                <div class="card">
-                    <div style="display: flex; color: #fbbf24; margin-bottom: 1rem;">
-                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                    </div>
-                    <p class="text-muted" style="font-style: italic; margin-bottom: 1.5rem;">"El pastel Red Velvet es increíble! Esponjoso, húmedo y con el punto perfecto de dulce."</p>
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <div style="width: 40px; height: 40px; background: var(--gradient-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;">MG</div>
-                        <div>
-                            <div style="font-weight: 600;">María Gómez</div>
-                            <div class="text-muted" style="font-size: 0.75rem;">Cliente frecuente</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div style="display: flex; color: #fbbf24; margin-bottom: 1rem;">
-                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                    </div>
-                    <p class="text-muted" style="font-style: italic; margin-bottom: 1.5rem;">"La torta personalizada para el cumpleaños de mi hija superó todas mis expectativas."</p>
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <div style="width: 40px; height: 40px; background: var(--gradient-success); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;">AS</div>
-                        <div>
-                            <div style="font-weight: 600;">Ana Solís</div>
-                            <div class="text-muted" style="font-size: 0.75rem;">Mamá repostera</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div style="display: flex; color: #fbbf24; margin-bottom: 1rem;">
-                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                    </div>
-                    <p class="text-muted" style="font-style: italic; margin-bottom: 1.5rem;">"Excelente servicio y calidad. Las galletas decoradas son perfectas para eventos."</p>
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <div style="width: 40px; height: 40px; background: var(--gradient-warning); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;">CR</div>
-                        <div>
-                            <div style="font-weight: 600;">Carlos R.</div>
-                            <div class="text-muted" style="font-size: 0.75rem;">Organizador de eventos</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    
     <section style="padding: 4rem 0; background: #fafafa;" class="why-us-section">
         <div class="container">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center;">
                 <div>
-                    <span class="badge badge-primary" style="margin-bottom: 1rem;">✨ Por qué nosotros</span>
-                    <h2 style="font-size: 2.5rem; margin-bottom: 1rem;">Hecho con amor, entregado con pasión</h2>
-                    <p class="text-muted" style="margin-bottom: 2rem;">Cada creación es única y especial, porque sabemos que detrás de cada pedido hay una celebración especial.</p>
+                    <span class="badge badge-primary" style="margin-bottom: 1rem;">Por que nosotros</span>
+                    <h2 style="font-size: 2.5rem; margin-bottom: 1rem;">Hecho con amor, entregado con pasion</h2>
+                    <p class="text-muted" style="margin-bottom: 2rem;">Cada creacion es unica y especial, porque sabemos que detras de cada pedido hay una celebracion especial.</p>
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
-                        <div style="display: flex; align-items: center; gap: 1rem;">
-                            <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                            <span>Ingredientes frescos y naturales</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 1rem;">
-                            <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                            <span>Personalización total para cada ocasión</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 1rem;">
-                            <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                            <span>Entrega puntual en toda la ciudad</span>
-                        </div>
+                        <div style="display: flex; align-items: center; gap: 1rem;"><i class="fas fa-check-circle" style="color: var(--success);"></i><span>Ingredientes frescos y naturales</span></div>
+                        <div style="display: flex; align-items: center; gap: 1rem;"><i class="fas fa-check-circle" style="color: var(--success);"></i><span>Personalizacion para cada ocasion</span></div>
+                        <div style="display: flex; align-items: center; gap: 1rem;"><i class="fas fa-check-circle" style="color: var(--success);"></i><span>Entrega puntual en la ciudad</span></div>
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <img src="https://images.unsplash.com/photo-1551024506-0bccd828d307?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300&q=80"
-                         alt="Pastel"
-                         style="width: 100%; height: 150px; object-fit: cover; border-radius: var(--radius);">
-                    <img src="https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300&q=80"
-                         alt="Brownie"
-                         style="width: 100%; height: 150px; object-fit: cover; border-radius: var(--radius);">
-                    <img src="https://images.unsplash.com/photo-1488477181946-6428a0291777?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300&q=80"
-                         alt="Galletas"
-                         style="width: 100%; height: 150px; object-fit: cover; border-radius: var(--radius);">
-                    <img src="https://images.unsplash.com/photo-1571115177094-24ec08c6433b?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300&q=80"
-                         alt="Torta"
-                         style="width: 100%; height: 150px; object-fit: cover; border-radius: var(--radius);">
+                    @foreach (var product in gallery)
+                    {
+                        <img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';" style="width: 100%; height: 150px; object-fit: cover; border-radius: var(--radius);">
+                    }
                 </div>
-            </div>
-        </div>
-    </section>
-
-    
-    <section style="padding: 4rem 0; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white;">
-        <div class="container" style="text-align: center;">
-            <h2 style="color: white; font-size: 2.5rem; margin-bottom: 1rem;">¿Listo para probar?</h2>
-            <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem; margin-bottom: 2rem; max-width: 500px; margin-left: auto; margin-right: auto;">
-                Haz tu pedido hoy y déjanos endulzar tu día
-            </p>
-            <div style="display: flex; gap: 1rem; justify-content: center;">
-                <a href="/Catalog" class="btn btn-outline" style="background: white; color: var(--primary); border-color: white;">
-                    Ver productos
-                </a>
-                <a href="/Account/Register" class="btn btn-outline" style="border-color: white; color: white;">
-                    Crear cuenta
-                </a>
             </div>
         </div>
     </section>
 }
 else if (isClient)
 {
-    
-
     <section class="hero-section" style="background: linear-gradient(135deg, #fff9f9 0%, #fff5f8 100%); padding: 4rem 0; position: relative; overflow: hidden;">
         <div class="container" style="position: relative; z-index: 1;">
             <div style="max-width: 800px; margin: 0 auto; text-align: center;">
                 <span class="badge badge-primary" style="font-size: 1rem; padding: 0.5rem 1.5rem; margin-bottom: 1.5rem; border-radius: 9999px;">
-                    🎉 ¡Hola, @(User?.Identity?.Name ?? "Cliente")!
+                    Hola, @(User?.Identity?.Name ?? "Cliente")
                 </span>
-
                 <h1 style="font-size: 3rem; font-weight: 800; line-height: 1.2; margin-bottom: 1.5rem;">
                     Descubre nuevas
                     <span style="background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">inspiraciones</span>
                     para tus momentos especiales
                 </h1>
-
-                <p style="font-size: 1.2rem; color: var(--text-light); margin-bottom: 2rem;">
-                    Explora nuestras novedades y encuentra el postre perfecto para cada ocasión.
-                </p>
-
+                <p style="font-size: 1.2rem; color: var(--text-light); margin-bottom: 2rem;">Explora nuestras novedades y encuentra el postre perfecto para cada ocasion.</p>
                 <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                    <a href="/Catalog" class="btn btn-primary btn-lg">
-                        <i class="fas fa-compass"></i>
-                        Explorar catálogo
-                    </a>
-                    <a href="/Client" class="btn btn-outline btn-lg">
-                        <i class="fas fa-user"></i>
-                        Mi espacio personal
-                    </a>
+                    <a href="/Catalog" class="btn btn-primary btn-lg"><i class="fas fa-compass"></i> Explorar catalogo</a>
+                    <a href="/Client" class="btn btn-outline btn-lg"><i class="fas fa-user"></i> Mi espacio personal</a>
                 </div>
             </div>
         </div>
     </section>
 
-    
     <section style="padding: 4rem 0;">
         <div class="container">
             <div style="text-align: center; margin-bottom: 3rem;">
-                <span class="badge badge-primary" style="margin-bottom: 1rem;">✨ Novedades</span>
-                <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">¿Qué hay de nuevo?</h2>
-                <p class="text-muted">Descubre nuestras últimas creaciones y promociones especiales</p>
+                <span class="badge badge-primary" style="margin-bottom: 1rem;">Novedades</span>
+                <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">Que hay de nuevo</h2>
+                <p class="text-muted">Descubre nuestras creaciones disponibles</p>
             </div>
-
-            <div class="grid grid-2" style="gap: 2rem;">
-                
-                <div class="card promo-card" style="background: linear-gradient(135deg, #fef3c7, #fde68a); border: none; overflow: hidden; position: relative;">
-                    <div style="position: absolute; top: -20px; right: -20px; width: 150px; height: 150px; background: rgba(255,255,255,0.2); border-radius: 50%;"></div>
-                    <div style="display: flex; align-items: center; gap: 2rem; position: relative; z-index: 1;">
-                        <div>
-                            <span class="badge badge-warning" style="margin-bottom: 0.5rem;">🔥 Promoción</span>
-                            <h3 style="margin: 0.5rem 0; color: inherit;">2x1 en Cupcakes</h3>
-                            <p class="text-muted">Válido todos los miércoles. Lleva 12 y paga 6.</p>
-                            <a href="/Catalog?category=Cupcakes" class="btn btn-warning btn-sm">Aprovechar</a>
-                        </div>
-                        <img src="https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&h=200&q=80"
-                             alt="Cupcakes"
-                             style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover;">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
+                @foreach (var product in featured)
+                {
+                    <div class="card" style="padding: 1rem;">
+                        <img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';" style="width: 100%; height: 180px; object-fit: cover; border-radius: var(--radius); margin-bottom: 1rem;">
+                        <h3 style="margin: 0 0 .5rem;">@product.Name</h3>
+                        <p class="text-muted">@product.Description</p>
+                        <a href="/Catalog/Details/@product.Id" class="btn btn-primary btn-sm">Conocer mas</a>
                     </div>
-                </div>
-
-                
-                <div class="card promo-card" style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); border: none; overflow: hidden; position: relative;">
-                    <div style="position: absolute; top: -20px; right: -20px; width: 150px; height: 150px; background: rgba(255,255,255,0.2); border-radius: 50%;"></div>
-                    <div style="display: flex; align-items: center; gap: 2rem; position: relative; z-index: 1;">
-                        <div>
-                            <span class="badge badge-success" style="margin-bottom: 0.5rem;">🎂 Nuevo</span>
-                            <h3 style="margin: 0.5rem 0; color: inherit;">Torta Arcoíris</h3>
-                            <p class="text-muted">Nuestra nueva torta de colores, ideal para cumpleaños</p>
-                            <a href="/Catalog/Details/9" class="btn btn-success btn-sm">Conocer más</a>
-                        </div>
-                        <img src="https://images.unsplash.com/photo-1571115177094-24ec08c6433b?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&h=200&q=80"
-                             alt="Torta Arcoíris"
-                             style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover;">
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    
-    <section style="padding: 4rem 0; background: #fafafa;" class="gallery-section">
-        <div class="container">
-            <div style="text-align: center; margin-bottom: 3rem;">
-                <span class="badge badge-primary" style="margin-bottom: 1rem;">📸 Inspiración</span>
-                <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">Momentos dulces</h2>
-                <p class="text-muted">Clientes felices con nuestras creaciones</p>
-            </div>
-
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
-                <img src="https://images.unsplash.com/photo-1551024506-0bccd828d307?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=400&q=80"
-                     alt="Torta"
-                     style="width: 100%; height: 200px; object-fit: cover; border-radius: var(--radius);">
-                <img src="https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=400&q=80"
-                     alt="Brownie"
-                     style="width: 100%; height: 200px; object-fit: cover; border-radius: var(--radius);">
-                <img src="https://images.unsplash.com/photo-1488477181946-6428a0291777?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=400&q=80"
-                     alt="Galletas"
-                     style="width: 100%; height: 200px; object-fit: cover; border-radius: var(--radius);">
-                <img src="https://images.unsplash.com/photo-1571115177094-24ec08c6433b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=400&q=80"
-                     alt="Torta"
-                     style="width: 100%; height: 200px; object-fit: cover; border-radius: var(--radius);">
-            </div>
-        </div>
-    </section>
-
-    
-    <section style="padding: 4rem 0;">
-        <div class="container">
-            <div style="text-align: center; margin-bottom: 3rem;">
-                <span class="badge badge-primary" style="margin-bottom: 1rem;">🎯 Para cada ocasión</span>
-                <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">¿Qué estás celebrando?</h2>
-                <p class="text-muted">Tenemos el postre perfecto para tu momento especial</p>
-            </div>
-
-            <div class="grid grid-3" style="gap: 1.5rem;">
-                <a href="/Catalog?category=Pasteles" class="card occasion-card" style="text-align: center; text-decoration: none;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🎂</div>
-                    <h3 style="margin: 0;">Cumpleaños</h3>
-                    <p class="text-muted">Pasteles personalizados</p>
-                </a>
-                <a href="/Catalog?category=Tortas" class="card occasion-card" style="text-align: center; text-decoration: none;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">💒</div>
-                    <h3 style="margin: 0;">Bodas</h3>
-                    <p class="text-muted">Tortas elegantes</p>
-                </a>
-                <a href="/Catalog?category=Cupcakes" class="card occasion-card" style="text-align: center; text-decoration: none;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">👶</div>
-                    <h3 style="margin: 0;">Baby Shower</h3>
-                    <p class="text-muted">Cupcakes temáticos</p>
-                </a>
-                <a href="/Catalog?category=Galletas" class="card occasion-card" style="text-align: center; text-decoration: none;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🎄</div>
-                    <h3 style="margin: 0;">Eventos</h3>
-                    <p class="text-muted">Galletas decoradas</p>
-                </a>
-                <a href="/Catalog?category=Postres" class="card occasion-card" style="text-align: center; text-decoration: none;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">💝</div>
-                    <h3 style="margin: 0;">Aniversarios</h3>
-                    <p class="text-muted">Postres románticos</p>
-                </a>
-                <a href="/Catalog" class="card occasion-card" style="text-align: center; text-decoration: none;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🎁</div>
-                    <h3 style="margin: 0;">Regalos</h3>
-                    <p class="text-muted">Sorpresas dulces</p>
-                </a>
-            </div>
-        </div>
-    </section>
-    
-    <section style="padding: 4rem 0; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white;">
-        <div class="container" style="text-align: center;">
-            <h2 style="color: white; font-size: 2.5rem; margin-bottom: 1rem;">Comparte tu momento</h2>
-            <p style="color: rgba(255,255,255,0.9); font-size: 1.2rem; margin-bottom: 2rem;">
-                Etiquétanos en tus fotos y aparecerás en nuestra galería
-            </p>
-            <div style="display: flex; gap: 1rem; justify-content: center;">
-                <a href="#" class="btn btn-outline" style="background: white; color: var(--primary); border-color: white;">
-                    <i class="fab fa-instagram"></i> @@bakesmart_patri
-                </a>
-                <a href="#" class="btn btn-outline" style="border-color: white; color: white;">
-                    <i class="fab fa-facebook"></i> BakeSmart Patri
-                </a>
+                }
             </div>
         </div>
     </section>
 }
 else if (isAdmin || isStaff)
 {
-    
-    
     <div class="page-header" style="margin: 2rem 0 2.5rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
         <div>
             <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -496,319 +209,45 @@ else if (isAdmin || isStaff)
         </div>
     </div>
 
-    
     <div style="padding: 0 1.5rem;">
-        
         <div class="card welcome-card" style="margin-bottom: 2rem; background: linear-gradient(135deg, var(--primary-light), var(--secondary-light)); border: none; position: relative; overflow: hidden;">
-            
-            <div class="dark-mode-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); opacity: 0; transition: opacity 0.3s ease; pointer-events: none;"></div>
             <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; position: relative; z-index: 2;">
                 <div style="width: 60px; height: 60px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow);">
                     <i class="fas fa-user-tie" style="font-size: 2rem; color: var(--primary);"></i>
                 </div>
                 <div>
-                    <h3 style="margin: 0; color: inherit;">¡Hola, @(User?.Identity?.Name ?? "Admin")!</h3>
-                    <p style="margin: 0; color: inherit; opacity: 0.9;">¿Qué deseas gestionar hoy?</p>
+                    <h3 style="margin: 0; color: inherit;">Hola, @(User?.Identity?.Name ?? "Admin")</h3>
+                    <p style="margin: 0; color: inherit; opacity: 0.9;">Que deseas gestionar hoy?</p>
                 </div>
             </div>
         </div>
 
-        
         <div style="text-align: center; margin-bottom: 2rem;">
-            <h2 style="font-size: 2rem; margin-bottom: 1rem;">Acceso rápido</h2>
-            <p class="text-muted">Selecciona un módulo para comenzar a trabajar</p>
+            <h2 style="font-size: 2rem; margin-bottom: 1rem;">Acceso rapido</h2>
+            <p class="text-muted">Selecciona un modulo para comenzar a trabajar</p>
         </div>
 
         <div class="grid grid-4" style="margin-bottom: 2rem;">
-            <a href="/Dashboard" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;">
-                <div style="width: 80px; height: 80px; background: var(--primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
-                    <i class="fas fa-chart-line" style="font-size: 2rem; color: var(--primary);"></i>
-                </div>
-                <h3 style="margin: 0;">Dashboard</h3>
-                <p class="text-muted" style="font-size: 0.875rem;">Estadísticas detalladas</p>
-            </a>
-            <a href="/Orders" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;">
-                <div style="width: 80px; height: 80px; background: var(--secondary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
-                    <i class="fas fa-clipboard-list" style="font-size: 2rem; color: var(--secondary);"></i>
-                </div>
-                <h3 style="margin: 0;">Pedidos</h3>
-                <p class="text-muted" style="font-size: 0.875rem;">Gestionar pedidos</p>
-            </a>
-            <a href="/Production" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;">
-                <div style="width: 80px; height: 80px; background: #d1fae5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
-                    <i class="fas fa-utensils" style="font-size: 2rem; color: var(--success);"></i>
-                </div>
-                <h3 style="margin: 0;">Producción</h3>
-                <p class="text-muted" style="font-size: 0.875rem;">Control de producción</p>
-            </a>
-            <a href="/Inventory" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;">
-                <div style="width: 80px; height: 80px; background: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
-                    <i class="fas fa-boxes" style="font-size: 2rem; color: var(--warning);"></i>
-                </div>
-                <h3 style="margin: 0;">Inventario</h3>
-                <p class="text-muted" style="font-size: 0.875rem;">Stock y alertas</p>
-            </a>
-            <a href="/POS" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;">
-                <div style="width: 80px; height: 80px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
-                    <i class="fas fa-cash-register" style="font-size: 2rem; color: var(--danger);"></i>
-                </div>
-                <h3 style="margin: 0;">Punto de Venta</h3>
-                <p class="text-muted" style="font-size: 0.875rem;">Ventas rápidas</p>
-            </a>
-            <a href="/Reports" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;">
-                <div style="width: 80px; height: 80px; background: #dbeafe; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
-                    <i class="fas fa-chart-bar" style="font-size: 2rem; color: var(--info);"></i>
-                </div>
-                <h3 style="margin: 0;">Reportes</h3>
-                <p class="text-muted" style="font-size: 0.875rem;">Análisis de ventas</p>
-            </a>
-            <a href="/Catalog" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;">
-                <div style="width: 80px; height: 80px; background: #f3e8ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
-                    <i class="fas fa-book-open" style="font-size: 2rem; color: #8b5cf6;"></i>
-                </div>
-                <h3 style="margin: 0;">Catálogo</h3>
-                <p class="text-muted" style="font-size: 0.875rem;">Gestionar productos</p>
-            </a>
-            <a href="/Account/Manage" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;">
-                <div style="width: 80px; height: 80px; background: #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
-                    <i class="fas fa-user-cog" style="font-size: 2rem; color: var(--text);"></i>
-                </div>
-                <h3 style="margin: 0;">Mi cuenta</h3>
-                <p class="text-muted" style="font-size: 0.875rem;">Configuración</p>
-            </a>
-        </div>
-
-        
-        <div class="card" style="background: var(--bg-alt); text-align: center;">
-            <i class="fas fa-info-circle" style="font-size: 2rem; color: var(--info); margin-bottom: 0.5rem;"></i>
-            <p class="text-muted">Accede a cualquier módulo para gestionar tu negocio. El dashboard principal está disponible con estadísticas detalladas.</p>
+            <a href="/Dashboard" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;"><i class="fas fa-chart-line" style="font-size: 2rem; color: var(--primary);"></i><h3>Dashboard</h3><p class="text-muted">Estadisticas detalladas</p></a>
+            <a href="/Orders" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;"><i class="fas fa-clipboard-list" style="font-size: 2rem; color: var(--secondary);"></i><h3>Pedidos</h3><p class="text-muted">Gestionar pedidos</p></a>
+            <a href="/Production" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;"><i class="fas fa-utensils" style="font-size: 2rem; color: var(--success);"></i><h3>Produccion</h3><p class="text-muted">Control de produccion</p></a>
+            <a href="/Inventory" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;"><i class="fas fa-boxes" style="font-size: 2rem; color: var(--warning);"></i><h3>Inventario</h3><p class="text-muted">Stock y alertas</p></a>
+            <a href="/POS" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;"><i class="fas fa-cash-register" style="font-size: 2rem; color: var(--danger);"></i><h3>Punto de Venta</h3><p class="text-muted">Ventas rapidas</p></a>
+            <a href="/Reports" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;"><i class="fas fa-chart-bar" style="font-size: 2rem; color: var(--info);"></i><h3>Reportes</h3><p class="text-muted">Analisis de ventas</p></a>
+            <a href="/Catalog" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;"><i class="fas fa-book-open" style="font-size: 2rem; color: #8b5cf6;"></i><h3>Catalogo</h3><p class="text-muted">Gestionar productos</p></a>
+            <a href="/Users" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;"><i class="fas fa-user-cog" style="font-size: 2rem; color: var(--text);"></i><h3>Usuarios</h3><p class="text-muted">Roles y accesos</p></a>
         </div>
     </div>
 }
 else
 {
-    
     <div class="container" style="padding: 4rem 0; text-align: center;">
         <h1>Bienvenido a BakeSmart Patri</h1>
-        <p class="text-muted">Selecciona una opción para continuar</p>
-        <a href="/Catalog" class="btn btn-primary">Ver catálogo</a>
+        <p class="text-muted">Selecciona una opcion para continuar</p>
+        <a href="/Catalog" class="btn btn-primary">Ver catalogo</a>
     </div>
 }
 
-<script>
-    
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            document.querySelector(this.getAttribute('href')).scrollIntoView({
-                behavior: 'smooth'
-            });
-        });
-    });
-</script>
-
-<style>
-    
-    .badge-success {
-        background: #d1fae5;
-        color: #065f46;
-    }
-
-    .badge-warning {
-        background: #fef3c7;
-        color: #92400e;
-    }
-
-    .badge-info {
-        background: #dbeafe;
-        color: #1e40af;
-    }
-
-    .badge-primary {
-        background: var(--primary-light);
-        color: var(--primary-dark);
-    }
-
-    .btn-warning {
-        background: #f59e0b;
-        color: white;
-    }
-
-        .btn-warning:hover {
-            background: #d97706;
-        }
-
-    .btn-success {
-        background: #10b981;
-        color: white;
-    }
-
-        .btn-success:hover {
-            background: #059669;
-        }
-
-    
-    .dark .hero-section {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
-    }
-
-        .dark .hero-section .text-muted,
-        .dark .hero-section p {
-            color: #a0aec0 !important;
-        }
-
-        .dark .hero-section h1,
-        .dark .hero-section h2,
-        .dark .hero-section h3,
-        .dark .hero-section span:not(.badge) {
-            color: white !important;
-        }
-
-    .dark .stats-section {
-        background: var(--bg) !important;
-    }
-
-    .dark .featured-section {
-        background: var(--bg-alt) !important;
-    }
-
-    .dark .gallery-section {
-        background: var(--bg-alt) !important;
-    }
-
-    .dark .why-us-section {
-        background: var(--bg-alt) !important;
-    }
-
-    .dark .promo-card {
-        background: linear-gradient(135deg, #2d3748, #1a202c) !important;
-    }
-
-        .dark .promo-card .text-muted,
-        .dark .promo-card p {
-            color: #a0aec0 !important;
-        }
-
-        .dark .promo-card h3 {
-            color: white !important;
-        }
-
-    .dark .occasion-card {
-        background: var(--bg-card) !important;
-    }
-
-        .dark .occasion-card:hover {
-            background: var(--bg-alt) !important;
-        }
-
-        .dark .occasion-card h3 {
-            color: white !important;
-        }
-
-        .dark .occasion-card p {
-            color: #a0aec0 !important;
-        }
-
-    .dark .module-card {
-        background: var(--bg-card) !important;
-    }
-
-        .dark .module-card:hover {
-            background: var(--bg-alt) !important;
-        }
-
-        .dark .module-card h3 {
-            color: white !important;
-        }
-
-        .dark .module-card p {
-            color: #a0aec0 !important;
-        }
-
-    
-    .dark .welcome-card {
-        background: linear-gradient(135deg, #2d3748, #1a202c) !important;
-    }
-
-        .dark .welcome-card .dark-mode-overlay {
-            opacity: 0.5;
-        }
-
-        .dark .welcome-card h3,
-        .dark .welcome-card p {
-            color: white !important;
-        }
-
-        .dark .welcome-card div[style*="background: white"] {
-            background: var(--primary) !important;
-        }
-
-            .dark .welcome-card div[style*="background: white"] i {
-                color: white !important;
-            }
-
-    
-    .dark .badge-primary {
-        background: rgba(139, 92, 246, 0.3) !important;
-        color: var(--primary-light) !important;
-    }
-
-    
-    .dark [style*="background: white"] {
-        background: var(--bg) !important;
-    }
-
-    .dark [style*="background: #fafafa"] {
-        background: var(--bg-alt) !important;
-    }
-
-    
-    .dark .card {
-        background: var(--bg-card) !important;
-        border-color: var(--border) !important;
-    }
-
-        .dark .card h1, .dark .card h2, .dark .card h3, .dark .card h4,
-        .dark .card strong, .dark .card b {
-            color: white !important;
-        }
-
-        .dark .card .text-muted,
-        .dark .card p:not([style*="color"]) {
-            color: #a0aec0 !important;
-        }
-
-        
-        .dark .card .badge-success {
-            background: rgba(16, 185, 129, 0.2) !important;
-            color: #10b981 !important;
-        }
-
-        .dark .card .badge-warning {
-            background: rgba(245, 158, 11, 0.2) !important;
-            color: #f59e0b !important;
-        }
-
-        .dark .card .badge-info {
-            background: rgba(59, 130, 246, 0.2) !important;
-            color: #3b82f6 !important;
-        }
-
-        .dark .card .badge-primary {
-            background: rgba(139, 92, 246, 0.2) !important;
-            color: var(--primary-light) !important;
-        }
-
-    
-    .dark [style*="background: linear-gradient(135deg, #fff9f9"] {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
-    }
-
-    .dark [style*="background: linear-gradient(135deg, #fef3c7"] {
-        background: linear-gradient(135deg, #2d3748, #1a202c) !important;
-    }
-
-    .dark [style*="background: linear-gradient(135deg, #d1fae5"] {
-        background: linear-gradient(135deg, #2d3748, #1a202c) !important;
-    }
-</style>
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/home-index.css" asp-append-version="true" />
+}

@@ -32,52 +32,58 @@ public class ApiController : Controller
     }
 
     [HttpGet("dashboard")]
-    public async Task<IActionResult> Dashboard()
-    {
-        if (_sqlStore.IsEnabled)
-            return Json(await _sqlStore.DashboardAsync());
-
-        return Json(new
-        {
-            kpis = new[]
-            {
-                new { label = "Pedidos hoy", value = 18, delta = "+12%" },
-                new { label = "En producción", value = 7, delta = "+2" },
-                new { label = "Ventas (₡)", value = 245000, delta = "+8%" },
-                new { label = "Alertas inventario", value = 3, delta = "stock bajo" }
-            }
-        });
-    }
+    public async Task<IActionResult> Dashboard() => Json(await _sqlStore.DashboardAsync());
 
     [HttpGet("orders")]
-    public async Task<IActionResult> Orders()
-    {
-        if (_sqlStore.IsEnabled)
-            return Json(await _sqlStore.OrdersAsync());
+    public async Task<IActionResult> Orders() => Json(await _sqlStore.OrdersAsync());
 
-        var rows = new[]
-        {
-            new { id=1012, cliente="María Gómez", producto="Cake Red Velvet (1.5kg)", estado="En Producción", entrega="2026-02-18", total=32000, canal="Web" },
-            new { id=1013, cliente="Clínica Santa Ana", producto="120 cupcakes corporativos", estado="Confirmado", entrega="2026-02-19", total=98000, canal="WhatsApp" },
-            new { id=1014, cliente="José Mora", producto="Cheesecake maracuyá", estado="Listo", entrega="2026-02-16", total=18000, canal="Tienda" },
-            new { id=1015, cliente="Ana Solís", producto="Cake infantil (tema unicornio)", estado="Pendiente Pago", entrega="2026-02-20", total=45000, canal="Instagram" },
-        };
-        return Json(rows);
+    [HttpPost("orders/{id:int}/status")]
+    public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] UpdateOrderStatusRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Status))
+            return BadRequest(new { message = "Debe indicar el estado." });
+
+        await _sqlStore.UpdateOrderStatusAsync(id, request.Status);
+        return Ok(new { ok = true });
+    }
+
+    [HttpPost("orders/{id:int}/pay")]
+    public async Task<IActionResult> MarkOrderPaid(int id, [FromBody] MarkPaidRequest request)
+    {
+        await _sqlStore.MarkOrderPaidAsync(id, string.IsNullOrWhiteSpace(request.Method) ? "Efectivo" : request.Method);
+        return Ok(new { ok = true });
     }
 
     [HttpGet("inventory")]
-    public async Task<IActionResult> Inventory()
-    {
-        if (_sqlStore.IsEnabled)
-            return Json(await _sqlStore.InventoryAsync());
+    public async Task<IActionResult> Inventory() => Json(await _sqlStore.InventoryAsync());
 
-        var rows = new[]
-        {
-            new { sku="HAR-001", item="Harina 000", unidad="kg", stock=8, min=10, costo=900, proveedor="Distribuidora Central" },
-            new { sku="AZU-002", item="Azúcar", unidad="kg", stock=14, min=12, costo=820, proveedor="Dulce Tico" },
-            new { sku="HUE-010", item="Huevo", unidad="unidad", stock=120, min=150, costo=95, proveedor="Avícola SJ" },
-            new { sku="MNT-003", item="Mantequilla", unidad="kg", stock=3, min=6, costo=2600, proveedor="Lácteos del Valle" },
-        };
-        return Json(rows);
+    [HttpGet("inventory/movements")]
+    public async Task<IActionResult> InventoryMovements() => Json(await _sqlStore.InventoryMovementsAsync());
+
+    [HttpGet("customers")]
+    public async Task<IActionResult> Customers() => Json(await _sqlStore.CustomersAsync());
+
+    [HttpGet("promotions")]
+    public async Task<IActionResult> Promotions() => Json(await _sqlStore.PromotionsAsync());
+
+    [HttpGet("users")]
+    public async Task<IActionResult> Users() => Json(await _sqlStore.UsersAsync());
+
+    [HttpGet("roles")]
+    public async Task<IActionResult> Roles() => Json(await _sqlStore.RolesAsync());
+
+    [HttpGet("pos/config")]
+    public async Task<IActionResult> PosConfig() => Json(await _sqlStore.PosConfigAsync());
+
+    [HttpGet("logs")]
+    public async Task<IActionResult> Logs() => Json(await _sqlStore.AuditLogsAsync());
+
+    [HttpGet("reports/{type}")]
+    public async Task<IActionResult> Reports(string type, DateTime? start, DateTime? end)
+    {
+        return Json(await _sqlStore.ReportsAsync(type, start, end));
     }
+
+    public sealed record UpdateOrderStatusRequest(string Status);
+    public sealed record MarkPaidRequest(string Method);
 }

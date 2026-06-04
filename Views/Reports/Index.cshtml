@@ -2,7 +2,7 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Reportes";
 }
-<div class="page-shell">
+<div class="page-shell reports-page">
     <div class="page-header" style="margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
         <div>
             <h1 style="margin:0; display:flex; align-items:center; gap:.75rem;"><i class="fas fa-chart-column" style="color:var(--primary);"></i> Reportería operativa y administrativa</h1>
@@ -82,8 +82,9 @@
         };
     }
 
-    function renderKpis() {
-        document.getElementById('reportAuditCount').textContent = BakeSmartStore.logs().filter(x => x.type.includes('REPORTE') || x.type.includes('EXPORTAR')).length;
+    async function renderKpis() {
+        await BakeSmartStore.refresh();
+        document.getElementById('reportAuditCount').textContent = BakeSmartStore.logs().filter(x => String(x.type || '').includes('REPORTE') || String(x.type || '').includes('EXPORTAR')).length;
         document.getElementById('reportUsersKpi').textContent = BakeSmartStore.reports.users().activeUsers;
         document.getElementById('reportOrdersKpi').textContent = BakeSmartStore.orders.list().length;
     }
@@ -99,43 +100,38 @@
         document.getElementById('exportReportBtn').disabled = !rows.length;
     }
 
-    window.loadReport = (type) => {
+    window.loadReport = async (type) => {
         try {
             const { start, end } = dates();
             if (start && end && new Date(end) < new Date(start)) throw new Error('La fecha final no puede ser menor a la inicial.');
+            const r = await BakeSmartStore.reports.load(type, start, end);
             switch (type) {
                 case 'sales': {
-                    const r = BakeSmartStore.reports.sales(start, end);
                     drawTable('Reporte de ventas', r.rows, `Ingresos: ${app.utils.formatCurrency(r.totalIncome)} | Transacciones: ${r.totalTransactions}`);
                     break;
                 }
                 case 'inventory': {
-                    const r = BakeSmartStore.reports.inventory();
                     drawTable('Reporte de inventario', r.rows, `Stock bajo: ${r.lowStock} | Inconsistencias: ${r.negativeStock}`);
                     break;
                 }
                 case 'users': {
-                    const r = BakeSmartStore.reports.users();
                     drawTable('Reporte de usuarios', r.rows, `Usuarios activos: ${r.activeUsers}`);
                     break;
                 }
                 case 'promotions': {
-                    const r = BakeSmartStore.reports.promotions(start, end);
                     drawTable('Reporte de promociones', r.rows, `Promociones activas: ${r.activePromotions}`);
                     break;
                 }
                 case 'cashClosures': {
-                    const r = BakeSmartStore.reports.cashClosures(start, end);
                     drawTable('Reporte de cierres de caja', r.rows, `Total ventas en cierres: ${app.utils.formatCurrency(r.totalSales)}`);
                     break;
                 }
                 case 'orders': {
-                    const r = BakeSmartStore.reports.orders(start, end);
                     drawTable('Reporte de pedidos', r.rows, `Cantidad de pedidos: ${r.totalOrders}`);
                     break;
                 }
             }
-            renderKpis();
+            await renderKpis();
         } catch (error) {
             app.toast.error(error.message);
         }
@@ -154,7 +150,10 @@
     const today = new Date().toISOString().slice(0,10);
     document.getElementById('reportEnd').value = today;
     document.getElementById('reportStart').value = new Date(Date.now() - 30*86400000).toISOString().slice(0,10);
-    renderKpis();
+    renderKpis().catch(error => app.toast.error(error.message));
 })();
 </script>
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/reports-index.css" asp-append-version="true" />
 }

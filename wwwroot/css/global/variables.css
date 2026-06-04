@@ -1,0 +1,57 @@
+:root {
+    --primary: #8b5cf6;
+    --primary-dark: #7c3aed;
+    --primary-light: #ede9fe;
+    --secondary: #ec4899;
+    --secondary-dark: #db2777;
+    --secondary-light: #fce7f3;
+    --accent: #f59e0b;
+    --accent-dark: #d97706;
+    --success: #10b981;
+    --success-dark: #059669;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
+    --bg: #ffffff;
+    --bg-alt: #f9fafb;
+    --bg-card: #ffffff;
+    --text: #1f2937;
+    --text-light: #6b7280;
+    --text-muted: #9ca3af;
+    --border: #e5e7eb;
+    --border-light: #f3f4f6;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    --radius-sm: 0.375rem;
+    --radius: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --gradient-primary: linear-gradient(135deg, var(--primary), var(--secondary));
+    --gradient-success: linear-gradient(135deg, var(--success), var(--info));
+    --gradient-warning: linear-gradient(135deg, var(--warning), var(--accent));
+    --gradient-dark: linear-gradient(135deg, #1f2937, #111827);
+}
+
+.dark {
+    --bg: #111827;
+    --bg-alt: #1f2937;
+    --bg-card: #1f2937;
+    --text: #f9fafb;
+    --text-light: #e5e7eb;
+    --text-muted: #9ca3af;
+    --border: #374151;
+    --border-light: #1f2937;
+}
+
+:root {
+    --bg-card-rgb: 255, 255, 255;
+}
+
+.dark {
+    --bg-card-rgb: 31, 41, 55;
+}

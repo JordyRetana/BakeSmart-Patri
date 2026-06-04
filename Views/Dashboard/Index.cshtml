@@ -3,11 +3,15 @@
     ViewData["Title"] = "Dashboard";
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/dashboard-index.css" asp-append-version="true" />
+}
+
 <div class="page-shell dashboard-page">
     <div class="page-header dashboard-header">
         <div>
             <h1 class="dashboard-title"><i class="fas fa-chart-line"></i> Dashboard operativo</h1>
-            <p class="text-muted dashboard-subtitle">Centro de control conectado a pedidos, producción, inventario, POS, reportes y contabilidad.</p>
+            <p class="text-muted dashboard-subtitle">Centro de control para pedidos, produccion, inventario y reportes.</p>
         </div>
         <div class="dashboard-actions">
             <a class="btn btn-primary" href="/Pos"><i class="fas fa-cash-register"></i> Abrir POS</a>
@@ -16,10 +20,10 @@
     </div>
 
     <div class="grid grid-4 dashboard-kpis">
-        <div class="card dashboard-kpi"><span class="text-muted">Pedidos</span><h2 id="dbOrders"></h2><small id="dbOrdersHint"></small></div>
-        <div class="card dashboard-kpi"><span class="text-muted">Ventas</span><h2 id="dbSales"></h2><small id="dbSalesHint"></small></div>
-        <div class="card dashboard-kpi"><span class="text-muted">Producción activa</span><h2 id="dbProduction"></h2><small id="dbProductionHint"></small></div>
-        <div class="card dashboard-kpi"><span class="text-muted">Stock bajo</span><h2 id="dbLowStock"></h2><small id="dbLowStockHint"></small></div>
+        <div class="card dashboard-kpi"><span class="text-muted">Pedidos hoy</span><h2 id="dbOrders">0</h2><small id="dbOrdersHint"></small></div>
+        <div class="card dashboard-kpi"><span class="text-muted">Ventas</span><h2 id="dbSales">0</h2><small id="dbSalesHint"></small></div>
+        <div class="card dashboard-kpi"><span class="text-muted">Produccion activa</span><h2 id="dbProduction">0</h2><small id="dbProductionHint"></small></div>
+        <div class="card dashboard-kpi"><span class="text-muted">Stock bajo</span><h2 id="dbLowStock">0</h2><small id="dbLowStockHint"></small></div>
     </div>
 
     <div class="dashboard-main-grid">
@@ -27,7 +31,7 @@
             <div class="dashboard-section-head">
                 <div>
                     <h3>Pedidos recientes</h3>
-                    <p class="text-muted">Cambiar estado aquí actualiza producción, seguimiento y reportes.</p>
+                    <p class="text-muted">Resumen reciente de actividad.</p>
                 </div>
                 <a class="btn btn-outline btn-sm" href="/Orders">Ver pedidos</a>
             </div>
@@ -41,11 +45,9 @@
 
         <aside class="dashboard-side-stack">
             <section class="card">
-                <div class="dashboard-section-head">
-                    <h3>Acciones rápidas</h3>
-                </div>
+                <div class="dashboard-section-head"><h3>Acciones rapidas</h3></div>
                 <div class="dashboard-shortcuts">
-                    <a href="/Production"><i class="fas fa-utensils"></i><span>Producción</span></a>
+                    <a href="/Production"><i class="fas fa-utensils"></i><span>Produccion</span></a>
                     <a href="/Inventory"><i class="fas fa-boxes-stacked"></i><span>Inventario</span></a>
                     <a href="/Marketing"><i class="fas fa-bullhorn"></i><span>Marketing</span></a>
                     <a href="/Accounting"><i class="fas fa-calculator"></i><span>Contabilidad</span></a>
@@ -53,9 +55,7 @@
             </section>
 
             <section class="card">
-                <div class="dashboard-section-head">
-                    <h3>Alertas</h3>
-                </div>
+                <div class="dashboard-section-head"><h3>Alertas</h3></div>
                 <div id="dbAlerts" class="dashboard-alerts"></div>
             </section>
         </aside>
@@ -64,207 +64,79 @@
     <div class="dashboard-bottom-grid">
         <section class="card">
             <div class="dashboard-section-head">
-                <h3>Cola de producción</h3>
+                <h3>Cola de produccion</h3>
                 <a class="btn btn-outline btn-sm" href="/Production">Gestionar</a>
             </div>
             <div id="dbProductionQueue" class="dashboard-list"></div>
         </section>
 
         <section class="card">
-            <div class="dashboard-section-head">
-                <h3>Actividad reciente</h3>
-            </div>
+            <div class="dashboard-section-head"><h3>Actividad reciente</h3></div>
             <div id="dbActivity" class="dashboard-list"></div>
         </section>
     </div>
 </div>
 
-<style>
-    .dashboard-page {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        max-width: 1480px;
-    }
-
-    .dashboard-title {
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: .75rem;
-    }
-
-    .dashboard-title i {
-        color: var(--primary);
-    }
-
-    .dashboard-subtitle {
-        margin: .35rem 0 0;
-    }
-
-    .dashboard-actions {
-        display: flex;
-        gap: .75rem;
-        flex-wrap: wrap;
-    }
-
-    .dashboard-kpis {
-        gap: 1rem;
-    }
-
-    .dashboard-kpi h2 {
-        margin: .35rem 0 0;
-        font-size: clamp(1.65rem, 2.4vw, 2.1rem);
-    }
-
-    .dashboard-kpi small {
-        color: var(--text-muted);
-        font-weight: 700;
-    }
-
-    .dashboard-main-grid,
-    .dashboard-bottom-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 1.35fr) minmax(340px, .65fr);
-        gap: 1rem;
-        align-items: start;
-    }
-
-    .dashboard-side-stack {
-        display: grid;
-        gap: 1rem;
-    }
-
-    .dashboard-section-head {
-        display: flex;
-        justify-content: space-between;
-        gap: 1rem;
-        align-items: flex-start;
-        flex-wrap: wrap;
-        margin-bottom: 1rem;
-    }
-
-    .dashboard-section-head h3,
-    .dashboard-section-head p {
-        margin: 0;
-    }
-
-    .dashboard-shortcuts {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: .75rem;
-    }
-
-    .dashboard-shortcuts a,
-    .dashboard-alert,
-    .dashboard-list-item {
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        background: var(--bg-card);
-        padding: .9rem;
-    }
-
-    .dashboard-shortcuts a {
-        display: flex;
-        align-items: center;
-        gap: .65rem;
-        color: var(--text);
-        font-weight: 800;
-    }
-
-    .dashboard-shortcuts i {
-        color: var(--primary);
-    }
-
-    .dashboard-alerts,
-    .dashboard-list {
-        display: grid;
-        gap: .75rem;
-    }
-
-    .dashboard-list-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .dashboard-list-item strong {
-        display: block;
-    }
-
-    .dashboard-page .card:hover,
-    .dashboard-page .table tbody tr:hover {
-        transform: none;
-    }
-
-    @@media (max-width: 1100px) {
-        .dashboard-main-grid,
-        .dashboard-bottom-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    @@media (max-width: 768px) {
-        .dashboard-actions,
-        .dashboard-actions .btn {
-            width: 100%;
-        }
-
-        .dashboard-shortcuts {
-            grid-template-columns: 1fr;
-        }
-    }
-</style>
-
 @section Scripts {
 <script>
 (() => {
-    const orders = BakeSmartStore.orders.list();
-    const sales = BakeSmartStore.reports.sales('', '');
-    const inventory = BakeSmartStore.reports.inventory();
-    const activeSession = BakeSmartStore.pos.activeSession();
-    const production = orders.filter(o => ['En producción', 'Listo', 'En camino'].includes(o.status));
-    const pendingPayments = orders.filter(o => o.paymentStatus !== 'Pagado');
+    const format = value => app.utils.formatCurrency(Number(value || 0));
+    const statusOf = order => order.estado || order.status || '';
 
-    document.getElementById('dbOrders').textContent = orders.length;
-    document.getElementById('dbOrdersHint').textContent = `${pendingPayments.length} con pago pendiente`;
-    document.getElementById('dbSales').textContent = app.utils.formatCurrency(sales.totalIncome);
-    document.getElementById('dbSalesHint').textContent = `${sales.totalTransactions} transacciones`;
-    document.getElementById('dbProduction').textContent = production.length;
-    document.getElementById('dbProductionHint').textContent = `${orders.filter(o => o.status === 'Confirmado').length} listos para iniciar`;
-    document.getElementById('dbLowStock').textContent = inventory.lowStock;
-    document.getElementById('dbLowStockHint').textContent = inventory.lowStock ? 'requiere revisión' : 'inventario estable';
+    async function renderDashboard() {
+        await BakeSmartStore.refresh();
 
-    document.getElementById('dbOrdersTable').innerHTML = orders.slice(0, 7).map(o => `
-        <tr>
-            <td><strong>#${o.id}</strong></td>
-            <td>${o.customerName}</td>
-            <td><span class="badge badge-primary">${o.status}</span></td>
-            <td><span class="badge ${o.paymentStatus === 'Pagado' ? 'badge-success' : 'badge-warning'}">${o.paymentStatus}</span></td>
-            <td>${app.utils.formatCurrency(o.total)}</td>
-        </tr>
-    `).join('') || `<tr><td colspan="5" class="text-center text-muted">No hay pedidos.</td></tr>`;
+        const dashboard = await fetch('/api/dashboard').then(r => r.json());
+        const orders = BakeSmartStore.orders.list();
+        const inventory = BakeSmartStore.reports.inventory();
+        const logs = BakeSmartStore.logs();
+        const kpis = dashboard.kpis || [];
+        const getKpi = (label, fallback) => kpis.find(x => x.label === label)?.value ?? fallback;
 
-    const alerts = [];
-    if (inventory.lowStock) alerts.push({ icon: 'fa-box-open', text: `${inventory.lowStock} productos tienen stock bajo.` });
-    if (pendingPayments.length) alerts.push({ icon: 'fa-money-bill-wave', text: `${pendingPayments.length} pedidos necesitan pago.` });
-    if (activeSession) alerts.push({ icon: 'fa-cash-register', text: `Caja #${activeSession.id} abierta con ${app.utils.formatCurrency(activeSession.totalSales || 0)}.` });
-    if (!alerts.length) alerts.push({ icon: 'fa-circle-check', text: 'No hay alertas críticas en este momento.' });
-    document.getElementById('dbAlerts').innerHTML = alerts.map(a => `<div class="dashboard-alert"><i class="fas ${a.icon}" style="color:var(--primary); margin-right:.5rem;"></i>${a.text}</div>`).join('');
+        const pendingPayments = orders.filter(o => (o.paymentStatus || '') !== 'Pagado');
+        const production = orders.filter(o => ['Confirmado', 'En produccion', 'En producción', 'Listo', 'En camino'].includes(statusOf(o)));
+        const lowStock = getKpi('Alertas inventario', inventory.lowStock);
 
-    document.getElementById('dbProductionQueue').innerHTML = orders
-        .filter(o => o.status !== 'Entregado')
-        .slice(0, 5)
-        .map(o => `<div class="dashboard-list-item"><div><strong>#${o.id} · ${o.customerName}</strong><span class="text-muted">${o.items?.[0]?.name || 'Pedido personalizado'}</span></div><span class="badge badge-info">${o.status}</span></div>`)
-        .join('') || `<div class="text-muted">No hay cola activa.</div>`;
+        document.getElementById('dbOrders').textContent = getKpi('Pedidos hoy', orders.length);
+        document.getElementById('dbOrdersHint').textContent = `${pendingPayments.length} con pago pendiente`;
+        document.getElementById('dbSales').textContent = format(getKpi('Ventas (CRC)', 0));
+        document.getElementById('dbSalesHint').textContent = 'ventas registradas';
+        document.getElementById('dbProduction').textContent = production.length;
+        document.getElementById('dbProductionHint').textContent = `${orders.filter(o => statusOf(o) === 'Confirmado').length} listos para iniciar`;
+        document.getElementById('dbLowStock').textContent = lowStock;
+        document.getElementById('dbLowStockHint').textContent = lowStock ? 'requiere revision' : 'inventario estable';
 
-    document.getElementById('dbActivity').innerHTML = BakeSmartStore.logs().slice(0, 6).map(log => `
-        <div class="dashboard-list-item">
-            <div><strong>${log.type.replaceAll('_', ' ')}</strong><span class="text-muted">${log.detail}</span></div>
-            <span class="text-muted">${new Date(log.createdAt).toLocaleDateString('es-CR')}</span>
-        </div>
-    `).join('');
+        document.getElementById('dbOrdersTable').innerHTML = orders.slice(0, 7).map(o => `
+            <tr>
+                <td><strong>#${o.id}</strong></td>
+                <td>${o.cliente || o.customerName || '-'}</td>
+                <td><span class="badge badge-primary">${statusOf(o)}</span></td>
+                <td><span class="badge ${(o.paymentStatus || '') === 'Pagado' ? 'badge-success' : 'badge-warning'}">${o.paymentStatus || '-'}</span></td>
+                <td>${format(o.total)}</td>
+            </tr>
+        `).join('') || `<tr><td colspan="5" class="text-center text-muted">No hay pedidos.</td></tr>`;
+
+        const alerts = [];
+        if (Number(lowStock) > 0) alerts.push({ icon: 'fa-box-open', text: `${lowStock} productos tienen stock bajo.` });
+        if (pendingPayments.length) alerts.push({ icon: 'fa-money-bill-wave', text: `${pendingPayments.length} pedidos necesitan pago.` });
+        if (!alerts.length) alerts.push({ icon: 'fa-circle-check', text: 'No hay alertas criticas en este momento.' });
+        document.getElementById('dbAlerts').innerHTML = alerts.map(a => `<div class="dashboard-alert"><i class="fas ${a.icon}"></i>${a.text}</div>`).join('');
+
+        document.getElementById('dbProductionQueue').innerHTML = orders
+            .filter(o => statusOf(o) !== 'Entregado')
+            .slice(0, 5)
+            .map(o => `<div class="dashboard-list-item"><div><strong>#${o.id} - ${o.cliente || o.customerName}</strong><span class="text-muted">${o.producto || 'Pedido personalizado'}</span></div><span class="badge badge-info">${statusOf(o)}</span></div>`)
+            .join('') || `<div class="text-muted">No hay cola activa.</div>`;
+
+        document.getElementById('dbActivity').innerHTML = logs.slice(0, 6).map(log => `
+            <div class="dashboard-list-item">
+                <div><strong>${String(log.type || '').replaceAll('_', ' ')}</strong><span class="text-muted">${log.detail || ''}</span></div>
+                <span class="text-muted">${new Date(log.createdAt).toLocaleDateString('es-CR')}</span>
+            </div>
+        `).join('') || `<div class="text-muted">No hay actividad registrada.</div>`;
+    }
+
+    renderDashboard().catch(error => app.toast.error(error.message));
 })();
 </script>
 }

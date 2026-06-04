@@ -1,3 +1,7 @@
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/users-index.css" asp-append-version="true" />
+}
 ﻿@{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Usuarios";
@@ -10,7 +14,7 @@
         </div>
         <div class="page-actions">
             <input id="userSearch" class="form-control" placeholder="Buscar por nombre, correo o teléfono" style="min-width:260px;" />
-            <button type="button" id="resetStoreUsers" class="btn btn-outline"><i class="fas fa-rotate-left"></i> Restaurar demo</button>
+            <button type="button" id="resetStoreUsers" class="btn btn-outline"><i class="fas fa-rotate"></i> Recargar</button>
             <button type="button" id="openUserQuickActions" class="btn btn-primary"><i class="fas fa-user-plus"></i> Acciones rápidas</button>
         </div>
     </div>
@@ -94,37 +98,7 @@
     </div>
 </div>
 
-<style>
-    .users-workspace {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        gap: 1rem;
-        align-items: start;
-    }
 
-    .users-action-card,
-    .users-roles-card {
-        width: 100%;
-    }
-
-    .users-roles-card #rolePreview {
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    }
-
-    @@media (min-width: 1180px) {
-        .users-workspace {
-            grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
-        }
-    }
-
-    @@media (max-width: 768px) {
-        .page-actions,
-        .page-actions .form-control,
-        .page-actions .btn {
-            width: 100%;
-        }
-    }
-</style>
 
 @section Scripts {
 <script>
@@ -160,11 +134,9 @@
             const data = Object.fromEntries(new FormData(form).entries());
             try {
                 if (data.id) {
-                    store.users.update(data.id, data);
-                    app.toast.success('Usuario actualizado correctamente.');
+                    app.toast.info('Esta accion debe actualizarse desde el sistema.');
                 } else {
-                    store.users.create(data);
-                    app.toast.success('Usuario creado correctamente.');
+                    app.toast.info('Esta accion debe crearse desde el sistema.');
                 }
                 app.modal.close();
                 renderRoles();
@@ -239,17 +211,14 @@
 
     window.toggleUser = (id) => {
         try {
-            store.users.toggle(id);
-            renderUsers();
-            app.toast.info('Estado del usuario actualizado.');
+            app.toast.info('Esta accion debe actualizarse desde el sistema.');
         } catch (error) {
             app.toast.error(error.message);
         }
     };
 
     document.getElementById('resetStoreUsers')?.addEventListener('click', () => {
-        store.reset();
-        app.toast.info('Se restauró la data demo completa.');
+        app.toast.info('La informacion fue actualizada.');
         renderRoles();
         renderUsers();
     });
@@ -257,8 +226,10 @@
     openQuickActions.addEventListener('click', () => openUserModal());
     search.addEventListener('input', renderUsers);
 
-    renderRoles();
-    renderUsers();
+    store.refresh().then(() => {
+        renderRoles();
+        renderUsers();
+    }).catch(error => app.toast.error(error.message));
 })();
 </script>
 }

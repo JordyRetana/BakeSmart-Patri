@@ -1,53 +1,79 @@
-﻿@{
+@{
     Layout = "~/Views/Shared/_Layout.cshtml";
-
     ViewData["Title"] = "Detalle de pedido";
+    var orderId = ViewContext.RouteData.Values["id"]?.ToString() ?? "";
 }
-<div class="card">
-    <div class="section-title">
-        <div>
-            <h2>Pedido #1012</h2>
-            <div class="sub">María Gómez — Cake Red Velvet (1.5kg)</div>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <a class="btn-secondary" href="/Orders/Edit/1012">Editar</a>
-            <a class="btn" href="/Orders">Volver</a>
-        </div>
-    </div>
 
-    <div class="hr"></div>
-
-    <div class="grid grid-3">
-        <div class="card soft">
-            <div class="muted" style="font-weight:900;">Estado</div>
-            <div style="margin-top:10px;"><span class="pill good">En producción</span></div>
-        </div>
-        <div class="card soft">
-            <div class="muted" style="font-weight:900;">Entrega</div>
-            <div style="margin-top:10px;font-weight:950;font-size:18px;">2026-02-18</div>
-        </div>
-        <div class="card soft">
-            <div class="muted" style="font-weight:900;">Total</div>
-            <div style="margin-top:10px;font-weight:950;font-size:18px;">₡32 000</div>
-        </div>
-    </div>
-
-    <div class="grid grid-2" style="margin-top:16px;">
-        <div class="card soft">
-            <div style="font-weight:950;">Notas</div>
-            <div class="muted" style="margin-top:8px;font-weight:700;line-height:1.6;">
-                Sin nueces • mensaje “Feliz cumple” • cobertura suave
+<div class="page-shell order-details-page">
+    <div class="card">
+        <div class="section-title">
+            <div>
+                <h2 id="orderTitle">Pedido</h2>
+                <div id="orderSubtitle" class="sub">Cargando informacion del pedido...</div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <a class="btn btn-secondary" href="/Orders/Edit/@orderId">Editar</a>
+                <a class="btn" href="/Orders">Volver</a>
             </div>
         </div>
 
-        <div class="card soft">
-            <div style="font-weight:950;">Acciones</div>
-            <div class="muted" style="margin-top:8px;font-weight:700;line-height:1.6;">
-                Editá estado, fecha y notas desde “Editar”.
+        <div class="hr"></div>
+
+        <div class="grid grid-3">
+            <div class="card soft">
+                <div class="muted" style="font-weight:900;">Estado</div>
+                <div style="margin-top:10px;"><span id="orderStatus" class="pill">-</span></div>
             </div>
-            <div style="margin-top:12px;">
-                <a class="btn-secondary" href="/Production">Ver producción</a>
+            <div class="card soft">
+                <div class="muted" style="font-weight:900;">Entrega</div>
+                <div id="orderDelivery" style="margin-top:10px;font-weight:950;font-size:18px;">-</div>
+            </div>
+            <div class="card soft">
+                <div class="muted" style="font-weight:900;">Total</div>
+                <div id="orderTotal" style="margin-top:10px;font-weight:950;font-size:18px;">-</div>
+            </div>
+        </div>
+
+        <div class="grid grid-2" style="margin-top:16px;">
+            <div class="card soft">
+                <div style="font-weight:950;">Productos</div>
+                <div id="orderProducts" class="muted" style="margin-top:8px;font-weight:700;line-height:1.6;">-</div>
+            </div>
+            <div class="card soft">
+                <div style="font-weight:950;">Acciones</div>
+                <div class="muted" style="margin-top:8px;font-weight:700;line-height:1.6;">Actualiza estado, fecha y notas desde editar.</div>
+                <div style="margin-top:12px;">
+                    <a class="btn btn-secondary" href="/Production">Ver produccion</a>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    (() => {
+        const orderId = Number('@orderId');
+        const money = value => `₡${Number(value || 0).toLocaleString('es-CR')}`;
+
+        window.BakeSmartStore.refresh().then(() => {
+            const order = window.BakeSmartStore.orders.list().find(row => Number(row.id) === orderId);
+            if (!order) {
+                document.getElementById('orderSubtitle').textContent = 'No se encontro el pedido solicitado.';
+                return;
+            }
+
+            document.getElementById('orderTitle').textContent = `Pedido #${order.id}`;
+            document.getElementById('orderSubtitle').textContent = `${order.cliente || order.customerName || '-'} - ${order.paymentMethod || '-'}`;
+            document.getElementById('orderStatus').textContent = order.estado || order.status || '-';
+            document.getElementById('orderDelivery').textContent = order.entrega || order.deliveryDate || '-';
+            document.getElementById('orderTotal').textContent = money(order.total);
+            document.getElementById('orderProducts').textContent = order.producto || order.products || 'Sin detalle';
+        }).catch(error => {
+            document.getElementById('orderSubtitle').textContent = error.message;
+        });
+    })();
+</script>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/orders-form.css" asp-append-version="true" />
+}

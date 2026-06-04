@@ -1,30 +1,27 @@
-# BakeSmart Patri - conexión SQL
+# BakeSmart Patri - SQL Server
 
-## 1. Crear la base
+## 1. Crear o reconstruir la base
 
-Ejecuta este archivo en SQL Server Management Studio o Azure Data Studio:
+Ejecutar en SQL Server Management Studio o Azure Data Studio:
 
 ```sql
 Database/BakeSmartPatri.sql
 ```
 
-El script crea la base `BakeSmartPatri`, todas las tablas principales y datos demo:
+El script crea la base `BakeSmartPatri`, normaliza las tablas y carga datos iniciales.
 
-- usuarios y roles
-- clientes
-- productos e inventario
-- movimientos de inventario
-- pedidos y detalle de pedidos
-- ventas
-- promociones
-- contabilidad básica
-- pagos a proveedores
-- destinos con latitud y longitud
-- bitácora
+## 2. Que queda normalizado
 
-## 2. Conectar el proyecto
+- Productos separados de tipos, categorias, subcategorias, unidades e imagenes.
+- Inventario separado en ubicaciones, saldos y movimientos.
+- Pedidos separados en clientes, direcciones, canales, estados, metodos de pago, items y eventos de seguimiento.
+- Promociones con relacion muchos-a-muchos hacia productos.
+- Contabilidad separada en catalogo de cuentas, asientos y lineas de asiento.
+- Gastos, proveedores, pagos, auditoria y configuraciones en tablas independientes.
 
-Edita `appsettings.json` o `appsettings.Development.json`:
+## 3. Conexion de la app
+
+Revisar `appsettings.Development.json` o `appsettings.json`:
 
 ```json
 "ConnectionStrings": {
@@ -35,21 +32,37 @@ Edita `appsettings.json` o `appsettings.Development.json`:
 }
 ```
 
-Si usas autenticación de Windows local:
+Con autenticacion de Windows local:
 
 ```json
 "BakeSmartDb": "Server=localhost;Database=BakeSmartPatri;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
 ```
 
-## 3. Probar conexión
+## 4. Script de base de datos
 
-Levanta el proyecto y abre:
+La solucion mantiene un solo script principal para evitar duplicados:
+
+```text
+Database/BakeSmartPatri.sql
+```
+
+Uso recomendado:
+
+1. Abrir `Database/BakeSmartPatri.sql` en SQL Server Management Studio o Azure Data Studio.
+2. Ejecutar el script contra SQL Server.
+3. Revisar la conexion en `appsettings.Development.json`.
+4. Levantar la app y validar `/api/health`.
+5. Usar **SQL Server Object Explorer** si desea revisar las tablas creadas en la base local.
+
+## 5. Probar conexion
+
+Levantar la app y abrir:
 
 ```text
 http://localhost:5275/api/health
 ```
 
-Cuando esté conectado debe responder algo parecido a:
+Debe responder:
 
 ```json
 {
@@ -59,12 +72,9 @@ Cuando esté conectado debe responder algo parecido a:
 }
 ```
 
-## 4. Endpoints listos
-
-Con `UseSqlDatabase` en `true`, estos endpoints leen desde SQL:
+Endpoints que leen desde SQL:
 
 - `/api/health`
 - `/api/dashboard`
 - `/api/orders`
 - `/api/inventory`
-
