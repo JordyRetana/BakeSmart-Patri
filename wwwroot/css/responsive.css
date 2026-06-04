@@ -1,0 +1,543 @@
+/* ================================================================
+   RESPONSIVE GLOBAL — BakeSmart Patri
+   Cubre todas las vistas del proyecto.
+   Breakpoints:
+     1200px  → tablet grande / laptops pequeños
+      992px  → tablet
+      768px  → móvil landscape
+      480px  → móvil portrait
+   ================================================================ */
+
+/* ---------------------------------------------------------------
+   1. RESET / BASE RESPONSIVE
+--------------------------------------------------------------- */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+img, video {
+    max-width: 100%;
+    height: auto;
+}
+
+/* ---------------------------------------------------------------
+   2. LAYOUT GENERAL — page-shell / page-header / container
+--------------------------------------------------------------- */
+.page-shell {
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.page-header {
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+/* ---------------------------------------------------------------
+   3. TABLAS — Todas las tablas con scroll horizontal
+--------------------------------------------------------------- */
+.table-container,
+.accounting-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+table {
+    min-width: 100%;
+}
+
+/* ---------------------------------------------------------------
+   4. GRILLAS DE CLASES (.grid .grid-N)
+   Las clases grid-2 a grid-6 se colapsan en site.css a 768px.
+   Aquí agregamos el breakpoint intermedio SOLO entre 769px y 992px
+   para no interferir con el colapso a 1 col de site.css.
+--------------------------------------------------------------- */
+@media (min-width: 769px) and (max-width: 992px) {
+    .grid-3,
+    .grid.grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .grid-4,
+    .grid.grid-4,
+    .grid-5,
+    .grid.grid-5,
+    .grid-6,
+    .grid.grid-6 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ---------------------------------------------------------------
+   5. PAGE-HEADER — encabezados de sección con flex
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    .page-header h1 {
+        font-size: 1.6rem !important;
+    }
+
+    .page-header > div:last-child {
+        margin-right: 0 !important;
+    }
+
+    .page-shell {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+}
+
+/* ---------------------------------------------------------------
+   6. CATALOG — Index (filtros y grilla de productos)
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    /* Grid de productos: 1 sola columna */
+    #productsGrid.grid.grid-3 {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Cards: imagen más baja */
+    .product-card img {
+        height: 200px !important;
+    }
+
+    /* Título + estrellas: permitir wrap */
+    .product-card [style*="justify-content: space-between"][style*="align-items: center"] {
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+
+    /* Precio: tamaño reducido */
+    .product-card [style*="font-size: 1.5rem"] {
+        font-size: 1.2rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Imagen aún más compacta */
+    .product-card img {
+        height: 170px !important;
+    }
+
+    /* Badges de specs: tamaño menor */
+    .product-card .badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+    }
+
+    /* Precio compacto */
+    .product-card [style*="font-size: 1.5rem"] {
+        font-size: 1.1rem !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   7. CATALOG — Details (vista de detalle de producto)
+--------------------------------------------------------------- */
+
+/* Grid principal: imagen + info (grid grid-2) ya lo cubre site.css */
+
+/* Miniaturas de imagen: 4 col → 2 col → 1 col */
+@media (max-width: 768px) {
+    /* Contenedor de miniaturas de producto */
+    #tab-details > div[style*="grid-template-columns"] {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Tab nutricional: 3 col → 1 col */
+    #tab-nutritional > div[style*="grid-template-columns"] {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+
+    /* Precio + disponibilidad */
+    .catalog-detail-price-row {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.5rem;
+    }
+
+    /* Botones agregar al carrito */
+    .catalog-detail-actions {
+        flex-direction: column;
+    }
+
+    .catalog-detail-actions .btn {
+        flex: unset !important;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Miniaturas: 4 → 2 */
+    .catalog-detail-thumbnails {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   8. ORDERS — Index / Details / Edit / Create
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    /* Filtros de órdenes: apilar */
+    .orders-filters {
+        flex-direction: column;
+        gap: 0.5rem !important;
+    }
+
+    .orders-filters .form-control,
+    .orders-status-filter {
+        min-width: unset !important;
+        width: 100% !important;
+    }
+
+    /* Encabezado sección */
+    .section-title {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    /* Botones de acción en Details / Edit */
+    .section-title > div:last-child,
+    .order-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+}
+
+/* ---------------------------------------------------------------
+   9. REPORTS — KPIs y grilla de reportes
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    /* Filtros de fecha: apilar */
+    .page-header .grid.grid-2 {
+        grid-template-columns: 1fr !important;
+        width: 100%;
+    }
+
+    /* Header de reporte: apilar */
+    #reportTitle {
+        font-size: 1.1rem;
+    }
+}
+
+/* ---------------------------------------------------------------
+   10. ROLES — Grilla de tarjetas de roles
+--------------------------------------------------------------- */
+/* ya cubierto por site.css en 768px (grid-3 → 1fr)
+   aquí añadimos el paso intermedio */
+@media (max-width: 640px) {
+    #rolesGrid.grid.grid-3 {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   11. ACCOUNTING — Tabla con scroll
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .accounting-main-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   12. MARKETING — Layout principal
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .marketing-main-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .marketing-form-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   13. INVENTORY — Modal de formulario
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .inventory-modal-form {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   14. POS — Layout de punto de venta
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .pos-layout {
+        grid-template-columns: 1fr !important;
+    }
+
+    .pos-main-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   15. CLIENT — Dashboard / Perfil / Órdenes / Track
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .client-dashboard-main-grid,
+    .client-profile-layout {
+        grid-template-columns: 1fr !important;
+    }
+
+    .client-dashboard-form-grid,
+    .client-profile-form-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .client-dashboard-product-grid,
+    .client-profile-stats {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .client-orders-actions {
+        grid-template-columns: 1fr !important;
+        gap: 0.5rem !important;
+    }
+
+    .client-order-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .track-layout {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .client-dashboard-product-grid,
+    .client-profile-stats {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   16. DASHBOARD — Panel principal
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .dashboard-main-grid,
+    .dashboard-bottom-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .dashboard-shortcuts {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   17. USERS — Workspace
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    #rolePreview {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   18. ERROR PAGE — Fuente gigante
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    /* Número de error (8rem en desktop → escalable) */
+    [style*="font-size: 8rem"],
+    [style*="font-size:8rem"] {
+        font-size: 4rem !important;
+    }
+
+    [style*="font-size: 6rem"],
+    [style*="font-size:6rem"] {
+        font-size: 3.5rem !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   19. BOTONES Y ACCIONES — flex wrap global
+--------------------------------------------------------------- */
+@media (max-width: 480px) {
+    /* Grupos de botones: apilar */
+    .btn-group,
+    [style*="display:flex"][style*="gap:10px"],
+    [style*="display: flex"][style*="gap: 1rem"] > .btn {
+        width: 100%;
+    }
+
+    /* Acciones del Home CTA */
+    [style*="display: flex; gap: 1rem; justify-content: center"] {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+/* ---------------------------------------------------------------
+   20. NAVBAR — Menu responsive (ya cubierto en site.css)
+       Aquí solo ajustes extra de padding en mobile
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .navbar-container {
+        padding: 0 0.75rem;
+    }
+}
+
+/* ---------------------------------------------------------------
+   21. CARDS — padding reducido en mobile
+--------------------------------------------------------------- */
+@media (max-width: 480px) {
+    .card {
+        padding: 1rem;
+    }
+
+    .card.module-card {
+        padding: 1.25rem;
+    }
+
+    /* Íconos de módulo */
+    .module-card [style*="width: 80px"],
+    .module-card [style*="width:80px"] {
+        width: 60px !important;
+        height: 60px !important;
+    }
+
+    .module-card [style*="font-size: 2rem"] {
+        font-size: 1.5rem !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   22. PRODUCTION — Kanban / Schedule
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .production-schedule-row {
+        grid-template-columns: 1fr !important;
+        gap: 0.5rem !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   23. CATALOG/DETAILS — Grillas inline
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    /* Miniaturas del producto: 4 → 2 columnas */
+    .catalog-detail-thumbnails {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* Botones de acción: apilar */
+    .catalog-detail-actions {
+        flex-direction: column;
+    }
+
+    .catalog-detail-actions .btn {
+        flex: unset !important;
+        width: 100%;
+    }
+
+    /* Tab detalles: 2 col → 1 col */
+    #tab-details [style*="grid-template-columns: repeat(2, 1fr)"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Tab nutricional: 3 col → 1 col */
+    #tab-nutritional [style*="grid-template-columns: repeat(3, 1fr)"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Productos relacionados: grid-4 → 2 */
+    .grid.grid-4 {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Productos relacionados: 2 → 1 col */
+    .grid.grid-4 {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Miniaturas: 2 → 2 (mantener) */
+    .catalog-detail-thumbnails {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   24. SECTION HEADERS — Títulos de sección
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    h2[style*="font-size: 2.5rem"] {
+        font-size: 1.75rem !important;
+    }
+
+    h1[style*="font-size: 3rem"],
+    h1[style*="font-size: 3.5rem"],
+    h1[style*="font-size: 2.5rem"] {
+        font-size: 1.8rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    h2[style*="font-size: 2.5rem"] {
+        font-size: 1.5rem !important;
+    }
+
+    h1[style*="font-size: 3rem"],
+    h1[style*="font-size: 3.5rem"],
+    h1[style*="font-size: 2.5rem"] {
+        font-size: 1.5rem !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   25. PROMO CARDS (vista cliente) — flex → column
+--------------------------------------------------------------- */
+@media (max-width: 640px) {
+    .promo-card [style*="display: flex; align-items: center; gap: 2rem"] {
+        flex-direction: column !important;
+        gap: 1rem !important;
+    }
+
+    .promo-card img[style*="border-radius: 50%"] {
+        width: 80px !important;
+        height: 80px !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   26. PADDING GLOBAL DE SECCIONES en mobile
+--------------------------------------------------------------- */
+@media (max-width: 768px) {
+    [style*="padding: 4rem 0"],
+    [style*="padding: 3rem 0"] {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+    }
+
+    [style*="padding: 0 1.5rem"] {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+}
+
+/* ---------------------------------------------------------------
+   27. HOME — Admin/Staff Panel (grid-4 módulos)
+   En 768px site.css ya colapsa a 1fr; aquí solo el paso intermedio.
+--------------------------------------------------------------- */
+@media (min-width: 769px) and (max-width: 992px) {
+    .grid.grid-4 {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
