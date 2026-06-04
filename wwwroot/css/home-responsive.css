@@ -1,0 +1,174 @@
+/* =====================================================
+   HOME RESPONSIVE — BakeSmart Patri
+   Breakpoints: 768px (mobile), 480px (small mobile)
+   ===================================================== */
+
+/* --- Grids del Home (visitante no autenticado) --- */
+
+/* Stats: 4 col → 2 col → 1 col */
+.home-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+}
+
+/* Productos destacados: 3 col → 1 col */
+.home-featured-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+/* Testimonios: 3 col → 1 col */
+.home-testimonials-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+/* "Por qué nosotros": 2 col (texto + galería) → 1 col */
+.home-why-us-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: center;
+}
+
+/* Galería de imágenes (vista cliente): 4 col → 2 col → 1 col */
+.home-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+/* CTA buttons en hero */
+.home-cta-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* =====================================================
+   TABLET — max-width: 1024px
+   ===================================================== */
+@media (max-width: 1024px) {
+    .home-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .home-gallery-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* =====================================================
+   MOBILE — max-width: 768px
+   ===================================================== */
+@media (max-width: 768px) {
+
+    /* Hero */
+    .hero-section h1 {
+        font-size: 2.2rem !important;
+    }
+
+    .hero-section p {
+        font-size: 1rem !important;
+    }
+
+    /* Imágenes decorativas del hero: reducir tamaño */
+    .hero-section [style*="width: 120px"] {
+        width: 85px !important;
+        height: 85px !important;
+    }
+
+    /* Stats */
+    .home-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    /* Productos destacados → 1 columna */
+    .home-featured-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Testimonios → 1 columna */
+    .home-testimonials-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* "Por qué nosotros" → apilado */
+    .home-why-us-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    /* Galería → 2 columnas */
+    .home-gallery-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Títulos de sección */
+    .featured-section h2,
+    .why-us-section h2 {
+        font-size: 1.75rem !important;
+    }
+
+    /* Secciones: padding reducido */
+    .featured-section,
+    .stats-section,
+    .why-us-section,
+    .gallery-section {
+        padding: 2.5rem 0 !important;
+    }
+
+    /* CTA final */
+    .home-cta-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .home-cta-buttons .btn {
+        width: 100%;
+        max-width: 280px;
+        justify-content: center;
+    }
+}
+
+/* =====================================================
+   SMALL MOBILE — max-width: 480px
+   ===================================================== */
+@media (max-width: 480px) {
+
+    /* Hero */
+    .hero-section h1 {
+        font-size: 1.8rem !important;
+    }
+
+    /* Stats → 1 columna */
+    .home-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Galería → 1 columna */
+    .home-gallery-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Imágenes hero: ocultar las extras, dejar 2 */
+    .hero-section [style*="width: 120px"]:nth-child(n+3) {
+        display: none;
+    }
+
+    /* Cards de productos: padding reducido */
+    .home-featured-grid .card {
+        padding: 0.75rem;
+    }
+
+    /* Nombre + badge en tarjetas: apilar si no caben */
+    .home-featured-grid .card [style*="display: flex; justify-content: space-between"] {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+}
