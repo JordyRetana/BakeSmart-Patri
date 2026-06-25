@@ -1,0 +1,27 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml"; //comentar si luego no funciona
+    ViewData["Title"] = "Gestión de contenido";
+}
+
+<div class="page-shell">
+
+    <h1><i class="fas fa-pen"></i> Gestión de contenido del sitio</h1>
+
+    <form method="post" action="/Content/Update">
+
+        <div class="card">
+            <label>Título principal</label>
+            <input name="key" value="home_title" class="form-control" />
+        </div>
+
+        <div class="card">
+            <label>Texto principal</label>
+            <textarea name="value" class="form-control" required></textarea>
+        </div>
+
+        <button class="btn btn-primary">
+            Guardar cambios
+        </button>
+    </form>
+
+</div>
