@@ -1,0 +1,49 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Contacto";
+}
+
+@section Styles { <link rel="stylesheet" href="~/css/pages/public-info.css" asp-append-version="true" /> }
+
+<main class="contact-page">
+    <section class="contact-hero">
+        <div>
+            <span class="story-kicker"><i class="fas fa-message"></i> Hablemos</span>
+            <h1>Tu proximo momento dulce comienza aqui.</h1>
+            <p>Cuentanos que necesitas y te ayudaremos a elegir productos, cantidades y detalles para tu pedido.</p>
+        </div>
+        <img src="/img/products/cheesecake-frutos-rojos.jpg" alt="Cheesecake de frutos rojos" />
+    </section>
+
+    <section class="contact-layout">
+        <div class="contact-details">
+            <div class="story-section-title"><span>Estamos cerca</span><h2>Elige el medio que prefieras</h2></div>
+            <a href="tel:+50688888888"><i class="fas fa-phone"></i><span><small>Telefono</small><strong>+506 8888-8888</strong></span><i class="fas fa-arrow-right"></i></a>
+            <a href="mailto:info@bakesmart.com"><i class="fas fa-envelope"></i><span><small>Correo</small><strong>info@bakesmart.com</strong></span><i class="fas fa-arrow-right"></i></a>
+            <div><i class="fas fa-location-dot"></i><span><small>Ubicacion</small><strong>San Jose, Costa Rica</strong></span></div>
+            <div><i class="fas fa-clock"></i><span><small>Horario</small><strong>Lunes a viernes, 8:00 a.m. - 6:00 p.m.</strong></span></div>
+        </div>
+
+        <form id="contactForm" class="contact-form">
+            <div class="contact-form-head"><span>Cotizacion y consultas</span><h2>Cuentanos sobre tu pedido</h2></div>
+            <div class="contact-form-grid">
+                <label><span>Nombre</span><input name="name" required placeholder="Tu nombre" /></label>
+                <label><span>Correo</span><input name="email" type="email" required placeholder="tu@correo.com" /></label>
+                <label><span>Telefono</span><input name="phone" required placeholder="8888-8888" /></label>
+                <label><span>Tipo de consulta</span><select name="subject" required><option value="">Selecciona una opcion</option><option>Pedido personalizado</option><option>Informacion de productos</option><option>Seguimiento de pedido</option><option>Evento o empresa</option></select></label>
+                <label class="contact-message"><span>Mensaje</span><textarea name="message" rows="5" required placeholder="Describe sabores, cantidad, fecha o idea especial"></textarea></label>
+            </div>
+            <button class="btn btn-primary" type="submit"><i class="fas fa-paper-plane"></i> Enviar consulta</button>
+        </form>
+    </section>
+</main>
+
+@section Scripts {
+<script>
+document.getElementById('contactForm')?.addEventListener('submit', event => {
+    event.preventDefault();
+    app.toast.success('Recibimos tu consulta. Te contactaremos muy pronto.');
+    event.currentTarget.reset();
+});
+</script>
+}

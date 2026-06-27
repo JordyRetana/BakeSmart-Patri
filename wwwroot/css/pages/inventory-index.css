@@ -257,6 +257,14 @@
         background: var(--bg-alt);
     }
 
+    .inv-row-warning {
+        background: color-mix(in srgb, #fef3c7 18%, transparent) !important;
+    }
+
+    .inv-row-danger {
+        background: color-mix(in srgb, #fee2e2 18%, transparent) !important;
+    }
+
     .inventory-page .btn:hover,
     .inventory-page .btn-primary:hover,
     .inventory-page .btn-outline:hover,

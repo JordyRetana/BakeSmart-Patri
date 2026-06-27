@@ -44,6 +44,7 @@ namespace BakeSmartPatri.Controllers
                 return View();
             }
 
+            await _sqlStore.AddAuditLogAsync("LOGIN", $"Inicio de sesion: {email} ({user.Role})", email);
             await SignInUserAsync(user);
 
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -118,8 +119,112 @@ namespace BakeSmartPatri.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+            if (!string.IsNullOrWhiteSpace(email))
+                await _sqlStore.AddAuditLogAsync("LOGOUT", $"Cierre de sesion: {email}", email);
+
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Index", "Home");
+        }
+
+        [HttpGet]
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public async Task<IActionResult> Profile()
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+            var profile = await _sqlStore.GetProfileAsync(email);
+            if (profile is null)
+                return RedirectToAction(nameof(Login));
+
+            ViewData["Profile"] = profile;
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public async Task<IActionResult> Profile(
+            string firstName, string lastName,
+            string? phone, string? address,
+            string? newPassword, string? confirmPassword,
+            int? customerAddressId, string? addressLabel,
+            decimal? latitude, decimal? longitude)
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+
+            firstName = (firstName ?? "").Trim();
+            lastName  = (lastName  ?? "").Trim();
+
+            if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName))
+            {
+                TempData["ToastError"] = "El nombre y apellido son obligatorios.";
+                return RedirectToAction(nameof(Profile));
+            }
+
+            if (User.IsInRole("Cliente") &&
+                !string.IsNullOrWhiteSpace(address) &&
+                !SqlStore.HasValidCoordinates(latitude, longitude))
+            {
+                TempData["ToastError"] = "Debe seleccionar una ubicacion valida en el mapa para guardar la direccion.";
+                return RedirectToAction(nameof(Profile));
+            }
+
+            if (!string.IsNullOrWhiteSpace(newPassword))
+            {
+                if (newPassword.Length < 8)
+                {
+                    TempData["ToastError"] = "La nueva contraseña debe tener al menos 8 caracteres.";
+                    return RedirectToAction(nameof(Profile));
+                }
+                if (newPassword != confirmPassword)
+                {
+                    TempData["ToastError"] = "Las contraseñas no coinciden.";
+                    return RedirectToAction(nameof(Profile));
+                }
+            }
+
+            await _sqlStore.UpdateProfileAsync(email, new SqlStore.ProfileInput(
+                firstName, lastName, phone, address, newPassword,
+                customerAddressId, addressLabel, latitude, longitude));
+            await _sqlStore.AddAuditLogAsync("ACTUALIZAR_PERFIL", $"Perfil actualizado: {firstName} {lastName}", email);
+
+            // Re-sign with updated display name
+            var currentRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            var updatedUser = new SqlStore.AuthUser(email, currentRole, $"{firstName} {lastName}".Trim());
+            await SignInUserAsync(updatedUser);
+
+            TempData["ToastSuccess"] = "Perfil actualizado correctamente.";
+            return RedirectToAction(nameof(Profile));
+        }
+
+        [HttpGet]
+        public IActionResult ForgotPassword()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ForgotPassword(string email)
+        {
+            email = (email ?? "").Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                TempData["ToastError"] = "Indique su correo electronico.";
+                return View();
+            }
+
+            var result = await _sqlStore.RequestPasswordResetAsync(email);
+            if (result)
+            {
+                TempData["ToastSuccess"] = "Contrasena restablecida. Revise la bitacora del sistema para obtener la temporal.";
+            }
+            else
+            {
+                TempData["Toast"] = "Si el correo esta registrado, recibira instrucciones.";
+            }
+
+            return RedirectToAction(nameof(Login));
         }
 
         public IActionResult Denied() => View();

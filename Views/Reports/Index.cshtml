@@ -15,7 +15,7 @@
     </div>
 
     <div class="grid grid-3" style="gap:1rem; margin-bottom:1rem;">
-        <div class="card"><div class="text-muted">Bitácora de reportes</div><h2 id="reportAuditCount" style="margin:0;"></h2></div>
+        <div class="card"><div class="text-muted">Productos en inventario</div><h2 id="reportInventoryKpi" style="margin:0;"></h2></div>
         <div class="card"><div class="text-muted">Usuarios activos</div><h2 id="reportUsersKpi" style="margin:0;"></h2></div>
         <div class="card"><div class="text-muted">Pedidos del periodo</div><h2 id="reportOrdersKpi" style="margin:0;"></h2></div>
     </div>
@@ -84,7 +84,7 @@
 
     async function renderKpis() {
         await BakeSmartStore.refresh();
-        document.getElementById('reportAuditCount').textContent = BakeSmartStore.logs().filter(x => String(x.type || '').includes('REPORTE') || String(x.type || '').includes('EXPORTAR')).length;
+        document.getElementById('reportInventoryKpi').textContent = BakeSmartStore.inventory.list().length;
         document.getElementById('reportUsersKpi').textContent = BakeSmartStore.reports.users().activeUsers;
         document.getElementById('reportOrdersKpi').textContent = BakeSmartStore.orders.list().length;
     }

@@ -20,7 +20,7 @@
 
         <div class="card" style="margin-bottom:1.5rem;">
             <h3>Informacion del cliente</h3>
-            <div class="grid grid-2">
+            <div class="grid grid-2" style="gap: clamp(0.75rem, 1.2vw, 1.25rem);">
                 <div class="input-group">
                     <label class="input-label"><i class="fas fa-user"></i> Nombre completo *</label>
                     <input type="text" class="input" name="cliente" required placeholder="Nombre del cliente">
@@ -96,12 +96,12 @@
             </div>
         </div>
 
-        <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card" style="margin-bottom:1.5rem;" id="deliverySection">
             <h3>Entrega y pago</h3>
             <div class="grid grid-2">
                 <div class="input-group">
                     <label class="input-label"><i class="fas fa-truck"></i> Metodo de entrega</label>
-                    <select class="input" name="metodoEntrega">
+                    <select class="input" name="metodoEntrega" id="metodoEntrega">
                         <option value="domicilio">A domicilio</option>
                         <option value="retiro">Retiro en tienda</option>
                     </select>
@@ -116,9 +116,23 @@
                     </select>
                 </div>
             </div>
-            <div class="input-group">
-                <label class="input-label"><i class="fas fa-map-pin"></i> Direccion de entrega</label>
-                <textarea class="input" name="direccion" rows="2" placeholder="Direccion completa"></textarea>
+
+            <div id="deliveryMapBlock" style="margin-top:1rem;">
+                <div class="input-group" style="margin-bottom:1rem;">
+                    <label class="input-label"><i class="fas fa-house"></i> Usar direccion guardada</label>
+                    <select class="input" id="savedAddressSelect">
+                        <option value="">Seleccionar en el mapa una nueva ubicacion</option>
+                    </select>
+                </div>
+                <input type="hidden" name="direccion" id="direccion" />
+                <input type="hidden" name="latitudEntrega" id="latitudEntrega" />
+                <input type="hidden" name="longitudEntrega" id="longitudEntrega" />
+                <input type="hidden" name="customerAddressId" id="customerAddressId" />
+                <div class="input-group" style="margin-bottom:1rem;">
+                    <label class="input-label"><i class="fas fa-signs-post"></i> Referencia de entrega</label>
+                    <input type="text" class="input" name="referenciaEntrega" placeholder="Ej: casa blanca, porton negro, apto 3B" />
+                </div>
+                <div id="orderMapPicker"></div>
             </div>
         </div>
 
@@ -141,7 +155,61 @@
     </form>
 </div>
 
+<script src="~/js/bakesmart-map-picker.js" asp-append-version="true"></script>
 <script>
+    let orderMapPicker;
+
+    async function initOrderMap() {
+        await BakeSmartStore.refresh();
+        const config = BakeSmartStore.pos.config();
+
+        orderMapPicker = await BakeSmartMapPicker.create('orderMapPicker', {
+            address: '',
+            lat: config.originLatitude,
+            lng: config.originLongitude,
+            onChange(values) {
+                document.getElementById('direccion').value = values.address || '';
+                document.getElementById('latitudEntrega').value = values.lat ?? '';
+                document.getElementById('longitudEntrega').value = values.lng ?? '';
+                document.getElementById('customerAddressId').value = '';
+                document.getElementById('savedAddressSelect').value = '';
+            }
+        });
+
+        try {
+            const addresses = await BakeSmartStore.loadAddresses();
+            const select = document.getElementById('savedAddressSelect');
+            addresses.forEach(item => {
+                const option = document.createElement('option');
+                option.value = String(item.id);
+                option.textContent = `${item.label} - ${item.addressLine}`;
+                option.dataset.address = item.addressLine;
+                option.dataset.lat = item.latitude ?? '';
+                option.dataset.lng = item.longitude ?? '';
+                select.appendChild(option);
+            });
+        } catch (_) { /* optional for staff without saved addresses */ }
+    }
+
+    function toggleDeliveryMode() {
+        const isPickup = document.getElementById('metodoEntrega').value === 'retiro';
+        document.getElementById('deliveryMapBlock').style.display = isPickup ? 'none' : 'block';
+    }
+
+    document.getElementById('savedAddressSelect').addEventListener('change', (event) => {
+        const option = event.target.selectedOptions[0];
+        if (!option || !option.value) return;
+        orderMapPicker.setValues({
+            address: option.dataset.address,
+            lat: option.dataset.lat,
+            lng: option.dataset.lng
+        });
+        document.getElementById('direccion').value = option.dataset.address;
+        document.getElementById('latitudEntrega').value = option.dataset.lat;
+        document.getElementById('longitudEntrega').value = option.dataset.lng;
+        document.getElementById('customerAddressId').value = option.value;
+    });
+
     function updateSummary() {
         const productSelect = document.getElementById('productSelect');
         const selectedOption = productSelect.options[productSelect.selectedIndex];
@@ -156,9 +224,25 @@
     }
 
     document.getElementById('productSelect').addEventListener('change', updateSummary);
-    document.querySelector('select[name="metodoEntrega"]').addEventListener('change', updateSummary);
+    document.getElementById('metodoEntrega').addEventListener('change', () => {
+        updateSummary();
+        toggleDeliveryMode();
+    });
     document.getElementById('orderForm').addEventListener('submit', function (e) {
-        e.preventDefault();
+        const isPickup = document.getElementById('metodoEntrega').value === 'retiro';
+        if (!isPickup && orderMapPicker) {
+            orderMapPicker.applyToFields({
+                address: 'direccion',
+                lat: 'latitudEntrega',
+                lng: 'longitudEntrega'
+            });
+        }
+        if (!isPickup && orderMapPicker && !orderMapPicker.isValid()) {
+            e.preventDefault();
+            app.toast.error('Seleccione una ubicacion valida de entrega en el mapa.');
+            return;
+        }
+
         const errors = app.validate.form(this, {
             cliente: ['required'],
             telefono: ['required'],
@@ -168,15 +252,15 @@
         });
 
         if (errors.length > 0) {
+            e.preventDefault();
             errors.forEach(error => app.toast.error(error.message));
-            return;
         }
-
-        app.toast.success('Pedido listo para guardar.');
-        setTimeout(() => this.submit(), 900);
     });
 
-    updateSummary();
+    initOrderMap().then(() => {
+        updateSummary();
+        toggleDeliveryMode();
+    }).catch(error => app.toast.error(error.message));
 </script>
 
 @section Styles {

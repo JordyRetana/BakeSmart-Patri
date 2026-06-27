@@ -15,17 +15,30 @@ namespace BakeSmartPatri.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var model = new CatalogIndexViewModel(
-                await _sqlStore.CatalogCategoriesAsync(),
-                await _sqlStore.CatalogProductsAsync());
-
-            return View(model);
+            return View(await BuildIndexModelAsync());
         }
+
+        public async Task<IActionResult> Categories() => View(await BuildIndexModelAsync());
+
+        public async Task<IActionResult> Offers() => View(await BuildIndexModelAsync());
+
+        public async Task<IActionResult> Popular() => View(await BuildIndexModelAsync());
+
+        public async Task<IActionResult> New() => View(await BuildIndexModelAsync());
+
+        public async Task<IActionResult> Combos() => View(await BuildIndexModelAsync());
 
         public async Task<IActionResult> Details(int id)
         {
             var model = await _sqlStore.CatalogProductDetailsAsync(id);
             return model is null ? NotFound() : View(model);
+        }
+
+        private async Task<CatalogIndexViewModel> BuildIndexModelAsync()
+        {
+            return new CatalogIndexViewModel(
+                await _sqlStore.CatalogCategoriesAsync(),
+                await _sqlStore.CatalogProductsAsync());
         }
     }
 }

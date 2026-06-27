@@ -1,119 +1,71 @@
-﻿@{
+@{
     Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Iniciar Sesión";
+    ViewData["Title"] = "Iniciar sesión";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/account-login.css" asp-append-version="true" />
 }
 
-<div class="login-page-shell">
-    <div class="card login-card">
-        <div class="login-hero">
-            <div class="login-logo-wrap">
-                <i class="fas fa-crown"></i>
+<main class="login-page-shell">
+    <section class="login-card">
+        <aside class="login-hero">
+            <img class="login-hero-photo" src="/img/products/cupcakes-decorados.jpg" alt="Cupcakes BakeSmart Patri" />
+            <div class="login-hero-shade"></div>
+            <div class="login-hero-content">
+                <div class="login-logo-wrap"><img src="/img/logo.png" alt="BakeSmart Patri" /></div>
+                <span class="login-eyebrow">Repostería artesanal</span>
+                <h1>Bienvenido a BakeSmart Patri</h1>
+                <p>Ingresa para administrar tu trabajo o continuar con tus pedidos.</p>
+            </div>
+        </aside>
+
+        <div class="login-form-panel">
+            <div class="login-form-heading">
+                <span>Acceso seguro</span>
+                <h2>Iniciar sesión</h2>
+                <p>Utiliza las credenciales asignadas a tu cuenta.</p>
             </div>
 
-            <h2 class="login-title">Bienvenido a BakeSmart Patri</h2>
-            <p class="text-muted login-subtitle">
-                Inicia sesión para acceder a tu panel personalizado.
-            </p>
+            @if (!string.IsNullOrEmpty(TempData["Toast"]?.ToString()))
+            {
+                <div class="alert alert-error login-alert"><i class="fas fa-circle-exclamation"></i><span>@TempData["Toast"]</span></div>
+            }
+
+            <form method="post" action="/Account/Login" class="login-form" id="loginForm">
+                @Html.AntiForgeryToken()
+                <div class="input-group">
+                    <label class="input-label" for="loginEmail"><i class="fas fa-envelope"></i> Correo electrónico</label>
+                    <input id="loginEmail" type="email" class="input" name="email" placeholder="tu@correo.com" required autocomplete="username" />
+                </div>
+                <div class="input-group">
+                    <label class="input-label" for="loginPassword"><i class="fas fa-lock"></i> Contraseña</label>
+                    <input id="loginPassword" type="password" class="input" name="password" placeholder="Escribe tu contraseña" required autocomplete="current-password" />
+                </div>
+                <div class="login-options">
+                    <label class="login-remember"><input type="checkbox" name="remember" /><span>Recordarme</span></label>
+                    <a href="/Account/ForgotPassword" class="login-forgot">¿Olvidaste tu contraseña?</a>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block btn-lg login-submit-btn" id="loginSubmitBtn"><i class="fas fa-right-to-bracket"></i> Iniciar sesión</button>
+                <div class="login-divider"><span>o</span></div>
+                <a href="/Account/Register" class="btn btn-outline btn-block"><i class="fas fa-user-plus"></i> Crear cuenta de cliente</a>
+            </form>
         </div>
+    </section>
 
-        @if (!string.IsNullOrEmpty(TempData["Toast"]?.ToString()))
-        {
-            <div class="alert alert-error login-alert">
-                <i class="fas fa-exclamation-circle"></i>
-                @TempData["Toast"]
-            </div>
-        }
+    <div class="login-security-note"><i class="fas fa-shield-halved"></i><span><strong>Conexión protegida</strong> Tus credenciales se validan de forma segura.</span></div>
+</main>
 
-        <form method="post" action="/Account/Login" class="login-form" id="loginForm">
-            @Html.AntiForgeryToken()
-
-            <div class="input-group">
-                <label class="input-label">
-                    <i class="fas fa-envelope"></i>
-                    Correo electrónico
-                </label>
-                <input type="email"
-                       class="input"
-                       name="email"
-                       placeholder="tu@correo.com"
-                       required
-                       autocomplete="username" />
-            </div>
-
-            <div class="input-group">
-                <label class="input-label">
-                    <i class="fas fa-lock"></i>
-                    Contraseña
-                </label>
-                <input type="password"
-                       class="input"
-                       name="password"
-                       placeholder="••••••••"
-                       required
-                       autocomplete="current-password" />
-            </div>
-
-            <div class="login-options">
-                <label class="login-remember">
-                    <input type="checkbox" name="remember" />
-                    <span class="text-muted">Recordarme</span>
-                </label>
-
-                <a href="#" class="text-muted login-forgot">¿Olvidaste tu contraseña?</a>
-            </div>
-
-            <button type="submit" class="btn btn-primary btn-block btn-lg login-submit-btn" id="loginSubmitBtn">
-                <i class="fas fa-sign-in-alt"></i>
-                Iniciar sesión
-            </button>
-
-            <a href="/Account/Register" class="btn btn-outline btn-block">
-                <i class="fas fa-user-plus"></i>
-                Crear cuenta
-            </a>
-
-        </form>
-    </div>
-
-    <div class="card login-help-card">
-        <div class="login-help-row">
-            <i class="fas fa-info-circle"></i>
-            <div>
-                <p><strong>Acceso:</strong> Admin, Staff y Cliente se validan con sus credenciales.</p>
-                <p class="text-muted">Ingresa con el usuario asignado por el administrador del sistema.</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-
+@section Scripts {
 <script>
-    (() => {
-        let pageInitialized = false;function initializePage() {
-            if (pageInitialized) return;
-            pageInitialized = true;
-
-            const form = document.getElementById('loginForm');
-            const submitBtn = document.getElementById('loginSubmitBtn');
-
-            if (!form || !submitBtn) return;
-
-            form.addEventListener('submit', () => {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ingresando...';
-            }, { once: true });
-        }
-
-        window.addEventListener('load', initializePage, { once: true });
-
-        if (document.readyState === 'complete') {
-            initializePage();
-        }
-    })();
+(() => {
+    const form = document.getElementById('loginForm');
+    const button = document.getElementById('loginSubmitBtn');
+    if (!form || !button) return;
+    form.addEventListener('submit', () => {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ingresando...';
+    }, { once: true });
+})();
 </script>
-
+}

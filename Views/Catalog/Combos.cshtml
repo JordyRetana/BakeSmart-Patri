@@ -1,0 +1,25 @@
+@model BakeSmartPatri.Models.CatalogIndexViewModel
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Combos";
+    var culture = new System.Globalization.CultureInfo("es-CR");
+    var products = Model.Products.Where(product => product.IsActive).Take(6).ToList();
+}
+<main class="commerce-page">
+    <header class="commerce-hero commerce-hero--combos"><div><span class="commerce-kicker">Ideas para compartir</span><h1>Combina tus productos favoritos</h1><p>Selecciona una propuesta y crea tu pedido con los productos disponibles.</p></div><i class="fas fa-box-open"></i></header>
+    <section class="commerce-section">
+        <div class="commerce-section-title"><span></span><h2>Propuestas para celebrar</h2><span></span></div>
+        <div class="commerce-combo-list">
+            @for (var index = 0; index < products.Count; index += 2)
+            {
+                var first = products[index];
+                var second = index + 1 < products.Count ? products[index + 1] : null;
+                var total = first.UnitPrice + (second?.UnitPrice ?? 0);
+                <article class="commerce-combo-tile">
+                    <div class="commerce-combo-images"><img src="@first.ImageUrl" alt="@first.AltText" />@if (second is not null) { <img src="@second.ImageUrl" alt="@second.AltText" /> }</div>
+                    <div><small>Combo sugerido</small><h2>@first.Name @(second is not null ? $"+ {second.Name}" : "")</h2><p>Arma una celebración con productos activos del catálogo.</p><strong>@total.ToString("C0", culture)</strong><a href="/Catalog">Elegir productos</a></div>
+                </article>
+            }
+        </div>
+    </section>
+</main>

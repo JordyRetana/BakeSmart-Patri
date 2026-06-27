@@ -11,9 +11,9 @@
     }
 
     .track-page--loading {
-        opacity: 0;
-        transform: translateY(4px);
-        pointer-events: none;
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
     }
 
     .track-page--ready {

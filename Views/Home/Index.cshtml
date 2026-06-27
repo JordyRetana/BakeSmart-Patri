@@ -7,247 +7,199 @@
     var isStaff = User?.IsInRole("Staff") ?? false;
     var isClient = User?.IsInRole("Cliente") ?? false;
     var culture = new System.Globalization.CultureInfo("es-CR");
-    var featured = Model.Products.Take(3).ToList();
-    var gallery = Model.Products.Take(4).ToList();
+    var products = Model.Products.Where(product => product.IsActive).ToList();
+    var heroProduct = products.FirstOrDefault();
+    var categoryCards = Model.Categories
+        .Take(5)
+        .Select(category => new
+        {
+            Category = category,
+            Product = products.FirstOrDefault(product => product.Category == category.Name)
+        })
+        .ToList();
+    var offerProducts = products.Skip(1).Take(3).ToList();
+    var popularProducts = products.Take(5).ToList();
 }
 
 @if (!isAuth)
 {
-    <section class="hero-section" style="background: linear-gradient(135deg, #fff9f9 0%, #fff5f8 100%); padding: 3rem 0; position: relative; overflow: hidden;">
-        <div class="container" style="position: relative; z-index: 1;">
-            <div style="max-width: 900px; margin: 0 auto; text-align: center;">
-                <span class="badge badge-primary" style="font-size: 1rem; padding: 0.5rem 1.5rem; margin-bottom: 1.5rem; border-radius: 9999px;">
-                    Bienvenidos a BakeSmart Patri
-                </span>
-
-                <h1 style="font-size: 3.5rem; font-weight: 800; line-height: 1.2; margin-bottom: 1rem;">
-                    El sabor que
-                    <span style="background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">endulza</span>
-                    tus momentos
-                </h1>
-
-                <p style="font-size: 1.25rem; color: var(--text-light); margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto;">
-                    Pasteleria artesanal con amor y tradicion. Cada creacion esta hecha con los mejores ingredientes y mucho corazon.
-                </p>
-
-                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 3rem;">
-                    <a href="/Catalog" class="btn btn-primary btn-lg">
-                        <i class="fas fa-cookie-bite"></i>
+    <div class="storefront-page">
+        <section class="storefront-hero">
+            <div class="container storefront-hero-grid">
+                <div class="storefront-hero-copy">
+                    <span class="storefront-eyebrow">Especial de temporada</span>
+                    <h1>Endulza <strong>tu día</strong></h1>
+                    <p>Repostería artesanal preparada con detalle, ingredientes seleccionados y ese toque especial que convierte cualquier momento en celebración.</p>
+                    <div class="storefront-code">
+                        <span>Descubre nuestras creaciones</span>
+                        <strong>BAKESMART</strong>
+                    </div>
+                    <a class="storefront-primary-action" href="/Catalog">
                         Ver productos
-                    </a>
-                    <a href="/Account/Login" class="btn btn-outline btn-lg">
-                        <i class="fas fa-user"></i>
-                        Iniciar sesion
+                        <i class="fas fa-bag-shopping"></i>
                     </a>
                 </div>
 
-                <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
-                    @foreach (var product in gallery)
+                <div class="storefront-hero-visual">
+                    <span class="storefront-doodle storefront-doodle-one">♡</span>
+                    <span class="storefront-doodle storefront-doodle-two">✦</span>
+                    <div class="storefront-hero-photo">
+                        <img src="@(heroProduct?.ImageUrl ?? "/img/products/cupcakes-decorados.jpg")"
+                             alt="@(heroProduct?.AltText ?? "Repostería artesanal BakeSmart Patri")"
+                             onerror="this.src='/img/products/producto-sin-imagen.svg';" />
+                    </div>
+                    <div class="storefront-love-seal">
+                        <span>Hechos</span>
+                        <strong>con amor</strong>
+                        <i class="far fa-heart"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="storefront-section storefront-categories" id="categorias">
+            <div class="container">
+                <div class="storefront-heading storefront-heading-compact">
+                    <span></span>
+                    <h2>Elige tu favorito</h2>
+                    <span></span>
+                </div>
+                <div class="storefront-category-grid">
+                    @foreach (var item in categoryCards)
                     {
-                        var rotation = product.Id % 2 == 0 ? "rotate(2deg)" : "rotate(-5deg)";
-                        <div style="width: 120px; height: 120px; border-radius: 30px; overflow: hidden; box-shadow: var(--shadow); transform: @rotation;">
-                            <img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';" style="width: 100%; height: 100%; object-fit: cover;">
-                        </div>
+                        <a class="storefront-category-card" href="/Catalog?category=@Uri.EscapeDataString(item.Category.Name)">
+                            <span class="storefront-category-image">
+                                <img src="@(item.Product?.ImageUrl ?? "/img/products/producto-sin-imagen.svg")"
+                                     alt="@item.Category.Name"
+                                     onerror="this.src='/img/products/producto-sin-imagen.svg';" />
+                            </span>
+                            <strong>@item.Category.Name</strong>
+                            <small>Ver más</small>
+                        </a>
                     }
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <section style="padding: 4rem 0; background: white;" class="stats-section">
-        <div class="container">
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
-                <div class="card" style="padding: 1.5rem; text-align: center; border: none; box-shadow: var(--shadow-sm);">
-                    <div style="font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem;"><i class="fas fa-cake-candles"></i></div>
-                    <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary);">@Model.Products.Count</div>
-                    <div class="text-muted" style="font-size: 0.875rem;">Productos disponibles</div>
+        <section class="storefront-section storefront-offers" id="ofertas">
+            <div class="container">
+                <div class="storefront-heading">
+                    <span></span>
+                    <h2>Ofertas que te van a encantar</h2>
+                    <span></span>
                 </div>
-                <div class="card" style="padding: 1.5rem; text-align: center; border: none; box-shadow: var(--shadow-sm);">
-                    <div style="font-size: 2rem; color: var(--secondary); margin-bottom: 0.5rem;"><i class="fas fa-layer-group"></i></div>
-                    <div style="font-size: 1.75rem; font-weight: 700; color: var(--secondary);">@Model.Categories.Count</div>
-                    <div class="text-muted" style="font-size: 0.875rem;">Categorias</div>
-                </div>
-                <div class="card" style="padding: 1.5rem; text-align: center; border: none; box-shadow: var(--shadow-sm);">
-                    <div style="font-size: 2rem; color: var(--success); margin-bottom: 0.5rem;"><i class="fas fa-truck"></i></div>
-                    <div style="font-size: 1.75rem; font-weight: 700; color: var(--success);">CR</div>
-                    <div class="text-muted" style="font-size: 0.875rem;">Entregas locales</div>
-                </div>
-                <div class="card" style="padding: 1.5rem; text-align: center; border: none; box-shadow: var(--shadow-sm);">
-                    <div style="font-size: 2rem; color: var(--warning); margin-bottom: 0.5rem;"><i class="fas fa-star"></i></div>
-                    <div style="font-size: 1.75rem; font-weight: 700; color: var(--warning);">4.9</div>
-                    <div class="text-muted" style="font-size: 0.875rem;">Calificacion</div>
+                <div class="storefront-offer-grid">
+                    @foreach (var product in offerProducts)
+                    {
+                        <article class="storefront-offer-card">
+                            <div class="storefront-offer-copy">
+                                <span>@product.Category</span>
+                                <h3>@product.Name</h3>
+                                <strong>@product.UnitPrice.ToString("C0", culture)</strong>
+                                <a href="/Catalog/Details/@product.Id">Ver oferta</a>
+                            </div>
+                            <img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';" />
+                        </article>
+                    }
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <section style="padding: 4rem 0; background: #fafafa;" class="featured-section">
-        <div class="container">
-            <div style="text-align: center; margin-bottom: 3rem;">
-                <span class="badge badge-primary" style="margin-bottom: 1rem;">Lo mas popular</span>
-                <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">Nuestros favoritos</h2>
-                <p class="text-muted" style="max-width: 500px; margin: 0 auto;">Los productos que mas aman nuestros clientes</p>
-            </div>
-
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
-                @foreach (var product in featured)
-                {
-                    <div class="card" style="padding: 1rem;">
-                        <img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';" style="width: 100%; height: 180px; object-fit: cover; border-radius: var(--radius); margin-bottom: 1rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; gap: .75rem; margin-bottom: 0.5rem;">
-                            <h3 style="margin: 0; font-size: 1.25rem;">@product.Name</h3>
-                            <span class="badge badge-primary" style="font-size: 0.75rem;">@product.Category</span>
-                        </div>
-                        <p class="text-muted" style="font-size: 0.875rem; margin-bottom: 1rem;">@product.Description</p>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-weight: 700; font-size: 1.25rem; color: var(--primary);">@product.UnitPrice.ToString("C0", culture)</span>
-                            <a href="/Catalog/Details/@product.Id" class="btn btn-primary btn-sm">
-                                <i class="fas fa-eye"></i> Ver
+        <section class="storefront-section storefront-popular" id="populares">
+            <div class="container">
+                <div class="storefront-heading storefront-heading-link">
+                    <span></span>
+                    <h2>Productos populares</h2>
+                    <a href="/Catalog/Popular">Ver todos <i class="fas fa-arrow-right"></i></a>
+                </div>
+                <div class="storefront-product-grid">
+                    @foreach (var product in popularProducts)
+                    {
+                        <article class="storefront-product-card">
+                            <a class="storefront-product-image" href="/Catalog/Details/@product.Id">
+                                <img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';" />
+                                <span><i class="far fa-heart"></i></span>
                             </a>
-                        </div>
-                    </div>
-                }
-            </div>
-
-            <div style="text-align: center; margin-top: 2rem;">
-                <a href="/Catalog" class="btn btn-outline">
-                    Ver todos los productos <i class="fas fa-arrow-right"></i>
-                </a>
-            </div>
-        </div>
-    </section>
-
-    <section style="padding: 4rem 0; background: #fafafa;" class="why-us-section">
-        <div class="container">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center;">
-                <div>
-                    <span class="badge badge-primary" style="margin-bottom: 1rem;">Por que nosotros</span>
-                    <h2 style="font-size: 2.5rem; margin-bottom: 1rem;">Hecho con amor, entregado con pasion</h2>
-                    <p class="text-muted" style="margin-bottom: 2rem;">Cada creacion es unica y especial, porque sabemos que detras de cada pedido hay una celebracion especial.</p>
-                    <div style="display: flex; flex-direction: column; gap: 1rem;">
-                        <div style="display: flex; align-items: center; gap: 1rem;"><i class="fas fa-check-circle" style="color: var(--success);"></i><span>Ingredientes frescos y naturales</span></div>
-                        <div style="display: flex; align-items: center; gap: 1rem;"><i class="fas fa-check-circle" style="color: var(--success);"></i><span>Personalizacion para cada ocasion</span></div>
-                        <div style="display: flex; align-items: center; gap: 1rem;"><i class="fas fa-check-circle" style="color: var(--success);"></i><span>Entrega puntual en la ciudad</span></div>
-                    </div>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    @foreach (var product in gallery)
-                    {
-                        <img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';" style="width: 100%; height: 150px; object-fit: cover; border-radius: var(--radius);">
+                            <div class="storefront-product-body">
+                                <small>@product.Category</small>
+                                <h3>@product.Name</h3>
+                                <div class="storefront-rating" aria-label="Valoración de cinco estrellas">
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                                </div>
+                                <strong>@product.UnitPrice.ToString("C0", culture)</strong>
+                                <a href="/Catalog?add=@product.Id">Agregar al carrito <i class="fas fa-cart-plus"></i></a>
+                            </div>
+                        </article>
                     }
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
+
+        <section class="storefront-section storefront-reviews">
+            <div class="container">
+                <div class="storefront-heading">
+                    <span></span>
+                    <h2>Lo que hace especial cada pedido</h2>
+                    <span></span>
+                </div>
+                <div class="storefront-review-grid">
+                    <article><i class="fas fa-wand-magic-sparkles"></i><div><strong>Acabado artesanal</strong><p>Cada creación se prepara con atención al detalle y una presentación cuidada.</p></div></article>
+                    <article><i class="fas fa-leaf"></i><div><strong>Ingredientes seleccionados</strong><p>Sabores equilibrados y productos pensados para disfrutar desde el primer bocado.</p></div></article>
+                    <article><i class="fas fa-gift"></i><div><strong>Momentos memorables</strong><p>Opciones para cumpleaños, eventos, regalos y cualquier ocasión especial.</p></div></article>
+                </div>
+            </div>
+        </section>
+
+        <section class="storefront-delivery">
+            <div class="container storefront-delivery-grid">
+                <div class="storefront-delivery-lead"><i class="fas fa-motorcycle"></i><strong>Entregas rápidas y seguras</strong><span>Coordinamos cada pedido con cuidado.</span></div>
+                <div><i class="far fa-clock"></i><span><strong>Atención ágil</strong>Respuesta oportuna</span></div>
+                <div><i class="fas fa-shield-heart"></i><span><strong>Empaque seguro</strong>Producto protegido</span></div>
+                <div><i class="far fa-face-smile"></i><span><strong>Satisfacción</strong>Servicio cercano</span></div>
+            </div>
+        </section>
+
+        <section class="storefront-newsletter">
+            <div class="container storefront-newsletter-grid">
+                <div><i class="fas fa-cake-candles"></i><span><strong>Recibe nuestras novedades</strong>Promociones, productos y fechas especiales.</span></div>
+                <form action="/Home/Contact" method="get">
+                    <label class="sr-only" for="newsletterEmail">Correo electrónico</label>
+                    <input id="newsletterEmail" type="email" name="email" placeholder="Tu correo electrónico" required />
+                    <button type="submit">Suscribirme</button>
+                </form>
+            </div>
+        </section>
+    </div>
 }
 else if (isClient)
 {
-    <section class="hero-section" style="background: linear-gradient(135deg, #fff9f9 0%, #fff5f8 100%); padding: 4rem 0; position: relative; overflow: hidden;">
-        <div class="container" style="position: relative; z-index: 1;">
-            <div style="max-width: 800px; margin: 0 auto; text-align: center;">
-                <span class="badge badge-primary" style="font-size: 1rem; padding: 0.5rem 1.5rem; margin-bottom: 1.5rem; border-radius: 9999px;">
-                    Hola, @(User?.Identity?.Name ?? "Cliente")
-                </span>
-                <h1 style="font-size: 3rem; font-weight: 800; line-height: 1.2; margin-bottom: 1.5rem;">
-                    Descubre nuevas
-                    <span style="background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">inspiraciones</span>
-                    para tus momentos especiales
-                </h1>
-                <p style="font-size: 1.2rem; color: var(--text-light); margin-bottom: 2rem;">Explora nuestras novedades y encuentra el postre perfecto para cada ocasion.</p>
-                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                    <a href="/Catalog" class="btn btn-primary btn-lg"><i class="fas fa-compass"></i> Explorar catalogo</a>
-                    <a href="/Client" class="btn btn-outline btn-lg"><i class="fas fa-user"></i> Mi espacio personal</a>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section style="padding: 4rem 0;">
+    <section class="home-account-hero">
         <div class="container">
-            <div style="text-align: center; margin-bottom: 3rem;">
-                <span class="badge badge-primary" style="margin-bottom: 1rem;">Novedades</span>
-                <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">Que hay de nuevo</h2>
-                <p class="text-muted">Descubre nuestras creaciones disponibles</p>
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
-                @foreach (var product in featured)
-                {
-                    <div class="card" style="padding: 1rem;">
-                        <img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';" style="width: 100%; height: 180px; object-fit: cover; border-radius: var(--radius); margin-bottom: 1rem;">
-                        <h3 style="margin: 0 0 .5rem;">@product.Name</h3>
-                        <p class="text-muted">@product.Description</p>
-                        <a href="/Catalog/Details/@product.Id" class="btn btn-primary btn-sm">Conocer mas</a>
-                    </div>
-                }
-            </div>
+            <span>Hola, @(User?.Identity?.Name ?? "Cliente")</span>
+            <h1>Encuentra algo especial para tu próximo momento.</h1>
+            <p>Explora el catálogo, revisa tus pedidos y administra tu perfil desde un solo lugar.</p>
+            <div><a class="btn btn-primary" href="/Catalog">Explorar catálogo</a><a class="btn btn-outline" href="/Client">Mi espacio</a></div>
         </div>
     </section>
 }
 else if (isAdmin || isStaff)
 {
-    <div class="page-header" style="margin: 2rem 0 2.5rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-        <div>
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <div style="width: 5px; height: 40px; background: var(--gradient-primary); border-radius: 5px;"></div>
-                <h1 style="margin: 0; font-size: 2.5rem; display: flex; align-items: center; gap: 0.75rem;">
-                    <i class="fas fa-store" style="color: var(--primary);"></i>
-                    BakeSmart Patri
-                </h1>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; margin-left: 1.25rem;">
-                <i class="fas fa-crown" style="color: var(--warning);"></i>
-                <p class="text-muted" style="margin: 0; font-size: 0.95rem;">
-                    @(isAdmin ? "Administrador" : "Staff") - Panel de control
-                </p>
-            </div>
+    <section class="home-account-hero home-account-hero-operations">
+        <div class="container">
+            <span>Panel operativo</span>
+            <h1>Bienvenido, @(User?.Identity?.Name ?? "Usuario")</h1>
+            <p>Consulta el estado del negocio y accede rápidamente a las operaciones disponibles para tu rol.</p>
+            <div><a class="btn btn-primary" href="/Dashboard">Ir al dashboard</a><a class="btn btn-outline" href="/Orders">Ver pedidos</a></div>
         </div>
-        <div style="display: flex; gap: 1rem; margin-right: 1.5rem;">
-            <span class="badge badge-primary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
-                <i class="fas fa-calendar-alt"></i>
-                @DateTime.Now.ToString("dddd, dd MMM", new System.Globalization.CultureInfo("es-ES"))
-            </span>
-        </div>
-    </div>
-
-    <div style="padding: 0 1.5rem;">
-        <div class="card welcome-card" style="margin-bottom: 2rem; background: linear-gradient(135deg, var(--primary-light), var(--secondary-light)); border: none; position: relative; overflow: hidden;">
-            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; position: relative; z-index: 2;">
-                <div style="width: 60px; height: 60px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow);">
-                    <i class="fas fa-user-tie" style="font-size: 2rem; color: var(--primary);"></i>
-                </div>
-                <div>
-                    <h3 style="margin: 0; color: inherit;">Hola, @(User?.Identity?.Name ?? "Admin")</h3>
-                    <p style="margin: 0; color: inherit; opacity: 0.9;">Que deseas gestionar hoy?</p>
-                </div>
-            </div>
-        </div>
-
-        <div style="text-align: center; margin-bottom: 2rem;">
-            <h2 style="font-size: 2rem; margin-bottom: 1rem;">Acceso rapido</h2>
-            <p class="text-muted">Selecciona un modulo para comenzar a trabajar</p>
-        </div>
-
-        <div class="grid grid-4" style="margin-bottom: 2rem;">
-            <a href="/Dashboard" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;"><i class="fas fa-chart-line" style="font-size: 2rem; color: var(--primary);"></i><h3>Dashboard</h3><p class="text-muted">Estadisticas detalladas</p></a>
-            <a href="/Orders" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;"><i class="fas fa-clipboard-list" style="font-size: 2rem; color: var(--secondary);"></i><h3>Pedidos</h3><p class="text-muted">Gestionar pedidos</p></a>
-            <a href="/Production" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;"><i class="fas fa-utensils" style="font-size: 2rem; color: var(--success);"></i><h3>Produccion</h3><p class="text-muted">Control de produccion</p></a>
-            <a href="/Inventory" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;"><i class="fas fa-boxes" style="font-size: 2rem; color: var(--warning);"></i><h3>Inventario</h3><p class="text-muted">Stock y alertas</p></a>
-            <a href="/POS" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;"><i class="fas fa-cash-register" style="font-size: 2rem; color: var(--danger);"></i><h3>Punto de Venta</h3><p class="text-muted">Ventas rapidas</p></a>
-            <a href="/Reports" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;"><i class="fas fa-chart-bar" style="font-size: 2rem; color: var(--info);"></i><h3>Reportes</h3><p class="text-muted">Analisis de ventas</p></a>
-            <a href="/Catalog" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;"><i class="fas fa-book-open" style="font-size: 2rem; color: #8b5cf6;"></i><h3>Catalogo</h3><p class="text-muted">Gestionar productos</p></a>
-            <a href="/Users" class="card module-card" style="text-align: center; text-decoration: none; padding: 2rem;"><i class="fas fa-user-cog" style="font-size: 2rem; color: var(--text);"></i><h3>Usuarios</h3><p class="text-muted">Roles y accesos</p></a>
-        </div>
-    </div>
+    </section>
 }
 else
 {
-    <div class="container" style="padding: 4rem 0; text-align: center;">
-        <h1>Bienvenido a BakeSmart Patri</h1>
-        <p class="text-muted">Selecciona una opcion para continuar</p>
-        <a href="/Catalog" class="btn btn-primary">Ver catalogo</a>
-    </div>
+    <section class="home-account-hero">
+        <div class="container"><h1>Bienvenido a BakeSmart Patri</h1><a class="btn btn-primary" href="/Dashboard">Continuar</a></div>
+    </section>
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/pages/home-index.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/home-storefront.css" asp-append-version="true" />
 }

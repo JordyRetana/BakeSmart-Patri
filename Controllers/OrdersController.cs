@@ -30,10 +30,81 @@ namespace BakeSmartPatri.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = "StaffOrAdmin")]
-        public IActionResult Create(string? cliente, string? producto, decimal? total, DateTime? entrega, string? notas)
+        public async Task<IActionResult> Create(
+            string? cliente, string? telefono, string? email,
+            int? productoId, DateTime? entrega, string? metodoPago,
+            string? direccion, string? notas, string? metodoEntrega,
+            decimal? latitudEntrega, decimal? longitudEntrega,
+            string? referenciaEntrega, int? customerAddressId)
         {
-            TempData["Toast"] = "Crear pedidos debe completarse desde el flujo del sistema.";
-            return RedirectToAction(nameof(Index));
+            if (string.IsNullOrWhiteSpace(cliente) || string.IsNullOrWhiteSpace(email) || !productoId.HasValue || !entrega.HasValue)
+            {
+                TempData["ToastError"] = "Complete los campos obligatorios: cliente, email, producto y fecha de entrega.";
+                return RedirectToAction(nameof(Create));
+            }
+
+            var deliveryMethod = (metodoEntrega ?? "domicilio").Trim().ToLowerInvariant();
+            if (deliveryMethod != "retiro")
+            {
+                if (string.IsNullOrWhiteSpace(direccion))
+                {
+                    TempData["ToastError"] = "Debe indicar la direccion de entrega.";
+                    return RedirectToAction(nameof(Create));
+                }
+
+                if (!SqlStore.HasValidCoordinates(latitudEntrega, longitudEntrega))
+                {
+                    TempData["ToastError"] = "Debe seleccionar una ubicacion valida en el mapa.";
+                    return RedirectToAction(nameof(Create));
+                }
+            }
+
+            try
+            {
+                var products = await _sqlStore.CatalogProductsAsync();
+                var product = products.FirstOrDefault(p => p.Id == productoId.Value);
+                if (product is null)
+                {
+                    TempData["ToastError"] = "El producto seleccionado no existe.";
+                    return RedirectToAction(nameof(Create));
+                }
+
+                var quantity = 1m;
+                var subtotal = product.UnitPrice * quantity;
+                var ivaRate = await _sqlStore.GetIvaRateAsync();
+                var tax = subtotal * ivaRate;
+                var total = subtotal + tax;
+
+                var input = new SqlStore.CreateOrderInput(
+                    CustomerName: cliente.Trim(),
+                    Email: email.Trim().ToLowerInvariant(),
+                    Phone: telefono?.Trim(),
+                    ProductId: productoId.Value,
+                    Quantity: quantity,
+                    UnitPrice: product.UnitPrice,
+                    Subtotal: subtotal,
+                    Tax: tax,
+                    Total: total,
+                    DeliveryDate: entrega.Value,
+                    Address: direccion?.Trim(),
+                    Notes: notas?.Trim(),
+                    PaymentMethod: metodoPago?.Trim() ?? "Pendiente",
+                    DestinationLatitude: latitudEntrega,
+                    DestinationLongitude: longitudEntrega,
+                    DeliveryReference: referenciaEntrega,
+                    CustomerAddressId: customerAddressId,
+                    DeliveryMethod: deliveryMethod
+                );
+
+                var orderId = await _sqlStore.CreateOrderAsync(input, User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value);
+                TempData["ToastSuccess"] = $"Pedido #{orderId} creado correctamente.";
+                return RedirectToAction(nameof(Details), new { id = orderId });
+            }
+            catch (Exception ex)
+            {
+                TempData["ToastError"] = $"Error al crear el pedido: {ex.Message}";
+                return RedirectToAction(nameof(Create));
+            }
         }
 
         public IActionResult Details(int id) => View();

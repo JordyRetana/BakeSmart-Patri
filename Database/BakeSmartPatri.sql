@@ -152,6 +152,9 @@ CREATE TABLE dbo.DireccionesCliente
     IsDefault bit NOT NULL CONSTRAINT DF_CustomerAddresses_IsDefault DEFAULT 0,
     Latitude decimal(10,6) NULL,
     Longitude decimal(10,6) NULL,
+    Status nvarchar(20) NOT NULL CONSTRAINT DF_CustomerAddresses_Status DEFAULT N'Activa',
+    CreatedAt datetime2(0) NOT NULL CONSTRAINT DF_CustomerAddresses_CreatedAt DEFAULT SYSUTCDATETIME(),
+    UpdatedAt datetime2(0) NULL,
     CONSTRAINT CK_CustomerAddresses_Latitude CHECK (Latitude IS NULL OR Latitude BETWEEN -90 AND 90),
     CONSTRAINT CK_CustomerAddresses_Longitude CHECK (Longitude IS NULL OR Longitude BETWEEN -180 AND 180)
 );
@@ -291,6 +294,7 @@ CREATE TABLE dbo.Pedidos
     RouteMode nvarchar(20) NOT NULL,
     TrackingStep int NOT NULL CONSTRAINT DF_Orders_TrackingStep DEFAULT 0,
     OriginLabel nvarchar(160) NOT NULL,
+    DeliveryReference nvarchar(250) NULL,
     CONSTRAINT CK_Orders_Amounts CHECK (Subtotal >= 0 AND Discount >= 0 AND Tax >= 0 AND Total >= 0),
     CONSTRAINT CK_Orders_CurrentLatitude CHECK (CurrentLatitude BETWEEN -90 AND 90),
     CONSTRAINT CK_Orders_CurrentLongitude CHECK (CurrentLongitude BETWEEN -180 AND 180),
@@ -455,7 +459,10 @@ GO
 INSERT INTO dbo.Roles (RoleName, Description, IsSystemRole)
 SELECT N'Admin', N'Acceso completo', 1
 UNION ALL SELECT N'Staff', N'Operacion diaria', 1
-UNION ALL SELECT N'Cliente', N'Portal del cliente', 1;
+UNION ALL SELECT N'Cliente', N'Portal del cliente', 1
+UNION ALL SELECT N'Cajero', N'Gestion de caja, ventas y pedidos de mostrador', 1
+UNION ALL SELECT N'Repostero', N'Produccion, recetas e inventario operativo', 1
+UNION ALL SELECT N'Supervisor', N'Seguimiento operativo, reportes y control de tienda', 1;
 
 INSERT INTO dbo.Usuarios (RoleId, FirstName, LastName, Email, Phone, PasswordHash, AddressLine, IsActive, CreatedAt)
 VALUES (1, N'Administrador', N'Principal', N'admin@demo.com', N'88881111', N'PBKDF2-SHA256$120000$ZAZVwhLsAp7QiXkwG/P+XA==$IQ+vDnKlWZgKUOMRJJjJ42G5POH2nLuPEkwfq1AnM/4=', N'San Jose, Costa Rica', 1, '2026-02-01T09:00:00');
@@ -665,6 +672,7 @@ INSERT INTO dbo.ConfiguracionesAplicacion (SettingKey, SettingValue)
 SELECT N'iva', N'0.13'
 UNION ALL SELECT N'frequentCustomerDiscount', N'0.05'
 UNION ALL SELECT N'originName', N'BakeSmart Patri - Sagrada Familia'
+UNION ALL SELECT N'originAddress', N'Sagrada Familia, San Jose, Costa Rica'
 UNION ALL SELECT N'originLatitude', N'9.9142'
 UNION ALL SELECT N'originLongitude', N'-84.0734';
 
@@ -688,6 +696,19 @@ CREATE INDEX IX_Orders_CreatedAt ON dbo.Pedidos(CreatedAt);
 CREATE INDEX IX_OrderItems_OrderId ON dbo.DetallePedido(OrderId);
 CREATE INDEX IX_Sales_CreatedAt ON dbo.Ventas(CreatedAt);
 CREATE INDEX IX_AuditLogs_CreatedAt ON dbo.BitacoraAuditoria(CreatedAt);
+GO
+
+-- Migracion para bases existentes (ejecutar solo si faltan columnas)
+IF COL_LENGTH(N'dbo.DireccionesCliente', N'Status') IS NULL
+    ALTER TABLE dbo.DireccionesCliente ADD Status nvarchar(20) NOT NULL CONSTRAINT DF_CustomerAddresses_Status_Mig DEFAULT N'Activa';
+IF COL_LENGTH(N'dbo.DireccionesCliente', N'CreatedAt') IS NULL
+    ALTER TABLE dbo.DireccionesCliente ADD CreatedAt datetime2(0) NOT NULL CONSTRAINT DF_CustomerAddresses_CreatedAt_Mig DEFAULT SYSUTCDATETIME();
+IF COL_LENGTH(N'dbo.DireccionesCliente', N'UpdatedAt') IS NULL
+    ALTER TABLE dbo.DireccionesCliente ADD UpdatedAt datetime2(0) NULL;
+IF COL_LENGTH(N'dbo.Pedidos', N'DeliveryReference') IS NULL
+    ALTER TABLE dbo.Pedidos ADD DeliveryReference nvarchar(250) NULL;
+IF NOT EXISTS (SELECT 1 FROM dbo.ConfiguracionesAplicacion WHERE SettingKey = N'originAddress')
+    INSERT INTO dbo.ConfiguracionesAplicacion (SettingKey, SettingValue) VALUES (N'originAddress', N'Sagrada Familia, San Jose, Costa Rica');
 GO
 
 SELECT

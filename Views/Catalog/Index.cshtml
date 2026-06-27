@@ -55,10 +55,10 @@
         }
     </div>
 
-    <div class="grid grid-3" id="productsGrid" style="gap: 1.5rem;">
+    <div class="grid grid-3" id="productsGrid" style="gap: clamp(1rem, 1.8vw, 2rem);">
         @foreach (var product in Model.Products)
         {
-            <div class="card product-card" data-category="@product.Category" data-price="@product.UnitPrice" data-name="@product.Name">
+            <div class="card product-card" data-id="@product.Id" data-category="@product.Category" data-price="@product.UnitPrice" data-name="@product.Name">
                 <div style="position: relative;">
                     <img src="@product.ImageUrl"
                          alt="@product.AltText"
@@ -71,9 +71,9 @@
                 </div>
 
                 <div style="margin-top: 1rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; gap: .75rem;">
-                        <h3 style="margin: 0;">@product.Name</h3>
-                        <div style="display: flex; gap: 0.25rem; color: #fbbf24;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; gap: .75rem;">
+                        <h3 style="margin: 0; font-size: clamp(1.05rem, 1.4vw, 1.25rem); line-height: 1.25;">@product.Name</h3>
+                        <div style="display: flex; gap: 0.25rem; color: #fbbf24; flex-shrink: 0;">
                             <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
                         </div>
                     </div>
@@ -112,20 +112,54 @@
     </div>
 </div>
 
-<div class="card" style="position: fixed; bottom: 20px; right: 20px; width: 300px; display: none; box-shadow: var(--shadow-xl); z-index: 1000;" id="cartSummary">
+<!-- Mobile cart backdrop -->
+<div class="mobile-sheet-backdrop" id="catalogCartBackdrop" style="display:none;"></div>
+
+<button type="button" id="catalogCartButton" class="btn btn-primary" style="display:none;position:fixed;right:1.25rem;bottom:1.25rem;z-index:5200;width:64px;height:64px;border-radius:50%;box-shadow:0 22px 54px rgba(139,92,246,.35);padding:0!important;" aria-label="Abrir carrito">
+    <i class="fas fa-shopping-cart"></i>
+    <span id="catalogCartButtonCount" style="position:absolute;top:-6px;right:-6px;min-width:26px;height:26px;border-radius:999px;background:#fff;color:var(--primary-dark);font-weight:900;font-size:.78rem;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);">0</span>
+</button>
+
+<!-- Mobile bottom-sheet cart -->
+<div class="mobile-bottom-sheet" id="catalogCartSheet" role="dialog" aria-modal="true" aria-hidden="true" style="display:none;">
+    <div class="mobile-bottom-sheet-header">
+        <h3><i class="fas fa-shopping-cart" style="color:var(--primary);margin-right:.5rem;"></i>Carrito</h3>
+        <button class="btn btn-ghost btn-sm" type="button" id="catalogCartClose" aria-label="Cerrar carrito" style="width:40px;height:40px;padding:0!important;border-radius:50%!important;">
+            <i class="fas fa-xmark"></i>
+        </button>
+    </div>
+
+    <span class="badge badge-primary" id="cartCount" style="margin-bottom:.75rem;">0</span>
+
+    <div id="cartItems" style="max-height:60vh;overflow-y:auto;margin-bottom:.75rem;"></div>
+
+    <div style="display:flex;justify-content:space-between;font-weight:700;padding:.75rem 0;border-top:1px solid var(--border);margin-bottom:.75rem;">
+        <span>Total:</span>
+        <span id="cartTotal" style="color:var(--primary);font-size:1.15rem;">₡0</span>
+    </div>
+
+    <a href="/Orders/Create" class="btn btn-primary btn-block" style="min-height:50px;">
+        <i class="fas fa-arrow-right"></i>
+        Finalizar pedido
+    </a>
+</div>
+
+<!-- Desktop cart floating card -->
+<div class="card" style="position: fixed; bottom: 20px; right: 20px; width: 320px; display: none; box-shadow: var(--shadow-xl); z-index: 1000; border-radius: 18px;" id="cartSummary">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
         <h4 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
             <i class="fas fa-shopping-cart" style="color: var(--primary);"></i>
             Carrito
         </h4>
-        <span class="badge badge-primary" id="cartCount">0</span>
+        <span class="badge badge-primary" id="cartCountDesktop">0</span>
     </div>
-    <div id="cartItems" style="max-height: 200px; overflow-y: auto; margin-bottom: 0.5rem;"></div>
+    <div id="cartItemsDesktop" style="max-height: 200px; overflow-y: auto; margin-bottom: 0.5rem;"></div>
     <div style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 0.5rem;">
         <span>Total:</span>
-        <span id="cartTotal">₡0</span>
+        <span id="cartTotalDesktop" style="color:var(--primary);">₡0</span>
     </div>
     <a href="/Orders/Create" class="btn btn-primary btn-block">
+        <i class="fas fa-arrow-right"></i>
         Finalizar pedido
     </a>
 </div>
@@ -133,6 +167,7 @@
 <script>
     let currentCategory = 'all';
     let cart = [];
+    let shouldAutoOpenCart = false;
 
     function filterCategory(category) {
         currentCategory = category;
@@ -189,27 +224,106 @@
         updateCartDisplay();
     }
 
+    function openCartSheet() {
+        const sheet = document.getElementById('catalogCartSheet');
+        const backdrop = document.getElementById('catalogCartBackdrop');
+        if (sheet) {
+            sheet.style.display = 'block';
+            sheet.classList.add('open');
+            sheet.setAttribute('aria-hidden', 'false');
+        }
+        if (backdrop) {
+            backdrop.style.display = 'block';
+            backdrop.classList.add('open');
+        }
+    }
+
+    function closeCartSheet() {
+        const sheet = document.getElementById('catalogCartSheet');
+        const backdrop = document.getElementById('catalogCartBackdrop');
+        if (sheet) {
+            sheet.classList.remove('open');
+            sheet.setAttribute('aria-hidden', 'true');
+            sheet.style.display = 'none';
+        }
+        if (backdrop) {
+            backdrop.classList.remove('open');
+            backdrop.style.display = 'none';
+        }
+    }
+
+    document.getElementById('catalogCartClose').addEventListener('click', closeCartSheet);
+    document.getElementById('catalogCartBackdrop').addEventListener('click', closeCartSheet);
+    document.getElementById('catalogCartButton').addEventListener('click', openCartSheet);
+
     function updateCartDisplay() {
         const cartSummary = document.getElementById('cartSummary');
         const cartItems = document.getElementById('cartItems');
+        const cartItemsDesktop = document.getElementById('cartItemsDesktop');
         const cartCount = document.getElementById('cartCount');
+        const cartCountDesktop = document.getElementById('cartCountDesktop');
         const cartTotal = document.getElementById('cartTotal');
+        const cartTotalDesktop = document.getElementById('cartTotalDesktop');
+        const cartButton = document.getElementById('catalogCartButton');
+        const cartButtonCount = document.getElementById('catalogCartButtonCount');
         const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
         const count = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-        cartSummary.style.display = cart.length ? 'block' : 'none';
-        cartCount.textContent = count;
-        cartTotal.textContent = `₡${total.toLocaleString('es-CR')}`;
-        cartItems.innerHTML = cart.map(item => `
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;padding:.5rem;border-bottom:1px solid var(--border);">
-                <div><strong>${item.name}</strong><div class="text-muted" style="font-size:.75rem;">x${item.quantity}</div></div>
-                <div style="display:flex;align-items:center;gap:.5rem;">
-                    <span>₡${(item.price * item.quantity).toLocaleString('es-CR')}</span>
-                    <button class="btn btn-ghost btn-sm" onclick="removeFromCart(${item.id})" style="color:var(--danger);"><i class="fas fa-trash"></i></button>
+        const cartHtml = cart.map(item => `
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;margin-bottom:.5rem;padding:.65rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-alt);">
+                <div style="min-width:0;flex:1;">
+                    <strong style="display:block;font-size:.9rem;">${item.name}</strong>
+                    <span class="text-muted" style="font-size:.78rem;">Cant: ${item.quantity} × ₡${item.price.toLocaleString('es-CR')}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0;">
+                    <span style="font-weight:700;white-space:nowrap;">₡${(item.price * item.quantity).toLocaleString('es-CR')}</span>
+                    <button class="btn btn-ghost btn-sm" onclick="removeFromCart(${item.id})" style="color:var(--danger);width:36px;height:36px;padding:0!important;border-radius:50%!important;">
+                        <i class="fas fa-trash-can"></i>
+                    </button>
                 </div>
             </div>
-        `).join('');
+        `).join('') || '<div class="text-muted" style="padding:.5rem 0;">Carrito vacío</div>';
+
+        cartSummary.style.display = 'none';
+        cartButton.style.display = cart.length ? 'inline-flex' : 'none';
+        cartCount.textContent = count;
+        cartButtonCount.textContent = count;
+        if (cartCountDesktop) cartCountDesktop.textContent = count;
+        cartTotal.textContent = `₡${total.toLocaleString('es-CR')}`;
+        if (cartTotalDesktop) cartTotalDesktop.textContent = `₡${total.toLocaleString('es-CR')}`;
+        cartItems.innerHTML = cartHtml;
+        if (cartItemsDesktop) cartItemsDesktop.innerHTML = cartHtml;
+
+        shouldAutoOpenCart = false;
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const parameters = new URLSearchParams(window.location.search);
+        const search = parameters.get('search');
+        const category = parameters.get('category');
+        const productId = Number(parameters.get('add'));
+
+        if (search) {
+            document.getElementById('searchProduct').value = search;
+            filterProducts();
+        }
+
+        if (category) {
+            const categoryButton = Array.from(document.querySelectorAll('.category-btn'))
+                .find(button => button.dataset.category.toLowerCase() === category.toLowerCase());
+            if (categoryButton) filterCategory(categoryButton.dataset.category);
+        }
+
+        if (productId) {
+            const addButton = document.querySelector(`[data-id="${productId}"][data-name][data-price]`);
+            if (addButton) {
+                addProductButton(addButton);
+                openCartSheet();
+            }
+        } else if (parameters.get('cart') === 'open' && cart.length) {
+            openCartSheet();
+        }
+    });
 </script>
 
 @section Styles {

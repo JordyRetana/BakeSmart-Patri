@@ -456,11 +456,7 @@
         });
     }
 
-    if (document.readyState === 'complete') {
-        initializePage();
-    } else {
-        window.addEventListener('load', initializePage, { once: true });
-    }
+    app.page.ready(initializePage);
 })();
 </script>
 }

@@ -1,0 +1,26 @@
+@model BakeSmartPatri.Models.CatalogIndexViewModel
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Productos populares";
+    var culture = new System.Globalization.CultureInfo("es-CR");
+}
+
+<main class="commerce-page">
+    <header class="commerce-hero commerce-hero--popular">
+        <div><span class="commerce-kicker">Los favoritos</span><h1>Productos que siempre antojan</h1><p>Una selección visual de nuestras creaciones activas y listas para pedir.</p></div>
+        <i class="fas fa-star"></i>
+    </header>
+
+    <section class="commerce-section">
+        <div class="commerce-section-title"><span></span><h2>Más buscados</h2><span></span></div>
+        <div class="commerce-product-list">
+            @foreach (var product in Model.Products.Where(product => product.IsActive).Take(10))
+            {
+                <article class="commerce-product-tile">
+                    <a href="/Catalog/Details/@product.Id"><img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';" /></a>
+                    <div><small>@product.Category</small><h2>@product.Name</h2><span class="commerce-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></span><strong>@product.UnitPrice.ToString("C0", culture)</strong><a href="/Catalog?add=@product.Id">Agregar al carrito <i class="fas fa-cart-plus"></i></a></div>
+                </article>
+            }
+        </div>
+    </section>
+</main>

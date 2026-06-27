@@ -1,10 +1,10 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Inventario";
+}
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/inventory-index.css" asp-append-version="true" />
-}
-﻿@{
-    Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Inventario";
 }
 
 <div class="page-shell inventory-page">
@@ -22,6 +22,12 @@
         <div class="page-actions inventory-actions">
             <input id="inventorySearch" class="form-control" placeholder="Buscar por código o descripción" />
             <select id="inventoryCategory" class="form-control inventory-category"></select>
+            <select id="inventoryStockFilter" class="form-control inventory-stock-filter">
+                <option value="todas">Todo el stock</option>
+                <option value="bajo">Stock bajo (&lt;= mínimo)</option>
+                <option value="critico">Stock crítico (= 0)</option>
+                <option value="disponible">Con stock (&gt; 0)</option>
+            </select>
             <button type="button" id="inventoryQuickActions" class="btn btn-primary">
                 <i class="fas fa-bolt"></i>
                 Nuevo producto
@@ -48,7 +54,7 @@
         </div>
         <div class="card inventory-kpi-card">
             <div class="text-muted">Materias primas</div>
-            <h2 id="invNegative"></h2>
+            <h2 id="invRaw"></h2>
         </div>
     </div>
 
@@ -75,32 +81,6 @@
         </div>
     </div>
 
-    <div class="card inventory-history-preview-card">
-        <div class="inventory-panel-header">
-            <div>
-                <h3 class="inventory-panel-title">Últimos movimientos</h3>
-            </div>
-            <button type="button" class="btn btn-outline btn-sm" onclick="openInventoryQuickActions('history')">
-                Ver historial completo
-            </button>
-        </div>
-
-        <div class="table-container table-container--soft inventory-table-wrap inventory-table-wrap-preview">
-            <table class="table inventory-table inventory-preview-table">
-                <thead>
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Producto</th>
-                        <th>Movimiento</th>
-                <th>Cantidad</th>
-                        <th>Responsable</th>
-                    </tr>
-                </thead>
-                <tbody id="movementPreviewTable"></tbody>
-            </table>
-        </div>
-    </div>
-
     <template id="inventoryProductTemplate">
         <div class="inventory-modal-shell">
             <div class="inventory-modal-head">
@@ -116,7 +96,7 @@
                 </div>
 
                 <div>
-                    <label>Precio</label>
+                    <label>Precio o costo</label>
                     <input class="form-control" name="price" type="number" min="0" step="0.01" required />
                 </div>
 
@@ -168,10 +148,10 @@
                     <input class="form-control" name="minStock" type="number" min="0" step="0.01" value="5" required />
                 </div>
 
-                <div class="inventory-modal-actions">
+                <div class="inventory-modal-actions inventory-modal-full">
                     <button class="btn btn-primary" type="submit">
                         <i class="fas fa-save"></i>
-                        Guardar
+                        Guardar en SQL
                     </button>
                 </div>
             </form>
@@ -195,12 +175,13 @@
                     <select class="form-control" name="type">
                         <option value="ENTRADA">Entrada</option>
                         <option value="SALIDA">Salida</option>
+                        <option value="AJUSTE">Ajuste positivo</option>
                     </select>
                 </div>
 
                 <div>
                     <label>Cantidad</label>
-                    <input class="form-control" name="quantity" type="number" min="0.01" step="0.01" placeholder="Cantidad" />
+                    <input class="form-control" name="quantity" type="number" min="0.01" step="0.01" placeholder="Cantidad" required />
                 </div>
 
                 <div class="inventory-modal-full">
@@ -215,31 +196,6 @@
                     </button>
                 </div>
             </form>
-        </div>
-    </template>
-
-    <template id="inventoryHistoryTemplate">
-        <div class="inventory-modal-shell inventory-modal-shell-wide">
-            <div class="inventory-modal-head">
-                <h3 class="inventory-modal-title">Historial de inventario</h3>
-            </div>
-
-            <div class="compact-table-wrap inventory-history-modal-table">
-                <table class="table inventory-table table--wide">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                        <th>Producto</th>
-                        <th>Movimiento</th>
-                        <th>Cantidad</th>
-                        <th>Unidad</th>
-                        <th>Responsable</th>
-                        <th>Nota</th>
-                        </tr>
-                    </thead>
-                    <tbody id="movementTable"></tbody>
-                </table>
-            </div>
         </div>
     </template>
 
@@ -271,34 +227,51 @@
     </div>
 </div>
 
-
-
 @section Scripts {
     <script>
         (() => {
             const search = document.getElementById('inventorySearch');
             const category = document.getElementById('inventoryCategory');
+            const stockFilter = document.getElementById('inventoryStockFilter');
             const quickButton = document.getElementById('inventoryQuickActions');
             const movementButton = document.getElementById('inventoryMovementActions');
             let products = [];
             let movements = [];
-
             let categoriesInitialized = false;
 
             function normalizeProduct(p) {
                 return {
-                    id: p.id,
-                    code: p.sku || p.code,
-                    description: p.item || p.description,
-                    type: p.type,
-                    unit: p.unidad || p.unit,
-                    category: p.category,
-                    subcategory: p.subcategory,
-                    price: Number(p.price || 0),
+                    id: Number(p.id),
+                    code: p.sku || p.code || '',
+                    description: p.item || p.description || '',
+                    type: p.type || 'Producto terminado',
+                    unit: p.unidad || p.unit || 'unidad',
+                    category: p.category || 'General',
+                    subcategory: p.subcategory || '',
+                    price: Number(p.price || p.costo || 0),
                     stock: Number(p.stock || 0),
                     minStock: Number(p.min || p.minStock || 0),
                     active: Boolean(p.active)
                 };
+            }
+
+            async function postJson(url, payload = {}) {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    let message = 'No se pudo guardar la información.';
+                    try {
+                        const error = await response.json();
+                        message = error.message || message;
+                    } catch { }
+                    throw new Error(message);
+                }
+
+                return response.json();
             }
 
             async function loadInventory() {
@@ -312,11 +285,9 @@
 
             function initializeCategories() {
                 if (categoriesInitialized) return;
-
                 const available = getCategories();
                 category.innerHTML = available.map(c => `<option value="${c}">${c}</option>`).join('');
                 category.value = 'Todas';
-                category.dataset.selected = 'Todas';
                 categoriesInitialized = true;
             }
 
@@ -328,7 +299,6 @@
                     const selected = category.value || 'Todas';
                     category.innerHTML = available.map(c => `<option value="${c}">${c}</option>`).join('');
                     category.value = available.includes(selected) ? selected : 'Todas';
-                    category.dataset.selected = category.value;
                 }
             }
 
@@ -336,9 +306,30 @@
                 const form = document.getElementById('inventoryForm');
                 if (!form) return;
 
-                form.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    app.toast.info('Esta accion debe guardarse desde el formulario del sistema.');
+                form.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const data = Object.fromEntries(new FormData(form).entries());
+                    const payload = {
+                        id: data.id ? Number(data.id) : null,
+                        code: data.code,
+                        description: data.description,
+                        type: data.type,
+                        unit: data.unit,
+                        category: data.category,
+                        subcategory: data.subcategory || null,
+                        price: Number(data.price || 0),
+                        stock: Number(data.stock || 0),
+                        minStock: Number(data.minStock || 0)
+                    };
+
+                    try {
+                        await postJson('/api/inventory', payload);
+                        app.toast.success('Inventario guardado en SQL.');
+                        app.modal.close();
+                        await refreshAll();
+                    } catch (error) {
+                        app.toast.error(error.message);
+                    }
                 });
             }
 
@@ -351,117 +342,107 @@
                     .map(p => `<option value="${p.id}">${p.code} - ${p.description} (${p.stock} ${p.unit || 'unidad'})</option>`)
                     .join('');
 
-                movementForm.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    app.toast.info('Esta accion debe registrarse desde el formulario del sistema.');
+                movementForm.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const data = Object.fromEntries(new FormData(movementForm).entries());
+                    const payload = {
+                        productId: Number(data.productId),
+                        type: data.type,
+                        quantity: Number(data.quantity || 0),
+                        note: data.note || null
+                    };
+
+                    try {
+                        await postJson('/api/inventory/movements', payload);
+                        app.toast.success('Movimiento registrado en SQL.');
+                        app.modal.close();
+                        await refreshAll();
+                    } catch (error) {
+                        app.toast.error(error.message);
+                    }
                 });
             }
 
             function renderProducts() {
                 const all = products;
-
                 document.getElementById('invTotal').textContent = all.length;
                 document.getElementById('invActive').textContent = all.filter(x => x.active).length;
                 document.getElementById('invLow').textContent = all.filter(x => Number(x.stock) <= Number(x.minStock ?? 5)).length;
-                document.getElementById('invNegative').textContent = all.filter(x => x.type === 'Materia prima').length;
+                document.getElementById('invRaw').textContent = all.filter(x => x.type === 'Materia prima').length;
 
                 refreshCategoriesIfNeeded();
+                const query = search.value.trim().toLowerCase();
+                const selectedCategory = category.value || 'Todas';
+                const selectedStock = stockFilter?.value || 'todas';
+                const rows = all.filter(p => {
+                    const stockNum = Number(p.stock);
+                    const minNum = Number(p.minStock ?? 5);
+                    const matchesQuery = !query || p.code.toLowerCase().includes(query) || p.description.toLowerCase().includes(query);
+                    const matchesCategory = selectedCategory === 'Todas' || p.category === selectedCategory;
+                    let matchesStock = true;
+                    if (selectedStock === 'bajo') matchesStock = stockNum <= minNum;
+                    else if (selectedStock === 'critico') matchesStock = stockNum === 0;
+                    else if (selectedStock === 'disponible') matchesStock = stockNum > 0;
+                    return matchesQuery && matchesCategory && matchesStock;
+                });
 
-                const q = search.value.trim().toLowerCase();
-                const c = category.value || 'Todas';
-
-                const rows = all.filter(p =>
-                    (!q || p.code.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)) &&
-                    (c === 'Todas' || p.category === c)
-                );
-
-                document.getElementById('inventoryTable').innerHTML = rows.map(p => `
-                    <tr>
-                        <td><strong>${p.code}</strong></td>
+                document.getElementById('inventoryTable').innerHTML = rows.map(p => {
+                    const stockNum = Number(p.stock);
+                    const minNum = Number(p.minStock ?? 5);
+                    const stockPct = Math.min(100, Math.round((stockNum / Math.max(stockNum, minNum * 2)) * 100));
+                    const isLow = stockNum <= minNum;
+                    const stockColor = stockNum === 0 ? 'var(--danger)' : isLow ? 'var(--warning)' : 'var(--success)';
+                    return `
+                    <tr class="${stockNum === 0 ? 'inv-row-danger' : isLow ? 'inv-row-warning' : ''}">
+                        <td><strong style="color:var(--primary);font-size:.85rem;">${p.code}</strong></td>
                         <td>
-                            ${p.description}
-                            <div class="text-muted" style="font-size:.8rem;">${p.subcategory || 'Sin subcategoría'} · ${p.unit || 'unidad'}</div>
+                            <strong style="font-size:.92rem;">${p.description}</strong>
+                            <div class="text-muted" style="font-size:.75rem;">${p.subcategory || 'Sin subcategoría'} · ${p.unit || 'unidad'}</div>
                         </td>
-                        <td><span class="inventory-type-chip">${p.type || 'Producto terminado'}</span></td>
-                        <td>${p.category}</td>
-                        <td>${app.utils.formatCurrency(p.price)}</td>
+                        <td><span class="inventory-type-chip">${p.type}</span></td>
+                        <td><span style="font-size:.85rem;">${p.category}</span></td>
+                        <td style="font-weight:700;color:var(--primary);">${app.utils.formatCurrency(p.price)}</td>
                         <td>
-                            <span class="badge ${Number(p.stock) <= Number(p.minStock ?? 5) ? 'badge-warning' : 'badge-success'}">${p.stock} ${p.unit || ''}</span>
+                            <div style="display:flex;align-items:center;gap:.5rem;">
+                                <div style="flex:1;max-width:60px;height:6px;border-radius:999px;background:var(--border);overflow:hidden;">
+                                    <div style="width:${stockPct}%;height:100%;border-radius:999px;background:${stockColor};transition:width .4s ease;"></div>
+                                </div>
+                                <span class="badge ${stockNum === 0 ? 'badge-danger' : isLow ? 'badge-warning' : 'badge-success'}" style="font-size:.75rem;">${p.stock}</span>
+                            </div>
                         </td>
-                        <td>${p.minStock ?? 5} ${p.unit || ''}</td>
+                        <td style="color:var(--text-muted);font-size:.85rem;">${p.minStock ?? 5}</td>
                         <td>
-                            <span class="badge ${p.active ? 'badge-success' : 'badge-warning'}">
+                            <span class="badge ${p.active ? 'badge-success' : 'badge-warning'}" style="font-size:.72rem;">
                                 ${p.active ? 'Activo' : 'Inactivo'}
                             </span>
                         </td>
-                        <td class="text-right">
-                            <button class="btn btn-outline btn-sm" onclick="editProduct(${p.id})">Editar</button>
-                            <button class="btn btn-outline btn-sm" onclick="toggleProduct(${p.id})">
-                                ${p.active ? 'Desactivar' : 'Activar'}
+                        <td class="text-right inventory-row-actions">
+                            <button class="btn btn-outline btn-sm" onclick="editProduct(${p.id})" style="font-size:.75rem;"><i class="fas fa-pen"></i></button>
+                            <button class="btn btn-ghost btn-sm" onclick="toggleProduct(${p.id})" style="color:${p.active ? 'var(--warning)' : 'var(--success)'};font-size:.75rem;">
+                                ${p.active ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>'}
                             </button>
                         </td>
                     </tr>
-                `).join('') || `
+                `}).join('') || `
                     <tr>
                         <td colspan="9" class="text-center text-muted">No hay productos para mostrar.</td>
                     </tr>
                 `;
             }
 
-            function renderMovements() {
-                const rows = movements;
-                const preview = rows.slice(0, 6);
-
-                document.getElementById('movementPreviewTable').innerHTML = preview.map(m => `
-                    <tr>
-                        <td>${new Date(m.createdAt).toLocaleString('es-CR')}</td>
-                        <td>${m.code}</td>
-                        <td><span class="badge badge-info">${m.type}</span></td>
-                        <td>${m.quantity} ${m.unit || ''}</td>
-                        <td>${m.responsible}</td>
-                    </tr>
-                `).join('') || `
-                    <tr>
-                        <td colspan="5" class="text-center text-muted">No hay movimientos registrados.</td>
-                    </tr>
-                `;
-
-                const historyTable = document.getElementById('movementTable');
-                if (historyTable) {
-                    historyTable.innerHTML = rows.map(m => `
-                        <tr>
-                            <td>${new Date(m.createdAt).toLocaleString('es-CR')}</td>
-                            <td>${m.code}</td>
-                            <td><span class="badge badge-info">${m.type}</span></td>
-                            <td>${m.quantity}</td>
-                            <td>${m.unit || '-'}</td>
-                            <td>${m.responsible}</td>
-                            <td>${m.note || '-'}</td>
-                        </tr>
-                    `).join('') || `
-                        <tr>
-                            <td colspan="7" class="text-center text-muted">No hay movimientos registrados.</td>
-                        </tr>
-                    `;
-                }
-            }
-
             async function refreshAll() {
                 await loadInventory();
                 renderProducts();
-                renderMovements();
             }
 
             window.openInventoryQuickActions = (section = 'product') => {
                 const templates = {
                     product: { title: 'Producto o materia prima', selector: '#inventoryProductTemplate', maxWidth: '980px' },
-                    movement: { title: 'Movimiento', selector: '#inventoryMovementTemplate', maxWidth: '980px' },
-                    history: { title: 'Historial de inventario', selector: '#inventoryHistoryTemplate', maxWidth: '1280px' }
+                    movement: { title: 'Movimiento', selector: '#inventoryMovementTemplate', maxWidth: '980px' }
                 };
 
                 const selected = templates[section] || templates.product;
                 const template = document.querySelector(selected.selector);
-
                 app.modal.open({
                     title: selected.title,
                     maxWidth: selected.maxWidth,
@@ -470,12 +451,10 @@
 
                 if (section === 'product') bindProductForm();
                 if (section === 'movement') bindMovementForm();
-                if (section === 'history') renderMovements();
             };
 
             window.editProduct = (id) => {
                 openInventoryQuickActions('product');
-
                 const item = products.find(x => x.id === id);
                 const form = document.getElementById('inventoryForm');
                 if (!item || !form) return;
@@ -488,7 +467,6 @@
 
             window.openIngredientPreset = (codePrefix, description, subcategory, unit, stock, minStock, price, type = 'Materia prima', categoryName = 'Ingredientes') => {
                 openInventoryQuickActions('product');
-
                 const form = document.getElementById('inventoryForm');
                 if (!form) return;
 
@@ -504,20 +482,21 @@
                 form.minStock.value = minStock;
             };
 
-            window.toggleProduct = (id) => {
-                app.toast.info('Esta accion debe actualizarse desde el sistema.');
+            window.toggleProduct = async (id) => {
+                try {
+                    await postJson(`/api/inventory/${id}/toggle`);
+                    app.toast.success('Estado del producto actualizado.');
+                    await refreshAll();
+                } catch (error) {
+                    app.toast.error(error.message);
+                }
             };
 
             quickButton.addEventListener('click', () => openInventoryQuickActions('product'));
             movementButton.addEventListener('click', () => openInventoryQuickActions('movement'));
-
             search.addEventListener('input', renderProducts);
-
-            category.addEventListener('change', () => {
-                category.dataset.selected = category.value;
-                renderProducts();
-            });
-
+            category.addEventListener('change', renderProducts);
+            if (stockFilter) stockFilter.addEventListener('change', renderProducts);
             refreshAll().then(initializeCategories).catch(error => app.toast.error(error.message));
         })();
     </script>

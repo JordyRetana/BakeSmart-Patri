@@ -1,5 +1,7 @@
 (function () {
   const cache = new Map();
+  let posSessionsCache = [];
+  let activeSessionCache = null;
 
   async function request(url, options = {}) {
     const response = await fetch(url, {
@@ -12,7 +14,12 @@
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(text || `Error ${response.status}`);
+      let message = text || `Error ${response.status}`;
+      try {
+        const payload = JSON.parse(text);
+        message = payload.message || payload.title || message;
+      } catch { }
+      throw new Error(message);
     }
 
     return response.status === 204 ? null : response.json();
@@ -27,6 +34,21 @@
 
   function cached(key, fallback = []) {
     return cache.has(key) ? cache.get(key) : fallback;
+  }
+
+  async function loadPosSessions() {
+    try {
+      posSessionsCache = await request("/api/pos/sessions");
+      activeSessionCache = posSessionsCache.find(s => s.status === "Abierta") || null;
+    } catch {
+      posSessionsCache = [];
+      activeSessionCache = null;
+    }
+    return posSessionsCache;
+  }
+
+  function activePosSession() {
+    return activeSessionCache;
   }
 
   function refreshAll() {
@@ -60,6 +82,37 @@
 
   const api = {
     refresh: refreshAll,
+    async refreshPos() {
+      await loadPosSessions();
+      window.dispatchEvent(new CustomEvent("bakesmart:data-ready", { detail: { key: "posSessions" } }));
+    },
+
+    async createOrder(input) {
+      return request("/api/orders", { method: "POST", body: JSON.stringify(input) });
+    },
+
+    async loadDefaultAddress() {
+      return request("/api/addresses/default");
+    },
+
+    async loadAddresses() {
+      return request("/api/addresses");
+    },
+
+    async saveSetting(key, value) {
+      const all = {};
+      all[key] = value;
+      return request("/api/settings", { method: "POST", body: JSON.stringify(all) });
+    },
+
+    async saveAllSettings(settings) {
+      return request("/api/settings", { method: "POST", body: JSON.stringify(settings) });
+    },
+
+    async loadSettings() {
+      return request("/api/settings");
+    },
+
     orders: {
       list() {
         return cached("orders").map(order => ({
@@ -126,15 +179,39 @@
       addPromotion() { throw new Error("Crear promociones debe hacerse desde el formulario del sistema."); }
     },
     users: {
-      list() { return cached("users"); }
+      list() { return cached("users"); },
+      async save(input = {}) {
+        const payload = {
+          id: input.id ? Number(input.id) : null,
+          firstName: input.firstName || "",
+          lastName: input.lastName || "",
+          email: input.email || "",
+          phone: input.phone || "",
+          address: input.address || "",
+          role: input.role || "Cliente",
+          password: input.password || ""
+        };
+
+        const result = await request("/api/users", { method: "POST", body: JSON.stringify(payload) });
+        await load("users", "/api/users");
+        return result;
+      },
+      async toggle(id) {
+        await request(`/api/users/${id}/toggle`, { method: "POST", body: JSON.stringify({}) });
+        const rows = await load("users", "/api/users");
+        return rows.find(user => Number(user.id) === Number(id));
+      }
     },
     roles: {
       list() { return cached("roles"); }
     },
     pos: {
       config() { return cached("posConfig", { iva: 0, frequentCustomerDiscount: 0, paymentMethods: [] }); },
-      activeSession() { return null; },
-      sessions() { return []; },
+      activeSession() { return activePosSession(); },
+      async sessions() {
+        await loadPosSessions();
+        return posSessionsCache;
+      },
       searchProducts(query) {
         const q = String(query || "").toLowerCase();
         return cached("inventory")
@@ -153,10 +230,55 @@
             stock: product.stock
           }));
       },
-      openSession() { throw new Error("Abrir caja debe registrarse desde el sistema."); },
-      closeSession() { throw new Error("Cerrar caja debe registrarse desde el sistema."); },
-      checkout() { throw new Error("La venta debe registrarse desde el sistema."); },
-      sell() { throw new Error("La venta debe registrarse desde el sistema."); }
+      async openSession(amount = 0) {
+        const result = await request("/api/pos/open", { method: "POST", body: JSON.stringify({ amount: Number(amount) }) });
+        await loadPosSessions();
+        return result;
+      },
+      async closeSession(id, declared = 0) {
+        const result = await request("/api/pos/close", { method: "POST", body: JSON.stringify({ id: Number(id), declaredAmount: Number(declared) }) });
+        await loadPosSessions();
+        return result;
+      },
+      async sell(input = {}) {
+        const session = activePosSession();
+        if (!session) throw new Error("Debe abrir caja antes de confirmar ventas.");
+
+        const items = Array.isArray(input.items) ? input.items : [];
+        if (!items.length) throw new Error("Agregue productos al carrito antes de cobrar.");
+
+        const products = api.inventory.list();
+        const subtotal = items.reduce((sum, item) => {
+          const product = products.find(row => Number(row.id) === Number(item.productId));
+          return sum + Number(product?.price || 0) * Number(item.quantity || 0);
+        }, 0);
+        const discountRate = Math.min(Math.max(Number(input.discountRate || 0), 0), 1);
+        const taxRate = Number(api.pos.config().iva || 0);
+        const discountedSubtotal = Math.max(0, subtotal - subtotal * discountRate);
+        const tax = discountedSubtotal * taxRate;
+        const total = discountedSubtotal + tax;
+
+        const saleInput = {
+          customerName: input.customerName || "Cliente de mostrador",
+          customerEmail: input.customerEmail || null,
+          customerPhone: input.customerPhone || null,
+          paymentMethod: input.paymentMethod || "Efectivo",
+          subtotal,
+          discount: subtotal * discountRate,
+          tax,
+          total,
+          notes: null,
+          items: items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: products.find(row => Number(row.id) === Number(item.productId))?.price || 0
+          }))
+        };
+
+        const result = await request("/api/pos/sell", { method: "POST", body: JSON.stringify(saleInput) });
+        await loadPosSessions();
+        return result;
+      }
     },
     reports: {
       async load(type, start = "", end = "") {
@@ -181,6 +303,7 @@
         const config = cached("posConfig", {});
         return {
           name: config.originName || "BakeSmart Patri",
+          address: config.originAddress || "",
           lat: Number(config.originLatitude),
           lng: Number(config.originLongitude)
         };
@@ -200,14 +323,4 @@
   };
 
   window.BakeSmartStore = api;
-  document.addEventListener("DOMContentLoaded", () => {
-    const page = (document.body?.dataset?.page || "").toLowerCase();
-    if (page === "/" || page === "/home/index" || page.startsWith("/catalog")) {
-      return;
-    }
-
-    refreshAll().catch(error => {
-      if (window.app?.toast) window.app.toast.error(error.message);
-    });
-  });
 })();

@@ -1,37 +1,41 @@
 .product-card {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    padding: 1.25rem !important;
+}
 
-        .product-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
-        }
+.product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: color-mix(in srgb, var(--primary) 32%, var(--border));
+}
 
-    .favorite-btn {
-        transition: all 0.2s ease;
-    }
+.favorite-btn {
+    transition: all 0.2s ease;
+}
 
-        .favorite-btn:hover {
-            transform: scale(1.1);
-            background: white !important;
-        }
+.favorite-btn:hover {
+    transform: scale(1.1);
+    background: white !important;
+}
 
-        .favorite-btn i.fas {
-            color: #ec4899;
-        }
+.favorite-btn i.fas {
+    color: #ec4899;
+}
 
-    
-    .dark .favorite-btn {
-        background: var(--bg-card) !important;
-    }
+.dark .favorite-btn {
+    background: var(--bg-card) !important;
+}
 
-        .dark .favorite-btn:hover {
-            background: var(--bg-card) !important;
-        }
+.dark .favorite-btn:hover {
+    background: var(--bg-card) !important;
+}
 
-    .dark #cartSummary {
-        background: var(--bg-card);
-    }
+.dark #cartSummary {
+    background: var(--bg-card);
+}
 
 .catalog-toolbar,
 .catalog-search-row,
@@ -47,6 +51,27 @@
 .catalog-search-button {
     flex: 0 0 auto;
     min-width: 56px;
+}
+
+.catalog-product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: clamp(1.25rem, 2vw, 2rem);
+    padding: 0 1.5rem 2rem;
+}
+
+@media (min-width: 1400px) {
+    .catalog-product-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 860px) {
+    .catalog-product-grid {
+        grid-template-columns: 1fr;
+        padding: 0 .85rem 1.5rem;
+        gap: 1rem;
+    }
 }
 
 /* Responsive catalog */

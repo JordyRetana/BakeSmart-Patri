@@ -1,139 +1,174 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Dashboard";
+
+    var isAdmin = User?.IsInRole("Admin") ?? false;
+    var isStaff = User?.IsInRole("Staff") ?? false;
+    var isCashier = User?.IsInRole("Cajero") ?? false;
+    var isBaker = User?.IsInRole("Repostero") ?? false;
+    var isSupervisor = User?.IsInRole("Supervisor") ?? false;
+    var canOrders = isAdmin || isStaff || isSupervisor || isCashier;
+    var canProduction = isAdmin || isStaff || isSupervisor || isBaker;
+    var canInventory = isAdmin || isStaff || isSupervisor || isBaker;
+    var canPos = isAdmin || isStaff || isSupervisor || isCashier;
+    var canReports = isAdmin || isSupervisor;
+    var canAudit = isAdmin || isStaff || isSupervisor;
+    var canSales = isAdmin || isStaff || isSupervisor || isCashier;
+
+    var roleKey = isAdmin ? "admin" : isCashier ? "cashier" : isBaker ? "baker" : isSupervisor ? "supervisor" : "staff";
+    var roleLabel = isAdmin ? "Administrador" : isCashier ? "Cajero" : isBaker ? "Repostero" : isSupervisor ? "Supervisor" : "Staff";
+    var roleTitle = isAdmin ? "Centro de administracion" : isCashier ? "Caja y ventas" : isBaker ? "Produccion de reposteria" : isSupervisor ? "Supervision general" : "Operacion diaria";
+    var roleSubtitle = isAdmin ? "Una lectura completa de ventas, pedidos, inventario y operacion." : isCashier ? "Controla caja, pedidos y cobros desde un espacio enfocado." : isBaker ? "Organiza la produccion y anticipa necesidades de inventario." : isSupervisor ? "Supervisa el rendimiento de cada area y toma decisiones con datos." : "Coordina pedidos y el trabajo diario desde un solo lugar.";
+    var roleIcon = isAdmin ? "fa-crown" : isCashier ? "fa-cash-register" : isBaker ? "fa-cake-candles" : isSupervisor ? "fa-chart-line" : "fa-store";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/dashboard-index.css" asp-append-version="true" />
 }
 
-<div class="page-shell dashboard-page">
-    <div class="page-header dashboard-header">
-        <div>
-            <h1 class="dashboard-title"><i class="fas fa-chart-line"></i> Dashboard operativo</h1>
-            <p class="text-muted dashboard-subtitle">Centro de control para pedidos, produccion, inventario y reportes.</p>
+<main class="dashboard-page dashboard-role-@roleKey">
+    <header class="dashboard-hero">
+        <div class="dashboard-hero-copy">
+            <span class="dashboard-role-chip"><i class="fas @roleIcon"></i> Panel @roleLabel</span>
+            <h1>@roleTitle</h1>
+            <p>@roleSubtitle</p>
         </div>
-        <div class="dashboard-actions">
-            <a class="btn btn-primary" href="/Pos"><i class="fas fa-cash-register"></i> Abrir POS</a>
-            <a class="btn btn-outline" href="/Reports"><i class="fas fa-file-lines"></i> Reportes</a>
+        <div class="dashboard-hero-actions">
+            @if (canPos) { <a class="btn btn-primary" href="/Pos"><i class="fas fa-cash-register"></i> Abrir POS</a> }
+            @if (canReports) { <a class="btn btn-outline" href="/Reports"><i class="fas fa-chart-column"></i> Reportes</a> }
+            @if (canAudit) { <a class="btn btn-outline" href="/Audit"><i class="fas fa-clock-rotate-left"></i> Bitacora</a> }
         </div>
-    </div>
+    </header>
 
-    <div class="grid grid-4 dashboard-kpis">
-        <div class="card dashboard-kpi"><span class="text-muted">Pedidos hoy</span><h2 id="dbOrders">0</h2><small id="dbOrdersHint"></small></div>
-        <div class="card dashboard-kpi"><span class="text-muted">Ventas</span><h2 id="dbSales">0</h2><small id="dbSalesHint"></small></div>
-        <div class="card dashboard-kpi"><span class="text-muted">Produccion activa</span><h2 id="dbProduction">0</h2><small id="dbProductionHint"></small></div>
-        <div class="card dashboard-kpi"><span class="text-muted">Stock bajo</span><h2 id="dbLowStock">0</h2><small id="dbLowStockHint"></small></div>
-    </div>
+    <section class="dashboard-kpis" aria-label="Indicadores principales">
+        <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--orders"><i class="fas fa-clipboard-list"></i></span><div><small>Pedidos hoy</small><strong id="dbOrders">0</strong><p id="dbOrdersHint">Cargando...</p></div></article>
+        <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--sales"><i class="fas fa-coins"></i></span><div><small>Ventas del dia</small><strong id="dbSales">0</strong><p id="dbSalesHint">Cargando...</p></div></article>
+        <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--prod"><i class="fas fa-fire-burner"></i></span><div><small>Produccion activa</small><strong id="dbProduction">0</strong><p id="dbProductionHint">Cargando...</p></div></article>
+        <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--stock"><i class="fas fa-boxes-stacked"></i></span><div><small>Stock bajo</small><strong id="dbLowStock">0</strong><p id="dbLowStockHint">Cargando...</p></div></article>
+    </section>
 
-    <div class="dashboard-main-grid">
-        <section class="card dashboard-orders-card">
-            <div class="dashboard-section-head">
-                <div>
-                    <h3>Pedidos recientes</h3>
-                    <p class="text-muted">Resumen reciente de actividad.</p>
-                </div>
-                <a class="btn btn-outline btn-sm" href="/Orders">Ver pedidos</a>
-            </div>
-            <div class="table-container">
-                <table class="table table--wide">
-                    <thead><tr><th>Pedido</th><th>Cliente</th><th>Estado</th><th>Pago</th><th>Total</th></tr></thead>
-                    <tbody id="dbOrdersTable"></tbody>
-                </table>
-            </div>
-        </section>
+    <section class="dashboard-insights">
+        <article class="dashboard-chart-card dashboard-chart-card--wide">
+            <div class="dashboard-section-head"><div><span>Comportamiento reciente</span><h2>Valor de pedidos</h2></div><i class="fas fa-chart-column"></i></div>
+            <div id="dashboardTrendBars" class="dashboard-bars"></div>
+        </article>
+        <article class="dashboard-chart-card">
+            <div class="dashboard-section-head"><div><span>Distribucion</span><h2>Estados de pedidos</h2></div><i class="fas fa-chart-pie"></i></div>
+            <div class="dashboard-donut-layout"><div id="dashboardDonut" class="dashboard-donut"><strong id="dashboardDonutTotal">0</strong><span>pedidos</span></div><div id="dashboardStatusLegend" class="dashboard-legend"></div></div>
+        </article>
+        <article class="dashboard-chart-card">
+            <div class="dashboard-section-head"><div><span>Control financiero</span><h2>Estado de cobros</h2></div><i class="fas fa-wallet"></i></div>
+            <div id="dashboardPaymentSummary" class="dashboard-payment-summary"></div>
+        </article>
+    </section>
 
+    <section class="dashboard-main-grid">
+        @if (canOrders)
+        {
+            <article class="dashboard-panel dashboard-orders-card">
+                <div class="dashboard-section-head"><div><span>Operacion</span><h2>Pedidos recientes</h2></div><a class="btn btn-outline btn-sm" href="/Orders">Ver pedidos</a></div>
+                <div class="dashboard-table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Estado</th><th>Pago</th><th>Total</th></tr></thead><tbody id="dbOrdersTable"></tbody></table></div>
+            </article>
+        }
         <aside class="dashboard-side-stack">
-            <section class="card">
-                <div class="dashboard-section-head"><h3>Acciones rapidas</h3></div>
+            <article class="dashboard-panel">
+                <div class="dashboard-section-head"><div><span>Navegacion</span><h2>Acciones rapidas</h2></div><i class="fas fa-bolt"></i></div>
                 <div class="dashboard-shortcuts">
-                    <a href="/Production"><i class="fas fa-utensils"></i><span>Produccion</span></a>
-                    <a href="/Inventory"><i class="fas fa-boxes-stacked"></i><span>Inventario</span></a>
-                    <a href="/Marketing"><i class="fas fa-bullhorn"></i><span>Marketing</span></a>
-                    <a href="/Accounting"><i class="fas fa-calculator"></i><span>Contabilidad</span></a>
+                    @if (canOrders) { <a href="/Orders"><i class="fas fa-clipboard-list"></i><span>Pedidos</span></a> }
+                    @if (canProduction) { <a href="/Production"><i class="fas fa-utensils"></i><span>Produccion</span></a> }
+                    @if (canInventory) { <a href="/Inventory"><i class="fas fa-boxes-stacked"></i><span>Inventario</span></a> }
+                    @if (canPos) { <a href="/Pos"><i class="fas fa-cash-register"></i><span>Punto de venta</span></a> }
+                    @if (canReports) { <a href="/Reports"><i class="fas fa-chart-bar"></i><span>Reportes</span></a> }
+                    @if (isAdmin) { <a href="/Users"><i class="fas fa-users"></i><span>Usuarios</span></a> }
                 </div>
-            </section>
-
-            <section class="card">
-                <div class="dashboard-section-head"><h3>Alertas</h3></div>
+            </article>
+            <article class="dashboard-panel">
+                <div class="dashboard-section-head"><div><span>Prioridades</span><h2>Alertas operativas</h2></div><i class="fas fa-bell"></i></div>
                 <div id="dbAlerts" class="dashboard-alerts"></div>
-            </section>
+            </article>
         </aside>
-    </div>
+    </section>
 
-    <div class="dashboard-bottom-grid">
-        <section class="card">
-            <div class="dashboard-section-head">
-                <h3>Cola de produccion</h3>
-                <a class="btn btn-outline btn-sm" href="/Production">Gestionar</a>
-            </div>
-            <div id="dbProductionQueue" class="dashboard-list"></div>
+    @if (canProduction)
+    {
+        <section class="dashboard-panel dashboard-production-panel">
+            <div class="dashboard-section-head"><div><span>Flujo de trabajo</span><h2>Cola de produccion</h2></div><a class="btn btn-outline btn-sm" href="/Production">Gestionar</a></div>
+            <div id="dbProductionQueue" class="dashboard-production-grid"></div>
         </section>
-
-        <section class="card">
-            <div class="dashboard-section-head"><h3>Actividad reciente</h3></div>
-            <div id="dbActivity" class="dashboard-list"></div>
-        </section>
-    </div>
-</div>
+    }
+</main>
 
 @section Scripts {
 <script>
 (() => {
     const format = value => app.utils.formatCurrency(Number(value || 0));
-    const statusOf = order => order.estado || order.status || '';
+    const statusOf = order => order.estado || order.status || 'Sin estado';
+    const statusColors = ['#7c3aed','#c83c86','#e96868','#df9b2f','#2f8eaa','#42a674'];
+    const canProduction = @(canProduction ? "true" : "false");
+
+    function renderBars(orders) {
+        const items = orders.slice(0, 7).reverse();
+        const max = Math.max(...items.map(item => Number(item.total || 0)), 1);
+        document.getElementById('dashboardTrendBars').innerHTML = items.map(item => {
+            const height = Math.max(12, Math.round(Number(item.total || 0) / max * 100));
+            return `<div class="dashboard-bar-item" title="${format(item.total)}"><span>${format(item.total)}</span><div><i style="height:${height}%"></i></div><small>#${item.id}</small></div>`;
+        }).join('') || '<div class="dashboard-chart-empty">No hay pedidos para graficar.</div>';
+    }
+
+    function renderStatusChart(orders) {
+        const counts = orders.reduce((result, order) => { const key = statusOf(order); result[key] = (result[key] || 0) + 1; return result; }, {});
+        const entries = Object.entries(counts);
+        let cursor = 0;
+        const segments = entries.map(([name, count], index) => { const start = cursor; cursor += count / Math.max(orders.length, 1) * 100; return `${statusColors[index % statusColors.length]} ${start}% ${cursor}%`; });
+        document.getElementById('dashboardDonut').style.background = entries.length ? `conic-gradient(${segments.join(',')})` : '#eee8f1';
+        document.getElementById('dashboardDonutTotal').textContent = orders.length;
+        document.getElementById('dashboardStatusLegend').innerHTML = entries.map(([name, count], index) => `<div><i style="background:${statusColors[index % statusColors.length]}"></i><span>${name}</span><strong>${count}</strong></div>`).join('') || '<span class="text-muted">Sin pedidos registrados.</span>';
+    }
+
+    function renderPayments(orders) {
+        const paid = orders.filter(order => (order.paymentStatus || '') === 'Pagado').length;
+        const pending = orders.length - paid;
+        const paidValue = orders.filter(order => (order.paymentStatus || '') === 'Pagado').reduce((sum, order) => sum + Number(order.total || 0), 0);
+        document.getElementById('dashboardPaymentSummary').innerHTML = `
+            <div><span><i class="payment-dot payment-dot--paid"></i>Pagados</span><strong>${paid}</strong></div>
+            <div><span><i class="payment-dot payment-dot--pending"></i>Pendientes</span><strong>${pending}</strong></div>
+            <div class="payment-total"><span>Total cobrado</span><strong>${format(paidValue)}</strong></div>`;
+    }
 
     async function renderDashboard() {
         await BakeSmartStore.refresh();
-
-        const dashboard = await fetch('/api/dashboard').then(r => r.json());
+        const dashboard = await fetch('/api/dashboard').then(response => response.json());
         const orders = BakeSmartStore.orders.list();
         const inventory = BakeSmartStore.reports.inventory();
-        const logs = BakeSmartStore.logs();
         const kpis = dashboard.kpis || [];
-        const getKpi = (label, fallback) => kpis.find(x => x.label === label)?.value ?? fallback;
-
-        const pendingPayments = orders.filter(o => (o.paymentStatus || '') !== 'Pagado');
-        const production = orders.filter(o => ['Confirmado', 'En produccion', 'En producción', 'Listo', 'En camino'].includes(statusOf(o)));
-        const lowStock = getKpi('Alertas inventario', inventory.lowStock);
+        const getKpi = (label, fallback) => kpis.find(item => item.label === label)?.value ?? fallback;
+        const pendingPayments = orders.filter(order => (order.paymentStatus || '') !== 'Pagado');
+        const production = orders.filter(order => ['Confirmado','En produccion','En produccion','Listo','En camino'].includes(statusOf(order)));
+        const lowStock = Number(getKpi('Alertas inventario', inventory.lowStock));
 
         document.getElementById('dbOrders').textContent = getKpi('Pedidos hoy', orders.length);
         document.getElementById('dbOrdersHint').textContent = `${pendingPayments.length} con pago pendiente`;
         document.getElementById('dbSales').textContent = format(getKpi('Ventas (CRC)', 0));
-        document.getElementById('dbSalesHint').textContent = 'ventas registradas';
-        document.getElementById('dbProduction').textContent = production.length;
-        document.getElementById('dbProductionHint').textContent = `${orders.filter(o => statusOf(o) === 'Confirmado').length} listos para iniciar`;
+        document.getElementById('dbSalesHint').textContent = 'ventas registradas hoy';
+        document.getElementById('dbProduction').textContent = getKpi('En produccion', production.length);
+        document.getElementById('dbProductionHint').textContent = `${production.length} pedidos en flujo`;
         document.getElementById('dbLowStock').textContent = lowStock;
         document.getElementById('dbLowStockHint').textContent = lowStock ? 'requiere revision' : 'inventario estable';
 
-        document.getElementById('dbOrdersTable').innerHTML = orders.slice(0, 7).map(o => `
-            <tr>
-                <td><strong>#${o.id}</strong></td>
-                <td>${o.cliente || o.customerName || '-'}</td>
-                <td><span class="badge badge-primary">${statusOf(o)}</span></td>
-                <td><span class="badge ${(o.paymentStatus || '') === 'Pagado' ? 'badge-success' : 'badge-warning'}">${o.paymentStatus || '-'}</span></td>
-                <td>${format(o.total)}</td>
-            </tr>
-        `).join('') || `<tr><td colspan="5" class="text-center text-muted">No hay pedidos.</td></tr>`;
+        const table = document.getElementById('dbOrdersTable');
+        if (table) table.innerHTML = orders.slice(0, 6).map(order => `<tr><td><strong>#${order.id}</strong></td><td>${order.cliente || order.customerName || '-'}</td><td><span class="badge">${statusOf(order)}</span></td><td><span class="badge ${(order.paymentStatus || '') === 'Pagado' ? 'badge-success' : 'badge-warning'}">${order.paymentStatus || '-'}</span></td><td><strong>${format(order.total)}</strong></td></tr>`).join('') || '<tr><td colspan="5" class="text-center text-muted">No hay pedidos recientes.</td></tr>';
 
         const alerts = [];
-        if (Number(lowStock) > 0) alerts.push({ icon: 'fa-box-open', text: `${lowStock} productos tienen stock bajo.` });
-        if (pendingPayments.length) alerts.push({ icon: 'fa-money-bill-wave', text: `${pendingPayments.length} pedidos necesitan pago.` });
-        if (!alerts.length) alerts.push({ icon: 'fa-circle-check', text: 'No hay alertas criticas en este momento.' });
-        document.getElementById('dbAlerts').innerHTML = alerts.map(a => `<div class="dashboard-alert"><i class="fas ${a.icon}"></i>${a.text}</div>`).join('');
+        if (lowStock > 0) alerts.push({ icon:'fa-box-open', title:'Stock por revisar', text:`${lowStock} productos alcanzaron su minimo.` });
+        if (pendingPayments.length) alerts.push({ icon:'fa-money-bill-wave', title:'Cobros pendientes', text:`${pendingPayments.length} pedidos necesitan seguimiento.` });
+        if (!alerts.length) alerts.push({ icon:'fa-circle-check', title:'Operacion estable', text:'No hay alertas criticas en este momento.' });
+        document.getElementById('dbAlerts').innerHTML = alerts.map(item => `<div class="dashboard-alert"><i class="fas ${item.icon}"></i><div><strong>${item.title}</strong><span>${item.text}</span></div></div>`).join('');
 
-        document.getElementById('dbProductionQueue').innerHTML = orders
-            .filter(o => statusOf(o) !== 'Entregado')
-            .slice(0, 5)
-            .map(o => `<div class="dashboard-list-item"><div><strong>#${o.id} - ${o.cliente || o.customerName}</strong><span class="text-muted">${o.producto || 'Pedido personalizado'}</span></div><span class="badge badge-info">${statusOf(o)}</span></div>`)
-            .join('') || `<div class="text-muted">No hay cola activa.</div>`;
+        if (canProduction) document.getElementById('dbProductionQueue').innerHTML = orders.filter(order => statusOf(order) !== 'Entregado').slice(0, 4).map(order => `<article><span class="production-order">#${order.id}</span><strong>${order.cliente || order.customerName || 'Cliente'}</strong><small>${order.producto || 'Pedido personalizado'}</small><span class="badge">${statusOf(order)}</span></article>`).join('') || '<div class="dashboard-chart-empty">No hay pedidos activos en produccion.</div>';
 
-        document.getElementById('dbActivity').innerHTML = logs.slice(0, 6).map(log => `
-            <div class="dashboard-list-item">
-                <div><strong>${String(log.type || '').replaceAll('_', ' ')}</strong><span class="text-muted">${log.detail || ''}</span></div>
-                <span class="text-muted">${new Date(log.createdAt).toLocaleDateString('es-CR')}</span>
-            </div>
-        `).join('') || `<div class="text-muted">No hay actividad registrada.</div>`;
+        renderBars(orders);
+        renderStatusChart(orders);
+        renderPayments(orders);
     }
 
     renderDashboard().catch(error => app.toast.error(error.message));

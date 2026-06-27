@@ -1,6 +1,24 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/pos-index.css" asp-append-version="true" />
+    <style>
+        #posCartPanel:not(.pos-cart-open) {
+            position: fixed !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            transform: translateX(28px) scale(.98) !important;
+        }
+
+        #posCartPanel.pos-cart-open {
+            visibility: visible !important;
+        }
+
+        body.pos-cart-is-open #posCartToggle {
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+    </style>
 }
 ﻿@{
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -83,6 +101,8 @@
                         </span>
                     </div>
 
+                    <div class="pos-products-grid" id="posProductsGrid"></div>
+
                     <div class="table-container pos-products-table-wrapper">
                         <table class="table pos-products-table">
                             <thead>
@@ -99,23 +119,33 @@
                     </div>
                 </section>
 
-                <section class="pos-cart-section">
-                    <div class="pos-panel-header">
-                        <div>
-                            <div class="pos-panel-eyebrow">Venta actual</div>
-                            <h3 class="pos-panel-title">Carrito actual</h3>
-                        </div>
-                        <span class="badge badge-info" id="posCartItemsBadge">0 productos</span>
+                <button class="pos-cart-fab" type="button" id="posCartToggle" aria-label="Abrir carrito">
+                    <i class="fas fa-cart-shopping"></i>
+                    <span id="posCartFabCount">0</span>
+                </button>
+
+                <!-- Mobile cart backdrop -->
+                <div class="mobile-sheet-backdrop" id="posCartBackdrop" style="display:none;"></div>
+
+                <!-- Mobile bottom-sheet cart overlay -->
+                <div class="mobile-bottom-sheet" id="posCartSheet" role="dialog" aria-modal="true" aria-hidden="true" style="display:none;">
+                    <div class="mobile-bottom-sheet-header">
+                        <h3><i class="fas fa-cart-shopping" style="color:var(--primary);margin-right:.5rem;"></i>Carrito actual</h3>
+                        <button class="btn btn-ghost btn-sm" type="button" id="posCartSheetClose" aria-label="Cerrar carrito" style="width:40px;height:40px;padding:0!important;border-radius:50%!important;">
+                            <i class="fas fa-xmark"></i>
+                        </button>
                     </div>
 
-                    <div id="posCart" class="pos-cart-list"></div>
+                    <div id="posCartItemsBadge" style="margin-bottom:.75rem;">
+                        <span class="badge badge-info">0 productos</span>
+                    </div>
 
-                    <div class="hr"></div>
+                    <div id="posCart" class="pos-cart-list" style="margin-bottom:1rem;"></div>
 
                     <form id="posCheckoutForm" class="pos-checkout-form">
                         <div class="pos-form-block">
                             <label>Cliente</label>
-                            <input class="form-control" name="customerName" placeholder="Cliente de mostrador" />
+                            <input class="form-control pos-customer-input" name="customerName" list="posCustomerOptions" placeholder="Buscar cliente o escribir manualmente" />
                         </div>
 
                         <div class="pos-form-block">
@@ -134,6 +164,64 @@
                         </div>
 
                         <div class="pos-form-block">
+                            <label>Descuento</label>
+                            <input class="form-control" type="number" min="0" step="0.01" name="discountRate" value="0" placeholder="Ej. 0.05" />
+                        </div>
+
+                        <button class="btn btn-primary pos-submit-btn" type="submit" style="min-height:52px;">
+                            <i class="fas fa-check-circle"></i>
+                            Confirmar venta
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Desktop cart mini summary -->
+                <section class="pos-cart-section pos-cart-summary-panel" id="posCartPanel" aria-hidden="true" style="display:none;position:fixed;top:auto;right:24px;left:auto;bottom:96px;z-index:5300;width:min(420px,calc(100vw - 2rem));max-height:min(70vh,560px);overflow:auto;transform:translateX(28px) scale(.98);">
+                    <div class="pos-panel-header">
+                        <div>
+                            <div class="pos-panel-eyebrow">Resumen</div>
+                            <h3 class="pos-panel-title"><i class="fas fa-cart-shopping"></i> Carrito</h3>
+                        </div>
+                        <div class="pos-cart-panel-actions">
+                            <span class="badge badge-info" id="posCartItemsBadgeDesktop">0 productos</span>
+                            <button class="btn btn-outline btn-sm pos-cart-close" type="button" id="posCartClose" aria-label="Cerrar carrito">
+                                <i class="fas fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="posCartDesktop" class="pos-cart-list"></div>
+
+                    <div class="pos-cart-summary-actions">
+                        <button class="btn btn-outline" type="button" onclick="closeCartPanel()">Seguir vendiendo</button>
+                        <button class="btn btn-primary" type="button" onclick="continueToCart()">
+                            Continuar
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <form id="posCheckoutFormDesktop" class="pos-checkout-form" style="display:none;">
+                        <div class="pos-form-block">
+                            <label>Cliente</label>
+                            <input class="form-control pos-customer-input" name="customerName" list="posCustomerOptions" placeholder="Buscar cliente o escribir manualmente" />
+                        </div>
+
+                        <div class="pos-form-block">
+                            <label>Correo</label>
+                            <input class="form-control" name="customerEmail" placeholder="correo@cliente.com" />
+                        </div>
+
+                        <div class="pos-form-block">
+                            <label>Teléfono</label>
+                            <input class="form-control" name="customerPhone" placeholder="Teléfono" />
+                        </div>
+
+                        <div class="pos-form-block">
+                            <label>Método de pago</label>
+                            <select class="form-control" name="paymentMethod" id="posPaymentMethodDesktop"></select>
+                        </div>
+
+                        <div class="pos-form-block">
                             <label>Descuento adicional</label>
                             <input class="form-control" type="number" min="0" step="0.01" name="discountRate" value="0" placeholder="Ej. 0.05" />
                         </div>
@@ -144,35 +232,11 @@
                         </button>
                     </form>
                 </section>
+                <datalist id="posCustomerOptions"></datalist>
             </div>
         </section>
     </div>
 
-    <div class="card pos-history-card">
-        <div class="pos-panel-header">
-            <div>
-                <div class="pos-panel-eyebrow">Auditoría</div>
-                <h3 class="pos-panel-title">Historial de cajas</h3>
-            </div>
-        </div>
-
-        <div class="table-container">
-            <table class="table table--wide">
-                <thead>
-                    <tr>
-                        <th>Caja</th>
-                        <th>Apertura</th>
-                        <th>Cierre</th>
-                        <th>Responsable</th>
-                        <th>Total ventas</th>
-                        <th>Diferencia</th>
-                        <th>Estado</th>
-                    </tr>
-                </thead>
-                <tbody id="posSessionsTable"></tbody>
-            </table>
-        </div>
-    </div>
 </div>
 
 
@@ -190,12 +254,19 @@
             const getActiveSession = () => store.pos.activeSession();
             const getProducts = () => store.pos.searchProducts(searchInput.value);
 
+            ['posCartToggle', 'posCartBackdrop', 'posCartSheet', 'posCartPanel'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element && element.parentElement !== document.body) {
+                    document.body.appendChild(element);
+                }
+            });
+
             function renderSummary() {
                 const session = getActiveSession();
                 const products = getProducts();
                 const methods = getConfig().paymentMethods.filter(x => x.active);
 
-                document.getElementById('posSessionStatus').textContent = session ? `#${session.id}` : 'Sin abrir';
+                document.getElementById('posSessionStatus').textContent = session ? `#${String(session.id).slice(-6)}` : 'Sin abrir';
                 document.getElementById('posSessionSales').textContent = fmt(session?.totalSales || 0);
                 document.getElementById('posProductsCount').textContent = products.length;
                 document.getElementById('posMethodsCount').textContent = methods.length;
@@ -243,6 +314,7 @@
                 const methods = getConfig().paymentMethods;
                 const paymentPanel = document.getElementById('paymentMethodsPanel');
                 const paymentSelect = document.getElementById('posPaymentMethod');
+                const paymentSelectDesktop = document.getElementById('posPaymentMethodDesktop');
 
                 paymentPanel.innerHTML = methods.map(method => `
                     <div class="payment-method-card">
@@ -258,17 +330,49 @@
                     </div>
                 `).join('');
 
-                paymentSelect.innerHTML = methods
+                const activeMethods = methods
                     .filter(method => method.active)
                     .map(method => `<option value="${method.name}">${method.name}</option>`)
                     .join('');
+
+                if (paymentSelect) paymentSelect.innerHTML = activeMethods;
+                if (paymentSelectDesktop) paymentSelectDesktop.innerHTML = activeMethods;
+            }
+
+            function renderCustomerOptions() {
+                const options = document.getElementById('posCustomerOptions');
+                if (!options) return;
+
+                options.innerHTML = store.customers.list().map(customer => `
+                    <option value="${customer.fullName || customer.name || ''}" data-email="${customer.email || ''}" data-phone="${customer.phone || ''}">
+                        ${customer.email || customer.phone || 'Cliente registrado'}
+                    </option>
+                `).join('');
+            }
+
+            function applyCustomerSelection(input) {
+                const selected = store.customers.list().find(customer =>
+                    String(customer.fullName || customer.name || '').toLowerCase() === String(input.value || '').toLowerCase()
+                );
+
+                if (!selected) return;
+
+                const form = input.closest('form');
+                if (!form) return;
+
+                const emailInput = form.querySelector('[name="customerEmail"]');
+                const phoneInput = form.querySelector('[name="customerPhone"]');
+                if (emailInput) emailInput.value = selected.email || '';
+                if (phoneInput) phoneInput.value = selected.phone || '';
             }
 
             function renderProducts() {
                 const products = getProducts();
                 const tableBody = document.getElementById('posProductsTable');
+                const productsGrid = document.getElementById('posProductsGrid');
 
                 if (!products.length) {
+                    productsGrid.innerHTML = `<div class="card pos-empty-products">No se encontraron productos.</div>`;
                     tableBody.innerHTML = `
                         <tr>
                             <td colspan="5" class="text-center text-muted">No se encontraron productos.</td>
@@ -276,6 +380,32 @@
                     `;
                     return;
                 }
+
+                productsGrid.innerHTML = products.map(product => {
+                    const stockPct = Math.min(100, Math.round((product.stock / Math.max(product.stock, 20)) * 100));
+                    const stockColor = stockPct > 50 ? 'var(--success)' : stockPct > 20 ? 'var(--warning)' : 'var(--danger)';
+                    return `
+                    <article class="pos-product-card">
+                        <div class="pos-product-top">
+                            <span class="pos-product-code">${product.code}</span>
+                            <h4>${product.description}</h4>
+                        </div>
+                        <div class="pos-product-price-tag">
+                            <span>${fmt(product.price)}</span>
+                            <small>c/u</small>
+                        </div>
+                        <div class="pos-product-stock-bar">
+                            <div class="stock-track">
+                                <div class="stock-fill" style="width:${stockPct}%;background:${stockColor};"></div>
+                            </div>
+                            <span class="stock-label">${product.stock} disp.</span>
+                        </div>
+                        <button class="pos-product-cart-btn" type="button" onclick="addToCart(${product.id})">
+                            <i class="fas fa-cart-plus"></i>
+                            Agregar
+                        </button>
+                    </article>
+                `}).join('');
 
                 tableBody.innerHTML = products.map(product => `
                     <tr>
@@ -294,89 +424,124 @@
 
             function renderCart() {
                 const cartContainer = document.getElementById('posCart');
+                const cartContainerDesktop = document.getElementById('posCartDesktop');
                 document.getElementById('posCartItemsBadge').textContent = `${cart.length} producto${cart.length === 1 ? '' : 's'}`;
+                const desktopBadge = document.getElementById('posCartItemsBadgeDesktop');
+                if (desktopBadge) desktopBadge.textContent = `${cart.length} producto${cart.length === 1 ? '' : 's'}`;
+                document.getElementById('posCartFabCount').textContent = cart.length;
 
+                const cartHtml = buildCartHtml();
+                cartContainer.innerHTML = cartHtml;
+                if (cartContainerDesktop) cartContainerDesktop.innerHTML = buildCartSummaryHtml();
+                saveCartSnapshot();
+            }
+
+            function saveCartSnapshot() {
+                sessionStorage.setItem('bakesmart.pos.cart', JSON.stringify(cart));
+            }
+
+            window.continueToCart = () => {
+                saveCartSnapshot();
+                window.location.assign('/Pos/Cart');
+            };
+
+            function buildCartSummaryHtml() {
                 if (!cart.length) {
-                    cartContainer.innerHTML = `<div class="text-muted pos-cart-empty">Aún no has agregado productos.</div>`;
-                    return;
+                    return `
+                        <div class="pos-cart-mini-empty">
+                            <i class="fas fa-basket-shopping"></i>
+                            <strong>Carrito vacio</strong>
+                            <span>Agregue productos para continuar.</span>
+                        </div>
+                    `;
                 }
 
                 const subtotal = cart.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
                 const tax = subtotal * getConfig().iva;
                 const total = subtotal + tax;
-
-                cartContainer.innerHTML = `
-                    ${cart.map(item => `
-                        <div class="pos-cart-item">
-                            <div class="pos-cart-item-header">
-                                <div>
-                                    <strong>${item.name}</strong>
-                                    <div class="text-muted">${item.code}</div>
-                                </div>
-                                <button class="btn btn-outline btn-sm" type="button" onclick="removeCartItem(${item.productId})">
-                                    Quitar
-                                </button>
-                            </div>
-
-                            <div class="pos-cart-item-footer">
-                                <div class="pos-cart-actions">
-                                    <button class="btn btn-outline btn-sm" type="button" onclick="changeQty(${item.productId}, -1)">-</button>
-                                    <span>${item.quantity}</span>
-                                    <button class="btn btn-outline btn-sm" type="button" onclick="changeQty(${item.productId}, 1)">+</button>
-                                </div>
-                                <span style="font-weight:700;">${fmt(item.quantity * item.unitPrice)}</span>
-                            </div>
+                const preview = cart.slice(0, 3).map(item => `
+                    <div class="pos-cart-mini-line">
+                        <div>
+                            <strong>${item.name}</strong>
+                            <span>${item.quantity} x ${fmt(item.unitPrice)}</span>
                         </div>
-                    `).join('')}
+                        <b>${fmt(item.quantity * item.unitPrice)}</b>
+                    </div>
+                `).join('');
 
-                    <div class="pos-cart-totals">
-                        <div class="pos-total-row">
-                            <span>Subtotal</span>
-                            <strong>${fmt(subtotal)}</strong>
-                        </div>
-                        <div class="pos-total-row">
-                            <span>IVA</span>
-                            <strong>${fmt(tax)}</strong>
-                        </div>
-                        <div class="pos-total-row total-final">
-                            <span>Total</span>
+                return `
+                    <div class="pos-cart-mini">
+                        ${preview}
+                        ${cart.length > 3 ? `<div class="text-muted" style="font-weight:700;">+${cart.length - 3} producto${cart.length - 3 === 1 ? '' : 's'} mas</div>` : ''}
+                        <div class="pos-cart-mini-total">
+                            <span>Total con IVA</span>
                             <strong>${fmt(total)}</strong>
                         </div>
                     </div>
                 `;
             }
 
-            function renderSessionsTable() {
-                const sessions = store.pos.sessions();
-                const tableBody = document.getElementById('posSessionsTable');
-
-                if (!sessions.length) {
-                    tableBody.innerHTML = `
-                        <tr>
-                            <td colspan="7" class="text-center text-muted">No hay historial de cajas.</td>
-                        </tr>
-                    `;
-                    return;
+            function buildCartHtml() {
+                if (!cart.length) {
+                    return `<div class="text-muted pos-cart-empty" style="padding:.2rem 0 .65rem;">Aún no has agregado productos.</div>`;
                 }
 
-                tableBody.innerHTML = sessions.map(session => `
-                    <tr>
-                        <td>#${session.id}</td>
-                        <td>${new Date(session.openedAt).toLocaleString('es-CR')}</td>
-                        <td>${session.closedAt ? new Date(session.closedAt).toLocaleString('es-CR') : '-'}</td>
-                        <td>${session.userName}</td>
-                        <td>${fmt(session.totalSales || 0)}</td>
-                        <td>${fmt(session.difference || 0)}</td>
-                        <td>
-                            <span class="badge ${session.status === 'ACTIVO' ? 'badge-success' : 'badge-info'}">
-                                ${session.status}
-                            </span>
-                        </td>
-                    </tr>
-                `).join('');
+                const subtotal = cart.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
+                const tax = subtotal * getConfig().iva;
+                const total = subtotal + tax;
+
+                return `
+                    ${cart.map(item => {
+                        const lineTotal = item.quantity * item.unitPrice;
+                        return `
+                        <div class="pos-cart-item">
+                            <div class="pos-cart-item-header">
+                                <div>
+                                    <strong>${item.name}</strong>
+                                    <div class="text-muted" style="font-size:.78rem;">${item.code} · ${fmt(item.unitPrice)} c/u</div>
+                                </div>
+                                <button class="btn btn-ghost btn-sm" type="button" onclick="removeCartItem(${item.productId})" style="color:var(--danger);width:36px;height:36px;padding:0!important;border-radius:50%!important;flex-shrink:0;">
+                                    <i class="fas fa-trash-can"></i>
+                                </button>
+                            </div>
+
+                            <div class="pos-cart-item-footer">
+                                <div class="pos-cart-actions">
+                                    <button class="btn btn-outline btn-sm" type="button" onclick="changeQty(${item.productId}, -1)"><i class="fas fa-minus"></i></button>
+                                    <span style="font-weight:800;min-width:24px;text-align:center;">${item.quantity}</span>
+                                    <button class="btn btn-outline btn-sm" type="button" onclick="changeQty(${item.productId}, 1)"><i class="fas fa-plus"></i></button>
+                                </div>
+                                <span style="font-weight:800;font-size:1.05rem;color:var(--primary);">${fmt(lineTotal)}</span>
+                            </div>
+                        </div>
+                    `}).join('')}
+
+                    <div class="pos-cart-totals" style="background:color-mix(in srgb, var(--bg-alt) 82%, var(--primary-light) 18%);border-radius:14px;padding:.85rem;margin-top:.5rem;">
+                        <div class="pos-total-row" style="padding:.25rem 0;">
+                            <span style="color:var(--text-muted);font-size:.85rem;">Subtotal</span>
+                            <strong style="font-size:.95rem;">${fmt(subtotal)}</strong>
+                        </div>
+                        <div class="pos-total-row" style="padding:.25rem 0;">
+                            <span style="color:var(--text-muted);font-size:.85rem;">IVA (${(getConfig().iva * 100).toFixed(0)}%)</span>
+                            <strong style="font-size:.95rem;">${fmt(tax)}</strong>
+                        </div>
+                        <div class="hr" style="margin:.35rem 0;"></div>
+                        <div class="pos-total-row total-final" style="padding:.25rem 0;">
+                            <span style="font-weight:700;">Total</span>
+                            <strong style="font-size:1.25rem;color:var(--primary);">${fmt(total)}</strong>
+                        </div>
+                    </div>
+                `;
             }
 
             window.addToCart = (productId) => {
+                if (!getActiveSession()) {
+                    app.toast.warning('Debe abrir caja antes de agregar productos al carrito.');
+                    const amountInput = document.getElementById('openingAmount');
+                    if (amountInput) amountInput.focus();
+                    return;
+                }
+
                 const product = store.inventory.list().find(x => x.id === productId);
                 if (!product) return;
 
@@ -400,6 +565,7 @@
                 }
 
                 renderCart();
+                openCartPanel();
             };
 
             window.changeQty = (productId, delta) => {
@@ -432,74 +598,137 @@
                 }
             };
 
-            window.openSession = () => {
+            window.openSession = async () => {
                 try {
                     const amount = document.getElementById('openingAmount')?.value || 0;
-                    store.pos.openSession(amount, document.body.dataset.userEmail || '');
+                    await store.pos.openSession(amount);
                     app.toast.success('Caja abierta correctamente.');
-                    renderAll();
+                    await renderAll();
                 } catch (error) {
                     app.toast.error(error.message);
                 }
             };
 
-            window.closeSession = () => {
+            window.closeSession = async () => {
                 try {
                     const session = getActiveSession();
                     if (!session) return;
 
                     const declared = document.getElementById('declaredCash')?.value || 0;
-                    const result = store.pos.closeSession(session.id, declared);
+                    await store.pos.closeSession(session.id, declared);
 
-                    app.toast.info(`Caja cerrada. Diferencia: ${fmt(result.difference)}`);
-                    renderAll();
+                    app.toast.info('Caja cerrada correctamente.');
+                    await renderAll();
                 } catch (error) {
                     app.toast.error(error.message);
                 }
             };
 
-            checkoutForm.addEventListener('submit', (event) => {
-                event.preventDefault();
+            function handleCheckout(formEl) {
+                return async function (event) {
+                    event.preventDefault();
 
-                try {
-                    if (!cart.length) {
-                        throw new Error('Agrega productos al carrito antes de cobrar.');
+                    try {
+                        if (!cart.length) {
+                            throw new Error('Agrega productos al carrito antes de cobrar.');
+                        }
+
+                        const formData = Object.fromEntries(new FormData(formEl).entries());
+
+                        await store.pos.sell({
+                            ...formData,
+                            items: cart.map(item => ({
+                                productId: item.productId,
+                                quantity: item.quantity
+                            }))
+                        });
+
+                        cart.splice(0, cart.length);
+                        formEl.reset();
+
+                        app.toast.success('Venta registrada correctamente.');
+                        closeCartPanel();
+                        await renderAll();
+                    } catch (error) {
+                        app.toast.error(error.message);
                     }
+                };
+            }
 
-                    const formData = Object.fromEntries(new FormData(checkoutForm).entries());
-
-                    store.pos.sell({
-                        ...formData,
-                        items: cart.map(item => ({
-                            productId: item.productId,
-                            quantity: item.quantity
-                        }))
-                    });
-
-                    cart.splice(0, cart.length);
-                    checkoutForm.reset();
-
-                    app.toast.success('Venta registrada correctamente.');
-                    renderAll();
-                } catch (error) {
-                    app.toast.error(error.message);
-                }
-            });
+            checkoutForm.addEventListener('submit', handleCheckout(checkoutForm));
+            const desktopForm = document.getElementById('posCheckoutFormDesktop');
+            if (desktopForm) {
+                desktopForm.addEventListener('submit', handleCheckout(desktopForm));
+            }
 
             searchInput.addEventListener('input', () => {
                 renderProducts();
                 renderSummary();
             });
 
-            function renderAll() {
-                renderSummary();
-                renderSessionPanel();
-                renderProducts();
-                renderCart();
-                renderSessionsTable();
+            function openCartPanel() {
+                document.body.classList.add('pos-cart-is-open');
+
+                const panel = document.getElementById('posCartPanel');
+                if (panel) {
+                    panel.style.display = 'block';
+                    panel.classList.add('pos-cart-open');
+                    panel.setAttribute('aria-hidden', 'false');
+                }
             }
 
-            store.refresh().then(renderAll).catch(error => app.toast.error(error.message));
+            function closeCartPanel() {
+                const sheet = document.getElementById('posCartSheet');
+                const backdrop = document.getElementById('posCartBackdrop');
+                const panel = document.getElementById('posCartPanel');
+                document.body.classList.remove('pos-cart-is-open');
+
+                if (sheet) {
+                    sheet.classList.remove('open');
+                    sheet.setAttribute('aria-hidden', 'true');
+                    sheet.style.display = 'none';
+                }
+                if (backdrop) {
+                    backdrop.classList.remove('open');
+                    backdrop.style.display = 'none';
+                }
+                if (panel) {
+                    panel.classList.remove('pos-cart-open');
+                    panel.setAttribute('aria-hidden', 'true');
+                    panel.style.display = 'none';
+                }
+            }
+
+            const navSignal = app.navigation.getAbortSignal();
+            document.getElementById('posCartToggle').addEventListener('click', openCartPanel);
+            document.getElementById('posCartClose').addEventListener('click', closeCartPanel);
+            document.getElementById('posCartSheetClose').addEventListener('click', closeCartPanel);
+            document.getElementById('posCartBackdrop').addEventListener('click', closeCartPanel);
+            document.addEventListener('click', (event) => {
+                const panel = document.getElementById('posCartPanel');
+                const toggle = document.getElementById('posCartToggle');
+                if (!panel?.classList.contains('pos-cart-open')) return;
+                if (panel.contains(event.target) || toggle.contains(event.target)) return;
+                closeCartPanel();
+            }, { signal: navSignal });
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') closeCartPanel();
+            }, { signal: navSignal });
+
+            document.querySelectorAll('.pos-customer-input').forEach(input => {
+                input.addEventListener('change', () => applyCustomerSelection(input));
+            });
+
+            async function renderAll() {
+                renderSummary();
+                renderSessionPanel();
+                renderCustomerOptions();
+                renderProducts();
+                renderCart();
+            }
+
+            // Cargar sesiones de caja primero, luego refresh general
+            store.refreshPos().then(() => store.refresh().then(renderAll).catch(error => app.toast.error(error.message)));
         })();
     </script>
 }

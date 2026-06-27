@@ -113,6 +113,40 @@
         return store.roles.list().map(r => `<option value="${r.name}">${r.name}</option>`).join('');
     }
 
+    function validateUserData(data) {
+        const required = [
+            ['firstName', 'nombre'],
+            ['lastName', 'apellidos'],
+            ['email', 'correo'],
+            ['phone', 'telefono'],
+            ['role', 'rol']
+        ];
+
+        for (const [field, label] of required) {
+            if (!String(data[field] || '').trim()) {
+                app.toast.warning(`Complete el campo ${label}.`, { title: 'Dato requerido' });
+                return false;
+            }
+        }
+
+        if (!new RegExp('^[^\\s@@]+@@[^\\s@@]+\\.[^\\s@@]+$').test(String(data.email || '').trim())) {
+            app.toast.warning('Ingrese un correo valido.', { title: 'Correo incorrecto' });
+            return false;
+        }
+
+        if (!data.id && String(data.password || '').trim().length < 8) {
+            app.toast.warning('La contrasena debe tener al menos 8 caracteres.', { title: 'Contrasena requerida' });
+            return false;
+        }
+
+        if (data.id && data.password && String(data.password).trim().length < 8) {
+            app.toast.warning('La nueva contrasena debe tener al menos 8 caracteres.', { title: 'Contrasena corta' });
+            return false;
+        }
+
+        return true;
+    }
+
     function bindUserForm(item = null) {
         const form = document.getElementById('userForm');
         const roleSelect = document.getElementById('userRole');
@@ -129,15 +163,16 @@
             if (pass) pass.value = '';
         }
 
-        form.addEventListener('submit', (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const data = Object.fromEntries(new FormData(form).entries());
+            if (!validateUserData(data)) return;
             try {
-                if (data.id) {
-                    app.toast.info('Esta accion debe actualizarse desde el sistema.');
-                } else {
-                    app.toast.info('Esta accion debe crearse desde el sistema.');
-                }
+                await store.users.save(data);
+                app.toast.success(
+                    data.id ? 'Los datos del usuario se actualizaron correctamente.' : 'El usuario quedó creado correctamente.',
+                    { title: data.id ? 'Usuario actualizado' : 'Usuario agregado' }
+                );
                 app.modal.close();
                 renderRoles();
                 renderUsers();
@@ -209,16 +244,21 @@
 
     window.editUser = (id) => openUserModal(id);
 
-    window.toggleUser = (id) => {
+    window.toggleUser = async (id) => {
         try {
-            app.toast.info('Esta accion debe actualizarse desde el sistema.');
+            const user = await store.users.toggle(id);
+            app.toast.success(
+                user?.active ? 'El usuario quedó activo nuevamente.' : 'El usuario quedó inactivo.',
+                { title: 'Estado de usuario actualizado' }
+            );
+            renderUsers();
         } catch (error) {
             app.toast.error(error.message);
         }
     };
 
     document.getElementById('resetStoreUsers')?.addEventListener('click', () => {
-        app.toast.info('La informacion fue actualizada.');
+        app.toast.info('La información visible fue actualizada.', { title: 'Usuarios actualizados' });
         renderRoles();
         renderUsers();
     });

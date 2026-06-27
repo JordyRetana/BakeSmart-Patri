@@ -20,6 +20,10 @@ namespace BakeSmartPatri.Controllers
             return View(new CatalogIndexViewModel(categories, products));
         }
 
+        public IActionResult About() => View();
+
+        public IActionResult Contact() => View();
+
         public IActionResult Error() => View();
     }
 }

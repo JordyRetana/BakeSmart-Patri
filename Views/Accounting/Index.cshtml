@@ -255,11 +255,7 @@
                 render();
             }
 
-            window.addEventListener('load', initializePage, { once: true });
-
-            if (document.readyState === 'complete') {
-                initializePage();
-            }
+            app.page.ready(initializePage);
         })();
     </script>
 }

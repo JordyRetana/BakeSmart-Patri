@@ -85,13 +85,25 @@
                 </div>
 
                 <div class="client-dashboard-form-block">
+                    <label>Método de entrega</label>
+                    <select class="form-control" name="deliveryMethod" id="quickDeliveryMethod">
+                        <option value="domicilio">A domicilio</option>
+                        <option value="retiro">Retiro en tienda</option>
+                    </select>
+                </div>
+
+                <div id="quickDeliveryMapBlock" class="client-dashboard-form-block">
                     <label>Dirección de entrega</label>
-                    <input class="form-control"
-                           name="address"
-                           value="Escazú, San José"
-                           placeholder="Ej: Escazú, Centro Educativo El Carmelo o Ciudad de Panamá"
-                           required />
-                    <div class="field-hint">La ruta sale siempre desde Sagrada Familia.</div>
+                    <div style="margin-bottom:.75rem;">
+                        <select class="form-control" id="quickSavedAddress">
+                            <option value="">Usar direccion predeterminada o seleccionar en el mapa</option>
+                        </select>
+                    </div>
+                    <input type="hidden" name="address" id="quickAddress" />
+                    <input type="hidden" name="destinationLatitude" id="quickLat" />
+                    <input type="hidden" name="destinationLongitude" id="quickLng" />
+                    <input type="hidden" name="customerAddressId" id="quickCustomerAddressId" />
+                    <div id="quickOrderMapPicker"></div>
                 </div>
 
                 <div class="client-dashboard-product-grid">
@@ -160,6 +172,7 @@
 
 
 @section Scripts {
+    <script src="~/js/bakesmart-map-picker.js" asp-append-version="true"></script>
     <script>
         (() => {
             const page = document.getElementById('clientDashboardPage');
@@ -167,9 +180,13 @@
             const form = document.getElementById('quickOrderForm');
             const productSelect = document.getElementById('quickOrderProduct');
             const submitBtn = document.getElementById('quickOrderSubmitBtn');
+            const deliveryMethod = document.getElementById('quickDeliveryMethod');
+            const deliveryMapBlock = document.getElementById('quickDeliveryMapBlock');
+            const savedAddressSelect = document.getElementById('quickSavedAddress');
 
             let pageInitialized = false;
             let productsLoaded = false;
+            let quickMapPicker;
 
             function showPage() {
                 page.classList.remove('client-dashboard-page--loading');
@@ -219,17 +236,122 @@
                 `;
             }
 
-            form.addEventListener('submit', (e) => {
+            function toggleQuickDelivery() {
+                const isPickup = deliveryMethod.value === 'retiro';
+                deliveryMapBlock.style.display = isPickup ? 'none' : 'block';
+            }
+
+            async function initQuickMap() {
+                await BakeSmartStore.refresh();
+                const config = BakeSmartStore.pos.config();
+                let defaultAddress = null;
+
+                try {
+                    defaultAddress = await BakeSmartStore.loadDefaultAddress();
+                    if (defaultAddress) {
+                        const option = document.createElement('option');
+                        option.value = String(defaultAddress.id);
+                        option.textContent = `${defaultAddress.label} - ${defaultAddress.addressLine}`;
+                        option.dataset.address = defaultAddress.addressLine;
+                        option.dataset.lat = defaultAddress.latitude ?? '';
+                        option.dataset.lng = defaultAddress.longitude ?? '';
+                        option.selected = true;
+                        savedAddressSelect.appendChild(option);
+                    }
+                } catch (_) { /* no saved address yet */ }
+
+                quickMapPicker = await BakeSmartMapPicker.create('quickOrderMapPicker', {
+                    address: defaultAddress?.addressLine || '',
+                    lat: defaultAddress?.latitude || config.originLatitude,
+                    lng: defaultAddress?.longitude || config.originLongitude,
+                    onChange(values) {
+                        document.getElementById('quickAddress').value = values.address || '';
+                        document.getElementById('quickLat').value = values.lat ?? '';
+                        document.getElementById('quickLng').value = values.lng ?? '';
+                        document.getElementById('quickCustomerAddressId').value = '';
+                        savedAddressSelect.value = '';
+                    }
+                });
+
+                if (defaultAddress) {
+                    document.getElementById('quickAddress').value = defaultAddress.addressLine;
+                    document.getElementById('quickLat').value = defaultAddress.latitude ?? '';
+                    document.getElementById('quickLng').value = defaultAddress.longitude ?? '';
+                    document.getElementById('quickCustomerAddressId').value = defaultAddress.id;
+                }
+            }
+
+            savedAddressSelect.addEventListener('change', () => {
+                const option = savedAddressSelect.selectedOptions[0];
+                if (!option || !option.value) return;
+                quickMapPicker.setValues({
+                    address: option.dataset.address,
+                    lat: option.dataset.lat,
+                    lng: option.dataset.lng
+                });
+                document.getElementById('quickAddress').value = option.dataset.address;
+                document.getElementById('quickLat').value = option.dataset.lat;
+                document.getElementById('quickLng').value = option.dataset.lng;
+                document.getElementById('quickCustomerAddressId').value = option.value;
+            });
+
+            deliveryMethod.addEventListener('change', toggleQuickDelivery);
+
+            form.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
                 const data = Object.fromEntries(new FormData(form).entries());
+                const isPickup = data.deliveryMethod === 'retiro';
+
+                if (!isPickup && quickMapPicker) {
+                    const mapValues = quickMapPicker.applyToFields({
+                        address: 'quickAddress',
+                        lat: 'quickLat',
+                        lng: 'quickLng'
+                    });
+                    data.address = mapValues.address || data.address;
+                    data.destinationLatitude = mapValues.lat;
+                    data.destinationLongitude = mapValues.lng;
+                }
+
+                if (!isPickup && quickMapPicker && !quickMapPicker.isValid()) {
+                    app.toast.error('Seleccione una ubicacion valida de entrega en el mapa.');
+                    return;
+                }
 
                 try {
                     submitBtn.disabled = true;
+                    const product = BakeSmartStore.inventory.list().find(p => Number(p.id) === Number(data.productId));
+                    if (!product) throw new Error('Producto no disponible.');
 
-                    const paymentStatus = data.paymentMethod === 'Pendiente' ? 'Pendiente' : 'Pagado';
+                    const quantity = Number(data.quantity || 1);
+                    const subtotal = Number(product.price) * quantity;
+                    const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
+                    const tax = subtotal * taxRate;
+                    const total = subtotal + tax;
 
-                    app.toast.info('Crear pedidos debe completarse desde el formulario de pedidos.');
+                    await BakeSmartStore.createOrder({
+                        customerName: data.customerName,
+                        email: data.customerEmail,
+                        phone: data.customerPhone,
+                        productId: Number(data.productId),
+                        quantity,
+                        unitPrice: Number(product.price),
+                        subtotal,
+                        tax,
+                        total,
+                        deliveryDate: data.deliveryDate,
+                        address: isPickup ? null : data.address,
+                        notes: data.notes || null,
+                        paymentMethod: data.paymentMethod,
+                        destinationLatitude: isPickup ? null : Number(data.destinationLatitude),
+                        destinationLongitude: isPickup ? null : Number(data.destinationLongitude),
+                        customerAddressId: isPickup ? null : (data.customerAddressId ? Number(data.customerAddressId) : null),
+                        deliveryMethod: data.deliveryMethod
+                    });
+
+                    await BakeSmartStore.refresh();
+                    app.toast.success('Pedido registrado correctamente.');
                     renderSummary();
                     form.quantity.value = 1;
                     form.notes.value = '';
@@ -248,6 +370,8 @@
                 form.deliveryDate.value = tomorrow;
 
                 await fillProductsOnce();
+                await initQuickMap();
+                toggleQuickDelivery();
                 renderSummary();
 
                 requestAnimationFrame(() => {
@@ -255,11 +379,7 @@
                 });
             }
 
-            if (document.readyState === 'complete') {
-                initializePage().catch(error => app.toast.error(error.message));
-            } else {
-                window.addEventListener('load', () => initializePage().catch(error => app.toast.error(error.message)), { once: true });
-            }
+            app.page.ready(() => initializePage());
         })();
     </script>
 }
