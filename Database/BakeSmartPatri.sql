@@ -1,6 +1,6 @@
 /*
     BakeSmart Patri - SQL Server database
-    Script normalizado para SQL Server.
+    Script normalizado para SQL Server..
 
     Ejecutar en SQL Server Management Studio o Azure Data Studio.
     Luego validar /api/health con la conexion configurada en appsettings.
