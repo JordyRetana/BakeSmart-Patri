@@ -1,0 +1,281 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Mi Perfil";
+
+    var profile = ViewData["Profile"] as BakeSmartPatri.Data.SqlStore.ProfileData;
+    var firstName = profile?.FirstName ?? "";
+    var lastName  = profile?.LastName  ?? "";
+    var email     = profile?.Email     ?? "";
+    var phone     = profile?.Phone     ?? "";
+    var address   = profile?.Address   ?? "";
+    var role      = profile?.Role      ?? "";
+    var addressId = profile?.CustomerAddressId;
+    var addressLabel = profile?.AddressLabel ?? "Principal";
+    var latitude  = profile?.Latitude?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
+    var longitude = profile?.Longitude?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
+    var roleLabel = role == "Cliente" ? "Cuenta personal" : role;
+
+    var initials = "";
+    if (firstName.Length > 0) initials += firstName[0];
+    if (lastName.Length  > 0) initials += lastName[0];
+    initials = initials.ToUpper();
+
+    var successMsg = TempData["ToastSuccess"] as string ?? "";
+    var errorMsg   = TempData["ToastError"]   as string ?? "";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/account-profile.css?v=20260625-v1" />
+}
+
+<div class="page-shell profile-page">
+
+    @if (!string.IsNullOrWhiteSpace(successMsg))
+    {
+        <div class="profile-toast profile-toast--success">
+            <i class="fas fa-circle-check"></i> @successMsg
+        </div>
+    }
+    @if (!string.IsNullOrWhiteSpace(errorMsg))
+    {
+        <div class="profile-toast profile-toast--error">
+            <i class="fas fa-triangle-exclamation"></i> @errorMsg
+        </div>
+    }
+
+    @* Hero card *@
+    <div class="profile-hero card">
+        <div class="profile-hero__bg"></div>
+        <div class="profile-hero__content">
+            <div class="profile-avatar">@initials</div>
+            <div class="profile-hero__info">
+                <h1 class="profile-hero__name">@firstName @lastName</h1>
+                <span class="profile-hero__role">
+                    <i class="fas fa-shield-halved"></i> @roleLabel
+                </span>
+                <span class="profile-hero__email">
+                    <i class="fas fa-envelope"></i> @email
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="profile-grid">
+        @* Datos personales *@
+        <section class="card profile-section">
+            <div class="profile-section__head">
+                <div class="profile-section__icon profile-section__icon--blue">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div>
+                    <h2 class="profile-section__title">Informacion personal</h2>
+                    <p class="profile-section__sub">Actualiza tu nombre, telefono y direccion</p>
+                </div>
+            </div>
+
+            <form method="post" action="/Account/Profile" class="profile-form" id="formPersonal">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="newPassword" value="" />
+                <input type="hidden" name="confirmPassword" value="" />
+
+                <div class="profile-form__row">
+                    <div class="profile-field">
+                        <label class="profile-label" for="firstName">Nombre</label>
+                        <div class="profile-input-wrap">
+                            <i class="fas fa-user profile-input-icon"></i>
+                            <input class="profile-input" type="text" id="firstName" name="firstName"
+                                   value="@firstName" required placeholder="Tu nombre" />
+                        </div>
+                    </div>
+                    <div class="profile-field">
+                        <label class="profile-label" for="lastName">Apellido</label>
+                        <div class="profile-input-wrap">
+                            <i class="fas fa-user profile-input-icon"></i>
+                            <input class="profile-input" type="text" id="lastName" name="lastName"
+                                   value="@lastName" required placeholder="Tu apellido" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-field">
+                    <label class="profile-label">Correo electronico</label>
+                    <div class="profile-input-wrap profile-input-wrap--disabled">
+                        <i class="fas fa-envelope profile-input-icon"></i>
+                        <input class="profile-input" type="email" value="@email" disabled />
+                        <span class="profile-input-badge">No editable</span>
+                    </div>
+                </div>
+
+                <div class="profile-form__row">
+                    <div class="profile-field">
+                        <label class="profile-label" for="phone">Telefono</label>
+                        <div class="profile-input-wrap">
+                            <i class="fas fa-phone profile-input-icon"></i>
+                            <input class="profile-input" type="tel" id="phone" name="phone"
+                                   value="@phone" placeholder="Ej: +506 8888-8888" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-field">
+                    <label class="profile-label">Direccion predeterminada</label>
+                    <input type="hidden" name="customerAddressId" id="customerAddressId" value="@(addressId?.ToString() ?? "")" />
+                    <input type="hidden" name="addressLabel" id="addressLabel" value="@addressLabel" />
+                    <input type="hidden" name="address" id="address" value="@address" />
+                    <input type="hidden" name="latitude" id="latitude" value="@latitude" />
+                    <input type="hidden" name="longitude" id="longitude" value="@longitude" />
+                    <div id="profileMapPicker"></div>
+                </div>
+
+                <div class="profile-form__actions">
+                    <button type="submit" class="btn btn-primary profile-save-btn">
+                        <i class="fas fa-save"></i> Guardar cambios
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        @* Cambiar contrasena *@
+        <section class="card profile-section">
+            <div class="profile-section__head">
+                <div class="profile-section__icon profile-section__icon--purple">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <div>
+                    <h2 class="profile-section__title">Cambiar contrasena</h2>
+                    <p class="profile-section__sub">Usa minimo 8 caracteres</p>
+                </div>
+            </div>
+
+            <form method="post" action="/Account/Profile" class="profile-form" id="formPassword">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="firstName" value="@firstName" />
+                <input type="hidden" name="lastName"  value="@lastName"  />
+                <input type="hidden" name="phone"     value="@phone"     />
+                <input type="hidden" name="address" id="passwordFormAddress" value="@address" />
+
+                <div class="profile-field">
+                    <label class="profile-label" for="newPassword">Nueva contrasena</label>
+                    <div class="profile-input-wrap">
+                        <i class="fas fa-lock profile-input-icon"></i>
+                        <input class="profile-input" type="password" id="newPassword" name="newPassword"
+                               placeholder="********" minlength="8" />
+                        <button type="button" class="profile-eye-btn" onclick="togglePass('newPassword', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="profile-field">
+                    <label class="profile-label" for="confirmPassword">Confirmar contrasena</label>
+                    <div class="profile-input-wrap">
+                        <i class="fas fa-lock profile-input-icon"></i>
+                        <input class="profile-input" type="password" id="confirmPassword" name="confirmPassword"
+                               placeholder="********" minlength="8" />
+                        <button type="button" class="profile-eye-btn" onclick="togglePass('confirmPassword', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="profile-password-strength" id="passStrength" style="display:none">
+                    <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+                    <span class="strength-label" id="strengthLabel"></span>
+                </div>
+
+                <div class="profile-form__actions">
+                    <button type="submit" class="btn btn-outline profile-save-btn" id="btnChangePass" disabled>
+                        <i class="fas fa-key"></i> Cambiar contrasena
+                    </button>
+                </div>
+            </form>
+        </section>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/bakesmart-map-picker.js" asp-append-version="true"></script>
+<script>
+let profileMapPicker;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    profileMapPicker = await BakeSmartMapPicker.create('profileMapPicker', {
+        label: document.getElementById('addressLabel').value,
+        address: document.getElementById('address').value,
+        lat: document.getElementById('latitude').value,
+        lng: document.getElementById('longitude').value,
+        onChange(values) {
+            document.getElementById('address').value = values.address || '';
+            document.getElementById('latitude').value = values.lat ?? '';
+            document.getElementById('longitude').value = values.lng ?? '';
+        }
+    });
+
+    document.getElementById('formPersonal').addEventListener('submit', (event) => {
+        const isClient = @(role == "Cliente" ? "true" : "false");
+        if (profileMapPicker) {
+            profileMapPicker.applyToFields({
+                address: 'address',
+                lat: 'latitude',
+                lng: 'longitude'
+            });
+        }
+        if (isClient && document.getElementById('address').value && profileMapPicker && !profileMapPicker.isValid()) {
+            event.preventDefault();
+            app.toast.error('Seleccione una ubicacion valida en el mapa antes de guardar.');
+        }
+    });
+});
+
+function togglePass(id, btn) {
+    const input = document.getElementById(id);
+    const isPass = input.type === 'password';
+    input.type = isPass ? 'text' : 'password';
+    btn.querySelector('i').className = isPass ? 'fas fa-eye-slash' : 'fas fa-eye';
+}
+
+const newPassInput  = document.getElementById('newPassword');
+const confirmInput  = document.getElementById('confirmPassword');
+const strengthBar   = document.getElementById('passStrength');
+const strengthFill  = document.getElementById('strengthFill');
+const strengthLabel = document.getElementById('strengthLabel');
+const btnChange     = document.getElementById('btnChangePass');
+
+function scorePassword(p) {
+    let score = 0;
+    if (p.length >= 8)  score++;
+    if (p.length >= 12) score++;
+    if (/[A-Z]/.test(p)) score++;
+    if (/[0-9]/.test(p)) score++;
+    if (/[^A-Za-z0-9]/.test(p)) score++;
+    return score;
+}
+
+newPassInput.addEventListener('input', () => {
+    const val = newPassInput.value;
+    if (!val) { strengthBar.style.display = 'none'; return; }
+    strengthBar.style.display = 'flex';
+    const score = scorePassword(val);
+    const pct   = (score / 5) * 100;
+    const colors = ['#ef4444','#f59e0b','#f59e0b','#10b981','#10b981'];
+    const labels = ['Muy débil','Débil','Regular','Buena','Fuerte'];
+    strengthFill.style.width   = pct + '%';
+    strengthFill.style.background = colors[score - 1] || '#ef4444';
+    strengthLabel.textContent  = labels[score - 1] || 'Muy débil';
+    updateBtn();
+});
+
+confirmInput.addEventListener('input', updateBtn);
+
+function updateBtn() {
+    const match = newPassInput.value === confirmInput.value && confirmInput.value.length > 0;
+    const ok    = newPassInput.value.length >= 8;
+    btnChange.disabled = !(match && ok);
+}
+
+// Auto-dismiss toast
+document.querySelectorAll('.profile-toast').forEach(t => {
+    setTimeout(() => t.classList.add('profile-toast--hide'), 4000);
+});
+</script>
+}

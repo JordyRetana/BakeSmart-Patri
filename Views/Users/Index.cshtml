@@ -1,3 +1,7 @@
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/users-index.css" asp-append-version="true" />
+}
 ﻿@{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Usuarios";
@@ -10,7 +14,7 @@
         </div>
         <div class="page-actions">
             <input id="userSearch" class="form-control" placeholder="Buscar por nombre, correo o teléfono" style="min-width:260px;" />
-            <button type="button" id="resetStoreUsers" class="btn btn-outline"><i class="fas fa-rotate-left"></i> Restaurar demo</button>
+            <button type="button" id="resetStoreUsers" class="btn btn-outline"><i class="fas fa-rotate"></i> Recargar</button>
             <button type="button" id="openUserQuickActions" class="btn btn-primary"><i class="fas fa-user-plus"></i> Acciones rápidas</button>
         </div>
     </div>
@@ -94,37 +98,7 @@
     </div>
 </div>
 
-<style>
-    .users-workspace {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        gap: 1rem;
-        align-items: start;
-    }
 
-    .users-action-card,
-    .users-roles-card {
-        width: 100%;
-    }
-
-    .users-roles-card #rolePreview {
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    }
-
-    @@media (min-width: 1180px) {
-        .users-workspace {
-            grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
-        }
-    }
-
-    @@media (max-width: 768px) {
-        .page-actions,
-        .page-actions .form-control,
-        .page-actions .btn {
-            width: 100%;
-        }
-    }
-</style>
 
 @section Scripts {
 <script>
@@ -137,6 +111,40 @@
 
     function roleOptions() {
         return store.roles.list().map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+    }
+
+    function validateUserData(data) {
+        const required = [
+            ['firstName', 'nombre'],
+            ['lastName', 'apellidos'],
+            ['email', 'correo'],
+            ['phone', 'telefono'],
+            ['role', 'rol']
+        ];
+
+        for (const [field, label] of required) {
+            if (!String(data[field] || '').trim()) {
+                app.toast.warning(`Complete el campo ${label}.`, { title: 'Dato requerido' });
+                return false;
+            }
+        }
+
+        if (!new RegExp('^[^\\s@@]+@@[^\\s@@]+\\.[^\\s@@]+$').test(String(data.email || '').trim())) {
+            app.toast.warning('Ingrese un correo valido.', { title: 'Correo incorrecto' });
+            return false;
+        }
+
+        if (!data.id && String(data.password || '').trim().length < 8) {
+            app.toast.warning('La contrasena debe tener al menos 8 caracteres.', { title: 'Contrasena requerida' });
+            return false;
+        }
+
+        if (data.id && data.password && String(data.password).trim().length < 8) {
+            app.toast.warning('La nueva contrasena debe tener al menos 8 caracteres.', { title: 'Contrasena corta' });
+            return false;
+        }
+
+        return true;
     }
 
     function bindUserForm(item = null) {
@@ -155,17 +163,16 @@
             if (pass) pass.value = '';
         }
 
-        form.addEventListener('submit', (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const data = Object.fromEntries(new FormData(form).entries());
+            if (!validateUserData(data)) return;
             try {
-                if (data.id) {
-                    store.users.update(data.id, data);
-                    app.toast.success('Usuario actualizado correctamente.');
-                } else {
-                    store.users.create(data);
-                    app.toast.success('Usuario creado correctamente.');
-                }
+                await store.users.save(data);
+                app.toast.success(
+                    data.id ? 'Los datos del usuario se actualizaron correctamente.' : 'El usuario quedó creado correctamente.',
+                    { title: data.id ? 'Usuario actualizado' : 'Usuario agregado' }
+                );
                 app.modal.close();
                 renderRoles();
                 renderUsers();
@@ -237,19 +244,21 @@
 
     window.editUser = (id) => openUserModal(id);
 
-    window.toggleUser = (id) => {
+    window.toggleUser = async (id) => {
         try {
-            store.users.toggle(id);
+            const user = await store.users.toggle(id);
+            app.toast.success(
+                user?.active ? 'El usuario quedó activo nuevamente.' : 'El usuario quedó inactivo.',
+                { title: 'Estado de usuario actualizado' }
+            );
             renderUsers();
-            app.toast.info('Estado del usuario actualizado.');
         } catch (error) {
             app.toast.error(error.message);
         }
     };
 
     document.getElementById('resetStoreUsers')?.addEventListener('click', () => {
-        store.reset();
-        app.toast.info('Se restauró la data demo completa.');
+        app.toast.info('La información visible fue actualizada.', { title: 'Usuarios actualizados' });
         renderRoles();
         renderUsers();
     });
@@ -257,8 +266,10 @@
     openQuickActions.addEventListener('click', () => openUserModal());
     search.addEventListener('input', renderUsers);
 
-    renderRoles();
-    renderUsers();
+    store.refresh().then(() => {
+        renderRoles();
+        renderUsers();
+    }).catch(error => app.toast.error(error.message));
 })();
 </script>
 }

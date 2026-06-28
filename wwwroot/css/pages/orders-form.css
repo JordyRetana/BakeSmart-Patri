@@ -1,0 +1,61 @@
+.order-form-page,
+.order-details-page,
+.order-form-page *,
+.order-details-page * {
+    min-width: 0;
+}
+
+.order-form-page .grid,
+.order-details-page .grid {
+    max-width: 100%;
+}
+
+.order-form-page .table-container,
+.order-details-page .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+    .order-form-page,
+    .order-details-page {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .order-form-page .grid,
+    .order-details-page .grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .order-form-page .btn,
+    .order-details-page .btn,
+    .order-form-page input,
+    .order-form-page select,
+    .order-form-page textarea {
+        width: 100%;
+    }
+
+    .order-form-page .card,
+    .order-details-page .card {
+        padding: 1rem !important;
+    }
+}
+
+@media (max-width: 520px) {
+    .order-form-page .steps {
+        align-items: stretch;
+        flex-direction: column;
+        gap: .75rem;
+    }
+
+    .order-form-page .steps::before {
+        display: none;
+    }
+
+    .order-form-page [style*="display:flex"],
+    .order-details-page [style*="display:flex"] {
+        align-items: stretch !important;
+        flex-direction: column !important;
+    }
+}

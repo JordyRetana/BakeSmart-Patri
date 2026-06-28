@@ -1,294 +1,71 @@
-﻿@{
+@{
     Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Iniciar Sesión";
+    ViewData["Title"] = "Iniciar sesión";
 }
 
-<div class="login-page-shell">
-    <div class="card login-card">
-        <div class="login-hero">
-            <div class="login-logo-wrap">
-                <i class="fas fa-crown"></i>
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/account-login.css" asp-append-version="true" />
+}
+
+<main class="login-page-shell">
+    <section class="login-card">
+        <aside class="login-hero">
+            <img class="login-hero-photo" src="/img/products/cupcakes-decorados.jpg" alt="Cupcakes BakeSmart Patri" />
+            <div class="login-hero-shade"></div>
+            <div class="login-hero-content">
+                <div class="login-logo-wrap"><img src="/img/logo.png" alt="BakeSmart Patri" /></div>
+                <span class="login-eyebrow">Repostería artesanal</span>
+                <h1>Bienvenido a BakeSmart Patri</h1>
+                <p>Ingresa para administrar tu trabajo o continuar con tus pedidos.</p>
+            </div>
+        </aside>
+
+        <div class="login-form-panel">
+            <div class="login-form-heading">
+                <span>Acceso seguro</span>
+                <h2>Iniciar sesión</h2>
+                <p>Utiliza las credenciales asignadas a tu cuenta.</p>
             </div>
 
-            <h2 class="login-title">Bienvenido a BakeSmart Patri</h2>
-            <p class="text-muted login-subtitle">
-                Inicia sesión para acceder a tu panel personalizado.
-            </p>
-        </div>
-
-        @if (!string.IsNullOrEmpty(TempData["Toast"]?.ToString()))
-        {
-            <div class="alert alert-error login-alert">
-                <i class="fas fa-exclamation-circle"></i>
-                @TempData["Toast"]
-            </div>
-        }
-
-        <form method="post" action="/Account/Login" class="login-form" id="loginForm">
-            @Html.AntiForgeryToken()
-
-            <div class="input-group">
-                <label class="input-label">
-                    <i class="fas fa-envelope"></i>
-                    Correo electrónico
-                </label>
-                <input type="email"
-                       class="input"
-                       name="email"
-                       placeholder="tu@correo.com"
-                       required
-                       autocomplete="username" />
-            </div>
-
-            <div class="input-group">
-                <label class="input-label">
-                    <i class="fas fa-lock"></i>
-                    Contraseña
-                </label>
-                <input type="password"
-                       class="input"
-                       name="password"
-                       placeholder="••••••••"
-                       required
-                       autocomplete="current-password" />
-            </div>
-
-            <div class="login-options">
-                <label class="login-remember">
-                    <input type="checkbox" name="remember" />
-                    <span class="text-muted">Recordarme</span>
-                </label>
-
-                <a href="#" class="text-muted login-forgot">¿Olvidaste tu contraseña?</a>
-            </div>
-
-            <button type="submit" class="btn btn-primary btn-block btn-lg login-submit-btn" id="loginSubmitBtn">
-                <i class="fas fa-sign-in-alt"></i>
-                Iniciar sesión
-            </button>
-
-            <div class="login-divider">
-                <span>Usuarios de prueba</span>
-            </div>
-
-            <div class="login-demo-grid">
-                <button type="button" class="btn btn-outline btn-sm" onclick="fillCredentials('admin@demo.com', '1234')">
-                    Admin
-                </button>
-                <button type="button" class="btn btn-outline btn-sm" onclick="fillCredentials('staff@demo.com', '1234')">
-                    Staff
-                </button>
-                <button type="button" class="btn btn-outline btn-sm" onclick="fillCredentials('cliente@demo.com', '1234')">
-                    Cliente
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <div class="card login-help-card">
-        <div class="login-help-row">
-            <i class="fas fa-info-circle"></i>
-            <div>
-                <p><strong>Demo:</strong> Usa cualquiera de las cuentas de prueba.</p>
-                <p class="text-muted">Todos los usuarios tienen contraseña: 1234</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-    .login-page-shell {
-        max-width: 500px;
-        margin: 2rem auto;
-        display: grid;
-        gap: 1rem;
-    }
-
-    .login-card,
-    .login-help-card {
-        width: 100%;
-    }
-
-    .login-card {
-        text-align: center;
-    }
-
-    .login-hero {
-        margin-bottom: 2rem;
-    }
-
-    .login-logo-wrap {
-        width: 84px;
-        height: 84px;
-        background: var(--gradient-primary);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 1rem;
-        box-shadow: var(--shadow-md);
-    }
-
-        .login-logo-wrap i {
-            font-size: 2rem;
-            color: white;
-        }
-
-    .login-title {
-        margin: 0;
-    }
-
-    .login-subtitle {
-        margin: .5rem 0 0;
-    }
-
-    .login-alert {
-        margin-bottom: 1rem;
-        text-align: left;
-    }
-
-    .login-form {
-        text-align: left;
-    }
-
-    .input-label {
-        display: flex;
-        align-items: center;
-        gap: .4rem;
-    }
-
-    .login-options {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-        flex-wrap: wrap;
-    }
-
-    .login-remember {
-        display: flex;
-        align-items: center;
-        gap: .5rem;
-    }
-
-    .login-forgot {
-        font-size: .875rem;
-    }
-
-    .login-submit-btn {
-        margin-bottom: 1rem;
-    }
-
-    .login-divider {
-        margin: 1.5rem 0;
-        position: relative;
-        text-align: center;
-    }
-
-        .login-divider::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: 50%;
-            height: 1px;
-            background: var(--border);
-            transform: translateY(-50%);
-        }
-
-        .login-divider span {
-            position: relative;
-            background: var(--bg-card);
-            padding: 0 1rem;
-            color: var(--text-muted);
-            font-size: .9rem;
-        }
-
-    .login-demo-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: .5rem;
-    }
-
-    .login-help-row {
-        display: flex;
-        gap: 1rem;
-        align-items: center;
-    }
-
-        .login-help-row i {
-            color: var(--primary);
-            font-size: 1.5rem;
-            flex-shrink: 0;
-        }
-
-        .login-help-row p {
-            margin: 0;
-        }
-
-            .login-help-row p + p {
-                margin-top: .25rem;
-                font-size: .875rem;
+            @if (!string.IsNullOrEmpty(TempData["Toast"]?.ToString()))
+            {
+                <div class="alert alert-error login-alert"><i class="fas fa-circle-exclamation"></i><span>@TempData["Toast"]</span></div>
             }
 
-    .login-card:hover,
-    .login-help-card:hover {
-        transform: none;
-        box-shadow: var(--shadow-sm);
-        border-color: var(--border);
-    }
+            <form method="post" action="/Account/Login" class="login-form" id="loginForm">
+                @Html.AntiForgeryToken()
+                <div class="input-group">
+                    <label class="input-label" for="loginEmail"><i class="fas fa-envelope"></i> Correo electrónico</label>
+                    <input id="loginEmail" type="email" class="input" name="email" placeholder="tu@correo.com" required autocomplete="username" />
+                </div>
+                <div class="input-group">
+                    <label class="input-label" for="loginPassword"><i class="fas fa-lock"></i> Contraseña</label>
+                    <input id="loginPassword" type="password" class="input" name="password" placeholder="Escribe tu contraseña" required autocomplete="current-password" />
+                </div>
+                <div class="login-options">
+                    <label class="login-remember"><input type="checkbox" name="remember" /><span>Recordarme</span></label>
+                    <a href="/Account/ForgotPassword" class="login-forgot">¿Olvidaste tu contraseña?</a>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block btn-lg login-submit-btn" id="loginSubmitBtn"><i class="fas fa-right-to-bracket"></i> Iniciar sesión</button>
+                <div class="login-divider"><span>o</span></div>
+                <a href="/Account/Register" class="btn btn-outline btn-block"><i class="fas fa-user-plus"></i> Crear cuenta de cliente</a>
+            </form>
+        </div>
+    </section>
 
-        .login-card:hover::after,
-        .login-help-card:hover::after {
-            opacity: 0;
-        }
+    <div class="login-security-note"><i class="fas fa-shield-halved"></i><span><strong>Conexión protegida</strong> Tus credenciales se validan de forma segura.</span></div>
+</main>
 
-    @@media (max-width: 640px) {
-        .login-page-shell {
-            margin: 1rem auto;
-            padding: 0 1rem;
-        }
-
-        .login-demo-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .login-options {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-    }
-</style>
-
+@section Scripts {
 <script>
-    (() => {
-        let pageInitialized = false;
-
-        window.fillCredentials = (email, password) => {
-            document.querySelector('input[name="email"]').value = email;
-            document.querySelector('input[name="password"]').value = password;
-        };
-
-        function initializePage() {
-            if (pageInitialized) return;
-            pageInitialized = true;
-
-            const form = document.getElementById('loginForm');
-            const submitBtn = document.getElementById('loginSubmitBtn');
-
-            if (!form || !submitBtn) return;
-
-            form.addEventListener('submit', () => {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ingresando...';
-            }, { once: true });
-        }
-
-        window.addEventListener('load', initializePage, { once: true });
-
-        if (document.readyState === 'complete') {
-            initializePage();
-        }
-    })();
+(() => {
+    const form = document.getElementById('loginForm');
+    const button = document.getElementById('loginSubmitBtn');
+    if (!form || !button) return;
+    form.addEventListener('submit', () => {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ingresando...';
+    }, { once: true });
+})();
 </script>
+}

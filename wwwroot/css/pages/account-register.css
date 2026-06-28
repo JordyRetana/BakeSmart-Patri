@@ -1,0 +1,146 @@
+.auth-page-shell {
+    max-width: 780px;
+    margin: 2rem auto;
+    display: grid;
+    gap: 1rem;
+}
+
+.auth-card,
+.auth-help-card {
+    width: 100%;
+}
+
+.auth-hero {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.auth-logo-wrap {
+    width: 84px;
+    height: 84px;
+    background: var(--gradient-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    box-shadow: var(--shadow-md);
+}
+
+.auth-logo-wrap i {
+    font-size: 2rem;
+    color: white;
+}
+
+.auth-title {
+    margin: 0;
+}
+
+.auth-subtitle {
+    margin: .5rem 0 0;
+}
+
+.auth-alert {
+    margin-bottom: 1rem;
+}
+
+.register-form {
+    text-align: left;
+}
+
+.register-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.register-full {
+    grid-column: 1 / -1;
+}
+
+.input-label {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+}
+
+.register-submit-btn {
+    margin-top: 1rem;
+}
+
+.auth-help-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.auth-help-row {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.auth-help-row i {
+    color: var(--primary);
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.auth-help-row p {
+    margin: 0;
+}
+
+.auth-help-row p + p {
+    margin-top: .25rem;
+    font-size: .875rem;
+}
+
+.auth-card:hover,
+.auth-help-card:hover {
+    transform: none;
+    box-shadow: var(--shadow-sm);
+    border-color: var(--border);
+}
+
+.auth-card:hover::after,
+.auth-help-card:hover::after {
+    opacity: 0;
+}
+
+@media (max-width: 720px) {
+    .auth-page-shell {
+        margin: 1rem auto;
+        padding: 0 1rem;
+    }
+
+    .register-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .register-full {
+        grid-column: auto;
+    }
+
+    .auth-help-card {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 430px) {
+    .auth-card,
+    .auth-help-card {
+        padding: 1rem !important;
+    }
+
+    .auth-logo-wrap {
+        width: 68px;
+        height: 68px;
+    }
+
+    .register-submit-btn,
+    .auth-help-card .btn {
+        width: 100%;
+    }
+}

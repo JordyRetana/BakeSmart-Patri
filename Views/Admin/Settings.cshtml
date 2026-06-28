@@ -1,0 +1,148 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Configuración del sitio";
+}
+
+<div class="page-shell">
+    <div class="page-header" style="margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+        <div>
+            <h1 style="margin:0; display:flex; align-items:center; gap:.75rem;">
+                <i class="fas fa-cog" style="color:var(--primary);"></i> Configuración del sitio
+            </h1>
+            <p class="text-muted" style="margin:.35rem 0 0;">
+                Administra la configuración general del sistema: IVA, descuentos, ubicación y contenido del sitio.
+            </p>
+        </div>
+    </div>
+
+    <form id="settingsForm" class="card" style="max-width:920px;padding:1.5rem;">
+        <h3 style="margin-top:0;">Configuración general</h3>
+
+        <div class="grid grid-2" style="gap:1rem;margin-bottom:1.5rem;">
+            <div>
+                <label>IVA (%)</label>
+                <input class="form-control" name="iva" type="number" min="0" max="1" step="0.01" />
+                <small class="text-muted">Ej: 0.13 para 13%</small>
+            </div>
+            <div>
+                <label>Descuento cliente frecuente (%)</label>
+                <input class="form-control" name="frequentCustomerDiscount" type="number" min="0" max="1" step="0.01" />
+                <small class="text-muted">Ej: 0.05 para 5%</small>
+            </div>
+        </div>
+
+        <h3>Ubicación del negocio</h3>
+        <p class="text-muted" style="margin-top:0;">Busca o selecciona en el mapa el origen de entregas y pedidos.</p>
+        <div class="grid grid-2" style="gap:1rem;margin-bottom:1rem;">
+            <div>
+                <label>Nombre del origen</label>
+                <input class="form-control" name="originName" id="originName" />
+            </div>
+            <div>
+                <label>Dirección del negocio</label>
+                <input class="form-control" name="originAddress" id="originAddress" readonly />
+            </div>
+        </div>
+        <input type="hidden" name="originLatitude" id="originLatitude" />
+        <input type="hidden" name="originLongitude" id="originLongitude" />
+        <div id="originMapPicker" style="margin-bottom:1.5rem;"></div>
+
+        <h3>Contenido del sitio</h3>
+        <div style="margin-bottom:1.5rem;">
+            <div style="margin-bottom:.75rem;">
+                <label>Título del hero (página principal)</label>
+                <input class="form-control" name="siteHeroTitle" placeholder="El sabor que endulza tus momentos" />
+            </div>
+            <div style="margin-bottom:.75rem;">
+                <label>Descripción del hero</label>
+                <textarea class="form-control" name="siteHeroDescription" rows="2" placeholder="Pasteleria artesanal con amor y tradicion..."></textarea>
+            </div>
+            <div style="margin-bottom:.75rem;">
+                <label>Teléfono de contacto</label>
+                <input class="form-control" name="sitePhone" placeholder="+506 8888-8888" />
+            </div>
+            <div style="margin-bottom:.75rem;">
+                <label>Correo de contacto</label>
+                <input class="form-control" name="siteEmail" placeholder="info@bakesmart.com" />
+            </div>
+            <div style="margin-bottom:.75rem;">
+                <label>Dirección pública del sitio</label>
+                <input class="form-control" name="siteAddress" placeholder="San Jose, Costa Rica" />
+            </div>
+        </div>
+
+        <div style="display:flex;gap:1rem;justify-content:flex-end;">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Guardar configuración
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="~/js/bakesmart-map-picker.js" asp-append-version="true"></script>
+    <script>
+        (() => {
+            const form = document.getElementById('settingsForm');
+            const fields = ['iva','frequentCustomerDiscount','originName','originAddress','originLatitude','originLongitude',
+                           'siteHeroTitle','siteHeroDescription','sitePhone','siteEmail','siteAddress'];
+            let originPicker;
+
+            async function loadSettings() {
+                const settings = await BakeSmartStore.loadSettings();
+                fields.forEach(key => {
+                    const input = form.querySelector(`[name="${key}"]`);
+                    const value = settings.find(s => s.key === key)?.value;
+                    if (input && value !== undefined) input.value = value;
+                });
+
+                originPicker = await BakeSmartMapPicker.create('originMapPicker', {
+                    label: document.getElementById('originName').value,
+                    address: document.getElementById('originAddress').value,
+                    lat: document.getElementById('originLatitude').value,
+                    lng: document.getElementById('originLongitude').value,
+                    onChange(values) {
+                        document.getElementById('originAddress').value = values.address || '';
+                        document.getElementById('originLatitude').value = values.lat ?? '';
+                        document.getElementById('originLongitude').value = values.lng ?? '';
+                    }
+                });
+            }
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                if (!originPicker.isValid()) {
+                    app.toast.error('Seleccione una ubicacion valida del negocio en el mapa.');
+                    return;
+                }
+
+                const mapValues = originPicker.applyToFields({
+                    address: 'originAddress',
+                    lat: 'originLatitude',
+                    lng: 'originLongitude'
+                });
+
+                const formData = new FormData(form);
+                const settings = {};
+                fields.forEach(key => {
+                    let value = formData.get(key);
+                    if (key === 'originAddress') value = mapValues.address || value;
+                    if (key === 'originLatitude') value = String(mapValues.lat ?? '');
+                    if (key === 'originLongitude') value = String(mapValues.lng ?? '');
+                    if (value !== null && value !== '') settings[key] = value;
+                });
+
+                try {
+                    await BakeSmartStore.saveAllSettings(settings);
+                    app.toast.success('Configuración guardada correctamente.');
+                    BakeSmartStore.refresh();
+                } catch (error) {
+                    app.toast.error(error.message);
+                }
+            });
+
+            loadSettings().catch(error => app.toast.error(error.message));
+        })();
+    </script>
+}

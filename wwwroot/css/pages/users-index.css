@@ -1,0 +1,46 @@
+.users-workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .users-action-card,
+    .users-roles-card {
+        width: 100%;
+    }
+
+    .users-roles-card #rolePreview {
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    @media (min-width: 1180px) {
+        .users-workspace {
+            grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .page-actions,
+        .page-actions .form-control,
+        .page-actions .btn {
+            width: 100%;
+        }
+    }
+
+@media (max-width: 520px) {
+    .users-workspace,
+    .users-roles-card #rolePreview,
+    #userForm {
+        grid-template-columns: 1fr !important;
+    }
+
+    #userForm > div {
+        grid-column: auto !important;
+    }
+
+    .users-action-card,
+    .users-roles-card {
+        padding: .9rem !important;
+    }
+}

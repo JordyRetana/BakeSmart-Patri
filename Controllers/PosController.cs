@@ -7,5 +7,7 @@ namespace BakeSmartPatri.Controllers
     public class PosController : Controller
     {
         public IActionResult Index() => View();
+
+        public IActionResult Cart() => View();
     }
 }

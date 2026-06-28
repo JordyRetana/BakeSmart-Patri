@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BakeSmartPatri.Controllers
@@ -12,7 +12,7 @@ namespace BakeSmartPatri.Controllers
 
         public IActionResult Track() => View();
 
-        public IActionResult Profile() => View();
+        public IActionResult Profile() => Redirect("/Account/Profile");
 
         [HttpGet]
         [AllowAnonymous]
