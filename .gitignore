@@ -13,6 +13,11 @@
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
+# Build output
+bin/
+obj/
+.data-protection/
+
 # Mono auto generated files
 mono_crash.*
 
@@ -396,3 +401,4 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+nul

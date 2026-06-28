@@ -10,4 +10,11 @@
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="artifacts\**;.dotnet-sdk8\**" />
+    <Content Remove="artifacts\**;.dotnet-sdk8\**" />
+    <EmbeddedResource Remove="artifacts\**;.dotnet-sdk8\**" />
+    <None Remove="artifacts\**;.dotnet-sdk8\**" />
+  </ItemGroup>
+
 </Project>

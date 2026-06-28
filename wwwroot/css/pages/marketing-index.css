@@ -1,0 +1,263 @@
+.marketing-page {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+        .marketing-page,
+        .marketing-page * {
+            min-width: 0;
+        }
+
+    .marketing-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .marketing-title {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+    }
+
+        .marketing-title i {
+            color: var(--primary);
+        }
+
+    .marketing-subtitle {
+        margin: .35rem 0 0;
+    }
+
+    .marketing-search-box {
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .marketing-kpi-grid {
+        gap: 1rem;
+    }
+
+    .marketing-kpi-card h2 {
+        margin: .35rem 0 0;
+    }
+
+    .marketing-main-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(360px, .8fr);
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .marketing-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .marketing-panel-header-compact {
+        margin-bottom: .85rem;
+    }
+
+    .marketing-panel-title {
+        margin: 0;
+        font-size: 1.15rem;
+    }
+
+    .marketing-table-wrap {
+        max-width: 100%;
+        overflow: auto;
+    }
+
+    .marketing-table {
+        width: 100%;
+        min-width: 0 !important;
+        margin: 0;
+    }
+
+    .marketing-customers-table {
+        table-layout: fixed;
+    }
+
+        .marketing-customers-table th:nth-child(1),
+        .marketing-customers-table td:nth-child(1) {
+            width: 29%;
+        }
+
+        .marketing-customers-table th:nth-child(2),
+        .marketing-customers-table td:nth-child(2) {
+            width: 27%;
+        }
+
+        .marketing-customers-table th:nth-child(3),
+        .marketing-customers-table td:nth-child(3) {
+            width: 16%;
+            white-space: nowrap;
+        }
+
+        .marketing-customers-table th:nth-child(4),
+        .marketing-customers-table td:nth-child(4) {
+            width: 12%;
+            white-space: nowrap;
+        }
+
+        .marketing-customers-table th:nth-child(5),
+        .marketing-customers-table td:nth-child(5) {
+            width: 16%;
+            white-space: nowrap;
+            text-align: right;
+        }
+
+        .marketing-customers-table td:nth-child(1),
+        .marketing-customers-table td:nth-child(2) {
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .marketing-customers-table .btn-sm {
+            min-width: 132px;
+        }
+
+    .marketing-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--bg-card);
+    }
+
+    .marketing-form {
+        display: grid;
+        gap: .9rem;
+    }
+
+    .marketing-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .marketing-form-block {
+        display: grid;
+        gap: .35rem;
+    }
+
+        .marketing-form-block label {
+            margin: 0;
+            font-size: .82rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+    .marketing-form-full {
+        width: 100%;
+    }
+
+    .marketing-submit-btn {
+        width: 100%;
+    }
+
+    .marketing-promotions-list {
+        display: grid;
+        gap: .75rem;
+    }
+
+    .marketing-promo-card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: .9rem 1rem;
+        background: var(--bg-card);
+    }
+
+    .marketing-promo-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .marketing-promo-name {
+        font-weight: 700;
+        margin-bottom: .2rem;
+    }
+
+    .marketing-promo-dates {
+        color: var(--text-light);
+        font-size: .9rem;
+    }
+
+    .marketing-customers-card,
+    .marketing-promotions-card {
+        align-self: start;
+    }
+
+    .marketing-page .card:hover {
+        transform: none;
+        box-shadow: var(--shadow-sm);
+        border-color: var(--border);
+    }
+
+        .marketing-page .card:hover::after {
+            opacity: 0;
+        }
+
+    .marketing-page .table tbody tr:hover {
+        transform: none;
+        box-shadow: none;
+        background: var(--bg-alt);
+    }
+
+    .marketing-page .btn:hover,
+    .marketing-page .btn-primary:hover,
+    .marketing-page .btn-outline:hover,
+    .marketing-page .btn-secondary:hover,
+    .marketing-page .btn-ghost:hover {
+        transform: none;
+    }
+
+    .marketing-page .form-control:focus,
+    .marketing-page input:focus,
+    .marketing-page select:focus,
+    .marketing-page textarea:focus {
+        transform: none;
+    }
+
+    @media (max-width: 1200px) {
+        .marketing-main-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .marketing-search-box {
+            max-width: 100%;
+        }
+
+        .marketing-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .marketing-customers-table {
+            table-layout: auto;
+            min-width: 920px !important;
+        }
+    }
+
+@media (max-width: 520px) {
+    .marketing-header,
+    .marketing-panel-header,
+    .marketing-promo-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .marketing-submit-btn,
+    .marketing-customers-table .btn-sm {
+        width: 100%;
+    }
+}

@@ -1,15 +1,8 @@
-﻿@{
+@model BakeSmartPatri.Models.CatalogIndexViewModel
+@{
     Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Catálogo de Productos";
-
-    var categories = new[] {
-        new { Id = 1, Name = "Pasteles", Icon = "fa-cake-candles" },
-        new { Id = 2, Name = "Cupcakes", Icon = "fa-cupcake" },
-        new { Id = 3, Name = "Postres", Icon = "fa-ice-cream" },
-        new { Id = 4, Name = "Galletas", Icon = "fa-cookie" },
-        new { Id = 5, Name = "Tortas", Icon = "fa-birthday-cake" },
-        new { Id = 6, Name = "Bebidas", Icon = "fa-mug-hot" }
-    };
+    ViewData["Title"] = "Catalogo de Productos";
+    var culture = new System.Globalization.CultureInfo("es-CR");
 }
 
 <div class="page-header" style="margin: 2rem 0 2.5rem 1.5rem;">
@@ -19,10 +12,10 @@
             <div>
                 <h1 style="margin: 0; font-size: 2.5rem; display: flex; align-items: center; gap: 0.75rem;">
                     <i class="fas fa-book-open" style="color: var(--primary);"></i>
-                    Nuestro Catálogo
+                    Nuestro Catalogo
                 </h1>
                 <p class="text-muted" style="margin-top: 0.5rem; font-size: 1rem; max-width: 600px;">
-                    Descubre nuestra selección de productos artesanales, preparados con los mejores ingredientes y mucho amor
+                    Descubre nuestra seleccion de productos artesanales, preparados con los mejores ingredientes y mucho amor
                 </p>
             </div>
         </div>
@@ -35,652 +28,304 @@
     </div>
 </div>
 
-
 <div style="padding: 0 1.5rem;">
-    
-    <div style="max-width: 600px; margin: 0 auto 2rem;">
-        <div style="display: flex; gap: 0.5rem;">
-            <div style="flex: 1; position: relative;">
+    <div class="catalog-toolbar" style="max-width: 600px; margin: 0 auto 2rem;">
+        <div class="catalog-search-row" style="display: flex; gap: 0.5rem;">
+            <div class="catalog-search-field" style="flex: 1; position: relative;">
                 <i class="fas fa-search" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
                 <input type="text" class="input" id="searchProduct" placeholder="Buscar productos por nombre..." style="padding-left: 2.5rem;">
             </div>
-            <button class="btn btn-primary" onclick="filterProducts()">
+            <button class="btn btn-primary catalog-search-button" type="button" onclick="filterProducts()">
                 <i class="fas fa-search"></i>
             </button>
         </div>
     </div>
 
-    
-    <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 3rem; flex-wrap: wrap;">
-        <button class="btn btn-primary category-btn active" data-category="all" style="border-radius: 9999px;" onclick="filterCategory('all')">
+    <div class="catalog-category-list" style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 3rem; flex-wrap: wrap;">
+        <button class="btn btn-primary category-btn active" data-category="all" style="border-radius: 9999px;" type="button" onclick="filterCategory('all')">
             <i class="fas fa-th-large"></i>
             Todos
         </button>
-        @foreach (var cat in categories)
+        @foreach (var category in Model.Categories)
         {
-            <button class="btn btn-outline category-btn" data-category="@cat.Name" style="border-radius: 9999px;" onclick="filterCategory('@cat.Name')">
-                <i class="fas @cat.Icon"></i>
-                @cat.Name
+            <button class="btn btn-outline category-btn" data-category="@category.Name" style="border-radius: 9999px;" type="button" onclick="filterCategory('@category.Name')">
+                <i class="fas @category.Icon"></i>
+                @category.Name
             </button>
         }
     </div>
 
-    
-    <div class="grid grid-3" id="productsGrid" style="gap: 1.5rem;">
-        
-        <div class="card product-card" data-category="Pasteles" data-price="32000" data-name="Red Velvet">
-            <div style="position: relative;">
-                <img src="https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                     alt="Red Velvet"
-                     style="width: 100%; height: 250px; object-fit: cover; border-radius: var(--radius);">
-                <span class="badge badge-primary" style="position: absolute; top: 1rem; right: 1rem;">Más vendido</span>
-                <button class="btn btn-ghost btn-sm favorite-btn" style="position: absolute; top: 1rem; left: 1rem; background: white; border-radius: 50%; width: 40px; height: 40px;" onclick="toggleFavorite(this)">
-                    <i class="far fa-heart"></i>
-                </button>
-            </div>
+    <div class="grid grid-3" id="productsGrid" style="gap: clamp(1rem, 1.8vw, 2rem);">
+        @foreach (var product in Model.Products)
+        {
+            <div class="card product-card" data-id="@product.Id" data-category="@product.Category" data-price="@product.UnitPrice" data-name="@product.Name">
+                <div style="position: relative;">
+                    <img src="@product.ImageUrl"
+                         alt="@product.AltText"
+                         onerror="this.src='/img/products/producto-sin-imagen.svg';"
+                         style="width: 100%; height: 250px; object-fit: cover; border-radius: var(--radius);">
+                    <span class="badge badge-primary" style="position: absolute; top: 1rem; right: 1rem;">@product.Category</span>
+                    <button class="btn btn-ghost btn-sm favorite-btn" style="position: absolute; top: 1rem; left: 1rem; background: white; border-radius: 50%; width: 40px; height: 40px;" onclick="toggleFavorite(this)">
+                        <i class="far fa-heart"></i>
+                    </button>
+                </div>
 
-            <div style="margin-top: 1rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 style="margin: 0;">Red Velvet</h3>
-                    <div style="display: flex; gap: 0.25rem; color: #fbbf24;">
-                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                        <span class="text-muted" style="margin-left: 0.25rem;">(45)</span>
+                <div style="margin-top: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; gap: .75rem;">
+                        <h3 style="margin: 0; font-size: clamp(1.05rem, 1.4vw, 1.25rem); line-height: 1.25;">@product.Name</h3>
+                        <div style="display: flex; gap: 0.25rem; color: #fbbf24; flex-shrink: 0;">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
                     </div>
-                </div>
 
-                <p class="text-muted" style="margin-bottom: 1rem;">
-                    Pastel de terciopelo rojo con capas de crema de queso. Esponjoso y delicioso.
-                </p>
+                    <p class="text-muted" style="margin-bottom: 1rem;">
+                        @product.Description
+                    </p>
 
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
-                    <span class="badge"><i class="fas fa-weight-scale"></i> 1.5kg</span>
-                    <span class="badge"><i class="fas fa-utensils"></i> 12 porciones</span>
-                    <span class="badge badge-success"><i class="fas fa-leaf"></i> Gluten Free</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
-                    <div>
-                        <span class="text-muted" style="text-decoration: line-through; font-size: 0.875rem;">₡35,000</span>
-                        <span style="font-weight: 700; font-size: 1.5rem; color: var(--primary); margin-left: 0.5rem;">₡32,000</span>
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <span class="badge"><i class="fas fa-barcode"></i> @product.Code</span>
+                        <span class="badge"><i class="fas fa-box"></i> @product.Stock.ToString("0.##") @product.Unit</span>
+                        @if (!string.IsNullOrWhiteSpace(product.Subcategory))
+                        {
+                            <span class="badge badge-info">@product.Subcategory</span>
+                        }
                     </div>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <a href="/Catalog/Details/1" class="btn btn-outline btn-sm" title="Ver detalles">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <a href="/Orders/Create?product=1" class="btn btn-primary btn-sm">
-                            <i class="fas fa-shopping-cart"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        
-        <div class="card product-card" data-category="Postres" data-price="28000" data-name="Cheesecake Frutos Rojos">
-            <div style="position: relative;">
-                <img src="https://images.unsplash.com/photo-1533134242443-d4fd215305ad?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                     alt="Cheesecake"
-                     style="width: 100%; height: 250px; object-fit: cover; border-radius: var(--radius);">
-                <span class="badge badge-success" style="position: absolute; top: 1rem; right: 1rem;">Recomendado</span>
-                <button class="btn btn-ghost btn-sm favorite-btn" style="position: absolute; top: 1rem; left: 1rem; background: white; border-radius: 50%; width: 40px; height: 40px;" onclick="toggleFavorite(this)">
-                    <i class="far fa-heart"></i>
-                </button>
-            </div>
-
-            <div style="margin-top: 1rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 style="margin: 0;">Cheesecake Frutos Rojos</h3>
-                    <div style="display: flex; gap: 0.25rem; color: #fbbf24;">
-                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                        <span class="text-muted" style="margin-left: 0.25rem;">(38)</span>
-                    </div>
-                </div>
-
-                <p class="text-muted" style="margin-bottom: 1rem;">
-                    Cheesecake cremoso con topping de frutos rojos y base de galleta crocante.
-                </p>
-
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
-                    <span class="badge"><i class="fas fa-utensils"></i> 12 porciones</span>
-                    <span class="badge"><i class="fas fa-snowflake"></i> Sin hornear</span>
-                    <span class="badge badge-warning"><i class="fas fa-seedling"></i> Frutas frescas</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
-                    <span style="font-weight: 700; font-size: 1.5rem; color: var(--primary);">₡28,000</span>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <a href="/Catalog/Details/2" class="btn btn-outline btn-sm" title="Ver detalles">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <a href="/Orders/Create?product=2" class="btn btn-primary btn-sm">
-                            <i class="fas fa-shopping-cart"></i>
-                        </a>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                        <span style="font-weight: 700; font-size: 1.5rem; color: var(--primary);">@product.UnitPrice.ToString("C0", culture)</span>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <a href="/Catalog/Details/@product.Id" class="btn btn-outline btn-sm" title="Ver detalles">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <button class="btn btn-primary btn-sm" type="button"
+                                    data-id="@product.Id"
+                                    data-name="@product.Name"
+                                    data-price="@product.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                    onclick="addProductButton(this)">
+                                <i class="fas fa-shopping-cart"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        
-        <div class="card product-card" data-category="Cupcakes" data-price="18000" data-name="Cupcakes Decorados">
-            <div style="position: relative;">
-                <img src="https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                     alt="Cupcakes"
-                     style="width: 100%; height: 250px; object-fit: cover; border-radius: var(--radius);">
-                <span class="badge badge-warning" style="position: absolute; top: 1rem; right: 1rem;">Especial</span>
-                <button class="btn btn-ghost btn-sm favorite-btn" style="position: absolute; top: 1rem; left: 1rem; background: white; border-radius: 50%; width: 40px; height: 40px;" onclick="toggleFavorite(this)">
-                    <i class="far fa-heart"></i>
-                </button>
-            </div>
-
-            <div style="margin-top: 1rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 style="margin: 0;">Cupcakes Decorados</h3>
-                    <div style="display: flex; gap: 0.25rem; color: #fbbf24;">
-                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
-                        <span class="text-muted" style="margin-left: 0.25rem;">(52)</span>
-                    </div>
-                </div>
-
-                <p class="text-muted" style="margin-bottom: 1rem;">
-                    Cupcakes esponjosos con decoración personalizada. Ideales para eventos y celebraciones.
-                </p>
-
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
-                    <span class="badge"><i class="fas fa-box"></i> Caja x12</span>
-                    <span class="badge"><i class="fas fa-ice-cream"></i> Sabores mixtos</span>
-                    <span class="badge badge-primary"><i class="fas fa-paint-brush"></i> Personalizables</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
-                    <span style="font-weight: 700; font-size: 1.5rem; color: var(--primary);">₡18,000</span>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <a href="/Catalog/Details/3" class="btn btn-outline btn-sm" title="Ver detalles">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <a href="/Orders/Create?product=3" class="btn btn-primary btn-sm">
-                            <i class="fas fa-shopping-cart"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        
-        
-        <div class="card product-card" data-category="Pasteles" data-price="24000" data-name="Tres Leches">
-            <div style="position: relative;">
-                <img src="https://images.unsplash.com/photo-1551024506-0bccd828d307?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                     alt="Tres Leches"
-                     style="width: 100%; height: 250px; object-fit: cover; border-radius: var(--radius);">
-                <button class="btn btn-ghost btn-sm favorite-btn" style="position: absolute; top: 1rem; left: 1rem; background: white; border-radius: 50%; width: 40px; height: 40px;" onclick="toggleFavorite(this)">
-                    <i class="far fa-heart"></i>
-                </button>
-            </div>
-
-            <div style="margin-top: 1rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 style="margin: 0;">Tres Leches</h3>
-                    <div style="display: flex; gap: 0.25rem; color: #fbbf24;">
-                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                        <span class="text-muted" style="margin-left: 0.25rem;">(41)</span>
-                    </div>
-                </div>
-
-                <p class="text-muted" style="margin-bottom: 1rem;">
-                    Esponjoso pastel bañado en tres leches, cubierto con merengue suave y canela.
-                </p>
-
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
-                    <span class="badge"><i class="fas fa-utensils"></i> 12 porciones</span>
-                    <span class="badge"><i class="fas fa-crown"></i> Tradicional</span>
-                    <span class="badge"><i class="fas fa-droplet"></i> Extra húmedo</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
-                    <span style="font-weight: 700; font-size: 1.5rem; color: var(--primary);">₡24,000</span>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <a href="/Catalog/Details/4" class="btn btn-outline btn-sm" title="Ver detalles">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <a href="/Orders/Create?product=4" class="btn btn-primary btn-sm">
-                            <i class="fas fa-shopping-cart"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        
-        <div class="card product-card" data-category="Postres" data-price="16000" data-name="Brownie Clásico">
-            <div style="position: relative;">
-                <img src="https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                     alt="Brownie"
-                     style="width: 100%; height: 250px; object-fit: cover; border-radius: var(--radius);">
-                <span class="badge badge-success" style="position: absolute; top: 1rem; right: 1rem;">Favorito</span>
-                <button class="btn btn-ghost btn-sm favorite-btn" style="position: absolute; top: 1rem; left: 1rem; background: white; border-radius: 50%; width: 40px; height: 40px;" onclick="toggleFavorite(this)">
-                    <i class="far fa-heart"></i>
-                </button>
-            </div>
-
-            <div style="margin-top: 1rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 style="margin: 0;">Brownie Clásico</h3>
-                    <div style="display: flex; gap: 0.25rem; color: #fbbf24;">
-                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                        <span class="text-muted" style="margin-left: 0.25rem;">(63)</span>
-                    </div>
-                </div>
-
-                <p class="text-muted" style="margin-bottom: 1rem;">
-                    Brownie de chocolate intenso, húmedo por dentro, con nueces y chispas de chocolate.
-                </p>
-
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
-                    <span class="badge"><i class="fas fa-utensils"></i> 16 porciones</span>
-                    <span class="badge"><i class="fas fa-seedling"></i> Con nueces</span>
-                    <span class="badge"><i class="fas fa-cookie"></i> Doble chocolate</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
-                    <span style="font-weight: 700; font-size: 1.5rem; color: var(--primary);">₡16,000</span>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <a href="/Catalog/Details/5" class="btn btn-outline btn-sm" title="Ver detalles">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <a href="/Orders/Create?product=5" class="btn btn-primary btn-sm">
-                            <i class="fas fa-shopping-cart"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        
-        <div class="card product-card" data-category="Galletas" data-price="12000" data-name="Galletas Decoradas">
-            <div style="position: relative;">
-                <img src="https://images.unsplash.com/photo-1488477181946-6428a0291777?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                     alt="Galletas"
-                     style="width: 100%; height: 250px; object-fit: cover; border-radius: var(--radius);">
-                <span class="badge badge-primary" style="position: absolute; top: 1rem; right: 1rem;">Nuevo</span>
-                <button class="btn btn-ghost btn-sm favorite-btn" style="position: absolute; top: 1rem; left: 1rem; background: white; border-radius: 50%; width: 40px; height: 40px;" onclick="toggleFavorite(this)">
-                    <i class="far fa-heart"></i>
-                </button>
-            </div>
-
-            <div style="margin-top: 1rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 style="margin: 0;">Galletas Decoradas</h3>
-                    <div style="display: flex; gap: 0.25rem; color: #fbbf24;">
-                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                        <span class="text-muted" style="margin-left: 0.25rem;">(27)</span>
-                    </div>
-                </div>
-
-                <p class="text-muted" style="margin-bottom: 1rem;">
-                    Galletas de mantequilla con glase real, decoradas a mano. Perfectas para regalo.
-                </p>
-
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
-                    <span class="badge"><i class="fas fa-box"></i> Caja x12</span>
-                    <span class="badge"><i class="fas fa-paint-brush"></i> Personalizadas</span>
-                    <span class="badge"><i class="fas fa-baby"></i> Baby shower</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
-                    <span style="font-weight: 700; font-size: 1.5rem; color: var(--primary);">₡12,000</span>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <a href="/Catalog/Details/6" class="btn btn-outline btn-sm" title="Ver detalles">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <a href="/Orders/Create?product=6" class="btn btn-primary btn-sm">
-                            <i class="fas fa-shopping-cart"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        
-        <div class="card product-card" data-category="Tortas" data-price="45000" data-name="Torta Unicornio">
-            <div style="position: relative;">
-                <img src="https://images.unsplash.com/photo-1571115177094-24ec08c6433b?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                     alt="Torta Unicornio"
-                     style="width: 100%; height: 250px; object-fit: cover; border-radius: var(--radius);">
-                <span class="badge badge-warning" style="position: absolute; top: 1rem; right: 1rem;">Especial</span>
-                <button class="btn btn-ghost btn-sm favorite-btn" style="position: absolute; top: 1rem; left: 1rem; background: white; border-radius: 50%; width: 40px; height: 40px;" onclick="toggleFavorite(this)">
-                    <i class="far fa-heart"></i>
-                </button>
-            </div>
-
-            <div style="margin-top: 1rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 style="margin: 0;">Torta Unicornio</h3>
-                    <div style="display: flex; gap: 0.25rem; color: #fbbf24;">
-                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                        <span class="text-muted" style="margin-left: 0.25rem;">(19)</span>
-                    </div>
-                </div>
-
-                <p class="text-muted" style="margin-bottom: 1rem;">
-                    Torta decorada con temática unicornio, colores pastel y detalles mágicos.
-                </p>
-
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
-                    <span class="badge"><i class="fas fa-weight-scale"></i> 2kg</span>
-                    <span class="badge"><i class="fas fa-utensils"></i> 20 porciones</span>
-                    <span class="badge badge-primary"><i class="fas fa-paint-brush"></i> Decoración premium</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
-                    <span style="font-weight: 700; font-size: 1.5rem; color: var(--primary);">₡45,000</span>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <a href="/Catalog/Details/7" class="btn btn-outline btn-sm" title="Ver detalles">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <a href="/Orders/Create?product=7" class="btn btn-primary btn-sm">
-                            <i class="fas fa-shopping-cart"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        
-        <div class="card product-card" data-category="Bebidas" data-price="3500" data-name="Chocolate Caliente">
-            <div style="position: relative;">
-                <img src="https://images.unsplash.com/photo-1542990253-0d0f5be5f0ed?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                     alt="Chocolate Caliente"
-                     style="width: 100%; height: 250px; object-fit: cover; border-radius: var(--radius);">
-                <button class="btn btn-ghost btn-sm favorite-btn" style="position: absolute; top: 1rem; left: 1rem; background: white; border-radius: 50%; width: 40px; height: 40px;" onclick="toggleFavorite(this)">
-                    <i class="far fa-heart"></i>
-                </button>
-            </div>
-
-            <div style="margin-top: 1rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 style="margin: 0;">Chocolate Caliente</h3>
-                    <div style="display: flex; gap: 0.25rem; color: #fbbf24;">
-                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                        <span class="text-muted" style="margin-left: 0.25rem;">(33)</span>
-                    </div>
-                </div>
-
-                <p class="text-muted" style="margin-bottom: 1rem;">
-                    Chocolate caliente artesanal, preparado con chocolate de mesa y especias.
-                </p>
-
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
-                    <span class="badge"><i class="fas fa-mug-hot"></i> 12oz</span>
-                    <span class="badge"><i class="fas fa-candy-cane"></i> Con canela</span>
-                    <span class="badge"><i class="fas fa-cookie"></i> Incluye galleta</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
-                    <span style="font-weight: 700; font-size: 1.5rem; color: var(--primary);">₡3,500</span>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <a href="/Catalog/Details/8" class="btn btn-outline btn-sm" title="Ver detalles">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <a href="/Orders/Create?product=8" class="btn btn-primary btn-sm">
-                            <i class="fas fa-shopping-cart"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    
-    <div style="display: flex; justify-content: center; gap: 0.5rem; margin: 3rem 0;">
-        <button class="btn btn-outline btn-sm" disabled>
-            <i class="fas fa-chevron-left"></i>
-        </button>
-        <button class="btn btn-primary btn-sm" style="width: 40px;">1</button>
-        <button class="btn btn-outline btn-sm" style="width: 40px;">2</button>
-        <button class="btn btn-outline btn-sm" style="width: 40px;">3</button>
-        <button class="btn btn-outline btn-sm" style="width: 40px;">4</button>
-        <button class="btn btn-outline btn-sm" style="width: 40px;">5</button>
-        <button class="btn btn-outline btn-sm">
-            <i class="fas fa-chevron-right"></i>
-        </button>
+        }
     </div>
 </div>
 
+<!-- Mobile cart backdrop -->
+<div class="mobile-sheet-backdrop" id="catalogCartBackdrop" style="display:none;"></div>
 
-<div class="card" style="position: fixed; bottom: 20px; right: 20px; width: 300px; display: none; box-shadow: var(--shadow-xl); z-index: 1000;" id="cartSummary">
+<button type="button" id="catalogCartButton" class="btn btn-primary" style="display:none;position:fixed;right:1.25rem;bottom:1.25rem;z-index:5200;width:64px;height:64px;border-radius:50%;box-shadow:0 22px 54px rgba(139,92,246,.35);padding:0!important;" aria-label="Abrir carrito">
+    <i class="fas fa-shopping-cart"></i>
+    <span id="catalogCartButtonCount" style="position:absolute;top:-6px;right:-6px;min-width:26px;height:26px;border-radius:999px;background:#fff;color:var(--primary-dark);font-weight:900;font-size:.78rem;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);">0</span>
+</button>
+
+<!-- Mobile bottom-sheet cart -->
+<div class="mobile-bottom-sheet" id="catalogCartSheet" role="dialog" aria-modal="true" aria-hidden="true" style="display:none;">
+    <div class="mobile-bottom-sheet-header">
+        <h3><i class="fas fa-shopping-cart" style="color:var(--primary);margin-right:.5rem;"></i>Carrito</h3>
+        <button class="btn btn-ghost btn-sm" type="button" id="catalogCartClose" aria-label="Cerrar carrito" style="width:40px;height:40px;padding:0!important;border-radius:50%!important;">
+            <i class="fas fa-xmark"></i>
+        </button>
+    </div>
+
+    <span class="badge badge-primary" id="cartCount" style="margin-bottom:.75rem;">0</span>
+
+    <div id="cartItems" style="max-height:60vh;overflow-y:auto;margin-bottom:.75rem;"></div>
+
+    <div style="display:flex;justify-content:space-between;font-weight:700;padding:.75rem 0;border-top:1px solid var(--border);margin-bottom:.75rem;">
+        <span>Total:</span>
+        <span id="cartTotal" style="color:var(--primary);font-size:1.15rem;">₡0</span>
+    </div>
+
+    <a href="/Orders/Create" class="btn btn-primary btn-block" style="min-height:50px;">
+        <i class="fas fa-arrow-right"></i>
+        Finalizar pedido
+    </a>
+</div>
+
+<!-- Desktop cart floating card -->
+<div class="card" style="position: fixed; bottom: 20px; right: 20px; width: 320px; display: none; box-shadow: var(--shadow-xl); z-index: 1000; border-radius: 18px;" id="cartSummary">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
         <h4 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
             <i class="fas fa-shopping-cart" style="color: var(--primary);"></i>
             Carrito
         </h4>
-        <span class="badge badge-primary" id="cartCount">0</span>
+        <span class="badge badge-primary" id="cartCountDesktop">0</span>
     </div>
-    <div id="cartItems" style="max-height: 200px; overflow-y: auto; margin-bottom: 0.5rem;"></div>
+    <div id="cartItemsDesktop" style="max-height: 200px; overflow-y: auto; margin-bottom: 0.5rem;"></div>
     <div style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 0.5rem;">
         <span>Total:</span>
-        <span id="cartTotal">₡0</span>
+        <span id="cartTotalDesktop" style="color:var(--primary);">₡0</span>
     </div>
     <a href="/Orders/Create" class="btn btn-primary btn-block">
+        <i class="fas fa-arrow-right"></i>
         Finalizar pedido
     </a>
 </div>
 
 <script>
-    
+    let currentCategory = 'all';
+    let cart = [];
+    let shouldAutoOpenCart = false;
+
     function filterCategory(category) {
-        const products = document.querySelectorAll('.product-card');
+        currentCategory = category;
         const buttons = document.querySelectorAll('.category-btn');
-
         buttons.forEach(btn => {
-            if (btn.dataset.category === category || (category === 'all' && btn.dataset.category === 'all')) {
-                btn.classList.remove('btn-outline');
-                btn.classList.add('btn-primary');
-            } else {
-                btn.classList.remove('btn-primary');
-                btn.classList.add('btn-outline');
-            }
+            const active = btn.dataset.category === category || (category === 'all' && btn.dataset.category === 'all');
+            btn.classList.toggle('btn-primary', active);
+            btn.classList.toggle('btn-outline', !active);
         });
+        filterProducts();
+    }
 
-        products.forEach(product => {
-            if (category === 'all' || product.dataset.category === category) {
-                product.style.display = 'block';
-            } else {
-                product.style.display = 'none';
-            }
+    function filterProducts() {
+        const searchTerm = document.getElementById('searchProduct').value.toLowerCase();
+        document.querySelectorAll('.product-card').forEach(product => {
+            const matchesCategory = currentCategory === 'all' || product.dataset.category === currentCategory;
+            const matchesSearch = !searchTerm || product.dataset.name.toLowerCase().includes(searchTerm);
+            product.style.display = matchesCategory && matchesSearch ? 'block' : 'none';
         });
     }
 
-    
-    document.getElementById('searchProduct').addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase();
-        const products = document.querySelectorAll('.product-card');
+    document.getElementById('searchProduct').addEventListener('input', app.utils.debounce(filterProducts, 250));
 
-        products.forEach(product => {
-            const name = product.dataset.name.toLowerCase();
-            if (name.includes(searchTerm)) {
-                product.style.display = 'block';
-            } else {
-                product.style.display = 'none';
-            }
-        });
-    });
-
-    
     function toggleFavorite(btn) {
         const icon = btn.querySelector('i');
-        if (icon.classList.contains('far')) {
-            icon.classList.remove('far');
-            icon.classList.add('fas');
+        icon.classList.toggle('far');
+        icon.classList.toggle('fas');
+        if (icon.classList.contains('fas')) {
             icon.style.color = '#ec4899';
-            if (typeof app !== 'undefined' && app.toast) {
-                app.toast.show('Agregado a favoritos ❤️', 'success');
-            } else {
-                alert('Agregado a favoritos ❤️');
-            }
+            app.toast.show('Agregado a favoritos', 'success');
         } else {
-            icon.classList.remove('fas');
-            icon.classList.add('far');
             icon.style.color = '';
         }
     }
 
-    
-    let cart = [];
+    function addProductButton(button) {
+        addToCart(Number(button.dataset.id), button.dataset.name, Number(button.dataset.price));
+    }
 
     function addToCart(productId, name, price) {
         const existingItem = cart.find(item => item.id === productId);
-
         if (existingItem) {
             existingItem.quantity++;
         } else {
-            cart.push({
-                id: productId,
-                name: name,
-                price: price,
-                quantity: 1
-            });
+            cart.push({ id: productId, name, price, quantity: 1 });
         }
 
         updateCartDisplay();
-        if (typeof app !== 'undefined' && app.toast) {
-            app.toast.show(`${name} agregado al carrito`, 'success');
-        } else {
-            alert(`${name} agregado al carrito`);
-        }
-    }
-
-    function updateCartDisplay() {
-        const cartSummary = document.getElementById('cartSummary');
-        const cartItems = document.getElementById('cartItems');
-        const cartCount = document.getElementById('cartCount');
-        const cartTotal = document.getElementById('cartTotal');
-
-        if (cart.length > 0) {
-            cartSummary.style.display = 'block';
-
-            let itemsHtml = '';
-            let total = 0;
-            let count = 0;
-
-            cart.forEach(item => {
-                itemsHtml += `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding: 0.5rem; border-bottom: 1px solid var(--border);">
-                        <div>
-                            <strong>${item.name}</strong>
-                            <div class="text-muted" style="font-size: 0.75rem;">x${item.quantity}</div>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <span>₡${(item.price * item.quantity).toLocaleString()}</span>
-                            <button class="btn btn-ghost btn-sm" onclick="removeFromCart(${item.id})" style="color: var(--danger);">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-                total += item.price * item.quantity;
-                count += item.quantity;
-            });
-
-            cartItems.innerHTML = itemsHtml;
-            cartCount.textContent = count;
-            cartTotal.textContent = `₡${total.toLocaleString()}`;
-        } else {
-            cartSummary.style.display = 'none';
-        }
+        app.toast.show(`${name} agregado al carrito`, 'success');
     }
 
     function removeFromCart(productId) {
         cart = cart.filter(item => item.id !== productId);
         updateCartDisplay();
-        if (typeof app !== 'undefined' && app.toast) {
-            app.toast.show('Producto eliminado del carrito', 'info');
-        } else {
-            alert('Producto eliminado del carrito');
+    }
+
+    function openCartSheet() {
+        const sheet = document.getElementById('catalogCartSheet');
+        const backdrop = document.getElementById('catalogCartBackdrop');
+        if (sheet) {
+            sheet.style.display = 'block';
+            sheet.classList.add('open');
+            sheet.setAttribute('aria-hidden', 'false');
+        }
+        if (backdrop) {
+            backdrop.style.display = 'block';
+            backdrop.classList.add('open');
         }
     }
 
-    
-    document.querySelectorAll('.btn-primary').forEach(btn => {
-        if (btn.textContent.includes('Pedir') || btn.querySelector('.fa-shopping-cart')) {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const card = this.closest('.product-card');
-                const name = card.querySelector('h3').textContent;
-                const priceText = card.querySelector('[style*="font-size: 1.5rem"]').textContent;
-                const price = parseInt(priceText.replace(/[₡,]/g, ''));
-                const productId = this.getAttribute('href').split('=')[1];
+    function closeCartSheet() {
+        const sheet = document.getElementById('catalogCartSheet');
+        const backdrop = document.getElementById('catalogCartBackdrop');
+        if (sheet) {
+            sheet.classList.remove('open');
+            sheet.setAttribute('aria-hidden', 'true');
+            sheet.style.display = 'none';
+        }
+        if (backdrop) {
+            backdrop.classList.remove('open');
+            backdrop.style.display = 'none';
+        }
+    }
 
-                addToCart(productId, name, price);
-            });
+    document.getElementById('catalogCartClose').addEventListener('click', closeCartSheet);
+    document.getElementById('catalogCartBackdrop').addEventListener('click', closeCartSheet);
+    document.getElementById('catalogCartButton').addEventListener('click', openCartSheet);
+
+    function updateCartDisplay() {
+        const cartSummary = document.getElementById('cartSummary');
+        const cartItems = document.getElementById('cartItems');
+        const cartItemsDesktop = document.getElementById('cartItemsDesktop');
+        const cartCount = document.getElementById('cartCount');
+        const cartCountDesktop = document.getElementById('cartCountDesktop');
+        const cartTotal = document.getElementById('cartTotal');
+        const cartTotalDesktop = document.getElementById('cartTotalDesktop');
+        const cartButton = document.getElementById('catalogCartButton');
+        const cartButtonCount = document.getElementById('catalogCartButtonCount');
+        const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+        const cartHtml = cart.map(item => `
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;margin-bottom:.5rem;padding:.65rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-alt);">
+                <div style="min-width:0;flex:1;">
+                    <strong style="display:block;font-size:.9rem;">${item.name}</strong>
+                    <span class="text-muted" style="font-size:.78rem;">Cant: ${item.quantity} × ₡${item.price.toLocaleString('es-CR')}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0;">
+                    <span style="font-weight:700;white-space:nowrap;">₡${(item.price * item.quantity).toLocaleString('es-CR')}</span>
+                    <button class="btn btn-ghost btn-sm" onclick="removeFromCart(${item.id})" style="color:var(--danger);width:36px;height:36px;padding:0!important;border-radius:50%!important;">
+                        <i class="fas fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('') || '<div class="text-muted" style="padding:.5rem 0;">Carrito vacío</div>';
+
+        cartSummary.style.display = 'none';
+        cartButton.style.display = cart.length ? 'inline-flex' : 'none';
+        cartCount.textContent = count;
+        cartButtonCount.textContent = count;
+        if (cartCountDesktop) cartCountDesktop.textContent = count;
+        cartTotal.textContent = `₡${total.toLocaleString('es-CR')}`;
+        if (cartTotalDesktop) cartTotalDesktop.textContent = `₡${total.toLocaleString('es-CR')}`;
+        cartItems.innerHTML = cartHtml;
+        if (cartItemsDesktop) cartItemsDesktop.innerHTML = cartHtml;
+
+        shouldAutoOpenCart = false;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const parameters = new URLSearchParams(window.location.search);
+        const search = parameters.get('search');
+        const category = parameters.get('category');
+        const productId = Number(parameters.get('add'));
+
+        if (search) {
+            document.getElementById('searchProduct').value = search;
+            filterProducts();
+        }
+
+        if (category) {
+            const categoryButton = Array.from(document.querySelectorAll('.category-btn'))
+                .find(button => button.dataset.category.toLowerCase() === category.toLowerCase());
+            if (categoryButton) filterCategory(categoryButton.dataset.category);
+        }
+
+        if (productId) {
+            const addButton = document.querySelector(`[data-id="${productId}"][data-name][data-price]`);
+            if (addButton) {
+                addProductButton(addButton);
+                openCartSheet();
+            }
+        } else if (parameters.get('cart') === 'open' && cart.length) {
+            openCartSheet();
         }
     });
-
-    
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-
-    
-    const searchInput = document.getElementById('searchProduct');
-    const debouncedSearch = debounce(function(e) {
-        const searchTerm = e.target.value.toLowerCase();
-        const products = document.querySelectorAll('.product-card');
-
-        products.forEach(product => {
-            const name = product.dataset.name.toLowerCase();
-            if (name.includes(searchTerm)) {
-                product.style.display = 'block';
-            } else {
-                product.style.display = 'none';
-            }
-        });
-    }, 300);
-
-    searchInput.addEventListener('input', debouncedSearch);
 </script>
 
-<style>
-    
-    .product-card {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-        .product-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
-        }
-
-    .favorite-btn {
-        transition: all 0.2s ease;
-    }
-
-        .favorite-btn:hover {
-            transform: scale(1.1);
-            background: white !important;
-        }
-
-        .favorite-btn i.fas {
-            color: #ec4899;
-        }
-
-    
-    .dark .favorite-btn {
-        background: var(--bg-card) !important;
-    }
-
-        .dark .favorite-btn:hover {
-            background: var(--bg-card) !important;
-        }
-
-    .dark #cartSummary {
-        background: var(--bg-card);
-    }
-</style>
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/catalog-index.css" asp-append-version="true" />
+}

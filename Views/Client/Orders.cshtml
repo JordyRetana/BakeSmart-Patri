@@ -1,3 +1,7 @@
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/client-orders.css" asp-append-version="true" />
+}
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Mis pedidos";
@@ -52,185 +56,12 @@
     <div class="client-orders-list" id="clientOrdersList"></div>
 </div>
 
-<style>
-    .client-orders-page {
-        display: grid;
-        gap: 1rem;
-    }
 
-    .client-orders-page,
-    .client-orders-page * {
-        min-width: 0;
-    }
-
-    .client-orders-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .client-orders-title {
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: .75rem;
-    }
-
-    .client-orders-title i {
-        color: var(--primary);
-    }
-
-    .client-orders-subtitle {
-        margin: .35rem 0 0;
-    }
-
-    .client-orders-actions {
-        display: grid;
-        grid-template-columns: minmax(220px, 1fr) minmax(180px, .75fr) auto;
-        gap: .75rem;
-        align-items: center;
-        min-width: min(100%, 680px);
-    }
-
-    .client-orders-kpis {
-        gap: 1rem;
-        margin: 0;
-    }
-
-    .client-orders-list {
-        display: grid;
-        gap: .9rem;
-    }
-
-    .client-order-card {
-        padding: 1.1rem;
-    }
-
-    .client-order-card:hover {
-        transform: none;
-        box-shadow: var(--shadow-sm);
-        border-color: var(--border);
-    }
-
-    .client-order-card:hover::after {
-        opacity: 0;
-    }
-
-    .client-order-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 1rem;
-        flex-wrap: wrap;
-        margin-bottom: 1rem;
-    }
-
-    .client-order-id {
-        display: flex;
-        align-items: center;
-        gap: .65rem;
-        margin: 0;
-        font-size: 1.05rem;
-    }
-
-    .client-order-id i {
-        color: var(--primary);
-    }
-
-    .client-order-statuses {
-        display: flex;
-        gap: .5rem;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-    }
-
-    .client-order-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 1.2fr) repeat(3, minmax(150px, .6fr));
-        gap: .75rem;
-        align-items: stretch;
-    }
-
-    .client-order-field {
-        padding: .85rem;
-        border-radius: 14px;
-        background: var(--bg-alt);
-        border: 1px solid var(--border);
-    }
-
-    .client-order-field span {
-        display: block;
-        margin-bottom: .25rem;
-        color: var(--text-muted);
-        font-size: .76rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: .05em;
-    }
-
-    .client-order-field strong {
-        color: var(--text);
-    }
-
-    .client-order-bottom {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1rem;
-        flex-wrap: wrap;
-        margin-top: 1rem;
-    }
-
-    .client-order-buttons {
-        display: flex;
-        gap: .55rem;
-        flex-wrap: wrap;
-    }
-
-    .client-empty-state {
-        padding: 2rem;
-        text-align: center;
-    }
-
-    body.dark .client-order-field {
-        background: #111827;
-        border-color: #334155;
-    }
-
-    @@media (max-width: 1100px) {
-        .client-order-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-    }
-
-    @@media (max-width: 768px) {
-        .client-orders-actions {
-            grid-template-columns: 1fr;
-            width: 100%;
-        }
-
-        .client-orders-actions .btn {
-            width: 100%;
-        }
-
-        .client-order-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .client-order-statuses,
-        .client-order-buttons {
-            justify-content: flex-start;
-            width: 100%;
-        }
-    }
-</style>
 
 @section Scripts {
     <script>
         (() => {
-            const userEmail = document.body.dataset.userEmail || 'cliente@demo.com';
+            const userEmail = document.body.dataset.userEmail || '';
             const search = document.getElementById('clientOrderSearch');
             const statusFilter = document.getElementById('clientStatusFilter');
             const list = document.getElementById('clientOrdersList');
@@ -330,7 +161,7 @@
 
             search.addEventListener('input', render);
             statusFilter.addEventListener('change', render);
-            render();
+            BakeSmartStore.refresh().then(render).catch(error => app.toast.error(error.message));
         })();
     </script>
 }

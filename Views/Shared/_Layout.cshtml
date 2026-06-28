@@ -1,12 +1,22 @@
-﻿@{
+@{
     var title = ViewData["Title"] as string ?? "BakeSmart Patri";
     var isAuth = User?.Identity?.IsAuthenticated ?? false;
     var isAdmin = User?.IsInRole("Admin") ?? false;
     var isStaff = User?.IsInRole("Staff") ?? false;
     var isClient = User?.IsInRole("Cliente") ?? false;
+    var isCashier = User?.IsInRole("Cajero") ?? false;
+    var isBaker = User?.IsInRole("Repostero") ?? false;
+    var isSupervisor = User?.IsInRole("Supervisor") ?? false;
+    var isOperational = isAdmin || isStaff || isCashier || isBaker || isSupervisor;
 
     string userInitials = "U";
     string userName = "Usuario";
+    string userRoleLabel = isAdmin ? "Administrador"
+        : isStaff ? "Staff"
+        : isCashier ? "Cajero"
+        : isBaker ? "Repostero"
+        : isSupervisor ? "Supervisor"
+        : "Cliente";
 
     if (isAuth && User?.Identity?.Name != null)
     {
@@ -16,47 +26,9 @@
         if (names.Length > 1) userInitials += names[1].Substring(0, 1).ToUpper();
     }
 
-    
     var currentPath = Context.Request.Path.ToString().ToLower();
-    string welcomeMessage = "";
-    string welcomeType = "info";
+    var showStorefrontHeader = !isAuth || isClient;
     var enablePageLoader = false;
-
-    if (currentPath == "/" || currentPath == "/home/index")
-    {
-        welcomeMessage = "👋 ¡Bienvenido a BakeSmart Patri! La mejor repostería inteligente";
-        welcomeType = "success";
-    }
-    else if (currentPath.StartsWith("/catalog"))
-    {
-        welcomeMessage = "🍰 ¡Descubre nuestro delicioso catálogo de productos!";
-        welcomeType = "info";
-    }
-    else if (currentPath.StartsWith("/orders"))
-    {
-        welcomeMessage = "📦 Aquí puedes gestionar todos tus pedidos";
-        welcomeType = "warning";
-    }
-    else if (currentPath.StartsWith("/client"))
-    {
-        welcomeMessage = "👤 Bienvenido a tu panel personal de cliente";
-        welcomeType = "success";
-    }
-    else if (currentPath.StartsWith("/dashboard"))
-    {
-        welcomeMessage = "📊 Panel de administración - Bienvenido";
-        welcomeType = "primary";
-    }
-    else if (currentPath.StartsWith("/inventory"))
-    {
-        welcomeMessage = "📦 Gestiona tu inventario de manera eficiente";
-        welcomeType = "info";
-    }
-    else if (currentPath.StartsWith("/production"))
-    {
-        welcomeMessage = "👨‍🍳 Controla tu producción de repostería";
-        welcomeType = "warning";
-    }
 }
 <!DOCTYPE html>
 <html lang="es">
@@ -69,7 +41,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        try {
+            const savedTheme = localStorage.getItem('bakesmart.theme');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                document.documentElement.classList.add('dark-start');
+            }
+        } catch (_) { }
+    </script>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
     <style>
         
         @@keyframes slideIn {
@@ -153,22 +135,76 @@
 
     <div class="cursor-glow" aria-hidden="true"></div>
     
+    @if (showStorefrontHeader)
+    {
+        <header class="storefront-header">
+            <div class="storefront-promo"><i class="fas fa-sparkles"></i> Sabor artesanal para todos tus momentos especiales</div>
+            <div class="storefront-main container">
+                <a class="storefront-brand" href="/">
+                    <img src="~/img/logo.png" alt="BakeSmart Patri" />
+                    <span>BakeSmart <strong>Patri</strong></span>
+                </a>
+                <form class="storefront-search" action="/Catalog" method="get" role="search">
+                    <input name="search" type="search" aria-label="Buscar productos" placeholder="¿Qué postre se te antoja hoy?" />
+                    <button type="submit" aria-label="Buscar"><i class="fas fa-search"></i></button>
+                </form>
+                <div class="storefront-tools">
+                    @if (isAuth)
+                    {
+                        <a href="/Account/Profile"><i class="far fa-user"></i><span>Mi cuenta</span></a>
+                        <a href="/Client/Orders"><i class="fas fa-box"></i><span>Pedidos</span></a>
+                    }
+                    else
+                    {
+                        <a href="/Account/Login"><i class="far fa-user"></i><span>Mi cuenta</span></a>
+                        <a href="/Catalog"><i class="far fa-heart"></i><span>Favoritos</span></a>
+                    }
+                    <a href="/Catalog?cart=open"><i class="fas fa-cart-shopping"></i><span>Carrito</span></a>
+                    <button class="storefront-theme theme-toggle" type="button" onclick="window.app.theme.toggle()" aria-label="Cambiar tema"><i class="fas fa-moon"></i></button>
+                </div>
+            </div>
+            <nav class="storefront-nav" aria-label="Navegación principal">
+                <div class="container storefront-nav-inner">
+                    <a class="storefront-category-link" href="/Catalog/Categories"><i class="fas fa-bars"></i> Todas las categorías</a>
+                    <div class="storefront-nav-links">
+                        <a href="/">Inicio</a><a href="/Catalog">Productos</a><a href="/Catalog/Offers">Ofertas</a><a href="/Catalog/New">Novedades</a><a href="/Catalog/Combos">Combos</a><a href="/Home/About">Nosotros</a><a href="/Home/Contact">Contacto</a>
+                        @if (isClient) { <a href="/Client">Mi panel</a> }
+                    </div>
+                </div>
+            </nav>
+        </header>
+    }
+    else
+    {
     <nav class="navbar">
         <div class="navbar-container">
             <div class="navbar-brand">
                 <div class="navbar-logo">
                     <img src="~/img/logo.png" alt="BakeSmart Patri" onerror="this.style.display='none'" />
                 </div>
-                <span style="font-weight: 700; font-size: 1.25rem; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">BakeSmart Patri</span>
+                <span class="navbar-brand-text" style="font-weight: 700; font-size: 1.25rem; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">BakeSmart Patri</span>
             </div>
 
-            <div class="navbar-menu">
-                <a class="navbar-link" data-nav href="/">
-                    <i class="fas fa-home" style="margin-right: 0.25rem;"></i> Inicio
-                </a>
-                <a class="navbar-link" data-nav href="/Catalog">
-                    <i class="fas fa-cake-candles" style="margin-right: 0.25rem;"></i> Catálogo
-                </a>
+            <button type="button" class="mobile-nav-toggle" aria-controls="navbarMenu" aria-expanded="false" aria-label="Abrir navegación">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <div class="navbar-menu" id="navbarMenu">
+                @if (!isAuth || isClient)
+                {
+                    <a class="navbar-link" data-nav href="/">
+                        <i class="fas fa-home" style="margin-right: 0.25rem;"></i> Inicio
+                    </a>
+                    <a class="navbar-link" data-nav href="/Catalog">
+                        <i class="fas fa-cake-candles" style="margin-right: 0.25rem;"></i> Catálogo
+                    </a>
+                    <a class="navbar-link" data-nav href="/Home/About">
+                        <i class="fas fa-heart" style="margin-right: 0.25rem;"></i> Sobre nosotros
+                    </a>
+                    <a class="navbar-link" data-nav href="/Home/Contact">
+                        <i class="fas fa-location-dot" style="margin-right: 0.25rem;"></i> Contacto
+                    </a>
+                }
 
                 @if (isAuth && isClient)
                 {
@@ -180,7 +216,7 @@
                     </a>
                 }
 
-                @if (isAuth && (isAdmin || isStaff))
+                @if (isAuth && isOperational)
                 {
                     <a class="navbar-link" data-nav href="/Dashboard">
                         <i class="fas fa-chart-line" style="margin-right: 0.25rem;"></i> Dashboard
@@ -192,21 +228,42 @@
                             <i class="fas fa-chevron-down" style="font-size: 0.75rem; margin-left: 0.25rem;"></i>
                         </span>
                         <div class="dropdown-menu">
-                            <a class="dropdown-item" href="/Orders">
-                                <i class="fas fa-clipboard-list" style="width: 20px; margin-right: 0.5rem;"></i> Pedidos
-                            </a>
-                            <a class="dropdown-item" href="/Production">
-                                <i class="fas fa-utensils" style="width: 20px; margin-right: 0.5rem;"></i> Producción
-                            </a>
-                            <a class="dropdown-item" href="/Inventory">
-                                <i class="fas fa-boxes" style="width: 20px; margin-right: 0.5rem;"></i> Inventario
-                            </a>
-                            <a class="dropdown-item" href="/Pos">
-                                <i class="fas fa-cash-register" style="width: 20px; margin-right: 0.5rem;"></i> Punto de Venta
-                            </a>
-                            <a class="dropdown-item" href="/Reports">
-                                <i class="fas fa-chart-bar" style="width: 20px; margin-right: 0.5rem;"></i> Reportes
-                            </a>
+                            @if (isAdmin || isStaff || isSupervisor || isCashier)
+                            {
+                                <a class="dropdown-item" href="/Orders">
+                                    <i class="fas fa-clipboard-list" style="width: 20px; margin-right: 0.5rem;"></i> Pedidos
+                                </a>
+                            }
+                            @if (isAdmin || isStaff || isSupervisor || isBaker)
+                            {
+                                <a class="dropdown-item" href="/Production">
+                                    <i class="fas fa-utensils" style="width: 20px; margin-right: 0.5rem;"></i> Producción
+                                </a>
+                            }
+                            @if (isAdmin || isStaff || isSupervisor || isBaker)
+                            {
+                                <a class="dropdown-item" href="/Inventory">
+                                    <i class="fas fa-boxes" style="width: 20px; margin-right: 0.5rem;"></i> Inventario
+                                </a>
+                            }
+                            @if (isAdmin || isStaff || isSupervisor || isCashier)
+                            {
+                                <a class="dropdown-item" href="/Pos">
+                                    <i class="fas fa-cash-register" style="width: 20px; margin-right: 0.5rem;"></i> Punto de Venta
+                                </a>
+                            }
+                            @if (isAdmin || isSupervisor)
+                            {
+                                <a class="dropdown-item" href="/Reports">
+                                    <i class="fas fa-chart-bar" style="width: 20px; margin-right: 0.5rem;"></i> Reportes
+                                </a>
+                            }
+                            @if (isAdmin || isStaff || isSupervisor)
+                            {
+                                <a class="dropdown-item" href="/Audit">
+                                    <i class="fas fa-clock-rotate-left" style="width: 20px; margin-right: 0.5rem;"></i> Bitacora
+                                </a>
+                            }
                             @if (isAdmin)
                             {
                                 <div style="border-top: 1px solid var(--border); margin: 0.5rem 0;"></div>
@@ -222,56 +279,77 @@
                                 <a class="dropdown-item" href="/Marketing">
                                     <i class="fas fa-megaphone" style="width: 20px; margin-right: 0.5rem;"></i> Marketing
                                 </a>
+                                <div style="border-top: 1px solid var(--border); margin: 0.5rem 0;"></div>
+                                <a class="dropdown-item" href="/Admin/Settings">
+                                    <i class="fas fa-cog" style="width: 20px; margin-right: 0.5rem;"></i> Configuración
+                                </a>
                             }
                         </div>
                     </div>
                 }
             </div>
 
-            <div class="navbar-actions" style="display: flex; align-items: center; gap: 1rem;">
+            <div class="navbar-actions">
                 <button class="btn btn-ghost btn-sm theme-toggle" onclick="window.app.theme.toggle()" style="border-radius: 50%; width: 40px; height: 40px; padding: 0;">
                     <i class="fas fa-moon"></i>
                 </button>
 
                 @if (isAuth)
                 {
-                    <div class="user-profile">
-                        <div class="user-avatar">@userInitials</div>
-                        <div class="user-info">
-                            <div class="user-name">@userName</div>
-                            <div class="user-role">
-                                @if (isAdmin)
+                    <div class="user-menu" id="userMenu">
+                        <button type="button" class="user-profile" id="userMenuToggle" aria-haspopup="true" aria-expanded="false">
+                            <span class="user-avatar">@userInitials</span>
+                            <span class="user-info">
+                                <span class="user-name">@userName</span>
+                                @if (!isClient)
                                 {
-                                    <text>Administrador</text>
-                                }
-                                else if (isStaff)
-                                {
-                                    <text>Staff</text>
+                                    <span class="user-role">@userRoleLabel</span>
                                 }
                                 else
                                 {
-                                    <text>Cliente</text>
+                                    <span class="user-role">Mi cuenta</span>
                                 }
+                            </span>
+                            <span class="user-chevron"><i class="fas fa-chevron-down"></i></span>
+                        </button>
+
+                        <div class="user-dropdown" id="userDropdown" role="menu" hidden>
+                            <div class="user-dropdown-head">
+                                <span class="user-avatar user-avatar-sm">@userInitials</span>
+                                <span>
+                                    <strong>@userName</strong>
+                                    <small>@(isClient ? "Perfil de cliente" : userRoleLabel)</small>
+                                </span>
                             </div>
+
+                            <a class="user-dropdown-item" href="/Account/Profile" role="menuitem">
+                                <i class="fas fa-user-pen"></i>
+                                <span>Mi perfil</span>
+                            </a>
+
+                            <div class="user-dropdown-divider"></div>
+
+                            <form method="post" action="/Account/Logout" class="user-dropdown-form">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="user-dropdown-item user-dropdown-danger" role="menuitem">
+                                    <i class="fas fa-right-from-bracket"></i>
+                                    <span>Cerrar sesion</span>
+                                </button>
+                            </form>
                         </div>
                     </div>
-
-                    <form method="post" action="/Account/Logout" style="display: inline;">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-outline btn-sm">
-                            <i class="fas fa-sign-out-alt" style="margin-right: 0.25rem;"></i> Salir
-                        </button>
-                    </form>
                 }
                 else
                 {
                     <a href="/Account/Login" class="btn btn-primary">
-                        <i class="fas fa-sign-in-alt" style="margin-right: 0.5rem;"></i> Iniciar Sesión
+                        <i class="fas fa-sign-in-alt" style="margin-right: 0.5rem;"></i> <span class="navbar-login-label">Iniciar Sesión</span>
                     </a>
                 }
             </div>
         </div>
     </nav>
+    }
+
 
     
     <main class="app-main page-enter">
@@ -299,9 +377,9 @@
                 <h4 class="footer-title">Productos</h4>
                 <ul class="footer-links">
                     <li><a href="/Catalog"><i class="fas fa-chevron-right" style="font-size: 0.75rem; margin-right: 0.5rem;"></i> Catálogo completo</a></li>
-                    <li><a href="/Catalog/Details/1"><i class="fas fa-chevron-right" style="font-size: 0.75rem; margin-right: 0.5rem;"></i> Pasteles personalizados</a></li>
-                    <li><a href="/Catalog/Details/2"><i class="fas fa-chevron-right" style="font-size: 0.75rem; margin-right: 0.5rem;"></i> Cupcakes</a></li>
-                    <li><a href="/Catalog/Details/3"><i class="fas fa-chevron-right" style="font-size: 0.75rem; margin-right: 0.5rem;"></i> Postres especiales</a></li>
+                    <li><a href="/Catalog"><i class="fas fa-chevron-right" style="font-size: 0.75rem; margin-right: 0.5rem;"></i> Productos activos</a></li>
+                    <li><a href="/Orders/Create"><i class="fas fa-chevron-right" style="font-size: 0.75rem; margin-right: 0.5rem;"></i> Crear pedido</a></li>
+                    <li><a href="/Client/Orders"><i class="fas fa-chevron-right" style="font-size: 0.75rem; margin-right: 0.5rem;"></i> Mis pedidos</a></li>
                 </ul>
             </div>
 
@@ -338,22 +416,6 @@
     <script src="~/js/bakesmart-store.js" asp-append-version="true"></script>
 
     
-    @if (!string.IsNullOrEmpty(welcomeMessage))
-    {
-        <script>
-            (function() {
-                
-                document.addEventListener('DOMContentLoaded', function() {
-                    const toastKey = 'bakesmart.welcome.' + '@currentPath';
-                    if (!sessionStorage.getItem(toastKey) && window.app && window.app.toast) {
-                        sessionStorage.setItem(toastKey, '1');
-                        window.app.toast.show('@welcomeMessage', '@welcomeType');
-                    }
-                });
-            })();
-        </script>
-    }
-
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

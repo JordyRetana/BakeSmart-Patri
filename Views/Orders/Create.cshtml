@@ -1,301 +1,268 @@
-﻿@{
+@model BakeSmartPatri.Models.OrderCreateViewModel
+@{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Nuevo Pedido";
+    var selectedProduct = Context.Request.Query["product"].ToString();
+    var culture = new System.Globalization.CultureInfo("es-CR");
 }
 
-<div style="max-width: 800px; margin: 0 auto;">
-    
-    <div style="margin-bottom: 2rem;">
-        <h1 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-            <i class="fas fa-plus-circle" style="color: var(--primary);"></i>
-            Nuevo Pedido
+<div class="page-shell order-form-page">
+    <div style="margin-bottom:2rem;">
+        <h1 style="margin:0;display:flex;align-items:center;gap:.5rem;">
+            <i class="fas fa-plus-circle" style="color:var(--primary);"></i>
+            Nuevo pedido
         </h1>
-        <p class="text-muted">Completa los datos para crear un nuevo pedido</p>
+        <p class="text-muted">Completa los datos para crear un nuevo pedido.</p>
     </div>
 
-    
-    <div class="steps" style="margin-bottom: 3rem;">
-        <div class="step active">
-            <div class="step-number">1</div>
-            <div class="step-title">Datos básicos</div>
-        </div>
-        <div class="step">
-            <div class="step-number">2</div>
-            <div class="step-title">Productos</div>
-        </div>
-        <div class="step">
-            <div class="step-number">3</div>
-            <div class="step-title">Confirmación</div>
-        </div>
-    </div>
-
-    
     <form method="post" action="/Orders/Create" id="orderForm">
         @Html.AntiForgeryToken()
 
-        <div class="card" style="margin-bottom: 1.5rem;">
-            <h3 style="margin-bottom: 1.5rem;">Información del cliente</h3>
-
-            <div class="grid grid-2">
+        <div class="card" style="margin-bottom:1.5rem;">
+            <h3>Informacion del cliente</h3>
+            <div class="grid grid-2" style="gap: clamp(0.75rem, 1.2vw, 1.25rem);">
                 <div class="input-group">
-                    <label class="input-label">
-                        <i class="fas fa-user"></i>
-                        Nombre completo *
-                    </label>
-                    <input type="text" class="input" name="cliente" required placeholder="Ej: María Gómez">
+                    <label class="input-label"><i class="fas fa-user"></i> Nombre completo *</label>
+                    <input type="text" class="input" name="cliente" required placeholder="Nombre del cliente">
                 </div>
-
                 <div class="input-group">
-                    <label class="input-label">
-                        <i class="fas fa-phone"></i>
-                        Teléfono *
-                    </label>
+                    <label class="input-label"><i class="fas fa-phone"></i> Telefono *</label>
                     <input type="tel" class="input" name="telefono" required placeholder="+506 8888-8888">
                 </div>
-
                 <div class="input-group">
-                    <label class="input-label">
-                        <i class="fas fa-envelope"></i>
-                        Email *
-                    </label>
+                    <label class="input-label"><i class="fas fa-envelope"></i> Email *</label>
                     <input type="email" class="input" name="email" required placeholder="cliente@email.com">
                 </div>
-
                 <div class="input-group">
-                    <label class="input-label">
-                        <i class="fas fa-id-card"></i>
-                        Cédula / Pasaporte
-                    </label>
-                    <input type="text" class="input" name="identificacion" placeholder="1-2345-6789">
+                    <label class="input-label"><i class="fas fa-id-card"></i> Cedula / Pasaporte</label>
+                    <input type="text" class="input" name="identificacion" placeholder="Identificacion">
                 </div>
             </div>
         </div>
 
-        <div class="card" style="margin-bottom: 1.5rem;">
-            <h3 style="margin-bottom: 1.5rem;">Detalles del pedido</h3>
-
+        <div class="card" style="margin-bottom:1.5rem;">
+            <h3>Detalles del pedido</h3>
             <div class="grid grid-2">
                 <div class="input-group">
-                    <label class="input-label">
-                        <i class="fas fa-cake-candles"></i>
-                        Producto *
-                    </label>
+                    <label class="input-label"><i class="fas fa-cake-candles"></i> Producto *</label>
                     <select class="input" name="productoId" required id="productSelect">
                         <option value="">Seleccionar producto</option>
-                        <option value="1">Red Velvet 1.5kg - ₡32,000</option>
-                        <option value="2">Cheesecake Frutos Rojos - ₡28,000</option>
-                        <option value="3">Cupcakes (caja x12) - ₡18,000</option>
-                        <option value="4">Tres Leches - ₡24,000</option>
-                        <option value="5">Brownie Clásico - ₡16,000</option>
-                        <option value="6">Galletas Decoradas (x12) - ₡12,000</option>
+                        @foreach (var product in Model.Products)
+                        {
+                            var isSelected = selectedProduct == product.Id.ToString();
+                            <option value="@product.Id" data-price="@product.UnitPrice" selected="@isSelected">
+                                @product.Name - @product.UnitPrice.ToString("C0", culture)
+                            </option>
+                        }
                     </select>
                 </div>
 
                 <div class="input-group">
-                    <label class="input-label">
-                        <i class="fas fa-weight-scale"></i>
-                        Tamaño / Porciones
-                    </label>
-                    <select class="input" name="tamaño" id="sizeSelect">
-                        <option value="">Seleccionar</option>
-                        <option value="pequeño">Pequeño (8-10 porciones)</option>
-                        <option value="mediano">Mediano (12-15 porciones)</option>
-                        <option value="grande">Grande (20-25 porciones)</option>
-                    </select>
+                    <label class="input-label"><i class="fas fa-weight-scale"></i> Tamano / Porciones</label>
+                    <input type="text" class="input" name="tamano" placeholder="Indicar tamano o porciones">
                 </div>
 
                 <div class="input-group">
-                    <label class="input-label">
-                        <i class="fas fa-calendar"></i>
-                        Fecha de entrega *
-                    </label>
+                    <label class="input-label"><i class="fas fa-calendar"></i> Fecha de entrega *</label>
                     <input type="date" class="input" name="entrega" required min="@DateTime.Now.ToString("yyyy-MM-dd")">
                 </div>
 
                 <div class="input-group">
-                    <label class="input-label">
-                        <i class="fas fa-clock"></i>
-                        Hora de entrega
-                    </label>
+                    <label class="input-label"><i class="fas fa-clock"></i> Hora de entrega</label>
                     <input type="time" class="input" name="hora" value="14:00">
                 </div>
             </div>
         </div>
 
-        <div class="card" style="margin-bottom: 1.5rem;">
-            <h3 style="margin-bottom: 1.5rem;">Personalización</h3>
-
+        <div class="card" style="margin-bottom:1.5rem;">
+            <h3>Personalizacion</h3>
             <div class="grid grid-2">
                 <div class="input-group">
-                    <label class="input-label">
-                        <i class="fas fa-paint-brush"></i>
-                        Sabor / Variante
-                    </label>
-                    <select class="input" name="sabor">
-                        <option value="">Seleccionar</option>
-                        <option value="chocolate">Chocolate</option>
-                        <option value="vainilla">Vainilla</option>
-                        <option value="fresa">Fresa</option>
-                        <option value="mixto">Mixto</option>
-                    </select>
+                    <label class="input-label"><i class="fas fa-paint-brush"></i> Sabor / Variante</label>
+                    <input type="text" class="input" name="sabor" placeholder="Detalle solicitado por el cliente">
                 </div>
-
                 <div class="input-group">
-                    <label class="input-label">
-                        <i class="fas fa-palette"></i>
-                        Color de decoración
-                    </label>
-                    <input type="color" class="input" name="color" style="height: 45px; padding: 0.25rem;" value="#ec4899">
+                    <label class="input-label"><i class="fas fa-palette"></i> Color de decoracion</label>
+                    <input type="color" class="input" name="color" style="height:45px;padding:.25rem;" value="#ec4899">
                 </div>
             </div>
-
             <div class="input-group">
-                <label class="input-label">
-                    <i class="fas fa-message"></i>
-                    Mensaje personalizado
-                </label>
-                <input type="text" class="input" name="mensaje" placeholder="Ej: Feliz cumpleaños María">
+                <label class="input-label"><i class="fas fa-message"></i> Mensaje personalizado</label>
+                <input type="text" class="input" name="mensaje" placeholder="Mensaje para el pedido">
             </div>
-
             <div class="input-group">
-                <label class="input-label">
-                    <i class="fas fa-clipboard"></i>
-                    Notas adicionales
-                </label>
+                <label class="input-label"><i class="fas fa-clipboard"></i> Notas adicionales</label>
                 <textarea class="input" name="notas" rows="3" placeholder="Alergias, instrucciones especiales, etc."></textarea>
             </div>
         </div>
 
-        <div class="card" style="margin-bottom: 1.5rem;">
-            <h3 style="margin-bottom: 1.5rem;">Entrega y pago</h3>
-
+        <div class="card" style="margin-bottom:1.5rem;" id="deliverySection">
+            <h3>Entrega y pago</h3>
             <div class="grid grid-2">
                 <div class="input-group">
-                    <label class="input-label">
-                        <i class="fas fa-truck"></i>
-                        Método de entrega
-                    </label>
-                    <select class="input" name="metodoEntrega">
-                        <option value="domicilio">A domicilio (+₡3,000)</option>
+                    <label class="input-label"><i class="fas fa-truck"></i> Metodo de entrega</label>
+                    <select class="input" name="metodoEntrega" id="metodoEntrega">
+                        <option value="domicilio">A domicilio</option>
                         <option value="retiro">Retiro en tienda</option>
                     </select>
                 </div>
-
                 <div class="input-group">
-                    <label class="input-label">
-                        <i class="fas fa-credit-card"></i>
-                        Método de pago
-                    </label>
+                    <label class="input-label"><i class="fas fa-credit-card"></i> Metodo de pago</label>
                     <select class="input" name="metodoPago">
-                        <option value="efectivo">Efectivo</option>
-                        <option value="tarjeta">Tarjeta de crédito/débito</option>
-                        <option value="sinpe">Sinpe Móvil</option>
-                        <option value="transferencia">Transferencia bancaria</option>
+                        @foreach (var method in Model.PaymentMethods)
+                        {
+                            <option value="@method">@method</option>
+                        }
                     </select>
                 </div>
             </div>
 
-            <div class="input-group">
-                <label class="input-label">
-                    <i class="fas fa-map-pin"></i>
-                    Dirección de entrega
-                </label>
-                <textarea class="input" name="direccion" rows="2" placeholder="Dirección completa"></textarea>
+            <div id="deliveryMapBlock" style="margin-top:1rem;">
+                <div class="input-group" style="margin-bottom:1rem;">
+                    <label class="input-label"><i class="fas fa-house"></i> Usar direccion guardada</label>
+                    <select class="input" id="savedAddressSelect">
+                        <option value="">Seleccionar en el mapa una nueva ubicacion</option>
+                    </select>
+                </div>
+                <input type="hidden" name="direccion" id="direccion" />
+                <input type="hidden" name="latitudEntrega" id="latitudEntrega" />
+                <input type="hidden" name="longitudEntrega" id="longitudEntrega" />
+                <input type="hidden" name="customerAddressId" id="customerAddressId" />
+                <div class="input-group" style="margin-bottom:1rem;">
+                    <label class="input-label"><i class="fas fa-signs-post"></i> Referencia de entrega</label>
+                    <input type="text" class="input" name="referenciaEntrega" placeholder="Ej: casa blanca, porton negro, apto 3B" />
+                </div>
+                <div id="orderMapPicker"></div>
             </div>
         </div>
 
-        
-        <div class="card" style="background: var(--gradient-primary); color: white; margin-bottom: 1.5rem;">
-            <h3 style="color: white; margin-bottom: 1rem;">Resumen del pedido</h3>
-
-            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Subtotal:</span>
-                    <span id="subtotal">₡0</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Envío:</span>
-                    <span id="envio">₡0</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 1.25rem; font-weight: 700; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.3);">
+        <div class="card" style="background:var(--gradient-primary);color:white;margin-bottom:1.5rem;">
+            <h3 style="color:white;">Resumen del pedido</h3>
+            <div style="display:flex;flex-direction:column;gap:.5rem;">
+                <div style="display:flex;justify-content:space-between;"><span>Subtotal:</span><span id="subtotal">₡0</span></div>
+                <div style="display:flex;justify-content:space-between;"><span>Envio:</span><span id="envio">₡0</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:1.25rem;font-weight:700;margin-top:.5rem;padding-top:.5rem;border-top:1px solid rgba(255,255,255,.3);">
                     <span>Total:</span>
                     <span id="total">₡0</span>
                 </div>
             </div>
         </div>
 
-        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-            <a href="/Orders" class="btn-outline btn-lg">
-                <i class="fas fa-times"></i>
-                Cancelar
-            </a>
-            <button type="submit" class="btn-primary btn-lg">
-                <i class="fas fa-save"></i>
-                Guardar pedido
-            </button>
+        <div style="display:flex;gap:1rem;justify-content:flex-end;flex-wrap:wrap;">
+            <a href="/Orders" class="btn btn-outline btn-lg"><i class="fas fa-times"></i> Cancelar</a>
+            <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-save"></i> Guardar pedido</button>
         </div>
     </form>
 </div>
 
+<script src="~/js/bakesmart-map-picker.js" asp-append-version="true"></script>
 <script>
-    
-    const prices = {
-        1: 32000,
-        2: 28000,
-        3: 18000,
-        4: 24000,
-        5: 16000,
-        6: 12000
-    };
+    let orderMapPicker;
 
-    
+    async function initOrderMap() {
+        await BakeSmartStore.refresh();
+        const config = BakeSmartStore.pos.config();
+
+        orderMapPicker = await BakeSmartMapPicker.create('orderMapPicker', {
+            address: '',
+            lat: config.originLatitude,
+            lng: config.originLongitude,
+            onChange(values) {
+                document.getElementById('direccion').value = values.address || '';
+                document.getElementById('latitudEntrega').value = values.lat ?? '';
+                document.getElementById('longitudEntrega').value = values.lng ?? '';
+                document.getElementById('customerAddressId').value = '';
+                document.getElementById('savedAddressSelect').value = '';
+            }
+        });
+
+        try {
+            const addresses = await BakeSmartStore.loadAddresses();
+            const select = document.getElementById('savedAddressSelect');
+            addresses.forEach(item => {
+                const option = document.createElement('option');
+                option.value = String(item.id);
+                option.textContent = `${item.label} - ${item.addressLine}`;
+                option.dataset.address = item.addressLine;
+                option.dataset.lat = item.latitude ?? '';
+                option.dataset.lng = item.longitude ?? '';
+                select.appendChild(option);
+            });
+        } catch (_) { /* optional for staff without saved addresses */ }
+    }
+
+    function toggleDeliveryMode() {
+        const isPickup = document.getElementById('metodoEntrega').value === 'retiro';
+        document.getElementById('deliveryMapBlock').style.display = isPickup ? 'none' : 'block';
+    }
+
+    document.getElementById('savedAddressSelect').addEventListener('change', (event) => {
+        const option = event.target.selectedOptions[0];
+        if (!option || !option.value) return;
+        orderMapPicker.setValues({
+            address: option.dataset.address,
+            lat: option.dataset.lat,
+            lng: option.dataset.lng
+        });
+        document.getElementById('direccion').value = option.dataset.address;
+        document.getElementById('latitudEntrega').value = option.dataset.lat;
+        document.getElementById('longitudEntrega').value = option.dataset.lng;
+        document.getElementById('customerAddressId').value = option.value;
+    });
+
     function updateSummary() {
-        const productId = document.getElementById('productSelect').value;
+        const productSelect = document.getElementById('productSelect');
+        const selectedOption = productSelect.options[productSelect.selectedIndex];
         const metodoEntrega = document.querySelector('select[name="metodoEntrega"]').value;
-
-        let subtotal = 0;
-        if (productId && prices[productId]) {
-            subtotal = prices[productId];
-        }
-
-        let envio = metodoEntrega === 'domicilio' ? 3000 : 0;
-        let total = subtotal + envio;
+        const subtotal = Number(selectedOption?.dataset.price || 0);
+        const envio = metodoEntrega === 'domicilio' ? 3000 : 0;
+        const total = subtotal + envio;
 
         document.getElementById('subtotal').textContent = `₡${subtotal.toLocaleString()}`;
         document.getElementById('envio').textContent = envio > 0 ? `₡${envio.toLocaleString()}` : 'Gratis';
         document.getElementById('total').textContent = `₡${total.toLocaleString()}`;
     }
 
-    
     document.getElementById('productSelect').addEventListener('change', updateSummary);
-    document.querySelector('select[name="metodoEntrega"]').addEventListener('change', updateSummary);
+    document.getElementById('metodoEntrega').addEventListener('change', () => {
+        updateSummary();
+        toggleDeliveryMode();
+    });
+    document.getElementById('orderForm').addEventListener('submit', function (e) {
+        const isPickup = document.getElementById('metodoEntrega').value === 'retiro';
+        if (!isPickup && orderMapPicker) {
+            orderMapPicker.applyToFields({
+                address: 'direccion',
+                lat: 'latitudEntrega',
+                lng: 'longitudEntrega'
+            });
+        }
+        if (!isPickup && orderMapPicker && !orderMapPicker.isValid()) {
+            e.preventDefault();
+            app.toast.error('Seleccione una ubicacion valida de entrega en el mapa.');
+            return;
+        }
 
-    
-    document.getElementById('orderForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        const rules = {
+        const errors = app.validate.form(this, {
             cliente: ['required'],
             telefono: ['required'],
             email: ['required', 'email'],
             productoId: ['required'],
             entrega: ['required']
-        };
-
-        const errors = app.validate.form(this, rules);
+        });
 
         if (errors.length > 0) {
-            errors.forEach(error => {
-                app.toast.error(error.message);
-            });
-        } else {
-            app.toast.success('Pedido creado exitosamente');
-            setTimeout(() => {
-                this.submit();
-            }, 1500);
+            e.preventDefault();
+            errors.forEach(error => app.toast.error(error.message));
         }
     });
 
-    
-    updateSummary();
+    initOrderMap().then(() => {
+        updateSummary();
+        toggleDeliveryMode();
+    }).catch(error => app.toast.error(error.message));
 </script>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/orders-form.css" asp-append-version="true" />
+}

@@ -1,0 +1,19 @@
+@model BakeSmartPatri.Models.CatalogIndexViewModel
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Novedades";
+    var culture = new System.Globalization.CultureInfo("es-CR");
+}
+<main class="commerce-page">
+    <header class="commerce-hero commerce-hero--new"><div><span class="commerce-kicker">Recién añadidos</span><h1>Nuevos sabores para descubrir</h1><p>Conoce las incorporaciones más recientes del catálogo BakeSmart Patri.</p></div><i class="fas fa-wand-magic-sparkles"></i></header>
+    <section class="commerce-section">
+        <div class="commerce-section-title"><span></span><h2>Novedades del catálogo</h2><span></span></div>
+        <div class="commerce-new-list">
+            @foreach (var product in Model.Products.Where(product => product.IsActive).OrderByDescending(product => product.Id).Take(8))
+            {
+                <article class="commerce-new-tile"><img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';" /><div><small>Nuevo · @product.Category</small><h2>@product.Name</h2><p>@product.Description</p><strong>@product.UnitPrice.ToString("C0", culture)</strong><a href="/Catalog/Details/@product.Id">Descubrir</a></div></article>
+            }
+        </div>
+    </section>
+</main>
+

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Cake pixel art">
+  <rect width="64" height="64" fill="none"/>
+  <rect x="28" y="4" width="8" height="10" fill="#f59e0b"/>
+  <rect x="26" y="14" width="12" height="4" fill="#fde68a"/>
+  <rect x="14" y="20" width="40" height="10" fill="#ffd1e6"/>
+  <rect x="10" y="30" width="48" height="8" fill="#db2777"/>
+  <rect x="12" y="38" width="44" height="12" fill="#7c3aed"/>
+  <rect x="10" y="50" width="48" height="6" fill="#4c1d95"/>
+  <rect x="16" y="24" width="6" height="4" fill="#fff7fb"/>
+  <rect x="30" y="24" width="6" height="4" fill="#fff7fb"/>
+  <rect x="44" y="24" width="6" height="4" fill="#fff7fb"/>
+  <rect x="18" y="40" width="4" height="8" fill="#a78bfa"/>
+  <rect x="34" y="40" width="4" height="8" fill="#a78bfa"/>
+  <rect x="48" y="40" width="4" height="8" fill="#a78bfa"/>
+</svg>

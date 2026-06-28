@@ -1,0 +1,32 @@
+@model BakeSmartPatri.Models.CatalogIndexViewModel
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Categorías";
+}
+
+<main class="commerce-page">
+    <header class="commerce-hero commerce-hero--categories">
+        <div>
+            <span class="commerce-kicker">Explora por categoría</span>
+            <h1>Encuentra tu antojo favorito</h1>
+            <p>Cada categoría reúne productos disponibles directamente desde nuestro catálogo.</p>
+        </div>
+        <i class="fas fa-layer-group"></i>
+    </header>
+
+    <section class="commerce-section">
+        <div class="commerce-section-title"><span></span><h2>Todas las categorías</h2><span></span></div>
+        <div class="commerce-category-list">
+            @foreach (var category in Model.Categories)
+            {
+                var products = Model.Products.Where(product => product.Category == category.Name).ToList();
+                var image = products.FirstOrDefault()?.ImageUrl ?? "/img/products/producto-sin-imagen.svg";
+                <a class="commerce-category-tile" href="/Catalog?category=@Uri.EscapeDataString(category.Name)">
+                    <span><img src="@image" alt="@category.Name" onerror="this.src='/img/products/producto-sin-imagen.svg';" /></span>
+                    <div><i class="fas @category.Icon"></i><h2>@category.Name</h2><p>@products.Count productos disponibles</p><strong>Explorar <i class="fas fa-arrow-right"></i></strong></div>
+                </a>
+            }
+        </div>
+    </section>
+</main>
+

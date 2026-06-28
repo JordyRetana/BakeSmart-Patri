@@ -1,0 +1,39 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Sobre nosotros";
+}
+
+@section Styles { <link rel="stylesheet" href="~/css/pages/public-info.css" asp-append-version="true" /> }
+
+<main class="story-page">
+    <section class="story-hero">
+        <div class="story-hero-copy">
+            <span class="story-kicker"><i class="fas fa-heart"></i> Nuestra historia</span>
+            <h1>Hacemos dulces que convierten momentos en recuerdos.</h1>
+            <p>BakeSmart Patri une reposteria artesanal, ingredientes seleccionados y una forma moderna de cuidar cada pedido desde la idea hasta la entrega.</p>
+            <div class="story-stats"><span><strong>500+</strong> pedidos preparados</span><span><strong>4.9</strong> valoracion promedio</span><span><strong>100%</strong> sabor artesanal</span></div>
+        </div>
+        <div class="story-collage">
+            <img class="story-photo story-photo--main" src="/img/products/pastel-decorado.jpg" alt="Pastel artesanal decorado" />
+            <img class="story-photo story-photo--small" src="/img/products/cupcakes-decorados.jpg" alt="Cupcakes decorados" />
+            <span class="story-seal"><i class="fas fa-cake-candles"></i> Hecho con amor</span>
+        </div>
+    </section>
+
+    <section class="story-values">
+        <div class="story-section-title"><span>Lo que nos mueve</span><h2>Una experiencia cuidada de principio a fin</h2></div>
+        <div class="story-value-grid">
+            <article><i class="fas fa-wand-magic-sparkles"></i><h3>Creatividad</h3><p>Diseños pensados para la ocasion y la personalidad de cada cliente.</p></article>
+            <article><i class="fas fa-wheat-awn"></i><h3>Calidad</h3><p>Ingredientes escogidos y procesos claros para mantener sabor y frescura.</p></article>
+            <article><i class="fas fa-comments"></i><h3>Cercania</h3><p>Acompanamiento sencillo para cotizar, personalizar y seguir cada pedido.</p></article>
+            <article><i class="fas fa-box-open"></i><h3>Cuidado</h3><p>Presentacion y entrega organizadas para que el producto llegue impecable.</p></article>
+        </div>
+    </section>
+
+    <section class="story-process">
+        <div><span>01</span><h3>Imaginamos contigo</h3><p>Escuchamos la idea, ocasion, sabores y detalles especiales.</p></div>
+        <div><span>02</span><h3>Preparamos con detalle</h3><p>Organizamos ingredientes, produccion y decoracion.</p></div>
+        <div><span>03</span><h3>Entregamos tu momento</h3><p>Coordinamos el pedido para que llegue listo para celebrar.</p></div>
+        <a href="/Catalog"><strong>Descubre nuestros productos</strong><i class="fas fa-arrow-right"></i></a>
+    </section>
+</main>

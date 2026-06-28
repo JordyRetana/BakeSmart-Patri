@@ -1,366 +1,163 @@
-﻿@{
+@{
     Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Producción";
+    ViewData["Title"] = "Produccion";
 }
 
 <div class="page-shell production-page">
-<div class="page-header production-header">
-    <div>
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <div style="width: 5px; height: 40px; background: var(--gradient-primary); border-radius: 5px;"></div>
-            <h1 style="margin: 0; font-size: 2.5rem; display: flex; align-items: center; gap: 0.75rem;">
-                <i class="fas fa-utensils" style="color: var(--primary);"></i>
-                Producción
+    <div class="page-header production-header">
+        <div>
+            <h1 style="margin:0;display:flex;align-items:center;gap:.75rem;">
+                <i class="fas fa-utensils" style="color:var(--primary);"></i>
+                Produccion
             </h1>
+            <p class="text-muted" style="margin:.35rem 0 0;">Cola de produccion y estado de pedidos.</p>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; margin-left: 1.25rem;">
-            <i class="fas fa-cog fa-spin" style="color: var(--primary);"></i>
-            <p class="text-muted" style="margin: 0; font-size: 0.95rem;">
-                Gestiona la cola de producción y el estado de los pedidos
-            </p>
-        </div>
-    </div>
-    <div class="production-date-chip">
-        <span class="badge badge-info" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+        <span class="badge badge-info">
             <i class="fas fa-calendar-day"></i>
             @DateTime.Now.ToString("dddd, dd MMM", new System.Globalization.CultureInfo("es-ES"))
         </span>
     </div>
-</div>
 
-
-<div class="production-content">
-    
-    <div class="grid grid-4 production-kpi-grid">
-        <div class="card" style="text-align: center;">
-            <div style="font-size: 2rem; color: var(--warning); margin-bottom: 0.5rem;">
-                <i class="fas fa-clock"></i>
+    <div class="production-content">
+        <div class="grid grid-4 production-kpi-grid">
+            <div class="card" style="text-align:center;">
+                <i class="fas fa-clock" style="font-size:2rem;color:var(--warning);"></i>
+                <div id="prodPendingCount" style="font-size:1.5rem;font-weight:700;">0</div>
+                <div class="text-muted">Pendientes</div>
             </div>
-            <div id="prodPendingCount" style="font-size: 1.5rem; font-weight: 700;">0</div>
-            <div class="text-muted">Pendientes</div>
+            <div class="card" style="text-align:center;">
+                <i class="fas fa-cog" style="font-size:2rem;color:var(--info);"></i>
+                <div id="prodActiveCount" style="font-size:1.5rem;font-weight:700;">0</div>
+                <div class="text-muted">En proceso</div>
+            </div>
+            <div class="card" style="text-align:center;">
+                <i class="fas fa-check-circle" style="font-size:2rem;color:var(--success);"></i>
+                <div id="prodDoneCount" style="font-size:1.5rem;font-weight:700;">0</div>
+                <div class="text-muted">Completados</div>
+            </div>
+            <div class="card" style="text-align:center;">
+                <i class="fas fa-exclamation-triangle" style="font-size:2rem;color:var(--danger);"></i>
+                <div id="prodLateCount" style="font-size:1.5rem;font-weight:700;">0</div>
+                <div class="text-muted">Atrasados</div>
+            </div>
         </div>
 
-        <div class="card" style="text-align: center;">
-            <div style="font-size: 2rem; color: var(--info); margin-bottom: 0.5rem;">
-                <i class="fas fa-cog fa-spin"></i>
+        <div class="production-board">
+            <div class="card production-lane production-lane--pending">
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                    <h3 style="margin:0;"><span style="width:12px;height:12px;background:var(--warning);display:inline-block;border-radius:50%;margin-right:.5rem;"></span>Pendientes</h3>
+                    <span id="prodPendingBadge" class="badge badge-warning">0</span>
+                </div>
+                <div id="prodPendingList" class="kanban-column" style="display:flex;flex-direction:column;gap:1rem;">
+                    <div class="text-muted">Cargando pedidos...</div>
+                </div>
             </div>
-            <div id="prodActiveCount" style="font-size: 1.5rem; font-weight: 700;">0</div>
-            <div class="text-muted">En proceso</div>
+
+            <div class="card production-lane production-lane--active">
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                    <h3 style="margin:0;"><span style="width:12px;height:12px;background:var(--info);display:inline-block;border-radius:50%;margin-right:.5rem;"></span>En produccion</h3>
+                    <span id="prodActiveBadge" class="badge badge-info">0</span>
+                </div>
+                <div id="prodActiveList" class="kanban-column" style="display:flex;flex-direction:column;gap:1rem;">
+                    <div class="text-muted">Cargando pedidos...</div>
+                </div>
+            </div>
+
+            <div class="card production-lane production-lane--done">
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                    <h3 style="margin:0;"><span style="width:12px;height:12px;background:var(--success);display:inline-block;border-radius:50%;margin-right:.5rem;"></span>Completados</h3>
+                    <span id="prodDoneBadge" class="badge badge-success">0</span>
+                </div>
+                <div id="prodDoneList" style="display:flex;flex-direction:column;gap:1rem;">
+                    <div class="text-muted">Cargando pedidos...</div>
+                </div>
+            </div>
         </div>
 
-        <div class="card" style="text-align: center;">
-            <div style="font-size: 2rem; color: var(--success); margin-bottom: 0.5rem;">
-                <i class="fas fa-check-circle"></i>
-            </div>
-            <div id="prodDoneCount" style="font-size: 1.5rem; font-weight: 700;">0</div>
-            <div class="text-muted">Hoy</div>
-        </div>
-
-        <div class="card" style="text-align: center;">
-            <div style="font-size: 2rem; color: var(--danger); margin-bottom: 0.5rem;">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div id="prodLateCount" style="font-size: 1.5rem; font-weight: 700;">0</div>
-            <div class="text-muted">Atrasados</div>
-        </div>
-    </div>
-
-    
-    <div class="production-board">
-        
-        <div class="card production-lane production-lane--pending">
-            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h3 style="margin: 0; display: flex; align-items: center;">
-                    <span style="width: 12px; height: 12px; background: var(--warning); display: inline-block; border-radius: 50%; margin-right: 0.5rem;"></span>
-                    Pendientes
+        <div class="card production-schedule-card">
+            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+                <h3 style="margin:0;display:flex;align-items:center;gap:.5rem;">
+                    <i class="fas fa-clock" style="color:var(--primary);"></i>
+                    Programacion del dia
                 </h3>
-                <span id="prodPendingBadge" class="badge badge-warning">0</span>
+                <span class="badge badge-info">@DateTime.Now.ToString("dd/MM/yyyy")</span>
             </div>
-
-            <div id="prodPendingList" style="display: flex; flex-direction: column; gap: 1rem;" class="kanban-column">
-                <div class="card production-ticket" draggable="true" style="cursor: move; border-left: 4px solid var(--warning);">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <strong>#1014 - Andrea M.</strong>
-                        <span class="badge badge-warning">Pendiente pago</span>
-                    </div>
-                    <div>Cheesecake Frutos Rojos</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
-                        <span class="text-muted"><i class="fas fa-calendar"></i> 20/02</span>
-                        <button class="btn btn-primary btn-sm" onclick="startProduction(1014)">
-                            <i class="fas fa-play"></i> Iniciar
-                        </button>
-                    </div>
-                </div>
-
-                <div class="card production-ticket" draggable="true" style="cursor: move; border-left: 4px solid var(--info);">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <strong>#1016 - Carlos R.</strong>
-                        <span class="badge badge-info">Confirmado</span>
-                    </div>
-                    <div>Brownie Clásico</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
-                        <span class="text-muted"><i class="fas fa-calendar"></i> 21/02</span>
-                        <button class="btn btn-primary btn-sm" onclick="startProduction(1016)">
-                            <i class="fas fa-play"></i> Iniciar
-                        </button>
-                    </div>
-                </div>
-
-                <div class="card production-ticket" draggable="true" style="cursor: move; border-left: 4px solid var(--info);">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <strong>#1017 - Laura S.</strong>
-                        <span class="badge badge-info">Confirmado</span>
-                    </div>
-                    <div>Cupcakes (24 uni)</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
-                        <span class="text-muted"><i class="fas fa-calendar"></i> 22/02</span>
-                        <button class="btn btn-primary btn-sm" onclick="startProduction(1017)">
-                            <i class="fas fa-play"></i> Iniciar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        
-        <div class="card production-lane production-lane--active">
-            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h3 style="margin: 0; display: flex; align-items: center;">
-                    <span style="width: 12px; height: 12px; background: var(--info); display: inline-block; border-radius: 50%; margin-right: 0.5rem;"></span>
-                    En Producción
-                </h3>
-                <span id="prodActiveBadge" class="badge badge-info">0</span>
-            </div>
-
-            <div id="prodActiveList" style="display: flex; flex-direction: column; gap: 1rem;" class="kanban-column">
-                <div class="card production-ticket" style="border-left: 4px solid var(--primary);">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <strong>#1012 - María G.</strong>
-                        <span class="badge badge-success">Horneado</span>
-                    </div>
-                    <div>Red Velvet 1.5kg</div>
-                    <div class="progress" style="margin: 0.5rem 0;">
-                        <div class="progress-bar" style="width: 60%;"></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="text-muted">60%</span>
-                        <div>
-                            <button class="btn btn-ghost btn-sm" onclick="updateProgress(1012)" title="Actualizar progreso">
-                                <i class="fas fa-arrow-right"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card production-ticket" style="border-left: 4px solid var(--warning);">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <strong>#1015 - Luis P.</strong>
-                        <span class="badge badge-warning">Decoración</span>
-                    </div>
-                    <div>Torta Unicornio</div>
-                    <div class="progress" style="margin: 0.5rem 0;">
-                        <div class="progress-bar" style="width: 75%;"></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="text-muted">75%</span>
-                        <button class="btn btn-ghost btn-sm" onclick="updateProgress(1015)" title="Actualizar progreso">
-                            <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="card production-ticket" style="border-left: 4px solid var(--success);">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <strong>#1013 - Clínica SF</strong>
-                        <span class="badge badge-success">Empaque</span>
-                    </div>
-                    <div>120 Cupcakes</div>
-                    <div class="progress" style="margin: 0.5rem 0;">
-                        <div class="progress-bar" style="width: 90%;"></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="text-muted">90%</span>
-                        <button class="btn btn-success btn-sm" onclick="completeProduction(1013)" title="Completar">
-                            <i class="fas fa-check"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        
-        <div class="card production-lane production-lane--done">
-            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h3 style="margin: 0; display: flex; align-items: center;">
-                    <span style="width: 12px; height: 12px; background: var(--success); display: inline-block; border-radius: 50%; margin-right: 0.5rem;"></span>
-                    Completados Hoy
-                </h3>
-                <span id="prodDoneBadge" class="badge badge-success">0</span>
-            </div>
-
-            <div id="prodDoneList" style="display: flex; flex-direction: column; gap: 1rem;">
-                <div class="card production-ticket" style="background: #d1fae5; border: 1px solid #a7f3d0;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <strong>#1009 - Miguel A.</strong>
-                        <span class="badge badge-success">Entregado</span>
-                    </div>
-                    <div>Tres Leches</div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
-                        <i class="fas fa-clock text-muted" style="font-size: 0.75rem;"></i>
-                        <span class="text-muted">Completado: 10:30 AM</span>
-                    </div>
-                </div>
-
-                <div class="card production-ticket" style="background: #d1fae5; border: 1px solid #a7f3d0;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <strong>#1010 - Ana S.</strong>
-                        <span class="badge badge-success">Entregado</span>
-                    </div>
-                    <div>Galletas Decoradas</div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
-                        <i class="fas fa-clock text-muted" style="font-size: 0.75rem;"></i>
-                        <span class="text-muted">Completado: 2:15 PM</span>
-                    </div>
-                </div>
+            <div id="productionSchedule" style="display:flex;flex-direction:column;gap:1rem;">
+                <div class="text-muted">Cargando programacion...</div>
             </div>
         </div>
     </div>
-
-    
-    <div class="card production-schedule-card">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                <i class="fas fa-clock" style="color: var(--primary);"></i>
-                Programación del día
-            </h3>
-            <span class="badge badge-info">@DateTime.Now.ToString("dd/MM/yyyy")</span>
-        </div>
-
-        <div id="productionSchedule" style="display: flex; flex-direction: column; gap: 1rem;">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <div style="width: 80px; font-weight: 700; color: var(--primary);">8:00 AM</div>
-                <div style="flex: 1; height: 2px; background: var(--border); position: relative;">
-                    <div style="position: absolute; top: -6px; left: 0; width: 12px; height: 12px; background: var(--primary); border-radius: 50%; box-shadow: 0 0 0 2px var(--primary-light);"></div>
-                </div>
-                <div style="width: 200px; background: var(--bg-alt); padding: 0.5rem; border-radius: var(--radius);">Inicio de jornada</div>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <div style="width: 80px; font-weight: 700; color: var(--warning);">9:30 AM</div>
-                <div style="flex: 1; height: 2px; background: var(--border); position: relative;">
-                    <div style="position: absolute; top: -6px; left: 25%; width: 12px; height: 12px; background: var(--warning); border-radius: 50%; box-shadow: 0 0 0 2px #fef3c7;"></div>
-                </div>
-                <div style="width: 200px; background: var(--bg-alt); padding: 0.5rem; border-radius: var(--radius);">Revisión de pedidos</div>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <div style="width: 80px; font-weight: 700; color: var(--success);">11:00 AM</div>
-                <div style="flex: 1; height: 2px; background: var(--border); position: relative;">
-                    <div style="position: absolute; top: -6px; left: 45%; width: 12px; height: 12px; background: var(--success); border-radius: 50%; box-shadow: 0 0 0 2px #d1fae5;"></div>
-                </div>
-                <div style="width: 200px; background: var(--bg-alt); padding: 0.5rem; border-radius: var(--radius);">Entrega #1012</div>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <div style="width: 80px; font-weight: 700; color: var(--info);">2:00 PM</div>
-                <div style="flex: 1; height: 2px; background: var(--border); position: relative;">
-                    <div style="position: absolute; top: -6px; left: 70%; width: 12px; height: 12px; background: var(--info); border-radius: 50%; box-shadow: 0 0 0 2px #dbeafe;"></div>
-                </div>
-                <div style="width: 200px; background: var(--bg-alt); padding: 0.5rem; border-radius: var(--radius);">Inicio producción #1015</div>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <div style="width: 80px; font-weight: 700; color: var(--danger);">4:00 PM</div>
-                <div style="flex: 1; height: 2px; background: var(--border); position: relative;">
-                    <div style="position: absolute; top: -6px; left: 90%; width: 12px; height: 12px; background: var(--danger); border-radius: 50%; box-shadow: 0 0 0 2px #fee2e2;"></div>
-                </div>
-                <div style="width: 200px; background: var(--bg-alt); padding: 0.5rem; border-radius: var(--radius);">Entrega #1013</div>
-            </div>
-        </div>
-    </div>
-</div>
 </div>
 
 @section Scripts {
 <script>
 (() => {
     const store = window.BakeSmartStore;
-    const fmtDate = (value) => new Date(value).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit' });
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const statusMeta = {
-        'Pendiente pago': { badge: 'badge-warning', border: 'var(--warning)', action: 'Cobrar', next: 'Confirmado', icon: 'fa-money-bill-wave', progress: 10 },
-        'Confirmado': { badge: 'badge-info', border: 'var(--info)', action: 'Iniciar', next: 'En producción', icon: 'fa-play', progress: 25 },
-        'En producción': { badge: 'badge-primary', border: 'var(--primary)', action: 'Listo', next: 'Listo', icon: 'fa-arrow-right', progress: 60 },
-        'Listo': { badge: 'badge-success', border: 'var(--success)', action: 'Enviar', next: 'En camino', icon: 'fa-truck', progress: 82 },
-        'En camino': { badge: 'badge-info', border: 'var(--info)', action: 'Entregar', next: 'Entregado', icon: 'fa-check', progress: 92 },
-        'Entregado': { badge: 'badge-success', border: 'var(--success)', action: '', next: '', icon: 'fa-check', progress: 100 }
+        'Pendiente pago': { badge: 'badge-warning', border: 'var(--warning)', next: 'Confirmado', action: 'Cobrar', icon: 'fa-money-bill-wave', progress: 10 },
+        'Confirmado': { badge: 'badge-info', border: 'var(--info)', next: 'En produccion', action: 'Iniciar', icon: 'fa-play', progress: 25 },
+        'En produccion': { badge: 'badge-primary', border: 'var(--primary)', next: 'Listo', action: 'Listo', icon: 'fa-arrow-right', progress: 60 },
+        'En producción': { badge: 'badge-primary', border: 'var(--primary)', next: 'Listo', action: 'Listo', icon: 'fa-arrow-right', progress: 60 },
+        'Listo': { badge: 'badge-success', border: 'var(--success)', next: 'En camino', action: 'Enviar', icon: 'fa-truck', progress: 82 },
+        'En camino': { badge: 'badge-info', border: 'var(--info)', next: 'Entregado', action: 'Entregar', icon: 'fa-check', progress: 92 },
+        'Entregado': { badge: 'badge-success', border: 'var(--success)', next: '', action: '', icon: 'fa-check', progress: 100 }
     };
 
-    function setText(id, value) {
+    const setText = (id, value) => {
         const el = document.getElementById(id);
         if (el) el.textContent = value;
-    }
+    };
 
-    function primaryItem(order) {
-        if (!order.items?.length) return 'Pedido personalizado';
-        const [first, ...rest] = order.items;
-        return `${first.name}${rest.length ? ` +${rest.length}` : ''}`;
-    }
+    const fmtDate = value => new Date(value).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit' });
+    const statusOf = order => order.estado || order.status || '';
+    const customerOf = order => order.cliente || order.customerName || '-';
+    const deliveryOf = order => order.entrega || order.deliveryDate || new Date().toISOString();
+    const itemOf = order => order.producto || order.products || 'Pedido personalizado';
 
-    function ticket(order, mode = 'active') {
-        const meta = statusMeta[order.status] || statusMeta.Confirmado;
-        const canPay = order.paymentStatus !== 'Pagado';
-        const isDone = order.status === 'Entregado';
-        const action = canPay
-            ? `<button class="btn btn-outline btn-sm" onclick="payProductionOrder(${order.id})"><i class="fas fa-money-bill-wave"></i> Cobrar</button>`
-            : (!isDone ? `<button class="btn btn-primary btn-sm" onclick="moveProductionOrder(${order.id}, '${meta.next}')"><i class="fas ${meta.icon}"></i> ${meta.action}</button>` : '');
+    function ticket(order, mode) {
+        const status = statusOf(order);
+        const meta = statusMeta[status] || statusMeta.Confirmado;
+        const action = status !== 'Entregado'
+            ? `<button class="btn btn-primary btn-sm" onclick="moveProductionOrder(${order.id}, '${meta.next}')"><i class="fas ${meta.icon}"></i> ${meta.action}</button>`
+            : `<span class="badge badge-success">Completado</span>`;
 
         return `
-            <div class="card production-ticket" draggable="${mode !== 'done'}" style="cursor:${mode !== 'done' ? 'move' : 'default'}; border-left:4px solid ${meta.border};">
-                <div style="display:flex; justify-content:space-between; gap:.75rem; margin-bottom:.5rem; align-items:start;">
-                    <strong>#${order.id} - ${order.customerName}</strong>
-                    <span class="badge ${meta.badge}">${order.status}</span>
+            <div class="card production-ticket" style="border-left:4px solid ${meta.border};">
+                <div style="display:flex;justify-content:space-between;gap:.75rem;margin-bottom:.5rem;align-items:start;">
+                    <strong>#${order.id} - ${customerOf(order)}</strong>
+                    <span class="badge ${meta.badge}">${status}</span>
                 </div>
-                <div>${primaryItem(order)}</div>
-                ${mode !== 'pending' ? `
-                    <div class="progress" style="margin:.65rem 0;">
-                        <div class="progress-bar" style="width:${meta.progress}%;"></div>
-                    </div>
-                ` : ''}
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:.75rem; margin-top:.65rem;">
-                    <span class="text-muted"><i class="fas fa-calendar"></i> ${fmtDate(order.deliveryDate)}</span>
-                    ${action || `<span class="badge badge-success">Completado</span>`}
+                <div>${itemOf(order)}</div>
+                ${mode !== 'pending' ? `<div class="progress" style="margin:.65rem 0;"><div class="progress-bar" style="width:${meta.progress}%;"></div></div>` : ''}
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:.75rem;margin-top:.65rem;">
+                    <span class="text-muted"><i class="fas fa-calendar"></i> ${fmtDate(deliveryOf(order))}</span>
+                    ${action}
                 </div>
-            </div>
-        `;
+            </div>`;
     }
 
     function scheduleRow(order, index) {
-        const colors = ['var(--primary)', 'var(--warning)', 'var(--success)', 'var(--info)', 'var(--danger)'];
-        const color = colors[index % colors.length];
-        const hour = `${8 + index}:00 ${index < 4 ? 'AM' : 'PM'}`;
+        const hour = `${8 + index}:00`;
         return `
             <div class="production-schedule-row">
-                <div class="production-schedule-time" style="color:${color};">${hour}</div>
-                <div class="production-schedule-line">
-                    <span style="left:${Math.min(index * 18, 90)}%; background:${color};"></span>
-                </div>
-                <div class="production-schedule-label">#${order.id} · ${primaryItem(order)}</div>
-            </div>
-        `;
+                <div class="production-schedule-time">${hour}</div>
+                <div class="production-schedule-line"><span style="left:${Math.min(index * 18, 90)}%;"></span></div>
+                <div class="production-schedule-label">#${order.id} - ${itemOf(order)}</div>
+            </div>`;
     }
 
     function renderProduction() {
         const orders = store.orders.list();
-        const pending = orders.filter(o => ['Pendiente pago', 'Confirmado'].includes(o.status));
-        const active = orders.filter(o => ['En producción', 'Listo', 'En camino'].includes(o.status));
-        const done = orders.filter(o => o.status === 'Entregado');
+        const pending = orders.filter(o => ['Pendiente pago', 'Confirmado'].includes(statusOf(o)));
+        const active = orders.filter(o => ['En produccion', 'En producción', 'Listo', 'En camino'].includes(statusOf(o)));
+        const done = orders.filter(o => statusOf(o) === 'Entregado');
         const late = orders.filter(o => {
-            const delivery = new Date(o.deliveryDate);
+            const delivery = new Date(deliveryOf(o));
             delivery.setHours(0, 0, 0, 0);
-            return delivery < today && o.status !== 'Entregado';
+            return delivery < today && statusOf(o) !== 'Entregado';
         });
 
         setText('prodPendingCount', pending.length);
@@ -371,240 +168,24 @@
         setText('prodActiveBadge', active.length);
         setText('prodDoneBadge', done.length);
 
-        document.getElementById('prodPendingList').innerHTML = pending.map(o => ticket(o, 'pending')).join('') || `<div class="text-muted">No hay pedidos pendientes.</div>`;
-        document.getElementById('prodActiveList').innerHTML = active.map(o => ticket(o, 'active')).join('') || `<div class="text-muted">No hay pedidos en producción.</div>`;
-        document.getElementById('prodDoneList').innerHTML = done.slice(0, 8).map(o => ticket(o, 'done')).join('') || `<div class="text-muted">Aún no hay pedidos completados.</div>`;
-        document.getElementById('productionSchedule').innerHTML = orders.slice(0, 5).map(scheduleRow).join('') || `<div class="text-muted">No hay programación para hoy.</div>`;
+        document.getElementById('prodPendingList').innerHTML = pending.map(o => ticket(o, 'pending')).join('') || '<div class="text-muted">No hay pedidos pendientes.</div>';
+        document.getElementById('prodActiveList').innerHTML = active.map(o => ticket(o, 'active')).join('') || '<div class="text-muted">No hay pedidos en produccion.</div>';
+        document.getElementById('prodDoneList').innerHTML = done.map(o => ticket(o, 'done')).join('') || '<div class="text-muted">No hay pedidos completados.</div>';
+        document.getElementById('productionSchedule').innerHTML = orders.slice(0, 5).map(scheduleRow).join('') || '<div class="text-muted">No hay programacion para hoy.</div>';
     }
 
-    window.payProductionOrder = (orderId) => {
-        try {
-            store.orders.markPaid(orderId, 'Efectivo');
-            app.toast.success(`Pedido #${orderId} cobrado y confirmado.`);
-            renderProduction();
-        } catch (error) {
-            app.toast.error(error.message);
-        }
-    };
-
     window.moveProductionOrder = (orderId, nextStatus) => {
-        try {
-            store.orders.updateStatus(orderId, nextStatus);
-            app.toast.success(`Pedido #${orderId} ahora está en ${nextStatus}.`);
+        store.orders.updateStatus(orderId, nextStatus).then(() => {
             renderProduction();
-        } catch (error) {
-            app.toast.error(error.message);
-        }
+            app.toast.success(`Pedido #${orderId} actualizado.`);
+        }).catch(error => app.toast.error(error.message));
     };
 
-    window.startProduction = (orderId) => window.moveProductionOrder(orderId, 'En producción');
-    window.updateProgress = (orderId) => window.moveProductionOrder(orderId, 'Listo');
-    window.completeProduction = (orderId) => window.moveProductionOrder(orderId, 'Entregado');
-
-    renderProduction();
+    store.refresh().then(renderProduction).catch(error => app.toast.error(error.message));
 })();
 </script>
 }
 
-<style>
-    .production-page {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        max-width: 1480px;
-    }
-
-        .production-page,
-        .production-page * {
-            min-width: 0;
-        }
-
-    .production-header {
-        align-items: center;
-        margin-bottom: 0;
-    }
-
-    .production-date-chip {
-        display: flex;
-        gap: 1rem;
-    }
-
-    .production-content {
-        display: flex;
-        flex-direction: column;
-        gap: 1.25rem;
-    }
-
-    .production-kpi-grid {
-        gap: 1rem;
-        margin-bottom: 0;
-    }
-
-    .production-board {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 1.25rem;
-        align-items: start;
-    }
-
-    .production-lane {
-        padding: 1.25rem;
-    }
-
-    .production-lane .kanban-column,
-    .production-lane > div:last-child {
-        display: grid !important;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        gap: 1rem !important;
-        align-items: stretch;
-    }
-
-    .production-ticket {
-        height: 100%;
-        padding: 1rem;
-    }
-
-    .production-schedule-card {
-        margin-top: 0;
-    }
-
-    .production-schedule-row {
-        display: grid;
-        grid-template-columns: 82px minmax(80px, 1fr) minmax(180px, 260px);
-        gap: 1rem;
-        align-items: center;
-    }
-
-    .production-schedule-time {
-        font-weight: 800;
-    }
-
-    .production-schedule-line {
-        height: 2px;
-        background: var(--border);
-        position: relative;
-    }
-
-    .production-schedule-line span {
-        position: absolute;
-        top: -6px;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        box-shadow: 0 0 0 2px var(--primary-light);
-    }
-
-    .production-schedule-label {
-        background: var(--bg-alt);
-        padding: .65rem .8rem;
-        border-radius: var(--radius);
-        font-weight: 700;
-    }
-
-    .production-page .card:hover {
-        transform: none;
-        box-shadow: var(--shadow-sm);
-        border-color: var(--border);
-    }
-
-    .production-page .card:hover::after {
-        opacity: 0;
-    }
-
-    .production-page .btn:hover,
-    .production-page .btn-primary:hover,
-    .production-page .btn-outline:hover,
-    .production-page .btn-secondary:hover,
-    .production-page .btn-ghost:hover,
-    .production-page .form-control:focus,
-    .production-page input:focus,
-    .production-page select:focus,
-    .production-page textarea:focus {
-        transform: none;
-    }
-
-    @@media (min-width: 1180px) {
-        .production-board {
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        }
-
-        .production-lane--done {
-            grid-column: 1 / -1;
-        }
-    }
-
-    @@media (max-width: 768px) {
-        .production-header {
-            align-items: flex-start;
-        }
-
-        .production-date-chip {
-            width: 100%;
-        }
-
-        .production-lane .kanban-column,
-        .production-lane > div:last-child {
-            grid-template-columns: 1fr;
-        }
-
-        .production-schedule-row {
-            grid-template-columns: 1fr;
-            gap: .5rem;
-        }
-
-        .production-schedule-line {
-            display: none;
-        }
-    }
-
-    
-    .dragging {
-        opacity: 0.5;
-        transform: scale(0.98);
-    }
-
-    .kanban-column {
-        min-height: 200px;
-    }
-
-    [draggable="true"] {
-        user-select: none;
-    }
-
-    
-    .badge-success {
-        background: #d1fae5;
-        color: #065f46;
-    }
-
-    .badge-warning {
-        background: #fef3c7;
-        color: #92400e;
-    }
-
-    .badge-info {
-        background: #dbeafe;
-        color: #1e40af;
-    }
-
-    
-    .dark .badge-success {
-        background: rgba(16, 185, 129, 0.2);
-        color: #10b981;
-    }
-
-    .dark .badge-warning {
-        background: rgba(245, 158, 11, 0.2);
-        color: #f59e0b;
-    }
-
-    .dark .badge-info {
-        background: rgba(59, 130, 246, 0.2);
-        color: #3b82f6;
-    }
-
-    .dark [style*="background: #d1fae5"] {
-        background: rgba(16, 185, 129, 0.1) !important;
-        border-color: rgba(16, 185, 129, 0.3) !important;
-    }
-</style>
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/production-index.css" asp-append-version="true" />
+}

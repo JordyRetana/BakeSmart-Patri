@@ -2,7 +2,7 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Roles";
 }
-<div class="page-shell">
+<div class="page-shell roles-page">
     <div class="page-header" style="margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
         <div>
             <h1 style="margin:0; display:flex; align-items:center; gap:.75rem;"><i class="fas fa-shield-alt" style="color:var(--primary);"></i> Roles y permisos</h1>
@@ -24,6 +24,8 @@
 @section Scripts {
 <script>
 (() => {
+    async function renderRoles() {
+    await BakeSmartStore.refresh();
     const roles = BakeSmartStore.roles.list();
     const all = [...new Set(roles.flatMap(r => r.permissions))].sort();
     document.getElementById('rolesGrid').innerHTML = roles.map(r => `
@@ -43,7 +45,13 @@
             <td>${feature}</td>
             ${roles.map(r => `<td>${r.permissions.includes(feature) ? '<i class="fas fa-check" style="color:var(--success);"></i>' : '<i class="fas fa-xmark" style="color:var(--danger);"></i>'}</td>`).join('')}
         </tr>
-    `).join('');
+    `).join('') || `<tr><td colspan="4" class="text-center text-muted">Los permisos detallados se administran desde autenticacion y roles.</td></tr>`;
+    }
+
+    renderRoles().catch(error => app.toast.error(error.message));
 })();
 </script>
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/roles-index.css" asp-append-version="true" />
 }

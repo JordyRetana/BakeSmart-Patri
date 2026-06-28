@@ -1,0 +1,199 @@
+@{
+    ViewData["Title"] = "Carrito POS";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-shell pos-cart-page">
+    <div class="page-header">
+        <div>
+            <div class="eyebrow"><i class="fas fa-cash-register"></i> Punto de venta</div>
+            <h1>Finalizar venta</h1>
+            <p class="text-muted">Revise los productos, seleccione o escriba el cliente y confirme el cobro.</p>
+        </div>
+        <a class="btn btn-outline" href="/Pos">
+            <i class="fas fa-arrow-left"></i>
+            Volver al POS
+        </a>
+    </div>
+
+    <div class="pos-cart-checkout-layout">
+        <section class="card pos-cart-checkout-card">
+            <div class="pos-panel-header">
+                <div>
+                    <div class="pos-panel-eyebrow">Detalle</div>
+                    <h3 class="pos-panel-title"><i class="fas fa-cart-shopping"></i> Productos</h3>
+                </div>
+                <span class="badge badge-info" id="checkoutCartCount">0 productos</span>
+            </div>
+            <div id="checkoutCartItems" class="pos-cart-list"></div>
+        </section>
+
+        <aside class="card pos-cart-checkout-card">
+            <div class="pos-panel-header">
+                <div>
+                    <div class="pos-panel-eyebrow">Cliente y cobro</div>
+                    <h3 class="pos-panel-title">Datos de venta</h3>
+                </div>
+            </div>
+
+            <form id="checkoutCartForm" class="pos-checkout-form">
+                <div class="pos-form-block">
+                    <label>Cliente</label>
+                    <input class="form-control" name="customerName" id="checkoutCustomerName" list="checkoutCustomerOptions" placeholder="Buscar cliente o escribir manualmente" />
+                    <datalist id="checkoutCustomerOptions"></datalist>
+                </div>
+                <div class="pos-form-block">
+                    <label>Correo</label>
+                    <input class="form-control" name="customerEmail" placeholder="correo@cliente.com" />
+                </div>
+                <div class="pos-form-block">
+                    <label>Telefono</label>
+                    <input class="form-control" name="customerPhone" placeholder="Telefono" />
+                </div>
+                <div class="pos-form-block">
+                    <label>Metodo de pago</label>
+                    <select class="form-control" name="paymentMethod" id="checkoutPaymentMethod"></select>
+                </div>
+                <div class="pos-form-block">
+                    <label>Descuento adicional</label>
+                    <input class="form-control" type="number" min="0" step="0.01" name="discountRate" value="0" />
+                </div>
+
+                <div id="checkoutTotals" class="pos-cart-totals"></div>
+
+                <button class="btn btn-primary pos-submit-btn" type="submit">
+                    <i class="fas fa-check-circle"></i>
+                    Confirmar venta
+                </button>
+            </form>
+        </aside>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const store = BakeSmartStore;
+            const fmt = app.utils.formatCurrency;
+            let cart = JSON.parse(sessionStorage.getItem('bakesmart.pos.cart') || '[]');
+
+            const itemsEl = document.getElementById('checkoutCartItems');
+            const countEl = document.getElementById('checkoutCartCount');
+            const totalsEl = document.getElementById('checkoutTotals');
+            const form = document.getElementById('checkoutCartForm');
+
+            function saveCart() {
+                sessionStorage.setItem('bakesmart.pos.cart', JSON.stringify(cart));
+            }
+
+            function renderCustomers() {
+                document.getElementById('checkoutCustomerOptions').innerHTML = store.customers.list().map(customer => `
+                    <option value="${customer.fullName || customer.name || ''}">
+                        ${customer.email || customer.phone || 'Cliente registrado'}
+                    </option>
+                `).join('');
+            }
+
+            function renderPayments() {
+                document.getElementById('checkoutPaymentMethod').innerHTML = store.pos.config().paymentMethods
+                    .filter(method => method.active)
+                    .map(method => `<option value="${method.name}">${method.name}</option>`)
+                    .join('');
+            }
+
+            function renderCart() {
+                countEl.textContent = `${cart.length} producto${cart.length === 1 ? '' : 's'}`;
+
+                if (!cart.length) {
+                    itemsEl.innerHTML = `<div class="pos-cart-mini-empty"><i class="fas fa-basket-shopping"></i><strong>Carrito vacio</strong><span>Vuelva al POS para agregar productos.</span></div>`;
+                    totalsEl.innerHTML = '';
+                    return;
+                }
+
+                itemsEl.innerHTML = cart.map(item => `
+                    <div class="pos-cart-item">
+                        <div class="pos-cart-item-header">
+                            <div>
+                                <strong>${item.name}</strong>
+                                <div class="text-muted" style="font-size:.82rem;">${item.code} - ${fmt(item.unitPrice)} c/u</div>
+                            </div>
+                            <button class="btn btn-ghost btn-sm" type="button" onclick="removeCheckoutItem(${item.productId})">
+                                <i class="fas fa-trash-can"></i>
+                            </button>
+                        </div>
+                        <div class="pos-cart-item-footer">
+                            <div class="pos-cart-actions">
+                                <button class="btn btn-outline btn-sm" type="button" onclick="changeCheckoutQty(${item.productId}, -1)"><i class="fas fa-minus"></i></button>
+                                <span style="font-weight:800;min-width:24px;text-align:center;">${item.quantity}</span>
+                                <button class="btn btn-outline btn-sm" type="button" onclick="changeCheckoutQty(${item.productId}, 1)"><i class="fas fa-plus"></i></button>
+                            </div>
+                            <strong style="color:var(--primary);">${fmt(item.quantity * item.unitPrice)}</strong>
+                        </div>
+                    </div>
+                `).join('');
+
+                const subtotal = cart.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+                const tax = subtotal * Number(store.pos.config().iva || 0);
+                const total = subtotal + tax;
+                totalsEl.innerHTML = `
+                    <div class="pos-total-row"><span>Subtotal</span><strong>${fmt(subtotal)}</strong></div>
+                    <div class="pos-total-row"><span>IVA</span><strong>${fmt(tax)}</strong></div>
+                    <div class="hr"></div>
+                    <div class="pos-total-row total-final"><span>Total</span><strong>${fmt(total)}</strong></div>
+                `;
+            }
+
+            window.changeCheckoutQty = (productId, delta) => {
+                const item = cart.find(row => Number(row.productId) === Number(productId));
+                if (!item) return;
+                item.quantity += delta;
+                if (item.quantity <= 0) cart = cart.filter(row => Number(row.productId) !== Number(productId));
+                saveCart();
+                renderCart();
+            };
+
+            window.removeCheckoutItem = (productId) => {
+                cart = cart.filter(row => Number(row.productId) !== Number(productId));
+                saveCart();
+                renderCart();
+            };
+
+            document.getElementById('checkoutCustomerName').addEventListener('change', event => {
+                const selected = store.customers.list().find(customer =>
+                    String(customer.fullName || customer.name || '').toLowerCase() === String(event.target.value || '').toLowerCase()
+                );
+                if (!selected) return;
+                form.customerEmail.value = selected.email || '';
+                form.customerPhone.value = selected.phone || '';
+            });
+
+            form.addEventListener('submit', async event => {
+                event.preventDefault();
+                try {
+                    if (!store.pos.activeSession()) throw new Error('Debe abrir caja antes de confirmar ventas.');
+                    if (!cart.length) throw new Error('Agregue productos al carrito antes de cobrar.');
+
+                    await store.pos.sell({
+                        ...Object.fromEntries(new FormData(form).entries()),
+                        items: cart.map(item => ({ productId: item.productId, quantity: item.quantity }))
+                    });
+
+                    cart = [];
+                    saveCart();
+                    app.toast.success('Venta registrada correctamente.');
+                    app.navigation.navigate('/Pos');
+                } catch (error) {
+                    app.toast.error(error.message);
+                }
+            });
+
+            renderCustomers();
+            renderPayments();
+            renderCart();
+        })();
+    </script>
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/pos-index.css" asp-append-version="true" />
+}

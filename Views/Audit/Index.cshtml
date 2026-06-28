@@ -1,0 +1,133 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Bitacora del sistema";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/audit-index.css" asp-append-version="true" />
+}
+
+<main class="audit-page">
+    <header class="audit-hero">
+        <div>
+            <span class="audit-eyebrow"><i class="fas fa-shield-halved"></i> Control centralizado</span>
+            <h1>Bitacora del sistema</h1>
+            <p>Consulta cambios, accesos y operaciones realizadas dentro de BakeSmart Patri.</p>
+        </div>
+        <button id="auditRefresh" class="btn btn-primary" type="button">
+            <i class="fas fa-rotate"></i> Actualizar
+        </button>
+    </header>
+
+    <section class="audit-kpis" aria-label="Resumen de actividad">
+        <article><span>Movimientos visibles</span><strong id="auditTotal">0</strong><i class="fas fa-list-check"></i></article>
+        <article><span>Usuarios activos</span><strong id="auditUsers">0</strong><i class="fas fa-users"></i></article>
+        <article><span>Actividad de hoy</span><strong id="auditToday">0</strong><i class="fas fa-calendar-day"></i></article>
+        <article><span>Ultima actividad</span><strong id="auditLast">Sin datos</strong><i class="fas fa-clock"></i></article>
+    </section>
+
+    <section class="audit-workspace">
+        <div class="audit-filters">
+            <label>
+                <span>Buscar</span>
+                <div class="audit-search"><i class="fas fa-search"></i><input id="auditSearch" type="search" placeholder="Usuario, detalle o tipo" /></div>
+            </label>
+            <label>
+                <span>Tipo de movimiento</span>
+                <select id="auditType"><option value="">Todos los tipos</option></select>
+            </label>
+            <label>
+                <span>Periodo</span>
+                <select id="auditPeriod">
+                    <option value="all">Todo el historial</option>
+                    <option value="today">Hoy</option>
+                    <option value="7">Ultimos 7 dias</option>
+                    <option value="30">Ultimos 30 dias</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="audit-table-card">
+            <div class="audit-table-heading">
+                <div><h2>Registro de movimientos</h2><p id="auditResultCount">Cargando actividad...</p></div>
+                <span class="audit-live"><i></i> Datos de SQL Server</span>
+            </div>
+            <div class="audit-table-wrap">
+                <table>
+                    <thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Accion</th><th>Detalle</th></tr></thead>
+                    <tbody id="auditRows"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</main>
+
+@section Scripts {
+<script>
+(() => {
+    let logs = [];
+    const rows = document.getElementById('auditRows');
+    const search = document.getElementById('auditSearch');
+    const type = document.getElementById('auditType');
+    const period = document.getElementById('auditPeriod');
+    const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[char]));
+    const label = value => String(value || 'SISTEMA').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+
+    function categoryIcon(value) {
+        const item = String(value || '');
+        if (item.includes('LOGIN') || item.includes('LOGOUT')) return 'fa-key';
+        if (item.includes('USUARIO') || item.includes('PERFIL')) return 'fa-user-gear';
+        if (item.includes('INVENTARIO')) return 'fa-boxes-stacked';
+        if (item.includes('PEDIDO')) return 'fa-clipboard-list';
+        if (item.includes('POS') || item.includes('CAJA') || item.includes('VENTA')) return 'fa-cash-register';
+        return 'fa-pen-to-square';
+    }
+
+    function inPeriod(item) {
+        if (period.value === 'all') return true;
+        const date = new Date(item.createdAt);
+        const now = new Date();
+        if (period.value === 'today') return date.toDateString() === now.toDateString();
+        return date >= new Date(now.getTime() - Number(period.value) * 86400000);
+    }
+
+    function render() {
+        const query = search.value.trim().toLowerCase();
+        const filtered = logs.filter(item => {
+            const matchesText = !query || [item.type, item.detail, item.userName, item.userEmail].some(value => String(value || '').toLowerCase().includes(query));
+            return matchesText && (!type.value || item.type === type.value) && inPeriod(item);
+        });
+
+        document.getElementById('auditResultCount').textContent = `${filtered.length} movimientos encontrados`;
+        rows.innerHTML = filtered.map(item => {
+            const date = new Date(item.createdAt);
+            return `<tr>
+                <td><strong>${date.toLocaleDateString('es-CR')}</strong><span>${date.toLocaleTimeString('es-CR', { hour:'2-digit', minute:'2-digit' })}</span></td>
+                <td><div class="audit-user"><b>${esc(item.userName)}</b><small>${esc(item.userEmail)}</small></div></td>
+                <td><span class="audit-action"><i class="fas ${categoryIcon(item.type)}"></i>${esc(label(item.type))}</span></td>
+                <td>${esc(item.detail)}</td>
+            </tr>`;
+        }).join('') || '<tr><td colspan="4"><div class="audit-empty"><i class="fas fa-magnifying-glass"></i><strong>No hay movimientos para estos filtros</strong><span>Prueba otra busqueda o periodo.</span></div></td></tr>';
+    }
+
+    async function load() {
+        rows.innerHTML = '<tr><td colspan="4"><div class="audit-empty"><i class="fas fa-spinner fa-spin"></i><strong>Cargando bitacora...</strong></div></td></tr>';
+        const response = await fetch('/api/logs');
+        if (!response.ok) throw new Error('No fue posible cargar la bitacora.');
+        logs = await response.json();
+        const types = [...new Set(logs.map(item => item.type).filter(Boolean))].sort();
+        type.innerHTML = '<option value="">Todos los tipos</option>' + types.map(value => `<option value="${esc(value)}">${esc(label(value))}</option>`).join('');
+        const today = new Date().toDateString();
+        document.getElementById('auditTotal').textContent = logs.length;
+        document.getElementById('auditUsers').textContent = new Set(logs.map(item => item.userEmail)).size;
+        document.getElementById('auditToday').textContent = logs.filter(item => new Date(item.createdAt).toDateString() === today).length;
+        document.getElementById('auditLast').textContent = logs.length ? new Date(logs[0].createdAt).toLocaleTimeString('es-CR', { hour:'2-digit', minute:'2-digit' }) : 'Sin datos';
+        render();
+    }
+
+    [search, type, period].forEach(element => element.addEventListener(element === search ? 'input' : 'change', render));
+    document.getElementById('auditRefresh').addEventListener('click', () => load().catch(error => app.toast.error(error.message)));
+    load().catch(error => { rows.innerHTML = `<tr><td colspan="4"><div class="audit-empty"><strong>${esc(error.message)}</strong></div></td></tr>`; });
+})();
+</script>
+}

@@ -1,0 +1,27 @@
+@model BakeSmartPatri.Models.CatalogIndexViewModel
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Ofertas";
+    var culture = new System.Globalization.CultureInfo("es-CR");
+}
+
+<main class="commerce-page">
+    <header class="commerce-hero commerce-hero--offers">
+        <div><span class="commerce-kicker">Selección especial</span><h1>Sabores para celebrar más</h1><p>Descubre productos destacados y opciones ideales para tu próximo pedido.</p></div>
+        <i class="fas fa-gift"></i>
+    </header>
+
+    <section class="commerce-section">
+        <div class="commerce-section-title"><span></span><h2>Especiales de BakeSmart Patri</h2><span></span></div>
+        <div class="commerce-offer-list">
+            @foreach (var product in Model.Products.Where(product => product.IsActive).Take(6))
+            {
+                <article class="commerce-offer-tile">
+                    <div><small>@product.Category</small><h2>@product.Name</h2><p>@product.Description</p><strong>@product.UnitPrice.ToString("C0", culture)</strong><a href="/Catalog/Details/@product.Id">Ver producto</a></div>
+                    <img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';" />
+                </article>
+            }
+        </div>
+    </section>
+</main>
+
