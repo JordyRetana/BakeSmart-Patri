@@ -52,6 +52,8 @@
     </script>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
+    <link rel="stylesheet" href="~/css/global/workspace-layout.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/global/smart-tables.css" asp-append-version="true" />
     <style>
         
         @@keyframes slideIn {
@@ -414,6 +416,7 @@
 
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/bakesmart-store.js" asp-append-version="true"></script>
+    <script src="~/js/smart-tables.js" asp-append-version="true"></script>
 
     
     @await RenderSectionAsync("Scripts", required: false)

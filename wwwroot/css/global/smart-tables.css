@@ -1,0 +1,289 @@
+.smart-table-toolbar {
+    min-width: 0;
+    margin: 0 0 .75rem;
+    padding: .7rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    border: 1px solid var(--bs-line, #e9e2ee);
+    border-radius: 10px;
+    background: linear-gradient(110deg, #fff, #fcf8ff 60%, #fff5f8);
+}
+
+.smart-table-search {
+    width: min(460px, 100%);
+    min-width: 0;
+    min-height: 42px;
+    margin: 0;
+    padding: 0 .45rem 0 .8rem;
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) 32px;
+    align-items: center;
+    gap: .4rem;
+    border: 1px solid #ded5e7;
+    border-radius: 9px;
+    background: #fff;
+    color: #756c7d;
+}
+
+.smart-table-search:focus-within {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, .1);
+}
+
+.smart-table-search input {
+    min-height: 38px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: .76rem;
+}
+
+.smart-table-search-button {
+    width: 28px;
+    height: 28px;
+    margin-left: -.35rem;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #7a4a9d;
+    cursor: pointer;
+}
+
+.smart-table-search-button:hover {
+    background: #f2ebf8;
+}
+
+.smart-table-clear {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: #f2ebf8;
+    color: #6c358e;
+    cursor: pointer;
+}
+
+.smart-table-toolbar-meta {
+    flex: 0 0 auto;
+}
+
+.smart-table-match {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .45rem .65rem;
+    border-radius: 999px;
+    background: #f1ebff;
+    color: #69339b;
+    font-size: .68rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.smart-table-dock {
+    min-width: 0;
+    margin: .75rem 0 0;
+    padding: .55rem .65rem;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: .75rem;
+    border: 1px solid var(--bs-line, #e9e2ee);
+    border-radius: 12px;
+    background: linear-gradient(110deg, #f8f3ff, #fff 45%, #fff4f8);
+    box-shadow: 0 10px 24px rgba(57, 35, 73, .07);
+}
+
+.smart-table-dock.is-compact {
+    grid-template-columns: auto 1fr;
+}
+
+.smart-table-page-size {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    color: #757b88;
+    font-size: .66rem;
+    font-weight: 800;
+}
+
+.smart-table-page-size select {
+    width: 62px !important;
+    min-height: 34px !important;
+    padding: 0 .45rem !important;
+    border-radius: 8px !important;
+    background: #fff !important;
+    font-size: .7rem;
+}
+
+.smart-table-pagination {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .45rem;
+}
+
+.smart-table-pages {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .3rem;
+}
+
+.smart-table-step,
+.smart-table-page {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 .5rem;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid #ded3ea;
+    border-radius: 9px;
+    background: #fff;
+    color: #5e2d86;
+    font-size: .7rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.smart-table-step:hover:not(:disabled),
+.smart-table-page:hover:not(.is-current) {
+    border-color: #9b6bc0;
+    background: #f8f2ff;
+    transform: translateY(-1px);
+}
+
+.smart-table-page.is-current {
+    min-width: 40px;
+    color: #fff;
+    border-color: transparent;
+    background: linear-gradient(135deg, #7c3aed, #c83c86);
+    box-shadow: 0 8px 18px rgba(124, 58, 237, .22);
+}
+
+.smart-table-step:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+}
+
+.smart-table-ellipsis {
+    width: 22px;
+    color: #93899a;
+    text-align: center;
+}
+
+.smart-table-range {
+    min-width: 82px;
+    color: #777d8a;
+    font-size: .67rem;
+    font-weight: 800;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.smart-row-hidden {
+    display: none !important;
+}
+
+.smart-table-empty {
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: .4rem;
+    color: #7b818d;
+    text-align: center;
+}
+
+.smart-table-empty i {
+    margin-bottom: .25rem;
+    color: #a46bd0;
+    font-size: 1.4rem;
+}
+
+.smart-table-empty strong,
+.smart-table-empty span {
+    display: block;
+}
+
+.smart-table-empty span {
+    font-size: .7rem;
+}
+
+body.dark .smart-table-toolbar,
+body.dark .smart-table-dock {
+    border-color: #3b3547;
+    background: linear-gradient(110deg, #24202d, #211e2b 55%, #2d202a);
+}
+
+body.dark .smart-table-search,
+body.dark .smart-table-page-size select,
+body.dark .smart-table-step,
+body.dark .smart-table-page {
+    border-color: #4b4258 !important;
+    background: #292431 !important;
+    color: #eadcff !important;
+}
+
+body.dark .smart-table-page.is-current {
+    border-color: transparent !important;
+    background: linear-gradient(135deg, #8b5cf6, #d14b91) !important;
+}
+
+body.dark .smart-table-match,
+body.dark .smart-table-clear {
+    background: #342a42;
+    color: #e3ccff;
+}
+
+@media (max-width: 680px) {
+    .smart-table-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .smart-table-search {
+        width: 100%;
+    }
+
+    .smart-table-toolbar-meta {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .smart-table-dock,
+    .smart-table-dock.is-compact {
+        grid-template-columns: 1fr auto;
+    }
+
+    .smart-table-pagination {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        overflow-x: auto;
+        justify-content: flex-start;
+        padding-bottom: .15rem;
+    }
+
+    .smart-table-page-size {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .smart-table-range {
+        grid-column: 2;
+        grid-row: 2;
+    }
+}

@@ -4,7 +4,20 @@ using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
 using BakeSmartPatri.Data;
 
+if (args.Contains("--check-databases", StringComparer.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = await DatabaseMigrationRunner.CheckConnectionsAsync();
+    return;
+}
+
+if (args.Contains("--migrate-database", StringComparer.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = await DatabaseMigrationRunner.MigrateAsync();
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddJsonFile("appsettings.Azure.json", optional: true, reloadOnChange: true);
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();

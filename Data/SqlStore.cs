@@ -50,7 +50,8 @@ public sealed class SqlStore
         {
             enabled = true,
             status = "connected",
-            database
+            database,
+            server = connection.DataSource
         };
     }
 

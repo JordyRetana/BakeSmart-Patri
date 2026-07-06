@@ -402,3 +402,10 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 nul
+
+# Local Azure migration files (contain credentials or generated summaries)
+appsettings.Azure.json
+Database/AzurePreMigrationSummary.json
+Database/Migrate-To-Azure.local.ps1
+.migration-temp/
+Publish-Main.local.ps1

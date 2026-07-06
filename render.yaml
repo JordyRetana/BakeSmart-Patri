@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: bakesmart-patri
+    runtime: docker
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+        value: "true"
+      - key: Features__UseSqlDatabase
+        value: "true"
+      - key: ConnectionStrings__BakeSmartDb
+        sync: false
