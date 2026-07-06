@@ -1,0 +1,100 @@
+name: Keep Render App Warm
+
+on:
+  schedule:
+    # Render Free puede dormir tras 15 minutos sin tráfico.
+    # Esto intenta visitar la app cada 5 minutos, que es el intervalo mínimo práctico en GitHub Actions.
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: keep-render-app-warm
+  cancel-in-progress: false
+
+jobs:
+  keep-alive:
+    name: Wake and warm Render app
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+
+    env:
+      APP_URL: "https://bakesmart-patri.onrender.com"
+
+    steps:
+      - name: Warm up app with retries
+        shell: bash
+        run: |
+          set -u
+
+          echo "========================================"
+          echo "Keep Alive Render"
+          echo "URL: $APP_URL"
+          echo "Fecha UTC: $(date -u '+%Y-%m-%d %H:%M:%S')"
+          echo "========================================"
+
+          warm_request() {
+            local label="$1"
+            local url="$2"
+
+            echo ""
+            echo "[$label] Consultando: $url"
+
+            http_code=$(curl \
+              --location \
+              --silent \
+              --show-error \
+              --output /tmp/render-response.html \
+              --write-out "%{http_code}" \
+              --max-time 70 \
+              --connect-timeout 20 \
+              --retry 4 \
+              --retry-all-errors \
+              --retry-delay 8 \
+              --user-agent "Mozilla/5.0 (GitHub Actions KeepAlive)" \
+              --header "Cache-Control: no-cache" \
+              --header "Pragma: no-cache" \
+              "$url" || echo "000")
+
+            echo "Código HTTP: $http_code"
+
+            if [[ "$http_code" =~ ^2|3 ]]; then
+              echo "OK: La app respondió correctamente."
+              return 0
+            fi
+
+            echo "Aviso: respuesta no exitosa en $label."
+            echo "Primeras líneas de respuesta, si existen:"
+            head -n 20 /tmp/render-response.html 2>/dev/null || true
+            return 1
+          }
+
+          success=0
+
+          # Primer golpe: si la app está dormida, este request la despierta.
+          if warm_request "1/3 wake" "$APP_URL/?keepalive=$(date +%s)"; then
+            success=1
+          fi
+
+          # Espera corta para que Render termine de levantar y cargar dependencias.
+          sleep 20
+
+          # Segundo golpe: ayuda a calentar la app después del arranque.
+          if warm_request "2/3 warm" "$APP_URL/?warmup=$(date +%s)"; then
+            success=1
+          fi
+
+          # Tercer golpe: confirma que ya está estable.
+          sleep 10
+          if warm_request "3/3 confirm" "$APP_URL/?confirm=$(date +%s)"; then
+            success=1
+          fi
+
+          if [[ "$success" -eq 1 ]]; then
+            echo ""
+            echo "Resultado final: app despierta/caliente."
+            exit 0
+          fi
+
+          echo ""
+          echo "Resultado final: la app no respondió correctamente después de varios intentos."
+          exit 1

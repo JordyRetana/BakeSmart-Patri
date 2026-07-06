@@ -25,7 +25,10 @@ public sealed class SqlStore
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("ConnectionStrings:BakeSmartDb no esta configurado.");
 
-        return new SqlConnection(connectionString);
+        var settings = new SqlConnectionStringBuilder(connectionString);
+        settings.ConnectRetryCount = Math.Max(3, settings.ConnectRetryCount);
+        settings.ConnectRetryInterval = 2;
+        return new SqlConnection(settings.ConnectionString);
     }
 
     public async Task<object> HealthAsync()

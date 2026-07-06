@@ -1,0 +1,70 @@
+name: Render Keep Alive
+
+on:
+  push:
+    paths:
+      - ".github/workflows/render-keepalive.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: render-keepalive-bakesmart-patri
+  cancel-in-progress: false
+
+jobs:
+  keep-alive:
+    name: Ping Render app
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      APP_URL: "https://bakesmart-patri.onrender.com"
+
+    steps:
+      - name: Show trigger info
+        run: |
+          echo "Workflow is running"
+          echo "Event: ${{ github.event_name }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "UTC: $(date -u '+%Y-%m-%d %H:%M:%S')"
+
+      - name: Ping app several times
+        shell: bash
+        run: |
+          set -u
+
+          success=0
+
+          for attempt in 1 2 3 4 5 6; do
+            echo "Attempt $attempt"
+
+            code=$(curl -L -sS -o /tmp/render_body.html -w "%{http_code}" \
+              --max-time 60 \
+              --connect-timeout 20 \
+              --retry 2 \
+              --retry-delay 5 \
+              -A "GitHubActions-KeepAlive" \
+              -H "Cache-Control: no-cache" \
+              "$APP_URL/?keepalive=$attempt-$(date +%s)" || echo "000")
+
+            echo "HTTP code: $code"
+            head -n 5 /tmp/render_body.html || true
+
+            if [[ "$code" =~ ^2|3 ]]; then
+              success=1
+            fi
+
+            sleep 20
+          done
+
+          if [[ "$success" -eq 1 ]]; then
+            echo "Render responded at least once."
+            exit 0
+          fi
+
+          echo "Render did not respond successfully."
+          exit 1
