@@ -144,6 +144,127 @@
         border-color: #334155;
     }
 
+    .payment-modal[hidden] {
+        display: none;
+    }
+
+    .payment-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 9000;
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+    }
+
+    .payment-modal__backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(17, 24, 39, .48);
+        backdrop-filter: blur(6px);
+    }
+
+    .payment-modal__dialog {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        gap: 1rem;
+        width: min(460px, 100%);
+        padding: 1rem;
+        border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
+        border-radius: 8px;
+        background: var(--bg-card);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .payment-modal__close {
+        position: absolute;
+        top: .75rem;
+        right: .75rem;
+        display: inline-grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        cursor: pointer;
+    }
+
+    .payment-modal__header {
+        display: flex;
+        align-items: center;
+        gap: .8rem;
+        padding-right: 2.5rem;
+    }
+
+    .payment-modal__icon {
+        display: inline-grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        color: var(--primary-dark);
+        background: color-mix(in srgb, var(--primary-light) 78%, white 22%);
+        border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border));
+        border-radius: 8px;
+    }
+
+    .payment-modal__header h2 {
+        margin: .15rem 0 0;
+        color: var(--text);
+        font-size: 1.3rem;
+    }
+
+    .payment-modal__eyebrow,
+    .payment-modal__amount span,
+    .payment-modal__note,
+    .payment-form label span {
+        color: var(--text-light);
+        font-size: .8rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0;
+    }
+
+    .payment-modal__amount {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+        padding: .85rem;
+        border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--primary-light) 24%, var(--bg));
+    }
+
+    .payment-modal__amount strong {
+        color: var(--text);
+        font-size: 1.45rem;
+    }
+
+    .payment-form {
+        display: grid;
+        gap: .75rem;
+    }
+
+    .payment-form label {
+        display: grid;
+        gap: .28rem;
+    }
+
+    .payment-form__grid {
+        display: grid;
+        grid-template-columns: 1fr 120px;
+        gap: .7rem;
+    }
+
+    .payment-modal__note {
+        margin: 0;
+        line-height: 1.45;
+        text-transform: none;
+    }
+
     @media (max-width: 1100px) {
         .client-order-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -168,6 +289,10 @@
         .client-order-buttons {
             justify-content: flex-start;
             width: 100%;
+        }
+
+        .payment-form__grid {
+            grid-template-columns: 1fr;
         }
     }
 

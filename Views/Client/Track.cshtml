@@ -126,36 +126,26 @@
         `;
     }
 
-    const icons = {
-        origin: L.divIcon({
+    function makeIcon(iconClass, extraClass = '', staticPulse = false) {
+        if (!window.L) return null;
+
+        return L.divIcon({
             className: 'track-marker-icon',
-            html: createPinHtml('fa-store', 'track-pin-origin', true),
+            html: createPinHtml(iconClass, extraClass, staticPulse),
             iconSize: [42, 42],
             iconAnchor: [21, 21],
             popupAnchor: [0, -18]
-        }),
-        destination: L.divIcon({
-            className: 'track-marker-icon',
-            html: createPinHtml('fa-location-dot', 'track-pin-destination', true),
-            iconSize: [42, 42],
-            iconAnchor: [21, 21],
-            popupAnchor: [0, -18]
-        }),
-        courier: L.divIcon({
-            className: 'track-marker-icon',
-            html: createPinHtml('fa-motorcycle', 'track-pin-courier'),
-            iconSize: [42, 42],
-            iconAnchor: [21, 21],
-            popupAnchor: [0, -18]
-        }),
-        plane: L.divIcon({
-            className: 'track-marker-icon',
-            html: createPinHtml('fa-plane', 'track-pin-plane'),
-            iconSize: [42, 42],
-            iconAnchor: [21, 21],
-            popupAnchor: [0, -18]
-        })
-    };
+        });
+    }
+
+    function getIcons() {
+        return {
+            origin: makeIcon('fa-store', 'track-pin-origin', true),
+            destination: makeIcon('fa-location-dot', 'track-pin-destination', true),
+            courier: makeIcon('fa-motorcycle', 'track-pin-courier'),
+            plane: makeIcon('fa-plane', 'track-pin-plane')
+        };
+    }
 
     function getOrders() {
         const own = BakeSmartStore.orders.byClient(userEmail);
@@ -163,6 +153,7 @@
     }
 
     function ensureMap() {
+        if (!window.L) return null;
         if (map) return map;
 
         map = L.map('deliveryMap', {
@@ -310,6 +301,41 @@
         }).join('');
     }
 
+    function renderTrackingSummary(order, destination, routeType) {
+        document.getElementById('trackingSummary').innerHTML = `
+            <div class="summary-row"><span>Origen</span><strong>${origin.name}</strong></div>
+            <div class="summary-row"><span>Cliente</span><strong>${order.customerName}</strong></div>
+            <div class="summary-row"><span>Direccion</span><strong>${order.address}</strong></div>
+            <div class="summary-row"><span>Destino visual</span><strong>${destination.name}</strong></div>
+            <div class="summary-row"><span>Latitud / longitud</span><strong>${destination.lat.toFixed(5)}, ${destination.lng.toFixed(5)}</strong></div>
+            <div class="summary-row"><span>Modalidad</span><strong>${routeType}</strong></div>
+            <div class="summary-row"><span>Entrega</span><strong>${new Date(order.deliveryDate).toLocaleDateString('es-CR')}</strong></div>
+            <div class="summary-row"><span>Productos</span><strong>${order.items.map(i => `${i.quantity} x ${i.name}`).join(', ')}</strong></div>
+            <div class="summary-row"><span>Pago</span><strong>${order.paymentStatus} (${order.paymentMethod || 'Pendiente'})</strong></div>
+        `;
+    }
+
+    function renderMapFallback(order, destination, routeType) {
+        document.getElementById('deliveryMap').innerHTML = `
+            <div class="track-fallback-map">
+                <div class="track-fallback-node">
+                    <span><i class="fas fa-store"></i></span>
+                    <strong>${origin.name}</strong>
+                    <small>${origin.city}, ${origin.country}</small>
+                </div>
+                <div class="track-fallback-route">
+                    <i class="fas ${routeType.includes('aerea') ? 'fa-plane' : 'fa-motorcycle'}"></i>
+                    <span>${order.status}</span>
+                </div>
+                <div class="track-fallback-node">
+                    <span><i class="fas fa-location-dot"></i></span>
+                    <strong>${destination.name}</strong>
+                    <small>${destination.country}</small>
+                </div>
+            </div>
+        `;
+    }
+
     function renderOrder(orderId) {
         const orders = getOrders();
         const order = orders.find(x => Number(x.id) === Number(orderId)) || orders[0];
@@ -320,8 +346,6 @@
         const destination = activePreset(order);
         const isInternational = destination.country !== 'Costa Rica';
         const routeType = isInternational ? 'Trayectoria aérea' : 'Trayecto local';
-        const mapInstance = ensureMap();
-
         document.getElementById('trackOrderId').textContent = `#${order.id}`;
         document.getElementById('trackStatus').textContent = order.status;
         document.getElementById('trackRouteType').textContent = routeType;
@@ -329,6 +353,16 @@
         document.getElementById('trackMeta').textContent = `${origin.city}, ${origin.country} -> ${destination.name}, ${destination.country}`;
 
         clearVisuals();
+        renderTimeline(order, destination);
+        renderTrackingSummary(order, destination, routeType);
+
+        const mapInstance = ensureMap();
+        if (!mapInstance) {
+            renderMapFallback(order, destination, routeType);
+            return;
+        }
+
+        const icons = getIcons();
 
         const startLatLng = [origin.lat, origin.lng];
         const destinationLatLng = [destination.lat, destination.lng];
@@ -442,18 +476,21 @@
         }
     });
 
-    function initializePage() {
+    async function initializePage() {
         if (pageInitialized) return;
         pageInitialized = true;
 
-        renderSelector();
-
-        requestAnimationFrame(() => {
-            showPage();
-            if (map) {
-                map.invalidateSize(true);
-            }
-        });
+        try {
+            await BakeSmartStore.refresh();
+            renderSelector();
+        } finally {
+            requestAnimationFrame(() => {
+                showPage();
+                if (map) {
+                    map.invalidateSize(true);
+                }
+            });
+        }
     }
 
     app.page.ready(initializePage);

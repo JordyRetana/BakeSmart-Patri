@@ -56,7 +56,57 @@
     <div class="client-orders-list" id="clientOrdersList"></div>
 </div>
 
-
+<div class="payment-modal" id="ordersPaymentModal" hidden>
+    <div class="payment-modal__backdrop" data-payment-close></div>
+    <section class="payment-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="ordersPaymentTitle">
+        <button class="payment-modal__close" type="button" data-payment-close aria-label="Cerrar">
+            <i class="fas fa-xmark"></i>
+        </button>
+        <div class="payment-modal__header">
+            <span class="payment-modal__icon"><i class="fas fa-shield-halved"></i></span>
+            <div>
+                <span class="payment-modal__eyebrow">Pasarela de pago</span>
+                <h2 id="ordersPaymentTitle">Pagar pedido</h2>
+            </div>
+        </div>
+        <div class="payment-modal__amount">
+            <span>Total</span>
+            <strong id="ordersPaymentTotal">0</strong>
+        </div>
+        <form id="ordersPaymentForm" class="payment-form">
+            <label>
+                <span>Metodo</span>
+                <select class="form-control" name="method" id="ordersPaymentMethod">
+                    <option>Tarjeta</option>
+                    <option>SINPE</option>
+                </select>
+            </label>
+            <label>
+                <span>Titular</span>
+                <input class="form-control" name="holder" required placeholder="Nombre del titular" />
+            </label>
+            <label class="payment-card-field">
+                <span>Tarjeta</span>
+                <input class="form-control" name="card" maxlength="19" inputmode="numeric" placeholder="4242 4242 4242 4242" />
+            </label>
+            <div class="payment-form__grid payment-card-field">
+                <label>
+                    <span>Vence</span>
+                    <input class="form-control" name="expiry" maxlength="5" placeholder="MM/AA" />
+                </label>
+                <label>
+                    <span>CVV</span>
+                    <input class="form-control" name="cvv" maxlength="4" inputmode="numeric" placeholder="123" />
+                </label>
+            </div>
+            <p class="payment-modal__note">Simulacion segura: no se guarda informacion sensible.</p>
+            <button class="btn btn-primary" type="submit" id="ordersPaymentSubmit">
+                <i class="fas fa-lock"></i>
+                Confirmar pago
+            </button>
+        </form>
+    </section>
+</div>
 
 @section Scripts {
     <script>
@@ -65,6 +115,11 @@
             const search = document.getElementById('clientOrderSearch');
             const statusFilter = document.getElementById('clientStatusFilter');
             const list = document.getElementById('clientOrdersList');
+            const paymentModal = document.getElementById('ordersPaymentModal');
+            const paymentForm = document.getElementById('ordersPaymentForm');
+            const paymentMethod = document.getElementById('ordersPaymentMethod');
+            const paymentSubmit = document.getElementById('ordersPaymentSubmit');
+            let selectedOrder = null;
 
             function badgeForPayment(status) {
                 return status === 'Pagado' ? 'badge-success' : 'badge-warning';
@@ -150,14 +205,56 @@
             }
 
             window.payClientOrder = (id) => {
+                selectedOrder = BakeSmartStore.orders.byClient(userEmail).find(order => Number(order.id) === Number(id));
+                if (!selectedOrder) return;
+                document.getElementById('ordersPaymentTitle').textContent = `Pagar pedido #${selectedOrder.id}`;
+                document.getElementById('ordersPaymentTotal').textContent = app.utils.formatCurrency(selectedOrder.total);
+                paymentModal.hidden = false;
+            };
+
+            function syncPaymentFields() {
+                const isSinpe = paymentMethod.value === 'SINPE';
+                document.querySelectorAll('#ordersPaymentModal .payment-card-field').forEach(field => {
+                    field.hidden = isSinpe;
+                });
+            }
+
+            function closePaymentModal() {
+                paymentModal.hidden = true;
+                selectedOrder = null;
+                paymentForm.reset();
+                syncPaymentFields();
+            }
+
+            document.querySelectorAll('[data-payment-close]').forEach(button => button.addEventListener('click', closePaymentModal));
+            paymentMethod.addEventListener('change', syncPaymentFields);
+
+            paymentForm.addEventListener('submit', async event => {
+                event.preventDefault();
+                if (!selectedOrder) return;
+
+                const data = Object.fromEntries(new FormData(paymentForm).entries());
+                if (data.method === 'Tarjeta') {
+                    const digits = String(data.card || '').replace(/\D/g, '');
+                    if (digits.length < 12 || !data.expiry || !data.cvv) {
+                        app.toast.error('Complete los datos de tarjeta para simular el pago.');
+                        return;
+                    }
+                }
+
                 try {
-                    BakeSmartStore.orders.markPaid(id, 'SINPE Móvil');
+                    paymentSubmit.disabled = true;
+                    await BakeSmartStore.orders.markPaid(selectedOrder.id, data.method);
+                    await BakeSmartStore.refresh();
                     app.toast.success('Pago registrado. Tu pedido fue enviado al flujo operativo.');
+                    closePaymentModal();
                     render();
                 } catch (error) {
                     app.toast.error(error.message);
+                } finally {
+                    paymentSubmit.disabled = false;
                 }
-            };
+            });
 
             search.addEventListener('input', render);
             statusFilter.addEventListener('change', render);

@@ -45,7 +45,14 @@ public class ApiController : Controller
     public async Task<IActionResult> Dashboard() => Json(await _sqlStore.DashboardAsync());
 
     [HttpGet("orders")]
-    public async Task<IActionResult> Orders() => Json(await _sqlStore.OrdersAsync());
+    [Authorize(Policy = "AnyUser")]
+    public async Task<IActionResult> Orders()
+    {
+        if (User.IsInRole("Cliente"))
+            return Json(await _sqlStore.OrdersAsync(CurrentUserEmail));
+
+        return Json(await _sqlStore.OrdersAsync());
+    }
 
     [HttpPost("orders/{id:int}/status")]
     public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] UpdateOrderStatusRequest request)
@@ -61,6 +68,14 @@ public class ApiController : Controller
     public async Task<IActionResult> MarkOrderPaid(int id, [FromBody] MarkPaidRequest request)
     {
         await _sqlStore.MarkOrderPaidAsync(id, string.IsNullOrWhiteSpace(request.Method) ? "Efectivo" : request.Method);
+        return Ok(new { ok = true });
+    }
+
+    [HttpDelete("orders/{id:int}")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> DeleteOrder(int id)
+    {
+        await _sqlStore.DeleteOrderAsync(id, CurrentUserEmail);
         return Ok(new { ok = true });
     }
 
@@ -109,6 +124,20 @@ public class ApiController : Controller
 
     [HttpGet("customers")]
     public async Task<IActionResult> Customers() => Json(await _sqlStore.CustomersAsync());
+
+    [HttpGet("profile/current")]
+    [Authorize(Policy = "AnyUser")]
+    public async Task<IActionResult> CurrentProfile()
+    {
+        var email = CurrentUserEmail;
+        if (string.IsNullOrWhiteSpace(email))
+            return Unauthorized(new { message = "Debe iniciar sesion." });
+
+        var profile = await _sqlStore.GetProfileAsync(email);
+        return profile is null
+            ? NotFound(new { message = "No se encontro el perfil." })
+            : Json(profile);
+    }
 
     [HttpGet("promotions")]
     public async Task<IActionResult> Promotions() => Json(await _sqlStore.PromotionsAsync());

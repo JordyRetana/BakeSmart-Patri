@@ -58,7 +58,7 @@ public sealed class SqlStore
         };
     }
 
-    public async Task<IReadOnlyList<object>> OrdersAsync()
+    public async Task<IReadOnlyList<object>> OrdersAsync(string? customerEmail = null)
     {
         const string sql = """
             SELECT
@@ -84,6 +84,7 @@ public sealed class SqlStore
             INNER JOIN dbo.MetodosPago pm ON pm.PaymentMethodId = o.PaymentMethodId
             INNER JOIN dbo.DetallePedido oi ON oi.OrderId = o.OrderId
             INNER JOIN dbo.Productos p ON p.ProductId = oi.ProductId
+            WHERE (@CustomerEmail IS NULL OR c.Email = @CustomerEmail)
             GROUP BY o.OrderId, c.FullName, c.Email, os.Name, o.DeliveryDate, o.Total, oc.Name, ps.Name, pm.Name,
                      ca.AddressLine, o.DestinationLabel, o.DestinationLatitude, o.DestinationLongitude, o.CreatedAt
             ORDER BY o.CreatedAt DESC;
@@ -104,7 +105,7 @@ public sealed class SqlStore
             address = reader.GetString("Address"),
             destinationLat = reader.GetDecimal("DestinationLatitude"),
             destinationLng = reader.GetDecimal("DestinationLongitude")
-        });
+        }, new SqlParameter("@CustomerEmail", string.IsNullOrWhiteSpace(customerEmail) ? DBNull.Value : customerEmail.Trim().ToLowerInvariant()));
     }
 
     public async Task<IReadOnlyList<object>> InventoryAsync()
@@ -916,18 +917,94 @@ public sealed class SqlStore
     public async Task MarkOrderPaidAsync(int orderId, string method)
     {
         const string sql = """
+            DECLARE @PaymentMethodId int = (SELECT PaymentMethodId FROM dbo.MetodosPago WHERE Name = @Method);
+            IF @PaymentMethodId IS NULL
+                SELECT @PaymentMethodId = PaymentMethodId FROM dbo.MetodosPago WHERE Name = N'Tarjeta';
+            IF @PaymentMethodId IS NULL
+                SELECT TOP 1 @PaymentMethodId = PaymentMethodId FROM dbo.MetodosPago WHERE IsActive = 1 ORDER BY PaymentMethodId;
+
+            DECLARE @PaidStatusId int = (SELECT PaymentStatusId FROM dbo.EstadosPago WHERE Name = N'Pagado');
+            DECLARE @ConfirmedStatusId int = (SELECT OrderStatusId FROM dbo.EstadosPedido WHERE Name = N'Confirmado');
+            DECLARE @Updated int = 0;
+
             UPDATE o
-            SET PaymentStatusId = ps.PaymentStatusId,
-                PaymentMethodId = pm.PaymentMethodId
+            SET PaymentStatusId = @PaidStatusId,
+                PaymentMethodId = @PaymentMethodId,
+                OrderStatusId = CASE
+                    WHEN currentStatus.Name = N'Pendiente pago' THEN COALESCE(@ConfirmedStatusId, o.OrderStatusId)
+                    ELSE o.OrderStatusId
+                END
             FROM dbo.Pedidos o
-            INNER JOIN dbo.EstadosPago ps ON ps.Name = N'Pagado'
-            INNER JOIN dbo.MetodosPago pm ON pm.Name = @Method
+            INNER JOIN dbo.EstadosPedido currentStatus ON currentStatus.OrderStatusId = o.OrderStatusId
             WHERE o.OrderId = @OrderId;
+
+            SET @Updated = @@ROWCOUNT;
+
+            INSERT INTO dbo.EventosSeguimientoPedido (OrderId, OrderStatusId, Detail, CreatedAt)
+            SELECT @OrderId, @ConfirmedStatusId, N'Pago confirmado; pedido enviado a produccion', SYSUTCDATETIME()
+            WHERE @Updated > 0 AND @ConfirmedStatusId IS NOT NULL;
             """;
 
         await ExecuteAsync(sql,
             new SqlParameter("@OrderId", orderId),
             new SqlParameter("@Method", method));
+    }
+
+    public async Task DeleteOrderAsync(int orderId, string? userEmail = null)
+    {
+        const string sql = """
+            SET XACT_ABORT ON;
+            BEGIN TRAN;
+
+            IF NOT EXISTS (SELECT 1 FROM dbo.Pedidos WHERE OrderId = @OrderId)
+                THROW 50060, 'El pedido no existe.', 1;
+
+            DECLARE @InventoryLocationId int;
+
+            IF NOT EXISTS (SELECT 1 FROM dbo.UbicacionesInventario WHERE Name = N'Bodega principal')
+                INSERT INTO dbo.UbicacionesInventario (Name, Description)
+                VALUES (N'Bodega principal', N'Ubicacion principal de BakeSmart Patri');
+
+            SELECT @InventoryLocationId = InventoryLocationId
+            FROM dbo.UbicacionesInventario
+            WHERE Name = N'Bodega principal';
+
+            ;WITH Items AS (
+                SELECT ProductId, SUM(Quantity) AS Quantity
+                FROM dbo.DetallePedido
+                WHERE OrderId = @OrderId
+                GROUP BY ProductId
+            )
+            MERGE dbo.ExistenciasInventario AS target
+            USING Items AS source
+            ON target.ProductId = source.ProductId AND target.InventoryLocationId = @InventoryLocationId
+            WHEN MATCHED THEN
+                UPDATE SET Quantity = target.Quantity + source.Quantity, UpdatedAt = SYSUTCDATETIME()
+            WHEN NOT MATCHED THEN
+                INSERT (ProductId, InventoryLocationId, Quantity)
+                VALUES (source.ProductId, @InventoryLocationId, source.Quantity);
+
+            INSERT INTO dbo.MovimientosInventario (ProductId, InventoryLocationId, MovementType, Quantity, Note, CreatedAt)
+            SELECT ProductId, @InventoryLocationId, N'ENTRADA', SUM(Quantity), CONCAT(N'Reversion por eliminacion pedido #', @OrderId), SYSUTCDATETIME()
+            FROM dbo.DetallePedido
+            WHERE OrderId = @OrderId
+            GROUP BY ProductId;
+
+            DELETE csp
+            FROM dbo.PagosSesionCaja csp
+            INNER JOIN dbo.Ventas v ON v.SaleId = csp.SaleId
+            WHERE v.OrderId = @OrderId;
+
+            DELETE FROM dbo.Ventas WHERE OrderId = @OrderId;
+            DELETE FROM dbo.EventosSeguimientoPedido WHERE OrderId = @OrderId;
+            DELETE FROM dbo.DetallePedido WHERE OrderId = @OrderId;
+            DELETE FROM dbo.Pedidos WHERE OrderId = @OrderId;
+
+            COMMIT TRAN;
+            """;
+
+        await ExecuteAsync(sql, new SqlParameter("@OrderId", orderId));
+        await AddAuditLogAsync("ELIMINAR_PEDIDO", $"Pedido #{orderId} eliminado y stock restaurado", userEmail);
     }
 
     private async Task<object> SalesReportAsync(DateTime? start, DateTime? end)
@@ -1498,6 +1575,26 @@ public sealed class SqlStore
             IF @DeliveryMethod <> N'retiro' AND (@DestLat IS NULL OR @DestLng IS NULL)
                 THROW 50020, 'Debe indicar una ubicacion de entrega valida en el mapa.', 1;
 
+            DECLARE @InventoryLocationId int;
+            DECLARE @AvailableStock decimal(18,2);
+
+            SELECT TOP 1
+                @InventoryLocationId = ib.InventoryLocationId,
+                @AvailableStock = ib.Quantity
+            FROM dbo.Productos p
+            INNER JOIN dbo.TiposProducto pt ON pt.ProductTypeId = p.ProductTypeId
+            INNER JOIN dbo.ExistenciasInventario ib ON ib.ProductId = p.ProductId
+            WHERE p.ProductId = @ProductId
+              AND p.IsActive = 1
+              AND pt.Name = N'Producto terminado'
+            ORDER BY ib.Quantity DESC;
+
+            IF @InventoryLocationId IS NULL
+                THROW 50030, 'El producto seleccionado no esta disponible para venta.', 1;
+
+            IF @AvailableStock < @Quantity
+                THROW 50031, 'No hay stock suficiente para completar el pedido.', 1;
+
             DECLARE @WebChannelId int = (SELECT OrderChannelId FROM dbo.CanalesPedido WHERE Name = N'Web');
             DECLARE @PendingStatusId int = (SELECT OrderStatusId FROM dbo.EstadosPedido WHERE Name = N'Pendiente pago');
             DECLARE @PendingPaymentId int = (SELECT PaymentStatusId FROM dbo.EstadosPago WHERE Name = N'Pendiente');
@@ -1521,6 +1618,15 @@ public sealed class SqlStore
 
             INSERT INTO dbo.DetallePedido (OrderId, ProductId, Quantity, UnitPrice)
             VALUES (@OrderId, @ProductId, @Quantity, @UnitPrice);
+
+            UPDATE dbo.ExistenciasInventario
+            SET Quantity = Quantity - @Quantity,
+                UpdatedAt = SYSUTCDATETIME()
+            WHERE ProductId = @ProductId
+              AND InventoryLocationId = @InventoryLocationId;
+
+            INSERT INTO dbo.MovimientosInventario (ProductId, InventoryLocationId, MovementType, Quantity, Note, CreatedAt)
+            VALUES (@ProductId, @InventoryLocationId, N'SALIDA', @Quantity, CONCAT(N'Pedido web #', @OrderId), SYSUTCDATETIME());
 
             INSERT INTO dbo.EventosSeguimientoPedido (OrderId, OrderStatusId, Detail, CreatedAt)
             VALUES (@OrderId, @PendingStatusId, N'Pedido creado desde formulario web', SYSUTCDATETIME());
@@ -1637,6 +1743,54 @@ public sealed class SqlStore
             SET XACT_ABORT ON;
             BEGIN TRAN;
 
+            DECLARE @SaleItems TABLE
+            (
+                ProductId int NOT NULL,
+                Quantity decimal(18,2) NOT NULL,
+                UnitPrice decimal(18,2) NOT NULL,
+                InventoryLocationId int NULL,
+                AvailableStock decimal(18,2) NULL
+            );
+
+            INSERT INTO @SaleItems (ProductId, Quantity, UnitPrice)
+            SELECT ProductId, Quantity, UnitPrice
+            FROM OPENJSON(@ItemsJson)
+            WITH (
+                ProductId int N'$.productId',
+                Quantity decimal(18,2) N'$.quantity',
+                UnitPrice decimal(18,2) N'$.unitPrice'
+            );
+
+            IF EXISTS (
+                SELECT 1
+                FROM @SaleItems si
+                LEFT JOIN dbo.Productos p ON p.ProductId = si.ProductId
+                LEFT JOIN dbo.TiposProducto pt ON pt.ProductTypeId = p.ProductTypeId
+                WHERE p.ProductId IS NULL
+                   OR p.IsActive = 0
+                   OR pt.Name <> N'Producto terminado'
+                   OR si.Quantity <= 0
+            )
+                THROW 50040, 'El carrito contiene productos no disponibles para venta.', 1;
+
+            UPDATE si
+            SET InventoryLocationId = stock.InventoryLocationId,
+                AvailableStock = stock.Quantity
+            FROM @SaleItems si
+            OUTER APPLY (
+                SELECT TOP 1 ib.InventoryLocationId, ib.Quantity
+                FROM dbo.ExistenciasInventario ib
+                WHERE ib.ProductId = si.ProductId
+                ORDER BY ib.Quantity DESC
+            ) stock;
+
+            IF EXISTS (
+                SELECT 1
+                FROM @SaleItems
+                WHERE InventoryLocationId IS NULL OR AvailableStock < Quantity
+            )
+                THROW 50041, 'No hay stock suficiente para completar la venta.', 1;
+
             -- Obtener o crear cliente
             DECLARE @CustomerId int;
             IF NULLIF(@CustomerEmail, N'') IS NOT NULL
@@ -1681,12 +1835,19 @@ public sealed class SqlStore
             -- Registrar productos del pedido desde JSON
             INSERT INTO dbo.DetallePedido (OrderId, ProductId, Quantity, UnitPrice)
             SELECT @OrderId, ProductId, Quantity, UnitPrice
-            FROM OPENJSON(@ItemsJson)
-            WITH (
-                ProductId int N'$.productId',
-                Quantity decimal(18,2) N'$.quantity',
-                UnitPrice decimal(18,2) N'$.unitPrice'
-            );
+            FROM @SaleItems;
+
+            UPDATE ib
+            SET Quantity = ib.Quantity - si.Quantity,
+                UpdatedAt = SYSUTCDATETIME()
+            FROM dbo.ExistenciasInventario ib
+            INNER JOIN @SaleItems si
+                ON si.ProductId = ib.ProductId
+               AND si.InventoryLocationId = ib.InventoryLocationId;
+
+            INSERT INTO dbo.MovimientosInventario (ProductId, InventoryLocationId, MovementType, Quantity, Note, CreatedAt)
+            SELECT ProductId, InventoryLocationId, N'SALIDA', Quantity, CONCAT(N'Venta POS #', @OrderId), SYSUTCDATETIME()
+            FROM @SaleItems;
 
             -- Crear venta
             INSERT INTO dbo.Ventas (OrderId, PaymentMethodId, Subtotal, Tax, Total, CreatedAt)

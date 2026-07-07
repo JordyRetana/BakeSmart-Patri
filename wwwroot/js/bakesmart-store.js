@@ -99,6 +99,10 @@
       return request("/api/addresses");
     },
 
+    async loadProfile() {
+      return request("/api/profile/current");
+    },
+
     async saveSetting(key, value) {
       const all = {};
       all[key] = value;
@@ -115,6 +119,13 @@
 
     orders: {
       list() {
+        const trackingSteps = ["Pendiente pago", "Confirmado", "En produccion", "Listo", "En camino", "Entregado"];
+        const stepFor = status => {
+          const normalized = String(status || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          const index = trackingSteps.findIndex(step => step === normalized);
+          return index >= 0 ? index : 0;
+        };
+
         return cached("orders").map(order => ({
           ...order,
           customerName: order.customerName || order.cliente,
@@ -123,7 +134,13 @@
           deliveryDate: order.deliveryDate || order.entrega,
           createdAt: order.createdAt || order.entrega || new Date().toISOString(),
           address: order.address || "",
-          items: order.items || [{ name: order.producto || "Pedido", quantity: 1 }]
+          items: order.items || [{ name: order.producto || "Pedido", quantity: 1 }],
+          tracking: order.tracking || {
+            destinationLat: Number(order.destinationLat || order.destinationLatitude || 0),
+            destinationLng: Number(order.destinationLng || order.destinationLongitude || 0),
+            currentStep: stepFor(order.status || order.estado),
+            steps: trackingSteps
+          }
         }));
       },
       byClient(email) {
@@ -136,6 +153,10 @@
       },
       async markPaid(id, method = "Efectivo") {
         await request(`/api/orders/${id}/pay`, { method: "POST", body: JSON.stringify({ method }) });
+        return load("orders", "/api/orders");
+      },
+      async delete(id) {
+        await request(`/api/orders/${id}`, { method: "DELETE" });
         return load("orders", "/api/orders");
       },
       create() {
@@ -152,8 +173,14 @@
           code: product.code || product.sku,
           description: product.description || product.item,
           unit: product.unit || product.unidad,
-          minStock: product.minStock ?? product.min
+          minStock: product.minStock ?? product.min,
+          productType: product.productType || product.type || ""
         }));
+      },
+      sellable() {
+        return api.inventory.list()
+          .filter(product => product.active && Number(product.stock) > 0)
+          .filter(product => String(product.productType || product.type || "").toLowerCase() === "producto terminado");
       },
       history() { return cached("inventoryMovements"); },
       add() { throw new Error("Crear productos debe hacerse desde el formulario del sistema."); },
@@ -214,18 +241,17 @@
       },
       searchProducts(query) {
         const q = String(query || "").toLowerCase();
-        return cached("inventory")
-          .filter(product => product.active && Number(product.stock) > 0)
+        return api.inventory.sellable()
           .filter(product =>
             !q ||
-            String(product.sku || product.code || "").toLowerCase().includes(q) ||
-            String(product.item || product.description || "").toLowerCase().includes(q)
+            String(product.code || product.sku || "").toLowerCase().includes(q) ||
+            String(product.description || product.item || "").toLowerCase().includes(q)
           )
           .map(product => ({
             id: product.id,
-            code: product.sku,
-            description: product.item,
-            name: product.item,
+            code: product.code || product.sku,
+            description: product.description || product.item,
+            name: product.description || product.item,
             price: product.price,
             stock: product.stock
           }));
@@ -304,6 +330,8 @@
         return {
           name: config.originName || "BakeSmart Patri",
           address: config.originAddress || "",
+          city: "San Jose",
+          country: "Costa Rica",
           lat: Number(config.originLatitude),
           lng: Number(config.originLongitude)
         };
@@ -316,7 +344,9 @@
         return {
           lat: Number(preset.lat || preset.latitude || origin.lat),
           lng: Number(preset.lng || preset.longitude || origin.lng),
-          label: address || preset.name || "Destino"
+          name: address || preset.name || "Destino",
+          label: address || preset.name || "Destino",
+          country: preset.country || "Costa Rica"
         };
       }
     }

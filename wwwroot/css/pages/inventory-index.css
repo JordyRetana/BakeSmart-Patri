@@ -47,6 +47,10 @@
         min-width: 190px !important;
     }
 
+    .inventory-type-filter {
+        min-width: 220px !important;
+    }
+
     .inventory-kpi-grid {
         gap: 1rem;
     }
@@ -191,6 +195,15 @@
 
     .inventory-preset-btn small {
         color: var(--text-muted);
+    }
+
+    .inventory-preset-btn--sale {
+        border-color: color-mix(in srgb, var(--success) 32%, var(--border));
+        background: color-mix(in srgb, #ecfdf5 52%, var(--bg-card));
+    }
+
+    .inventory-preset-btn--sale i {
+        color: var(--success);
     }
 
     .inventory-type-chip {

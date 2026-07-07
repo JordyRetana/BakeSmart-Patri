@@ -186,6 +186,9 @@
                                 ${o.paymentStatus !== 'Pagado'
                                     ? `<button class="btn btn-outline btn-sm" onclick="payOrder(${o.id})">Marcar pagado</button>`
                                     : ''}
+                                <button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="deleteOrder(${o.id})">
+                                    <i class="fas fa-trash-can"></i>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -224,6 +227,19 @@
                     if (!response.ok) throw new Error(await response.text());
                     await loadOrders();
                     app.toast.success('Pedido marcado como pagado.');
+                    render();
+                }).catch(error => app.toast.error(error.message));
+            };
+
+            window.deleteOrder = (id) => {
+                if (!confirm(`Eliminar pedido #${id}? Esto lo quitara del cliente, rastreo y flujo operativo.`)) return;
+
+                fetch(`/api/orders/${id}`, {
+                    method: 'DELETE'
+                }).then(async response => {
+                    if (!response.ok) throw new Error(await response.text());
+                    await loadOrders();
+                    app.toast.success(`Pedido #${id} eliminado.`);
                     render();
                 }).catch(error => app.toast.error(error.message));
             };
