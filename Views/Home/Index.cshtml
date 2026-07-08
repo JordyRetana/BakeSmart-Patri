@@ -46,6 +46,7 @@
                     <div class="storefront-hero-photo">
                         <img src="@(heroProduct?.ImageUrl ?? "/img/products/cupcakes-decorados.jpg")"
                              alt="@(heroProduct?.AltText ?? "Repostería artesanal BakeSmart Patri")"
+                             width="720" height="720" decoding="async" fetchpriority="high"
                              onerror="this.src='/img/products/producto-sin-imagen.svg';" />
                     </div>
                     <div class="storefront-love-seal">
@@ -71,6 +72,7 @@
                             <span class="storefront-category-image">
                                 <img src="@(item.Product?.ImageUrl ?? "/img/products/producto-sin-imagen.svg")"
                                      alt="@item.Category.Name"
+                                     width="180" height="180" loading="lazy" decoding="async"
                                      onerror="this.src='/img/products/producto-sin-imagen.svg';" />
                             </span>
                             <strong>@item.Category.Name</strong>
@@ -98,7 +100,7 @@
                                 <strong>@product.UnitPrice.ToString("C0", culture)</strong>
                                 <a href="/Catalog/Details/@product.Id">Ver oferta</a>
                             </div>
-                            <img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';" />
+                            <img src="@product.ImageUrl" alt="@product.AltText" width="420" height="240" loading="lazy" decoding="async" onerror="this.src='/img/products/producto-sin-imagen.svg';" />
                         </article>
                     }
                 </div>
@@ -117,7 +119,7 @@
                     {
                         <article class="storefront-product-card">
                             <a class="storefront-product-image" href="/Catalog/Details/@product.Id">
-                                <img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';" />
+                                <img src="@product.ImageUrl" alt="@product.AltText" width="480" height="420" loading="lazy" decoding="async" onerror="this.src='/img/products/producto-sin-imagen.svg';" />
                                 <span><i class="far fa-heart"></i></span>
                             </a>
                             <div class="storefront-product-body">

@@ -1,0 +1,15 @@
+.git
+.github
+.vs
+.vscode
+bin
+obj
+artifacts
+.data-protection
+.migration-temp
+appsettings.Azure.json
+Database/AzurePreMigrationSummary.json
+Database/Migrate-To-Azure.local.ps1
+*.user
+*.suo
+*.log

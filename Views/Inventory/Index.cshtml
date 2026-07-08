@@ -21,6 +21,13 @@
 
         <div class="page-actions inventory-actions">
             <input id="inventorySearch" class="form-control" placeholder="Buscar por código o descripción" />
+            <select id="inventoryTypeFilter" class="form-control inventory-type-filter">
+                <option value="todos">Todo el inventario</option>
+                <option value="operativo">Materia prima / empaque</option>
+                <option value="Producto terminado">Productos vendibles</option>
+                <option value="Materia prima">Solo materia prima</option>
+                <option value="Empaque">Solo empaques</option>
+            </select>
             <select id="inventoryCategory" class="form-control inventory-category"></select>
             <select id="inventoryStockFilter" class="form-control inventory-stock-filter">
                 <option value="todas">Todo el stock</option>
@@ -77,6 +84,12 @@
             </button>
             <button type="button" class="inventory-preset-btn" onclick="openIngredientPreset('EMP-CAJ-', 'Caja para entregas', 'Cajas', 'unidad', 50, 20, 420, 'Empaque', 'Empaques')">
                 <i class="fas fa-box"></i><span>Cajas</span><small>unidad</small>
+            </button>
+            <button type="button" class="inventory-preset-btn inventory-preset-btn--sale" onclick="openIngredientPreset('PAST-', 'Queque personalizado', 'Queques', 'unidad', 6, 2, 30000, 'Producto terminado', 'Pasteles')">
+                <i class="fas fa-cake-candles"></i><span>Queque</span><small>venta</small>
+            </button>
+            <button type="button" class="inventory-preset-btn inventory-preset-btn--sale" onclick="openIngredientPreset('GAL-', 'Galletas decoradas', 'Galletas', 'unidad', 12, 4, 12000, 'Producto terminado', 'Galletas')">
+                <i class="fas fa-cookie"></i><span>Galletas</span><small>venta</small>
             </button>
         </div>
     </div>
@@ -231,6 +244,7 @@
     <script>
         (() => {
             const search = document.getElementById('inventorySearch');
+            const typeFilter = document.getElementById('inventoryTypeFilter');
             const category = document.getElementById('inventoryCategory');
             const stockFilter = document.getElementById('inventoryStockFilter');
             const quickButton = document.getElementById('inventoryQuickActions');
@@ -373,17 +387,21 @@
                 refreshCategoriesIfNeeded();
                 const query = search.value.trim().toLowerCase();
                 const selectedCategory = category.value || 'Todas';
+                const selectedType = typeFilter?.value || 'todos';
                 const selectedStock = stockFilter?.value || 'todas';
                 const rows = all.filter(p => {
                     const stockNum = Number(p.stock);
                     const minNum = Number(p.minStock ?? 5);
                     const matchesQuery = !query || p.code.toLowerCase().includes(query) || p.description.toLowerCase().includes(query);
                     const matchesCategory = selectedCategory === 'Todas' || p.category === selectedCategory;
+                    let matchesType = true;
+                    if (selectedType === 'operativo') matchesType = p.type !== 'Producto terminado';
+                    else if (selectedType !== 'todos') matchesType = p.type === selectedType;
                     let matchesStock = true;
                     if (selectedStock === 'bajo') matchesStock = stockNum <= minNum;
                     else if (selectedStock === 'critico') matchesStock = stockNum === 0;
                     else if (selectedStock === 'disponible') matchesStock = stockNum > 0;
-                    return matchesQuery && matchesCategory && matchesStock;
+                    return matchesQuery && matchesCategory && matchesType && matchesStock;
                 });
 
                 document.getElementById('inventoryTable').innerHTML = rows.map(p => {
@@ -495,6 +513,7 @@
             quickButton.addEventListener('click', () => openInventoryQuickActions('product'));
             movementButton.addEventListener('click', () => openInventoryQuickActions('movement'));
             search.addEventListener('input', renderProducts);
+            if (typeFilter) typeFilter.addEventListener('change', renderProducts);
             category.addEventListener('change', renderProducts);
             if (stockFilter) stockFilter.addEventListener('change', renderProducts);
             refreshAll().then(initializeCategories).catch(error => app.toast.error(error.message));

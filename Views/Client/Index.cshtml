@@ -1,4 +1,3 @@
-
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/client-index.css" asp-append-version="true" />
 }
@@ -6,335 +5,571 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Mi panel";
     var nameLabel = User?.Identity?.Name ?? "Cliente";
+    var emailLabel = User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
 }
 
 <div class="page-shell client-dashboard-page client-dashboard-page--loading" id="clientDashboardPage">
-    <div class="page-header client-dashboard-header">
-        <div>
-            <h1 class="client-dashboard-title">
-                <i class="fas fa-smile"></i>
-                Hola, @nameLabel
-            </h1>
-            <p class="text-muted client-dashboard-subtitle">
-                Desde aquí puedes registrar pedidos, pagar, seguir entregas y editar tu perfil.
-            </p>
+    <section class="client-hero">
+        <div class="client-hero__copy">
+            <span class="client-hero__eyebrow">Panel de cliente</span>
+            <h1>Hola, @nameLabel</h1>
+            <p>Revisa tus pedidos, crea una solicitud rapida con productos disponibles y mantente al tanto de cada entrega.</p>
         </div>
 
-        <div class="client-dashboard-actions">
-            <a href="/Client/Orders" class="btn btn-primary">
-                <i class="fas fa-box"></i>
-                Mis pedidos
+        <div class="client-hero__actions" aria-label="Accesos principales">
+            <a href="/Client/Orders" class="client-action">
+                <span class="client-action__icon"><i class="fas fa-box-open"></i></span>
+                <span>
+                    <strong>Mis pedidos</strong>
+                    <small>Historial y pagos</small>
+                </span>
             </a>
-            <a href="/Client/Track" class="btn btn-outline">
-                <i class="fas fa-map-location-dot"></i>
-                Seguimiento
+            <a href="/Client/Track" class="client-action">
+                <span class="client-action__icon"><i class="fas fa-route"></i></span>
+                <span>
+                    <strong>Seguimiento</strong>
+                    <small>Estado y ubicacion</small>
+                </span>
+            </a>
+            <a href="/Client/Profile" class="client-action">
+                <span class="client-action__icon"><i class="fas fa-user-pen"></i></span>
+                <span>
+                    <strong>Perfil</strong>
+                    <small>Datos y direccion</small>
+                </span>
             </a>
         </div>
-    </div>
+    </section>
 
-    <div class="grid grid-3 client-dashboard-kpis">
-        <div class="card client-dashboard-kpi-card">
-            <div class="text-muted">Pedidos del cliente</div>
-            <h2 id="clientOrderCount"></h2>
-        </div>
+    <section class="client-metrics" aria-label="Resumen de pedidos">
+        <article class="client-metric">
+            <span class="client-metric__icon"><i class="fas fa-receipt"></i></span>
+            <span class="client-metric__label">Pedidos realizados</span>
+            <strong id="clientOrderCount">0</strong>
+        </article>
+        <article class="client-metric">
+            <span class="client-metric__icon"><i class="fas fa-wallet"></i></span>
+            <span class="client-metric__label">Total comprado</span>
+            <strong id="clientSpent">0</strong>
+        </article>
+        <article class="client-metric">
+            <span class="client-metric__icon"><i class="fas fa-clock"></i></span>
+            <span class="client-metric__label">Pedidos activos</span>
+            <strong id="clientActive">0</strong>
+        </article>
+        <article class="client-metric">
+            <span class="client-metric__icon"><i class="fas fa-cake-candles"></i></span>
+            <span class="client-metric__label">Productos disponibles</span>
+            <strong id="clientAvailableProducts">0</strong>
+        </article>
+    </section>
 
-        <div class="card client-dashboard-kpi-card">
-            <div class="text-muted">Total gastado</div>
-            <h2 id="clientSpent"></h2>
-        </div>
-
-        <div class="card client-dashboard-kpi-card">
-            <div class="text-muted">Pedidos activos</div>
-            <h2 id="clientActive"></h2>
-        </div>
-    </div>
-
-    <div class="client-dashboard-main-grid">
-        <div class="card client-dashboard-order-card">
-            <div class="client-dashboard-section-header">
-                <h3 class="client-dashboard-section-title">Pedido rápido desde el sitio web</h3>
-            </div>
-
-            <form id="quickOrderForm" class="client-dashboard-form">
-                <div class="client-dashboard-form-grid">
-                    <div class="client-dashboard-form-block">
-                        <label>Nombre</label>
-                        <input class="form-control" name="customerName" value="@nameLabel" required />
-                    </div>
-
-                    <div class="client-dashboard-form-block">
-                        <label>Correo</label>
-                        <input class="form-control"
-                               name="customerEmail"
-                               type="email"
-                               value="@(User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "")"
-                               required />
-                    </div>
+    <section class="client-workspace">
+        <article class="client-panel client-panel--order">
+            <div class="client-panel__header">
+                <div>
+                    <span class="client-panel__eyebrow">Pedido rapido</span>
+                    <h2>Elige un producto disponible</h2>
                 </div>
-
-                <div class="client-dashboard-form-grid">
-                    <div class="client-dashboard-form-block">
-                        <label>Teléfono</label>
-                        <input class="form-control" name="customerPhone" value="88883333" required />
-                    </div>
-
-                    <div class="client-dashboard-form-block">
-                        <label>Fecha de entrega</label>
-                        <input class="form-control" name="deliveryDate" type="date" required />
-                    </div>
-                </div>
-
-                <div class="client-dashboard-form-block">
-                    <label>Método de entrega</label>
-                    <select class="form-control" name="deliveryMethod" id="quickDeliveryMethod">
-                        <option value="domicilio">A domicilio</option>
-                        <option value="retiro">Retiro en tienda</option>
-                    </select>
-                </div>
-
-                <div id="quickDeliveryMapBlock" class="client-dashboard-form-block">
-                    <label>Dirección de entrega</label>
-                    <div style="margin-bottom:.75rem;">
-                        <select class="form-control" id="quickSavedAddress">
-                            <option value="">Usar direccion predeterminada o seleccionar en el mapa</option>
-                        </select>
-                    </div>
-                    <input type="hidden" name="address" id="quickAddress" />
-                    <input type="hidden" name="destinationLatitude" id="quickLat" />
-                    <input type="hidden" name="destinationLongitude" id="quickLng" />
-                    <input type="hidden" name="customerAddressId" id="quickCustomerAddressId" />
-                    <div id="quickOrderMapPicker"></div>
-                </div>
-
-                <div class="client-dashboard-product-grid">
-                    <div class="client-dashboard-form-block">
-                        <label>Producto</label>
-                        <select class="form-control" name="productId" id="quickOrderProduct"></select>
-                    </div>
-
-                    <div class="client-dashboard-form-block">
-                        <label>Cantidad</label>
-                        <input class="form-control" name="quantity" type="number" min="1" value="1" required />
-                    </div>
-
-                    <div class="client-dashboard-form-block">
-                        <label>Método de pago</label>
-                        <select class="form-control" name="paymentMethod">
-                            <option>Pendiente</option>
-                            <option>Efectivo</option>
-                            <option>SINPE Móvil</option>
-                            <option>Tarjeta</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="client-dashboard-form-block">
-                    <label>Notas</label>
-                    <textarea class="form-control" name="notes" rows="3" placeholder="Detalles del pedido"></textarea>
-                </div>
-
-                <button class="btn btn-primary client-dashboard-submit-btn" type="submit" id="quickOrderSubmitBtn">
-                    <i class="fas fa-paper-plane"></i>
-                    Registrar pedido
-                </button>
-            </form>
-        </div>
-
-        <div class="card client-dashboard-miniorders-card">
-            <div class="client-dashboard-section-header">
-                <h3 class="client-dashboard-section-title">Últimos pedidos</h3>
-            </div>
-
-            <div class="table-container client-dashboard-table-wrap">
-                <table class="table client-dashboard-table">
-                    <thead>
-                        <tr>
-                            <th>Pedido</th>
-                            <th>Estado</th>
-                            <th>Pago</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody id="clientMiniOrders"></tbody>
-                </table>
-            </div>
-
-            <div class="client-dashboard-footer-actions">
-                <a href="/Client/Profile" class="btn btn-outline">
-                    <i class="fas fa-user-pen"></i>
-                    Editar perfil
+                <a class="client-panel__link" href="/Catalog">
+                    <i class="fas fa-store"></i>
+                    Catalogo
                 </a>
             </div>
-        </div>
-    </div>
+
+            <form id="quickOrderForm" class="quick-order">
+                <div class="quick-order__catalog">
+                    <div class="quick-order__toolbar">
+                        <label class="quick-search">
+                            <i class="fas fa-search"></i>
+                            <input type="search" id="quickProductSearch" placeholder="Buscar producto disponible" autocomplete="off" />
+                        </label>
+                        <select id="quickProductSort" class="quick-sort" aria-label="Ordenar productos">
+                            <option value="featured">Destacados</option>
+                            <option value="priceAsc">Menor precio</option>
+                            <option value="priceDesc">Mayor precio</option>
+                            <option value="stockDesc">Mas stock</option>
+                        </select>
+                    </div>
+
+                    <input type="hidden" name="productId" id="quickOrderProduct" required />
+                    <div class="quick-products" id="quickProducts"></div>
+                    <p class="quick-products-empty" id="quickProductsEmpty" hidden>No hay productos disponibles con ese filtro.</p>
+                </div>
+
+                <div class="quick-order__details">
+                    <input type="hidden" name="customerName" id="quickCustomerName" value="@nameLabel" />
+                    <input type="hidden" name="customerEmail" id="quickCustomerEmail" value="@emailLabel" />
+                    <input type="hidden" name="customerPhone" id="quickCustomerPhone" />
+
+                    <div class="quick-order__section">
+                        <h3><i class="fas fa-user-check"></i> Datos del perfil</h3>
+                        <div class="profile-source">
+                            <span class="profile-source__icon"><i class="fas fa-id-card"></i></span>
+                            <span>
+                                <strong id="quickProfileName">@nameLabel</strong>
+                                <small id="quickProfileMeta">@emailLabel</small>
+                            </span>
+                            <a href="/Client/Profile">Editar</a>
+                        </div>
+                    </div>
+
+                    <div class="quick-order__section">
+                        <h3><i class="fas fa-calendar-day"></i> Fecha y cantidad</h3>
+                        <div class="quick-form-grid quick-form-grid--compact">
+                            <label>
+                                <span>Fecha de entrega</span>
+                                <input class="form-control" name="deliveryDate" type="date" required />
+                            </label>
+                            <label>
+                                <span>Cantidad</span>
+                                <input class="form-control" name="quantity" id="quickQuantity" type="number" min="1" value="1" required />
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="quick-order__section">
+                        <h3><i class="fas fa-truck"></i> Entrega y pago</h3>
+                        <div class="quick-form-grid quick-form-grid--compact">
+                            <label>
+                                <span>Entrega</span>
+                                <select class="form-control" name="deliveryMethod" id="quickDeliveryMethod">
+                                    <option value="domicilio">A domicilio</option>
+                                    <option value="retiro">Retiro en tienda</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>Pago</span>
+                                <select class="form-control" name="paymentMethod" id="quickPaymentMethod">
+                                    <option>Pendiente</option>
+                                    <option>Pago en linea</option>
+                                    <option>SINPE</option>
+                                    <option>Tarjeta</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="quickDeliveryProfileBlock" class="quick-order__section">
+                        <h3><i class="fas fa-location-dot"></i> Direccion del perfil</h3>
+                        <div class="profile-source">
+                            <span class="profile-source__icon"><i class="fas fa-map-location-dot"></i></span>
+                            <span>
+                                <strong id="quickProfileAddress">Sin direccion configurada</strong>
+                                <small>La direccion se administra desde Perfil</small>
+                            </span>
+                            <a href="/Client/Profile">Configurar</a>
+                        </div>
+                        <input type="hidden" name="address" id="quickAddress" />
+                        <input type="hidden" name="destinationLatitude" id="quickLat" />
+                        <input type="hidden" name="destinationLongitude" id="quickLng" />
+                        <input type="hidden" name="customerAddressId" id="quickCustomerAddressId" />
+                    </div>
+
+                    <div class="quick-order__section">
+                        <h3><i class="fas fa-note-sticky"></i> Notas</h3>
+                        <textarea class="form-control" name="notes" rows="3" placeholder="Decoracion, horario, dedicatoria o detalles especiales"></textarea>
+                    </div>
+                </div>
+
+                <aside class="quick-summary" aria-label="Resumen del pedido">
+                    <div>
+                        <span class="quick-summary__label">Producto seleccionado</span>
+                        <strong id="quickSummaryProduct">Seleccione un producto</strong>
+                    </div>
+                    <div class="quick-summary__rows">
+                        <div><span>Subtotal</span><strong id="quickSubtotal">0</strong></div>
+                        <div><span>IVA</span><strong id="quickTax">0</strong></div>
+                        <div class="quick-summary__total"><span>Total</span><strong id="quickTotal">0</strong></div>
+                    </div>
+                    <button class="btn btn-primary quick-submit" type="submit" id="quickOrderSubmitBtn">
+                        <i class="fas fa-credit-card"></i>
+                        Registrar y continuar
+                    </button>
+                </aside>
+            </form>
+        </article>
+
+        <aside class="client-panel client-panel--orders">
+            <div class="client-panel__header">
+                <div>
+                    <span class="client-panel__eyebrow">Actividad</span>
+                    <h2>Ultimos pedidos</h2>
+                </div>
+                <a class="client-panel__link" href="/Client/Orders">
+                    <i class="fas fa-arrow-right"></i>
+                    Ver todos
+                </a>
+            </div>
+            <div class="client-orders-list" id="clientMiniOrders"></div>
+        </aside>
+    </section>
 </div>
 
-
+<div class="payment-modal" id="clientPaymentModal" hidden>
+    <div class="payment-modal__backdrop" data-payment-close></div>
+    <section class="payment-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="paymentModalTitle">
+        <button class="payment-modal__close" type="button" data-payment-close aria-label="Cerrar">
+            <i class="fas fa-xmark"></i>
+        </button>
+        <div class="payment-modal__header">
+            <span class="payment-modal__icon"><i class="fas fa-shield-halved"></i></span>
+            <div>
+                <span class="client-panel__eyebrow">Pasarela de pago</span>
+                <h2 id="paymentModalTitle">Confirmar pago</h2>
+            </div>
+        </div>
+        <div class="payment-modal__amount">
+            <span>Total a pagar</span>
+            <strong id="paymentModalTotal">0</strong>
+        </div>
+        <form id="clientPaymentForm" class="payment-form">
+            <label>
+                <span>Metodo</span>
+                <select class="form-control" name="method" id="paymentGatewayMethod">
+                    <option>Tarjeta</option>
+                    <option>SINPE</option>
+                </select>
+            </label>
+            <label>
+                <span>Nombre del titular</span>
+                <input class="form-control" name="holder" placeholder="Nombre en la tarjeta o SINPE" required />
+            </label>
+            <label class="payment-card-field">
+                <span>Numero de tarjeta</span>
+                <input class="form-control" name="card" inputmode="numeric" maxlength="19" placeholder="4242 4242 4242 4242" />
+            </label>
+            <div class="payment-form__grid payment-card-field">
+                <label>
+                    <span>Vence</span>
+                    <input class="form-control" name="expiry" placeholder="MM/AA" maxlength="5" />
+                </label>
+                <label>
+                    <span>CVV</span>
+                    <input class="form-control" name="cvv" inputmode="numeric" maxlength="4" placeholder="123" />
+                </label>
+            </div>
+            <p class="payment-modal__note">Simulacion segura para desarrollo: no se guarda informacion sensible.</p>
+            <button class="btn btn-primary quick-submit" type="submit" id="paymentConfirmBtn">
+                <i class="fas fa-lock"></i>
+                Pagar pedido
+            </button>
+        </form>
+    </section>
+</div>
 
 @section Scripts {
-    <script src="~/js/bakesmart-map-picker.js" asp-append-version="true"></script>
     <script>
         (() => {
             const page = document.getElementById('clientDashboardPage');
             const userEmail = document.body.dataset.userEmail || '';
             const form = document.getElementById('quickOrderForm');
-            const productSelect = document.getElementById('quickOrderProduct');
+            const productInput = document.getElementById('quickOrderProduct');
+            const productsGrid = document.getElementById('quickProducts');
+            const productsEmpty = document.getElementById('quickProductsEmpty');
+            const productSearch = document.getElementById('quickProductSearch');
+            const productSort = document.getElementById('quickProductSort');
+            const quantityInput = document.getElementById('quickQuantity');
             const submitBtn = document.getElementById('quickOrderSubmitBtn');
             const deliveryMethod = document.getElementById('quickDeliveryMethod');
-            const deliveryMapBlock = document.getElementById('quickDeliveryMapBlock');
-            const savedAddressSelect = document.getElementById('quickSavedAddress');
+            const deliveryProfileBlock = document.getElementById('quickDeliveryProfileBlock');
+            const paymentModal = document.getElementById('clientPaymentModal');
+            const paymentForm = document.getElementById('clientPaymentForm');
+            const paymentMethod = document.getElementById('paymentGatewayMethod');
+            const paymentConfirmBtn = document.getElementById('paymentConfirmBtn');
 
             let pageInitialized = false;
-            let productsLoaded = false;
-            let quickMapPicker;
+            let products = [];
+            let selectedProduct = null;
+            let currentProfile = null;
+            let pendingPayment = null;
+
+            const money = value => app.utils.formatCurrency(Number(value || 0));
+            const clean = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            })[char]);
 
             function showPage() {
                 page.classList.remove('client-dashboard-page--loading');
                 page.classList.add('client-dashboard-page--ready');
             }
 
-            async function fillProductsOnce() {
-                if (productsLoaded) return;
+            function normalizeProduct(product) {
+                return {
+                    ...product,
+                    id: Number(product.id),
+                    name: product.description || product.item || product.name || 'Producto',
+                    code: product.code || product.sku || '',
+                    price: Number(product.price || 0),
+                    stock: Number(product.stock || 0),
+                    active: product.active !== false,
+                    type: product.type || product.productType || ''
+                };
+            }
+
+            function isSellableProduct(product) {
+                return String(product.type || '').toLowerCase() === 'producto terminado';
+            }
+
+            function availableProducts() {
+                const query = productSearch.value.trim().toLowerCase();
+                let rows = products.filter(product =>
+                    product.active &&
+                    isSellableProduct(product) &&
+                    product.stock > 0 &&
+                    (!query ||
+                        product.name.toLowerCase().includes(query) ||
+                        product.code.toLowerCase().includes(query))
+                );
+
+                rows = rows.sort((a, b) => {
+                    if (productSort.value === 'priceAsc') return a.price - b.price;
+                    if (productSort.value === 'priceDesc') return b.price - a.price;
+                    if (productSort.value === 'stockDesc') return b.stock - a.stock;
+                    return b.stock - a.stock || a.name.localeCompare(b.name);
+                });
+
+                return rows;
+            }
+
+            function selectProduct(id) {
+                selectedProduct = products.find(product => Number(product.id) === Number(id)) || null;
+                productInput.value = selectedProduct ? selectedProduct.id : '';
+                renderProducts();
+                updateSummary();
+            }
+
+            function renderProducts() {
+                const rows = availableProducts();
+                productsEmpty.hidden = rows.length > 0;
+
+                productsGrid.innerHTML = rows.map(product => {
+                    const selected = selectedProduct && Number(selectedProduct.id) === Number(product.id);
+                    return `
+                        <button class="quick-product ${selected ? 'quick-product--selected' : ''}" type="button" data-product-id="${product.id}">
+                            <span class="quick-product__icon"><i class="fas fa-cake-candles"></i></span>
+                            <span class="quick-product__body">
+                                <strong>${clean(product.name)}</strong>
+                                <small>${clean(product.code || 'Producto disponible')}</small>
+                            </span>
+                            <span class="quick-product__meta">
+                                <strong>${money(product.price)}</strong>
+                                <small>${product.stock} disp.</small>
+                            </span>
+                        </button>
+                    `;
+                }).join('');
+            }
+
+            function fillPaymentMethods() {
+                const methods = (BakeSmartStore.pos.config().paymentMethods || []).filter(method => method.active);
+                const names = new Set(['Pendiente', 'Pago en linea', 'Tarjeta', 'SINPE Movil']);
+                methods.forEach(method => names.add(method.name));
+
+                document.getElementById('quickPaymentMethod').innerHTML = [...names]
+                    .map(name => `<option>${clean(name)}</option>`)
+                    .join('');
+            }
+
+            async function loadProducts() {
                 await BakeSmartStore.refresh();
+                products = BakeSmartStore.inventory.list().map(normalizeProduct);
+                document.getElementById('clientAvailableProducts').textContent =
+                    products.filter(product => product.active && isSellableProduct(product) && product.stock > 0).length;
 
-                const products = BakeSmartStore.inventory.list().filter(p => p.active && p.stock > 0);
-                productSelect.innerHTML = products.map(p =>
-                    `<option value="${p.id}">${p.description} - ${app.utils.formatCurrency(p.price)}</option>`
-                ).join('');
+                fillPaymentMethods();
+                renderProducts();
 
-                productsLoaded = true;
+                const first = availableProducts()[0];
+                if (first) selectProduct(first.id);
+            }
+
+            async function loadProfile() {
+                try {
+                    currentProfile = await BakeSmartStore.loadProfile();
+                } catch (_) {
+                    currentProfile = null;
+                }
+
+                const fullName = currentProfile
+                    ? `${currentProfile.firstName || ''} ${currentProfile.lastName || ''}`.trim()
+                    : '@nameLabel';
+                const email = currentProfile?.email || userEmail || '@emailLabel';
+                const phone = currentProfile?.phone || '';
+
+                document.getElementById('quickCustomerName').value = fullName || 'Cliente';
+                document.getElementById('quickCustomerEmail').value = email;
+                document.getElementById('quickCustomerPhone').value = phone;
+                document.getElementById('quickProfileName').textContent = fullName || 'Cliente';
+                document.getElementById('quickProfileMeta').textContent = phone ? `${email} - ${phone}` : email;
+
+                document.getElementById('quickProfileAddress').textContent = currentProfile?.address || 'Sin direccion configurada';
+                document.getElementById('quickAddress').value = currentProfile?.address || '';
+                document.getElementById('quickLat').value = currentProfile?.latitude ?? '';
+                document.getElementById('quickLng').value = currentProfile?.longitude ?? '';
+                document.getElementById('quickCustomerAddressId').value = currentProfile?.customerAddressId ?? '';
             }
 
             function renderSummary() {
                 const orders = BakeSmartStore.orders.byClient(userEmail);
-                const total = orders.reduce((acc, x) => acc + x.total, 0);
+                const total = orders.reduce((acc, order) => acc + Number(order.total || 0), 0);
+                const active = orders.filter(order => !['Entregado', 'Cancelado'].includes(order.status)).length;
 
                 document.getElementById('clientOrderCount').textContent = orders.length;
-                document.getElementById('clientSpent').textContent = app.utils.formatCurrency(total);
-                document.getElementById('clientActive').textContent = orders.filter(x => x.status !== 'Entregado').length;
+                document.getElementById('clientSpent').textContent = money(total);
+                document.getElementById('clientActive').textContent = active;
 
-                document.getElementById('clientMiniOrders').innerHTML = orders.slice(0, 5).map(o => `
-                    <tr>
-                        <td>
-                            <strong>#${o.id}</strong>
-                            <div class="text-muted" style="font-size:.8rem;">${o.items.map(i => i.name).join(', ')}</div>
-                        </td>
-                        <td>
-                            <span class="badge badge-primary">${o.status}</span>
-                        </td>
-                        <td>
-                            <span class="badge ${o.paymentStatus === 'Pagado' ? 'badge-success' : 'badge-warning'}">
-                                ${o.paymentStatus}
-                            </span>
-                        </td>
-                        <td>${app.utils.formatCurrency(o.total)}</td>
-                    </tr>
+                const recent = orders.slice(0, 5);
+                document.getElementById('clientMiniOrders').innerHTML = recent.map(order => `
+                    <article class="client-order-row">
+                        <span class="client-order-row__icon"><i class="fas fa-bag-shopping"></i></span>
+                        <span class="client-order-row__main">
+                            <strong>#${order.id} · ${clean((order.items || []).map(item => item.name).join(', ') || 'Pedido')}</strong>
+                            <small>${clean(order.deliveryDate || order.createdAt || '')}</small>
+                        </span>
+                        <span class="client-order-row__status">
+                            <span class="badge badge-primary">${clean(order.status || 'Pendiente')}</span>
+                            <strong>${money(order.total)}</strong>
+                        </span>
+                    </article>
                 `).join('') || `
-                    <tr>
-                        <td colspan="4" class="text-center text-muted">No tienes pedidos aún.</td>
-                    </tr>
+                    <div class="client-empty-state">
+                        <i class="fas fa-clipboard-list"></i>
+                        <strong>Aun no tienes pedidos</strong>
+                        <span>Cuando registres uno, aparecera aqui.</span>
+                    </div>
                 `;
+            }
+
+            function updateSummary() {
+                const quantity = Math.max(1, Number(quantityInput.value || 1));
+                const price = Number(selectedProduct?.price || 0);
+                const subtotal = price * quantity;
+                const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
+                const tax = subtotal * taxRate;
+
+                document.getElementById('quickSummaryProduct').textContent = selectedProduct?.name || 'Seleccione un producto';
+                document.getElementById('quickSubtotal').textContent = money(subtotal);
+                document.getElementById('quickTax').textContent = money(tax);
+                document.getElementById('quickTotal').textContent = money(subtotal + tax);
+            }
+
+            function shouldOpenGateway(method) {
+                const value = String(method || '').toLowerCase();
+                return value.includes('linea') || value.includes('tarjeta') || value.includes('sinpe');
+            }
+
+            function openPaymentGateway(orderId, total, method) {
+                pendingPayment = { orderId, total, method };
+                document.getElementById('paymentModalTotal').textContent = money(total);
+                paymentMethod.value = String(method || '').toLowerCase().includes('sinpe') ? 'SINPE' : 'Tarjeta';
+                syncPaymentFields();
+                paymentModal.hidden = false;
+                paymentForm.holder.value = document.getElementById('quickCustomerName').value || '';
+            }
+
+            function closePaymentGateway() {
+                paymentModal.hidden = true;
+                pendingPayment = null;
+                paymentForm.reset();
+                syncPaymentFields();
+            }
+
+            function syncPaymentFields() {
+                const isSinpe = paymentMethod.value === 'SINPE';
+                document.querySelectorAll('.payment-card-field').forEach(field => {
+                    field.hidden = isSinpe;
+                });
             }
 
             function toggleQuickDelivery() {
                 const isPickup = deliveryMethod.value === 'retiro';
-                deliveryMapBlock.style.display = isPickup ? 'none' : 'block';
+                deliveryProfileBlock.hidden = isPickup;
             }
 
-            async function initQuickMap() {
-                await BakeSmartStore.refresh();
-                const config = BakeSmartStore.pos.config();
-                let defaultAddress = null;
-
-                try {
-                    defaultAddress = await BakeSmartStore.loadDefaultAddress();
-                    if (defaultAddress) {
-                        const option = document.createElement('option');
-                        option.value = String(defaultAddress.id);
-                        option.textContent = `${defaultAddress.label} - ${defaultAddress.addressLine}`;
-                        option.dataset.address = defaultAddress.addressLine;
-                        option.dataset.lat = defaultAddress.latitude ?? '';
-                        option.dataset.lng = defaultAddress.longitude ?? '';
-                        option.selected = true;
-                        savedAddressSelect.appendChild(option);
-                    }
-                } catch (_) { /* no saved address yet */ }
-
-                quickMapPicker = await BakeSmartMapPicker.create('quickOrderMapPicker', {
-                    address: defaultAddress?.addressLine || '',
-                    lat: defaultAddress?.latitude || config.originLatitude,
-                    lng: defaultAddress?.longitude || config.originLongitude,
-                    onChange(values) {
-                        document.getElementById('quickAddress').value = values.address || '';
-                        document.getElementById('quickLat').value = values.lat ?? '';
-                        document.getElementById('quickLng').value = values.lng ?? '';
-                        document.getElementById('quickCustomerAddressId').value = '';
-                        savedAddressSelect.value = '';
-                    }
-                });
-
-                if (defaultAddress) {
-                    document.getElementById('quickAddress').value = defaultAddress.addressLine;
-                    document.getElementById('quickLat').value = defaultAddress.latitude ?? '';
-                    document.getElementById('quickLng').value = defaultAddress.longitude ?? '';
-                    document.getElementById('quickCustomerAddressId').value = defaultAddress.id;
-                }
-            }
-
-            savedAddressSelect.addEventListener('change', () => {
-                const option = savedAddressSelect.selectedOptions[0];
-                if (!option || !option.value) return;
-                quickMapPicker.setValues({
-                    address: option.dataset.address,
-                    lat: option.dataset.lat,
-                    lng: option.dataset.lng
-                });
-                document.getElementById('quickAddress').value = option.dataset.address;
-                document.getElementById('quickLat').value = option.dataset.lat;
-                document.getElementById('quickLng').value = option.dataset.lng;
-                document.getElementById('quickCustomerAddressId').value = option.value;
+            productsGrid.addEventListener('click', event => {
+                const button = event.target.closest('[data-product-id]');
+                if (!button) return;
+                selectProduct(button.dataset.productId);
             });
 
+            productSearch.addEventListener('input', renderProducts);
+            productSort.addEventListener('change', renderProducts);
+            quantityInput.addEventListener('input', updateSummary);
             deliveryMethod.addEventListener('change', toggleQuickDelivery);
+            paymentMethod.addEventListener('change', syncPaymentFields);
 
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
+            document.querySelectorAll('[data-payment-close]').forEach(button => {
+                button.addEventListener('click', closePaymentGateway);
+            });
+
+            paymentForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                if (!pendingPayment) return;
+
+                const data = Object.fromEntries(new FormData(paymentForm).entries());
+                if (data.method === 'Tarjeta') {
+                    const digits = String(data.card || '').replace(/\D/g, '');
+                    if (digits.length < 12 || !data.expiry || !data.cvv) {
+                        app.toast.error('Complete los datos de tarjeta para simular el pago.');
+                        return;
+                    }
+                }
+
+                try {
+                    paymentConfirmBtn.disabled = true;
+                    await BakeSmartStore.orders.markPaid(pendingPayment.orderId, data.method);
+                    await BakeSmartStore.refresh();
+                    renderSummary();
+                    app.toast.success(`Pago aprobado. Pedido #${pendingPayment.orderId} confirmado para produccion.`);
+                    closePaymentGateway();
+                } catch (error) {
+                    app.toast.error(error.message);
+                } finally {
+                    paymentConfirmBtn.disabled = false;
+                }
+            });
+
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
 
                 const data = Object.fromEntries(new FormData(form).entries());
                 const isPickup = data.deliveryMethod === 'retiro';
+                const quantity = Math.max(1, Number(data.quantity || 1));
+                const product = selectedProduct || products.find(item => Number(item.id) === Number(data.productId));
 
-                if (!isPickup && quickMapPicker) {
-                    const mapValues = quickMapPicker.applyToFields({
-                        address: 'quickAddress',
-                        lat: 'quickLat',
-                        lng: 'quickLng'
-                    });
-                    data.address = mapValues.address || data.address;
-                    data.destinationLatitude = mapValues.lat;
-                    data.destinationLongitude = mapValues.lng;
+                if (!product) {
+                    app.toast.error('Seleccione un producto disponible.');
+                    return;
                 }
 
-                if (!isPickup && quickMapPicker && !quickMapPicker.isValid()) {
-                    app.toast.error('Seleccione una ubicacion valida de entrega en el mapa.');
+                if (quantity > product.stock) {
+                    app.toast.error('La cantidad supera el stock disponible.');
+                    return;
+                }
+
+                if (!isPickup && (!data.address || !data.destinationLatitude || !data.destinationLongitude)) {
+                    app.toast.error('Configure una direccion valida desde Perfil antes de pedir a domicilio.');
                     return;
                 }
 
                 try {
                     submitBtn.disabled = true;
-                    const product = BakeSmartStore.inventory.list().find(p => Number(p.id) === Number(data.productId));
-                    if (!product) throw new Error('Producto no disponible.');
 
-                    const quantity = Number(data.quantity || 1);
                     const subtotal = Number(product.price) * quantity;
                     const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
                     const tax = subtotal * taxRate;
                     const total = subtotal + tax;
 
-                    await BakeSmartStore.createOrder({
+                    const result = await BakeSmartStore.createOrder({
                         customerName: data.customerName,
                         email: data.customerEmail,
                         phone: data.customerPhone,
-                        productId: Number(data.productId),
+                        productId: Number(product.id),
                         quantity,
                         unitPrice: Number(product.price),
                         subtotal,
@@ -351,8 +586,17 @@
                     });
 
                     await BakeSmartStore.refresh();
-                    app.toast.success('Pedido registrado correctamente.');
+                    products = BakeSmartStore.inventory.list().map(normalizeProduct);
+                    document.getElementById('clientAvailableProducts').textContent =
+                        products.filter(item => item.active && isSellableProduct(item) && item.stock > 0).length;
+                    renderProducts();
                     renderSummary();
+                    updateSummary();
+                    if (shouldOpenGateway(data.paymentMethod)) {
+                        openPaymentGateway(result.id, total, data.paymentMethod);
+                    } else {
+                        app.toast.success('Pedido registrado correctamente. Queda pendiente de pago.');
+                    }
                     form.quantity.value = 1;
                     form.notes.value = '';
                 } catch (error) {
@@ -369,14 +613,13 @@
                 const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
                 form.deliveryDate.value = tomorrow;
 
-                await fillProductsOnce();
-                await initQuickMap();
+                await loadProducts();
+                await loadProfile();
                 toggleQuickDelivery();
                 renderSummary();
+                updateSummary();
 
-                requestAnimationFrame(() => {
-                    showPage();
-                });
+                requestAnimationFrame(showPage);
             }
 
             app.page.ready(() => initializePage());

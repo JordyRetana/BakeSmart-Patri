@@ -1,6 +1,7 @@
 using BakeSmartPatri.Data;
 using BakeSmartPatri.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 
 namespace BakeSmartPatri.Controllers
 {
@@ -13,11 +14,13 @@ namespace BakeSmartPatri.Controllers
             _sqlStore = sqlStore;
         }
 
+        [OutputCache(Duration = 60)]
         public async Task<IActionResult> Index()
         {
-            var products = await _sqlStore.CatalogProductsAsync();
-            var categories = await _sqlStore.CatalogCategoriesAsync();
-            return View(new CatalogIndexViewModel(categories, products));
+            var productsTask = _sqlStore.CatalogProductsAsync();
+            var categoriesTask = _sqlStore.CatalogCategoriesAsync();
+            await Task.WhenAll(productsTask, categoriesTask);
+            return View(new CatalogIndexViewModel(await categoriesTask, await productsTask));
         }
 
         public IActionResult About() => View();

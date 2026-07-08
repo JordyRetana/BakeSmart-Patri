@@ -4,7 +4,22 @@ using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
 using BakeSmartPatri.Data;
 
+if (args.Contains("--check-databases", StringComparer.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = await DatabaseMigrationRunner.CheckConnectionsAsync();
+    return;
+}
+
+if (args.Contains("--migrate-database", StringComparer.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = await DatabaseMigrationRunner.MigrateAsync();
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration
+    .AddJsonFile("appsettings.Azure.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables();
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
@@ -18,6 +33,8 @@ builder.Services
     .SetApplicationName("BakeSmartPatri");
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddOutputCache();
+builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 builder.Services.AddScoped<SqlStore>();
 builder.Services.AddHttpClient("Nominatim", client =>
 {
@@ -68,12 +85,20 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+app.UseResponseCompression();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        context.Context.Response.Headers.CacheControl = "public,max-age=86400";
+    }
+});
 
 app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseOutputCache();
 
 
 app.MapControllerRoute(
