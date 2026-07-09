@@ -19,7 +19,9 @@ namespace BakeSmartPatri.Controllers
         {
             var productsTask = _sqlStore.CatalogProductsAsync();
             var categoriesTask = _sqlStore.CatalogCategoriesAsync();
-            await Task.WhenAll(productsTask, categoriesTask);
+            var settingsTask = _sqlStore.SettingsDictionaryAsync();
+            await Task.WhenAll(productsTask, categoriesTask, settingsTask);
+            ViewBag.HomeSettings = await settingsTask;
             return View(new CatalogIndexViewModel(await categoriesTask, await productsTask));
         }
 

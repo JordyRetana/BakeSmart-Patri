@@ -101,6 +101,22 @@
                     .join('');
             }
 
+            function currentDiscountRate() {
+                const manual = Math.min(Math.max(Number(form.discountRate?.value || 0), 0), 1);
+                const customer = store.customers.list().find(row =>
+                    (form.customerEmail.value && String(row.email || '').toLowerCase() === String(form.customerEmail.value).toLowerCase()) ||
+                    (form.customerName.value && String(row.fullName || '').toLowerCase() === String(form.customerName.value).toLowerCase())
+                );
+                const frequent = customer?.frequent ? Number(store.pos.config().frequentCustomerDiscount || 0) : 0;
+                return Math.max(manual, frequent);
+            }
+
+            function remainingStock(productId) {
+                const product = store.inventory.list().find(row => Number(row.id) === Number(productId));
+                const item = cart.find(row => Number(row.productId) === Number(productId));
+                return Math.max(0, Number(product?.stock || 0) - Number(item?.quantity || 0));
+            }
+
             function renderCart() {
                 countEl.textContent = `${cart.length} producto${cart.length === 1 ? '' : 's'}`;
 
@@ -115,7 +131,7 @@
                         <div class="pos-cart-item-header">
                             <div>
                                 <strong>${item.name}</strong>
-                                <div class="text-muted" style="font-size:.82rem;">${item.code} - ${fmt(item.unitPrice)} c/u</div>
+                                <div class="text-muted" style="font-size:.82rem;">${item.code} - ${fmt(item.unitPrice)} c/u · ${remainingStock(item.productId)} disponibles</div>
                             </div>
                             <button class="btn btn-ghost btn-sm" type="button" onclick="removeCheckoutItem(${item.productId})">
                                 <i class="fas fa-trash-can"></i>
@@ -125,7 +141,7 @@
                             <div class="pos-cart-actions">
                                 <button class="btn btn-outline btn-sm" type="button" onclick="changeCheckoutQty(${item.productId}, -1)"><i class="fas fa-minus"></i></button>
                                 <span style="font-weight:800;min-width:24px;text-align:center;">${item.quantity}</span>
-                                <button class="btn btn-outline btn-sm" type="button" onclick="changeCheckoutQty(${item.productId}, 1)"><i class="fas fa-plus"></i></button>
+                                <button class="btn btn-outline btn-sm" type="button" onclick="changeCheckoutQty(${item.productId}, 1)" ${remainingStock(item.productId) <= 0 ? 'disabled' : ''}><i class="fas fa-plus"></i></button>
                             </div>
                             <strong style="color:var(--primary);">${fmt(item.quantity * item.unitPrice)}</strong>
                         </div>
@@ -133,10 +149,14 @@
                 `).join('');
 
                 const subtotal = cart.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-                const tax = subtotal * Number(store.pos.config().iva || 0);
-                const total = subtotal + tax;
+                const discountRate = currentDiscountRate();
+                const discount = subtotal * discountRate;
+                const discountedSubtotal = Math.max(0, subtotal - discount);
+                const tax = discountedSubtotal * Number(store.pos.config().iva || 0);
+                const total = discountedSubtotal + tax;
                 totalsEl.innerHTML = `
                     <div class="pos-total-row"><span>Subtotal</span><strong>${fmt(subtotal)}</strong></div>
+                    ${discount > 0 ? `<div class="pos-total-row"><span>Descuento ${Math.round(discountRate * 100)}%</span><strong>-${fmt(discount)}</strong></div>` : ''}
                     <div class="pos-total-row"><span>IVA</span><strong>${fmt(tax)}</strong></div>
                     <div class="hr"></div>
                     <div class="pos-total-row total-final"><span>Total</span><strong>${fmt(total)}</strong></div>
@@ -146,6 +166,10 @@
             window.changeCheckoutQty = (productId, delta) => {
                 const item = cart.find(row => Number(row.productId) === Number(productId));
                 if (!item) return;
+                if (delta > 0 && remainingStock(productId) <= 0) {
+                    app.toast.warning('La cantidad supera el stock disponible.');
+                    return;
+                }
                 item.quantity += delta;
                 if (item.quantity <= 0) cart = cart.filter(row => Number(row.productId) !== Number(productId));
                 saveCart();
@@ -165,11 +189,16 @@
                 if (!selected) return;
                 form.customerEmail.value = selected.email || '';
                 form.customerPhone.value = selected.phone || '';
+                renderCart();
             });
+
+            form.discountRate.addEventListener('input', renderCart);
+            form.customerEmail.addEventListener('input', renderCart);
 
             form.addEventListener('submit', async event => {
                 event.preventDefault();
                 try {
+                    await store.pos.sessions();
                     if (!store.pos.activeSession()) throw new Error('Debe abrir caja antes de confirmar ventas.');
                     if (!cart.length) throw new Error('Agregue productos al carrito antes de cobrar.');
 
@@ -187,9 +216,19 @@
                 }
             });
 
-            renderCustomers();
-            renderPayments();
-            renderCart();
+            async function initializeCheckout() {
+                try {
+                    await store.pos.sessions();
+                    await store.refresh();
+                    renderCustomers();
+                    renderPayments();
+                    renderCart();
+                } catch (error) {
+                    app.toast.error(error.message);
+                }
+            }
+
+            initializeCheckout();
         })();
     </script>
 }

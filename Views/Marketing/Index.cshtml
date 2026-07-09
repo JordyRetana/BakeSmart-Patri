@@ -1,4 +1,3 @@
-
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/marketing-index.css" asp-append-version="true" />
 }
@@ -15,12 +14,12 @@
                 Marketing y clientes frecuentes
             </h1>
             <p class="text-muted marketing-subtitle">
-                Búsqueda de clientes, registro como frecuentes y manejo de promociones.
+                Gestiona clientes frecuentes, promociones y comunicaciones comerciales desde un solo lugar.
             </p>
         </div>
 
         <div class="marketing-search-box">
-            <input id="marketingSearch" class="form-control" placeholder="Buscar clientes" />
+            <input id="marketingSearch" class="form-control" placeholder="Buscar por nombre, correo o teléfono" />
         </div>
     </div>
 
@@ -36,23 +35,26 @@
         </div>
 
         <div class="card marketing-kpi-card">
-            <div class="text-muted">Descuento cliente frecuente</div>
+            <div class="text-muted">Descuento frecuente</div>
             <h2 id="mkDiscount"></h2>
         </div>
     </div>
 
     <div class="marketing-main-grid">
-        <div class="card marketing-customers-card">
+        <section class="card marketing-customers-card">
             <div class="marketing-panel-header">
                 <div>
-                    <h3 class="marketing-panel-title">Clientes</h3>
+                    <span class="marketing-eyebrow">Clientes</span>
+                    <h3 class="marketing-panel-title">Base de clientes</h3>
                 </div>
+                <span class="badge badge-info">Seleccione destinatarios para campañas</span>
             </div>
 
             <div class="table-container marketing-table-wrap">
                 <table class="table marketing-table marketing-customers-table">
                     <thead>
                         <tr>
+                            <th>Enviar</th>
                             <th>Cliente</th>
                             <th>Contacto</th>
                             <th>Total gastado</th>
@@ -63,57 +65,85 @@
                     <tbody id="marketingCustomers"></tbody>
                 </table>
             </div>
-        </div>
+        </section>
 
-        <div class="card marketing-promotions-card">
-            <div class="marketing-panel-header">
-                <div>
-                    <h3 class="marketing-panel-title">Nueva promoción</h3>
-                </div>
-            </div>
-
-            <form id="promotionForm" class="marketing-form">
-                <div class="marketing-form-block marketing-form-full">
-                    <label>Nombre de la promoción</label>
-                    <input class="form-control" name="name" placeholder="Nombre de la promoción" required />
-                </div>
-
-                <div class="marketing-form-grid">
-                    <div class="marketing-form-block">
-                        <label>Fecha de inicio</label>
-                        <input class="form-control" type="date" name="startDate" required />
-                    </div>
-
-                    <div class="marketing-form-block">
-                        <label>Fecha de fin</label>
-                        <input class="form-control" type="date" name="endDate" required />
+        <aside class="marketing-side-stack">
+            <section class="card marketing-promotions-card">
+                <div class="marketing-panel-header">
+                    <div>
+                        <span class="marketing-eyebrow">Promociones</span>
+                        <h3 class="marketing-panel-title">Nueva promoción</h3>
                     </div>
                 </div>
 
-                <div class="marketing-form-block marketing-form-full">
-                    <label>Descuento</label>
-                    <input class="form-control" type="number" min="0.01" step="0.01" max="1" name="discount" placeholder="Ej. 0.10" required />
+                <form id="promotionForm" class="marketing-form">
+                    <div class="marketing-form-block marketing-form-full">
+                        <label>Nombre de la promoción</label>
+                        <input class="form-control" name="name" placeholder="Ej. Semana del queque" required />
+                    </div>
+
+                    <div class="marketing-form-grid">
+                        <div class="marketing-form-block">
+                            <label>Fecha de inicio</label>
+                            <input class="form-control" type="date" name="startDate" required />
+                        </div>
+
+                        <div class="marketing-form-block">
+                            <label>Fecha de fin</label>
+                            <input class="form-control" type="date" name="endDate" required />
+                        </div>
+                    </div>
+
+                    <div class="marketing-form-block marketing-form-full">
+                        <label>Descuento</label>
+                        <input class="form-control" type="number" min="0.01" step="0.01" max="1" name="discount" placeholder="Ej. 0.10" required />
+                        <small class="text-muted">Use 0.10 para 10%.</small>
+                    </div>
+
+                    <button class="btn btn-primary marketing-submit-btn" type="submit">
+                        <i class="fas fa-save"></i>
+                        Guardar promoción
+                    </button>
+                </form>
+            </section>
+
+            <section class="card marketing-promotions-card">
+                <div class="marketing-panel-header marketing-panel-header-compact">
+                    <div>
+                        <span class="marketing-eyebrow">Registro</span>
+                        <h3 class="marketing-panel-title">Promociones registradas</h3>
+                    </div>
                 </div>
+                <div id="promotionsList" class="marketing-promotions-list"></div>
+            </section>
 
-                <button class="btn btn-primary marketing-submit-btn" type="submit">
-                    Guardar promoción
-                </button>
-            </form>
+            <section class="card marketing-promotions-card">
+                <form id="campaignForm" class="marketing-form">
+                    <div class="marketing-panel-header marketing-panel-header-compact">
+                        <div>
+                            <span class="marketing-eyebrow">Campaña</span>
+                            <h3 class="marketing-panel-title">Comunicación a clientes</h3>
+                            <p class="text-muted" style="margin:.25rem 0 0;">Se enviará solo a los clientes marcados en la tabla.</p>
+                        </div>
+                    </div>
 
-            <div class="hr"></div>
-
-            <div class="marketing-panel-header marketing-panel-header-compact">
-                <div>
-                    <h3 class="marketing-panel-title">Promociones registradas</h3>
-                </div>
-            </div>
-
-            <div id="promotionsList" class="marketing-promotions-list"></div>
-        </div>
+                    <div class="marketing-form-block marketing-form-full">
+                        <label>Asunto de comunicación</label>
+                        <input class="form-control" name="subject" placeholder="Promoción especial" required />
+                    </div>
+                    <div class="marketing-form-block marketing-form-full">
+                        <label>Mensaje</label>
+                        <textarea class="form-control" name="message" rows="4" placeholder="Mensaje para clientes seleccionados" required></textarea>
+                    </div>
+                    <button class="btn btn-outline marketing-submit-btn" type="submit">
+                        <i class="fas fa-paper-plane"></i>
+                        Enviar comunicación
+                    </button>
+                </form>
+            </section>
+        </aside>
     </div>
 </div>
-
-
 
 @section Scripts {
     <script>
@@ -133,6 +163,7 @@
 
                 document.getElementById('marketingCustomers').innerHTML = customers.map(c => `
                     <tr>
+                        <td><input type="checkbox" class="marketing-recipient" value="${c.id}" /></td>
                         <td>
                             <strong>${c.fullName}</strong>
                             <div class="text-muted" style="font-size:.8rem;">${c.address || '-'}</div>
@@ -148,14 +179,14 @@
                             </span>
                         </td>
                         <td class="text-right">
-                            ${!c.frequent
-                                ? `<button class="btn btn-outline btn-sm" onclick="makeFrequent(${c.id})">Marcar frecuente</button>`
-                                : ''}
+                            <button class="btn btn-outline btn-sm" onclick="makeFrequent(${c.id})">
+                                ${c.frequent ? 'Quitar frecuente' : 'Marcar frecuente'}
+                            </button>
                         </td>
                     </tr>
                 `).join('') || `
                     <tr>
-                        <td colspan="5" class="text-center text-muted">No se encontraron clientes.</td>
+                        <td colspan="6" class="text-center text-muted">No se encontraron clientes.</td>
                     </tr>
                 `;
 
@@ -166,7 +197,9 @@
                                 <div class="marketing-promo-name">${p.name}</div>
                                 <div class="marketing-promo-dates">${p.startDate} al ${p.endDate}</div>
                             </div>
-                            <span class="badge badge-primary">${(p.discount * 100).toFixed(0)}%</span>
+                            <button class="badge ${p.active ? 'badge-primary' : 'badge-warning'}" type="button" onclick="togglePromotion(${p.id})">
+                                ${(p.discount * 100).toFixed(0)}% · ${p.active ? 'Activa' : 'Inactiva'}
+                            </button>
                         </div>
                     </div>
                 `).join('') || `
@@ -174,21 +207,57 @@
                 `;
             }
 
-            window.makeFrequent = (id) => {
-                app.toast.info('Esta accion debe actualizarse desde el sistema.');
+            window.makeFrequent = async (id) => {
+                try {
+                    await BakeSmartStore.customers.addFrequent(id);
+                    app.toast.success('Cliente frecuente actualizado.');
+                    await render();
+                } catch (error) {
+                    app.toast.error(error.message);
+                }
             };
 
-            document.getElementById('promotionForm').addEventListener('submit', (e) => {
+            window.togglePromotion = async (id) => {
+                try {
+                    await BakeSmartStore.marketing.togglePromotion(id);
+                    app.toast.success('Promoción actualizada.');
+                    await render();
+                } catch (error) {
+                    app.toast.error(error.message);
+                }
+            };
+
+            document.getElementById('promotionForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
 
                 try {
-                    BakeSmartStore.marketing.addPromotion(
+                    await BakeSmartStore.marketing.addPromotion(
                         Object.fromEntries(new FormData(e.target).entries())
                     );
 
                     e.target.reset();
                     app.toast.success('Promoción registrada.');
-                    render();
+                    await render();
+                } catch (error) {
+                    app.toast.error(error.message);
+                }
+            });
+
+            document.getElementById('campaignForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                try {
+                    const selected = [...document.querySelectorAll('.marketing-recipient:checked')]
+                        .map(input => Number(input.value));
+
+                    await BakeSmartStore.marketing.sendCampaign({
+                        ...Object.fromEntries(new FormData(e.target).entries()),
+                        customerIds: selected
+                    });
+
+                    e.target.reset();
+                    document.querySelectorAll('.marketing-recipient:checked').forEach(input => input.checked = false);
+                    app.toast.success('Comunicación enviada y registrada en bitácora.');
                 } catch (error) {
                     app.toast.error(error.message);
                 }
@@ -199,7 +268,7 @@
             function initializePage() {
                 if (pageInitialized) return;
                 pageInitialized = true;
-                render();
+                render().catch(error => app.toast.error(error.message));
             }
 
             requestAnimationFrame(() => {

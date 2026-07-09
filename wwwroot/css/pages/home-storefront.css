@@ -243,6 +243,16 @@ body[data-page="/"] .cursor-glow {
 .storefront-category-card small { margin-top:.45rem; padding:.35rem .7rem; border-radius:7px; background:var(--store-coral); color:#fff; font-size:.62rem; font-weight:850; text-transform:uppercase; }
 .storefront-category-card:hover .storefront-category-image { transform:translateY(-5px) rotate(2deg); box-shadow:0 16px 28px rgba(77,36,120,.16); }
 
+.storefront-managed { background:linear-gradient(180deg,#fff,#f7f3fb); }
+.storefront-managed-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1.1rem; }
+.storefront-managed-card { min-width:0; overflow:hidden; display:grid; grid-template-rows:auto 1fr; border:1px solid #e9dfef; border-radius:10px; background:#fff; box-shadow:0 12px 28px rgba(45,27,62,.08); }
+.storefront-managed-card > img { width:100%; aspect-ratio:1.6/1; object-fit:cover; background:#f8f4fb; }
+.storefront-managed-body { display:flex; flex-direction:column; gap:.65rem; padding:1.15rem; }
+.storefront-managed-body > i { width:42px; height:42px; display:grid; place-items:center; border-radius:10px; background:linear-gradient(135deg,var(--store-purple),var(--store-coral)); color:#fff; font-size:1rem; }
+.storefront-managed-body h3 { margin:0; color:#17375d; font-size:1.1rem; line-height:1.2; }
+.storefront-managed-body p { margin:0; color:#667085; font-size:.82rem; line-height:1.55; }
+.storefront-managed-body a { width:fit-content; display:inline-flex; align-items:center; gap:.45rem; margin-top:auto; color:var(--store-coral); text-decoration:none; font-size:.78rem; font-weight:900; }
+
 .storefront-offers { background:linear-gradient(180deg,#fff5f8,#fff); }
 .storefront-offer-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
 .storefront-offer-card { min-height:220px; display:grid; grid-template-columns:1fr 1fr; align-items:center; border-radius:10px; overflow:hidden; background:linear-gradient(135deg,#bd3d83,#e06b69); color:#fff; }
@@ -308,6 +318,7 @@ body[data-page="/"] .footer-bottom { border-color:rgba(255,255,255,.12); }
 body.dark[data-page="/"] .storefront-header { background:rgba(24,22,35,.97); border-color:#383248; }
 body.dark[data-page="/"] .storefront-search,
 body.dark[data-page="/"] .storefront-product-card,
+body.dark[data-page="/"] .storefront-managed-card,
 body.dark[data-page="/"] .storefront-review-grid article { background:#211e2d; border-color:#3a3448; }
 body.dark[data-page="/"] .storefront-search input,
 body.dark[data-page="/"] .storefront-tools a,
@@ -319,8 +330,10 @@ body.dark[data-page="/"] .storefront-popular { background:#17151f; }
 body.dark[data-page="/"] .storefront-hero { background:linear-gradient(124deg,#1c2330 0 48%,#241b29 48% 100%); }
 body.dark[data-page="/"] .storefront-hero-copy > p { color:#ccd3df; }
 body.dark[data-page="/"] .storefront-offers { background:linear-gradient(180deg,#201925,#17151f); }
+body.dark[data-page="/"] .storefront-managed { background:#1b1724; }
 body.dark[data-page="/"] .storefront-reviews { background:#211923; }
 body.dark[data-page="/"] .storefront-heading h2,
+body.dark[data-page="/"] .storefront-managed-body h3,
 body.dark[data-page="/"] .storefront-product-body h3,
 body.dark[data-page="/"] .storefront-product-body > strong,
 body.dark[data-page="/"] .storefront-review-grid strong { color:#f6eefb; }

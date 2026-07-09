@@ -130,9 +130,8 @@
 
         load() {
             const saved = localStorage.getItem(this.key);
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-            if (saved === 'dark' || (!saved && prefersDark)) {
+            if (saved === 'dark') {
                 document.body.classList.add('dark');
                 document.documentElement.classList.add('dark-start');
                 this.updateIcon('dark');
@@ -168,11 +167,8 @@
         },
 
         setupSystemListener() {
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-                if (!localStorage.getItem(this.key)) {
-                    document.body.classList.toggle('dark', e.matches);
-                    this.updateIcon(e.matches ? 'dark' : 'light');
-                }
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+                this.load();
             });
         }
     };

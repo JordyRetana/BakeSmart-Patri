@@ -3,11 +3,15 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BakeSmartPatri.Controllers;
 
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = "StaffOrAdmin")]
 public class AdminController : Controller
 {
+    [Authorize(Policy = "AdminOnly")]
     public IActionResult Users() => View();
+
+    [Authorize(Policy = "AdminOnly")]
     public IActionResult Roles() => View();
+
     public IActionResult Settings() => View();
 
     [HttpPost]

@@ -12,11 +12,13 @@ public class ApiController : Controller
 {
     private readonly SqlStore _sqlStore;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IWebHostEnvironment _environment;
 
-    public ApiController(SqlStore sqlStore, IHttpClientFactory httpClientFactory)
+    public ApiController(SqlStore sqlStore, IHttpClientFactory httpClientFactory, IWebHostEnvironment environment)
     {
         _sqlStore = sqlStore;
         _httpClientFactory = httpClientFactory;
+        _environment = environment;
     }
 
     private string? CurrentUserEmail =>
@@ -60,14 +62,14 @@ public class ApiController : Controller
         if (string.IsNullOrWhiteSpace(request.Status))
             return BadRequest(new { message = "Debe indicar el estado." });
 
-        await _sqlStore.UpdateOrderStatusAsync(id, request.Status);
+        await _sqlStore.UpdateOrderStatusAsync(id, request.Status, CurrentUserEmail);
         return Ok(new { ok = true });
     }
 
     [HttpPost("orders/{id:int}/pay")]
     public async Task<IActionResult> MarkOrderPaid(int id, [FromBody] MarkPaidRequest request)
     {
-        await _sqlStore.MarkOrderPaidAsync(id, string.IsNullOrWhiteSpace(request.Method) ? "Efectivo" : request.Method);
+        await _sqlStore.MarkOrderPaidAsync(id, string.IsNullOrWhiteSpace(request.Method) ? "Efectivo" : request.Method, CurrentUserEmail);
         return Ok(new { ok = true });
     }
 
@@ -142,6 +144,135 @@ public class ApiController : Controller
     [HttpGet("promotions")]
     public async Task<IActionResult> Promotions() => Json(await _sqlStore.PromotionsAsync());
 
+    [HttpGet("catalog/options")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> CatalogOptions()
+    {
+        var categoriesTask = _sqlStore.CatalogCategoriesAsync();
+        var productsTask = _sqlStore.CatalogProductsAsync();
+        await Task.WhenAll(categoriesTask, productsTask);
+
+        var products = await productsTask;
+        var imageRoot = Path.Combine(_environment.WebRootPath, "img");
+        var staticImages = Directory.Exists(imageRoot)
+            ? Directory.EnumerateFiles(imageRoot, "*.*", SearchOption.AllDirectories)
+                .Where(path => IsAllowedImageExtension(Path.GetExtension(path)))
+                .Select(path => "/" + Path.GetRelativePath(_environment.WebRootPath, path).Replace("\\", "/"))
+            : Enumerable.Empty<string>();
+
+        var imageOptions = products
+            .Select(product => product.ImageUrl)
+            .Concat(staticImages)
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(url => url)
+            .ToList();
+
+        return Json(new
+        {
+            categories = (await categoriesTask).Select(category => new
+            {
+                category.Id,
+                category.Name,
+                category.Icon,
+                url = $"/Catalog?category={Uri.EscapeDataString(category.Name)}"
+            }),
+            products = products.Where(product => product.IsActive).Select(product => new
+            {
+                product.Id,
+                product.Name,
+                product.Category,
+                product.ImageUrl,
+                url = $"/Catalog/Details/{product.Id}"
+            }),
+            images = imageOptions
+        });
+    }
+
+    [HttpPost("assets/site-images")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    [RequestSizeLimit(8 * 1024 * 1024)]
+    public async Task<IActionResult> UploadSiteImage(IFormFile? file)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { message = "Seleccione una imagen para subir." });
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!IsAllowedImageExtension(extension))
+            return BadRequest(new { message = "Formato no permitido. Use JPG, PNG, WEBP o GIF." });
+
+        if (file.Length > 8 * 1024 * 1024)
+            return BadRequest(new { message = "La imagen no puede superar 8 MB." });
+
+        var uploadFolder = Path.Combine(_environment.WebRootPath, "img", "uploads", "site");
+        Directory.CreateDirectory(uploadFolder);
+
+        var fileName = $"{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}{extension}";
+        var fullPath = Path.Combine(uploadFolder, fileName);
+        await using (var stream = System.IO.File.Create(fullPath))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        var url = $"/img/uploads/site/{fileName}";
+        await _sqlStore.AddAuditLogAsync("SUBIR_IMAGEN_SITIO", $"Imagen del sitio cargada: {url}", CurrentUserEmail);
+        return Ok(new { ok = true, url });
+    }
+
+    [HttpPost("promotions")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> SavePromotion([FromBody] SqlStore.PromotionInput request)
+    {
+        try
+        {
+            var id = await _sqlStore.SavePromotionAsync(request, CurrentUserEmail);
+            return Ok(new { ok = true, id });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("promotions/{id:int}/toggle")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> TogglePromotion(int id)
+    {
+        await _sqlStore.TogglePromotionAsync(id, CurrentUserEmail);
+        return Ok(new { ok = true });
+    }
+
+    [HttpPost("customers/{id:int}/frequent")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> ToggleFrequentCustomer(int id)
+    {
+        await _sqlStore.MarkCustomerFrequentAsync(id, CurrentUserEmail);
+        return Ok(new { ok = true });
+    }
+
+    [HttpPost("marketing/campaigns")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> SendMarketingCampaign([FromBody] SqlStore.MarketingCampaignInput request)
+    {
+        try
+        {
+            var id = await _sqlStore.SendMarketingCampaignAsync(request, CurrentUserEmail);
+            return Ok(new { ok = true, id });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpGet("users")]
     public async Task<IActionResult> Users() => Json(await _sqlStore.UsersAsync());
 
@@ -198,6 +329,29 @@ public class ApiController : Controller
 
     [HttpGet("pos/config")]
     public async Task<IActionResult> PosConfig() => Json(await _sqlStore.PosConfigAsync());
+
+    [HttpPost("pos/payment-methods")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> SavePaymentMethod([FromBody] SqlStore.PaymentMethodInput request)
+    {
+        try
+        {
+            var id = await _sqlStore.SavePaymentMethodAsync(request, CurrentUserEmail);
+            return Ok(new { ok = true, id });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("pos/payment-methods/{id:int}/toggle")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> TogglePaymentMethod(int id)
+    {
+        await _sqlStore.TogglePaymentMethodAsync(id, CurrentUserEmail);
+        return Ok(new { ok = true });
+    }
 
     [HttpGet("logs")]
     [Authorize(Roles = "Admin,Staff,Supervisor")]
@@ -363,14 +517,83 @@ public class ApiController : Controller
         {
             return BadRequest(new { message = ex.Message });
         }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("pos/credit-notes")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> RegisterCreditNote([FromBody] SqlStore.CreditNoteInput request)
+    {
+        try
+        {
+            var id = await _sqlStore.RegisterCreditNoteAsync(request, CurrentUserEmail);
+            return Ok(new { ok = true, id });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("accounting")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> Accounting() => Json(await _sqlStore.AccountingOverviewAsync());
+
+    [HttpPost("accounting/expenses")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> RegisterExpense([FromBody] SqlStore.AccountingExpenseInput request)
+    {
+        try
+        {
+            var id = await _sqlStore.RegisterExpenseAsync(request, CurrentUserEmail);
+            return Ok(new { ok = true, id });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("accounting/supplier-payments")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> RegisterSupplierPayment([FromBody] SqlStore.SupplierPaymentInput request)
+    {
+        try
+        {
+            var id = await _sqlStore.RegisterSupplierPaymentAsync(request, CurrentUserEmail);
+            return Ok(new { ok = true, id });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("accounting/reconcile-pos")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> ReconcilePos()
+    {
+        var result = await _sqlStore.ReconcilePosAsync(CurrentUserEmail);
+        return Ok(result);
+    }
+
+    [HttpPost("accounting/daily-close")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> DailyAccountingClose()
+    {
+        var result = await _sqlStore.DailyAccountingCloseAsync(CurrentUserEmail);
+        return Ok(result);
     }
 
     [HttpGet("settings")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> Settings() => Json(await _sqlStore.GetSettingsAsync());
 
     [HttpPost("settings")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> SaveSettings([FromBody] Dictionary<string, string> settings)
     {
         try
@@ -408,5 +631,14 @@ public class ApiController : Controller
         {
             return false;
         }
+    }
+
+    private static bool IsAllowedImageExtension(string extension)
+    {
+        return extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".png", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".webp", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".gif", StringComparison.OrdinalIgnoreCase);
     }
 }

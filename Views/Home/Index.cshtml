@@ -19,6 +19,38 @@
         .ToList();
     var offerProducts = products.Skip(1).Take(3).ToList();
     var popularProducts = products.Take(5).ToList();
+    var settings = ViewBag.HomeSettings as IReadOnlyDictionary<string, string> ?? new Dictionary<string, string>();
+    string setting(string key, string fallback) => settings.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value) ? value : fallback;
+    var heroEyebrow = setting("siteHeroEyebrow", "Especial de temporada");
+    var heroTitle = setting("siteHeroTitle", "Endulza tu dia");
+    var heroDescription = setting("siteHeroDescription", "Reposteria artesanal preparada con detalle, ingredientes seleccionados y ese toque especial que convierte cualquier momento en celebracion.");
+    var heroCode = setting("siteHeroCode", "BAKESMART");
+    var heroButtonText = setting("siteHeroButtonText", "Ver productos");
+    var heroButtonUrl = setting("siteHeroButtonUrl", "/Catalog");
+    var heroImageUrl = setting("siteHeroImageUrl", heroProduct?.ImageUrl ?? "/img/products/cupcakes-decorados.jpg");
+    var heroAltText = setting("siteHeroAltText", heroProduct?.AltText ?? "Reposteria artesanal BakeSmart Patri");
+    var homeBlocks = HomeContentItem.Parse(settings, "siteHomeBlocks");
+    var benefitBlocks = HomeContentItem.Parse(settings, "siteBenefitBlocks");
+    if (!benefitBlocks.Any())
+    {
+        benefitBlocks =
+        [
+            new() { Icon = "fa-wand-magic-sparkles", Title = "Acabado artesanal", Text = "Cada creacion se prepara con atencion al detalle y una presentacion cuidada." },
+            new() { Icon = "fa-leaf", Title = "Ingredientes seleccionados", Text = "Sabores equilibrados y productos pensados para disfrutar desde el primer bocado." },
+            new() { Icon = "fa-gift", Title = "Momentos memorables", Text = "Opciones para cumpleanos, eventos, regalos y cualquier ocasion especial." }
+        ];
+    }
+    var deliveryBlocks = HomeContentItem.Parse(settings, "siteDeliveryBlocks");
+    if (!deliveryBlocks.Any())
+    {
+        deliveryBlocks =
+        [
+            new() { Icon = "fa-motorcycle", Title = "Entregas rapidas y seguras", Text = "Coordinamos cada pedido con cuidado." },
+            new() { Icon = "fa-clock", Title = "Atencion agil", Text = "Respuesta oportuna" },
+            new() { Icon = "fa-shield-heart", Title = "Empaque seguro", Text = "Producto protegido" },
+            new() { Icon = "fa-face-smile", Title = "Satisfaccion", Text = "Servicio cercano" }
+        ];
+    }
 }
 
 @if (!isAuth)
@@ -27,25 +59,25 @@
         <section class="storefront-hero">
             <div class="container storefront-hero-grid">
                 <div class="storefront-hero-copy">
-                    <span class="storefront-eyebrow">Especial de temporada</span>
-                    <h1>Endulza <strong>tu día</strong></h1>
-                    <p>Repostería artesanal preparada con detalle, ingredientes seleccionados y ese toque especial que convierte cualquier momento en celebración.</p>
+                    <span class="storefront-eyebrow">@heroEyebrow</span>
+                    <h1>@heroTitle</h1>
+                    <p>@heroDescription</p>
                     <div class="storefront-code">
                         <span>Descubre nuestras creaciones</span>
-                        <strong>BAKESMART</strong>
+                        <strong>@heroCode</strong>
                     </div>
-                    <a class="storefront-primary-action" href="/Catalog">
-                        Ver productos
+                    <a class="storefront-primary-action" href="@heroButtonUrl">
+                        @heroButtonText
                         <i class="fas fa-bag-shopping"></i>
                     </a>
                 </div>
 
                 <div class="storefront-hero-visual">
-                    <span class="storefront-doodle storefront-doodle-one">♡</span>
-                    <span class="storefront-doodle storefront-doodle-two">✦</span>
+                    <span class="storefront-doodle storefront-doodle-one">*</span>
+                    <span class="storefront-doodle storefront-doodle-two">+</span>
                     <div class="storefront-hero-photo">
-                        <img src="@(heroProduct?.ImageUrl ?? "/img/products/cupcakes-decorados.jpg")"
-                             alt="@(heroProduct?.AltText ?? "Repostería artesanal BakeSmart Patri")"
+                        <img src="@heroImageUrl"
+                             alt="@heroAltText"
                              width="720" height="720" decoding="async" fetchpriority="high"
                              onerror="this.src='/img/products/producto-sin-imagen.svg';" />
                     </div>
@@ -76,12 +108,45 @@
                                      onerror="this.src='/img/products/producto-sin-imagen.svg';" />
                             </span>
                             <strong>@item.Category.Name</strong>
-                            <small>Ver más</small>
+                            <small>Ver mas</small>
                         </a>
                     }
                 </div>
             </div>
         </section>
+
+        @if (homeBlocks.Any())
+        {
+            <section class="storefront-section storefront-managed" id="destacados">
+                <div class="container">
+                    <div class="storefront-heading">
+                        <span></span>
+                        <h2>Destacados</h2>
+                        <span></span>
+                    </div>
+                    <div class="storefront-managed-grid">
+                        @foreach (var block in homeBlocks)
+                        {
+                            <article class="storefront-managed-card">
+                                @if (!string.IsNullOrWhiteSpace(block.ImageUrl))
+                                {
+                                    <img src="@block.ImageUrl" alt="@block.Title" width="520" height="320" loading="lazy" decoding="async" onerror="this.src='/img/products/producto-sin-imagen.svg';" />
+                                }
+                                <div class="storefront-managed-body">
+                                    <i class="fas @block.Icon"></i>
+                                    <h3>@block.Title</h3>
+                                    <p>@block.Text</p>
+                                    @if (!string.IsNullOrWhiteSpace(block.LinkUrl))
+                                    {
+                                        <a href="@block.LinkUrl">@(string.IsNullOrWhiteSpace(block.LinkText) ? "Ver mas" : block.LinkText) <i class="fas fa-arrow-right"></i></a>
+                                    }
+                                </div>
+                            </article>
+                        }
+                    </div>
+                </div>
+            </section>
+        }
 
         <section class="storefront-section storefront-offers" id="ofertas">
             <div class="container">
@@ -125,7 +190,7 @@
                             <div class="storefront-product-body">
                                 <small>@product.Category</small>
                                 <h3>@product.Name</h3>
-                                <div class="storefront-rating" aria-label="Valoración de cinco estrellas">
+                                <div class="storefront-rating" aria-label="Valoracion de cinco estrellas">
                                     <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
                                 </div>
                                 <strong>@product.UnitPrice.ToString("C0", culture)</strong>
@@ -145,19 +210,21 @@
                     <span></span>
                 </div>
                 <div class="storefront-review-grid">
-                    <article><i class="fas fa-wand-magic-sparkles"></i><div><strong>Acabado artesanal</strong><p>Cada creación se prepara con atención al detalle y una presentación cuidada.</p></div></article>
-                    <article><i class="fas fa-leaf"></i><div><strong>Ingredientes seleccionados</strong><p>Sabores equilibrados y productos pensados para disfrutar desde el primer bocado.</p></div></article>
-                    <article><i class="fas fa-gift"></i><div><strong>Momentos memorables</strong><p>Opciones para cumpleaños, eventos, regalos y cualquier ocasión especial.</p></div></article>
+                    @foreach (var block in benefitBlocks)
+                    {
+                        <article><i class="fas @block.Icon"></i><div><strong>@block.Title</strong><p>@block.Text</p></div></article>
+                    }
                 </div>
             </div>
         </section>
 
         <section class="storefront-delivery">
             <div class="container storefront-delivery-grid">
-                <div class="storefront-delivery-lead"><i class="fas fa-motorcycle"></i><strong>Entregas rápidas y seguras</strong><span>Coordinamos cada pedido con cuidado.</span></div>
-                <div><i class="far fa-clock"></i><span><strong>Atención ágil</strong>Respuesta oportuna</span></div>
-                <div><i class="fas fa-shield-heart"></i><span><strong>Empaque seguro</strong>Producto protegido</span></div>
-                <div><i class="far fa-face-smile"></i><span><strong>Satisfacción</strong>Servicio cercano</span></div>
+                @foreach (var block in deliveryBlocks.Select((item, index) => new { item, index }))
+                {
+                    var leadClass = block.index == 0 ? "storefront-delivery-lead" : "";
+                    <div class="@leadClass"><i class="fas @block.item.Icon"></i><span><strong>@block.item.Title</strong>@block.item.Text</span></div>
+                }
             </div>
         </section>
 
@@ -165,8 +232,8 @@
             <div class="container storefront-newsletter-grid">
                 <div><i class="fas fa-cake-candles"></i><span><strong>Recibe nuestras novedades</strong>Promociones, productos y fechas especiales.</span></div>
                 <form action="/Home/Contact" method="get">
-                    <label class="sr-only" for="newsletterEmail">Correo electrónico</label>
-                    <input id="newsletterEmail" type="email" name="email" placeholder="Tu correo electrónico" required />
+                    <label class="sr-only" for="newsletterEmail">Correo electronico</label>
+                    <input id="newsletterEmail" type="email" name="email" placeholder="Tu correo electronico" required />
                     <button type="submit">Suscribirme</button>
                 </form>
             </div>
@@ -178,9 +245,9 @@ else if (isClient)
     <section class="home-account-hero">
         <div class="container">
             <span>Hola, @(User?.Identity?.Name ?? "Cliente")</span>
-            <h1>Encuentra algo especial para tu próximo momento.</h1>
-            <p>Explora el catálogo, revisa tus pedidos y administra tu perfil desde un solo lugar.</p>
-            <div><a class="btn btn-primary" href="/Catalog">Explorar catálogo</a><a class="btn btn-outline" href="/Client">Mi espacio</a></div>
+            <h1>Encuentra algo especial para tu proximo momento.</h1>
+            <p>Explora el catalogo, revisa tus pedidos y administra tu perfil desde un solo lugar.</p>
+            <div><a class="btn btn-primary" href="/Catalog">Explorar catalogo</a><a class="btn btn-outline" href="/Client">Mi espacio</a></div>
         </div>
     </section>
 }
@@ -190,7 +257,7 @@ else if (isAdmin || isStaff)
         <div class="container">
             <span>Panel operativo</span>
             <h1>Bienvenido, @(User?.Identity?.Name ?? "Usuario")</h1>
-            <p>Consulta el estado del negocio y accede rápidamente a las operaciones disponibles para tu rol.</p>
+            <p>Consulta el estado del negocio y accede rapidamente a las operaciones disponibles para tu rol.</p>
             <div><a class="btn btn-primary" href="/Dashboard">Ir al dashboard</a><a class="btn btn-outline" href="/Orders">Ver pedidos</a></div>
         </div>
     </section>
@@ -204,4 +271,38 @@ else
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/home-storefront.css" asp-append-version="true" />
+}
+
+@functions {
+    private sealed class HomeContentItem
+    {
+        public string Id { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Text { get; set; } = "";
+        public string Icon { get; set; } = "fa-star";
+        public string ImageUrl { get; set; } = "";
+        public string LinkText { get; set; } = "";
+        public string LinkUrl { get; set; } = "";
+        public bool Active { get; set; } = true;
+
+        public static List<HomeContentItem> Parse(IReadOnlyDictionary<string, string> settings, string key)
+        {
+            if (!settings.TryGetValue(key, out var json) || string.IsNullOrWhiteSpace(json))
+            {
+                return [];
+            }
+
+            try
+            {
+                return System.Text.Json.JsonSerializer.Deserialize<List<HomeContentItem>>(json, new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                })?.Where(item => item.Active).ToList() ?? [];
+            }
+            catch
+            {
+                return [];
+            }
+        }
+    }
 }

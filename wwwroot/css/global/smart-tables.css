@@ -11,6 +11,39 @@
     background: linear-gradient(110deg, #fff, #fcf8ff 60%, #fff5f8);
 }
 
+.table-container:has(.smart-table),
+.table-responsive:has(.smart-table),
+.dashboard-table-wrap:has(.smart-table),
+.audit-table-wrap:has(.smart-table),
+[class*='table-wrap']:has(.smart-table) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.smart-table {
+    width: max-content;
+    min-width: 960px;
+}
+
+.accounting-entries-table.smart-table {
+    min-width: 1080px !important;
+}
+
+.inventory-products-table.smart-table,
+.marketing-customers-table.smart-table,
+.pos-products-table.smart-table,
+.orders-table.smart-table {
+    min-width: 1040px;
+}
+
+.smart-table th,
+.smart-table td {
+    overflow: visible;
+    text-overflow: clip;
+}
+
 .smart-table-search {
     width: min(460px, 100%);
     min-width: 0;

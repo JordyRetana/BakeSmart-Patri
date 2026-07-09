@@ -774,6 +774,75 @@ public sealed class SqlStore
         });
     }
 
+    public async Task<int> SavePaymentMethodAsync(PaymentMethodInput input, string? userEmail = null)
+    {
+        var name = (input.Name ?? "").Trim();
+        var account = string.IsNullOrWhiteSpace(input.Account) ? name : input.Account.Trim();
+
+        if (string.IsNullOrWhiteSpace(name))
+            throw new InvalidOperationException("Debe indicar el nombre de la forma de pago.");
+
+        if (input.CommissionRate < 0)
+            throw new InvalidOperationException("La comision debe ser mayor o igual a 0.");
+
+        const string sql = """
+            DECLARE @PaymentMethodId int;
+
+            IF @Id IS NULL
+            BEGIN
+                IF EXISTS (SELECT 1 FROM dbo.MetodosPago WHERE LOWER(Name) = LOWER(@Name))
+                    THROW 50100, 'Ya existe una forma de pago con ese nombre.', 1;
+
+                INSERT INTO dbo.MetodosPago (Name, CommissionRate, IsActive)
+                VALUES (@Name, @CommissionRate, @IsActive);
+                SET @PaymentMethodId = SCOPE_IDENTITY();
+            END
+            ELSE
+            BEGIN
+                IF EXISTS (SELECT 1 FROM dbo.MetodosPago WHERE LOWER(Name) = LOWER(@Name) AND PaymentMethodId <> @Id)
+                    THROW 50101, 'Ya existe una forma de pago con ese nombre.', 1;
+
+                UPDATE dbo.MetodosPago
+                SET Name = @Name,
+                    CommissionRate = @CommissionRate,
+                    IsActive = @IsActive
+                WHERE PaymentMethodId = @Id;
+
+                SET @PaymentMethodId = @Id;
+            END;
+
+            MERGE dbo.ConfiguracionesAplicacion AS target
+            USING (SELECT CONCAT(N'paymentMethodAccount:', @PaymentMethodId) AS SettingKey) AS source
+            ON target.SettingKey = source.SettingKey
+            WHEN MATCHED THEN UPDATE SET SettingValue = @Account
+            WHEN NOT MATCHED THEN INSERT (SettingKey, SettingValue) VALUES (source.SettingKey, @Account);
+
+            SELECT @PaymentMethodId;
+            """;
+
+        var id = Convert.ToInt32(await ScalarAsync(sql,
+            new SqlParameter("@Id", (object?)input.Id ?? DBNull.Value),
+            new SqlParameter("@Name", name),
+            new SqlParameter("@CommissionRate", input.CommissionRate),
+            new SqlParameter("@IsActive", input.IsActive),
+            new SqlParameter("@Account", account)));
+
+        await AddAuditLogAsync("CONFIGURACION_POS", $"Forma de pago '{name}' configurada", userEmail);
+        return id;
+    }
+
+    public async Task TogglePaymentMethodAsync(int id, string? userEmail = null)
+    {
+        const string sql = """
+            UPDATE dbo.MetodosPago
+            SET IsActive = CASE WHEN IsActive = 1 THEN 0 ELSE 1 END
+            WHERE PaymentMethodId = @Id;
+            """;
+
+        await ExecuteAsync(sql, new SqlParameter("@Id", id));
+        await AddAuditLogAsync("CONFIGURACION_POS", $"Forma de pago ID {id} cambio de estado", userEmail);
+    }
+
     public async Task<object> PosConfigAsync()
     {
         var methods = await PaymentMethodsAsync();
@@ -880,6 +949,122 @@ public sealed class SqlStore
         });
     }
 
+    public async Task MarkCustomerFrequentAsync(int customerId, string? userEmail = null)
+    {
+        const string sql = """
+            IF NOT EXISTS (SELECT 1 FROM dbo.Clientes WHERE CustomerId = @CustomerId)
+                THROW 50110, 'El cliente no existe.', 1;
+
+            UPDATE dbo.Clientes
+            SET IsFrequent = CASE WHEN IsFrequent = 1 THEN 0 ELSE 1 END
+            WHERE CustomerId = @CustomerId;
+            """;
+
+        await ExecuteAsync(sql, new SqlParameter("@CustomerId", customerId));
+        await AddAuditLogAsync("CREAR_CLIENTE_FRECUENTE", $"Cliente ID {customerId} cambio marca frecuente", userEmail);
+    }
+
+    public async Task<int> SavePromotionAsync(PromotionInput input, string? userEmail = null)
+    {
+        var name = (input.Name ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(name))
+            throw new InvalidOperationException("Debe indicar el nombre del descuento.");
+        if (input.Discount <= 0)
+            throw new InvalidOperationException("El descuento debe ser mayor a 0.");
+        if (input.StartDate.Date > input.EndDate.Date)
+            throw new InvalidOperationException("La fecha final debe ser posterior a la fecha inicial.");
+
+        var discount = input.Discount > 1 ? input.Discount / 100m : input.Discount;
+
+        const string sql = """
+            DECLARE @PromotionId int;
+
+            IF @Id IS NULL
+            BEGIN
+                IF EXISTS (SELECT 1 FROM dbo.Promociones WHERE LOWER(Name) = LOWER(@Name))
+                    THROW 50120, 'Ya existe un descuento con ese nombre.', 1;
+
+                INSERT INTO dbo.Promociones (Name, StartDate, EndDate, DiscountRate, IsActive)
+                VALUES (@Name, @StartDate, @EndDate, @DiscountRate, @IsActive);
+                SET @PromotionId = SCOPE_IDENTITY();
+            END
+            ELSE
+            BEGIN
+                IF EXISTS (SELECT 1 FROM dbo.Promociones WHERE LOWER(Name) = LOWER(@Name) AND PromotionId <> @Id)
+                    THROW 50121, 'Ya existe un descuento con ese nombre.', 1;
+
+                UPDATE dbo.Promociones
+                SET Name = @Name,
+                    StartDate = @StartDate,
+                    EndDate = @EndDate,
+                    DiscountRate = @DiscountRate,
+                    IsActive = @IsActive
+                WHERE PromotionId = @Id;
+                SET @PromotionId = @Id;
+            END;
+
+            SELECT @PromotionId;
+            """;
+
+        var id = Convert.ToInt32(await ScalarAsync(sql,
+            new SqlParameter("@Id", (object?)input.Id ?? DBNull.Value),
+            new SqlParameter("@Name", name),
+            new SqlParameter("@StartDate", input.StartDate.Date),
+            new SqlParameter("@EndDate", input.EndDate.Date),
+            new SqlParameter("@DiscountRate", discount),
+            new SqlParameter("@IsActive", input.IsActive)));
+
+        await AddAuditLogAsync("CONFIGURAR_DESCUENTO", $"Descuento '{name}' configurado", userEmail);
+        return id;
+    }
+
+    public async Task TogglePromotionAsync(int id, string? userEmail = null)
+    {
+        const string sql = """
+            UPDATE dbo.Promociones
+            SET IsActive = CASE WHEN IsActive = 1 THEN 0 ELSE 1 END
+            WHERE PromotionId = @Id;
+            """;
+
+        await ExecuteAsync(sql, new SqlParameter("@Id", id));
+        await AddAuditLogAsync("CONFIGURAR_DESCUENTO", $"Promocion ID {id} cambio de estado", userEmail);
+    }
+
+    public async Task<int> SendMarketingCampaignAsync(MarketingCampaignInput input, string? userEmail = null)
+    {
+        if (input.CustomerIds is null || input.CustomerIds.Count == 0)
+            throw new InvalidOperationException("Debe seleccionar al menos un destinatario.");
+        if (string.IsNullOrWhiteSpace(input.Message))
+            throw new InvalidOperationException("Debe redactar el mensaje de la comunicacion.");
+
+        const string sql = """
+            IF OBJECT_ID(N'dbo.ComunicacionesMarketing', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.ComunicacionesMarketing
+                (
+                    CommunicationId int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    Subject nvarchar(160) NOT NULL,
+                    Message nvarchar(max) NOT NULL,
+                    RecipientCount int NOT NULL,
+                    CreatedAt datetime2 NOT NULL
+                );
+            END;
+
+            INSERT INTO dbo.ComunicacionesMarketing (Subject, Message, RecipientCount, CreatedAt)
+            VALUES (@Subject, @Message, @RecipientCount, SYSUTCDATETIME());
+
+            SELECT CONVERT(int, SCOPE_IDENTITY());
+            """;
+
+        var id = Convert.ToInt32(await ScalarAsync(sql,
+            new SqlParameter("@Subject", string.IsNullOrWhiteSpace(input.Subject) ? "Promocion BakeSmart" : input.Subject.Trim()),
+            new SqlParameter("@Message", input.Message.Trim()),
+            new SqlParameter("@RecipientCount", input.CustomerIds.Count)));
+
+        await AddAuditLogAsync("COMUNICACION_MARKETING", $"Campana #{id} enviada a {input.CustomerIds.Count} clientes", userEmail);
+        return id;
+    }
+
     public async Task<object> ReportsAsync(string type, DateTime? start, DateTime? end)
     {
         return type switch
@@ -894,7 +1079,7 @@ public sealed class SqlStore
         };
     }
 
-    public async Task UpdateOrderStatusAsync(int orderId, string status)
+    public async Task UpdateOrderStatusAsync(int orderId, string status, string? userEmail = null)
     {
         const string sql = """
             UPDATE o
@@ -912,9 +1097,12 @@ public sealed class SqlStore
         await ExecuteAsync(sql,
             new SqlParameter("@OrderId", orderId),
             new SqlParameter("@Status", status));
+
+        var normalized = RemoveDiacritics(status).ToUpperInvariant();
+        await AddAuditLogAsync(normalized.Contains("ENTREGADO") ? "ENTREGA_PEDIDO" : "ACTUALIZAR_ESTADO_PEDIDO", $"Pedido #{orderId} actualizado a {status}", userEmail);
     }
 
-    public async Task MarkOrderPaidAsync(int orderId, string method)
+    public async Task MarkOrderPaidAsync(int orderId, string method, string? userEmail = null)
     {
         const string sql = """
             DECLARE @PaymentMethodId int = (SELECT PaymentMethodId FROM dbo.MetodosPago WHERE Name = @Method);
@@ -948,6 +1136,8 @@ public sealed class SqlStore
         await ExecuteAsync(sql,
             new SqlParameter("@OrderId", orderId),
             new SqlParameter("@Method", method));
+
+        await AddAuditLogAsync("PAGO_PEDIDO", $"Pago confirmado para pedido #{orderId} con {method}", userEmail);
     }
 
     public async Task DeleteOrderAsync(int orderId, string? userEmail = null)
@@ -1005,6 +1195,234 @@ public sealed class SqlStore
 
         await ExecuteAsync(sql, new SqlParameter("@OrderId", orderId));
         await AddAuditLogAsync("ELIMINAR_PEDIDO", $"Pedido #{orderId} eliminado y stock restaurado", userEmail);
+    }
+
+    public async Task<object> AccountingOverviewAsync()
+    {
+        const string sql = """
+            SELECT TOP 150
+                e.AccountingEntryId,
+                e.EntryType,
+                COALESCE(a.AccountCode + N' - ' + a.AccountName, N'Sin cuenta') AS AccountName,
+                SUM(l.Debit) AS Debit,
+                SUM(l.Credit) AS Credit,
+                e.CreatedAt
+            FROM dbo.AsientosContables e
+            LEFT JOIN dbo.LineasAsientoContable l ON l.AccountingEntryId = e.AccountingEntryId
+            LEFT JOIN dbo.CatalogoCuentas a ON a.AccountId = l.AccountId
+            GROUP BY e.AccountingEntryId, e.EntryType, a.AccountCode, a.AccountName, e.CreatedAt
+            ORDER BY e.CreatedAt DESC, e.AccountingEntryId DESC;
+            """;
+
+        var entries = await QueryAsync(sql, reader => new
+        {
+            id = reader.GetInt32("AccountingEntryId"),
+            type = reader.GetString("EntryType"),
+            account = reader.GetString("AccountName"),
+            debit = reader.GetDecimal("Debit"),
+            credit = reader.GetDecimal("Credit"),
+            balanced = reader.GetDecimal("Debit") == reader.GetDecimal("Credit"),
+            createdAt = reader.GetDateTime("CreatedAt").ToString("o")
+        });
+
+        var expenseCount = Convert.ToInt32(await ScalarAsync("SELECT COUNT(1) FROM dbo.Gastos"));
+        var supplierPaymentCount = Convert.ToInt32(await ScalarAsync("SELECT COUNT(1) FROM dbo.PagosProveedor"));
+
+        return new { entries, expensesCount = expenseCount, supplierPaymentsCount = supplierPaymentCount };
+    }
+
+    public async Task<int> RegisterExpenseAsync(AccountingExpenseInput input, string? userEmail = null)
+    {
+        if (string.IsNullOrWhiteSpace(input.Description))
+            throw new InvalidOperationException("Debe indicar la descripcion del gasto.");
+        if (input.Amount <= 0)
+            throw new InvalidOperationException("El monto del gasto debe ser mayor a 0.");
+
+        var accountId = await EnsureAccountAsync(input.Account, "Gasto operativo", "GASTO");
+        var categoryId = await EnsureExpenseCategoryAsync("Operativo");
+        var methodId = await EnsurePaymentMethodAsync("Transferencia");
+
+        const string sql = """
+            SET XACT_ABORT ON;
+            BEGIN TRAN;
+
+            INSERT INTO dbo.Gastos (ExpenseCategoryId, PaymentMethodId, Description, Amount, CreatedAt)
+            VALUES (@CategoryId, @PaymentMethodId, @Description, @Amount, SYSUTCDATETIME());
+            DECLARE @ExpenseId int = SCOPE_IDENTITY();
+
+            INSERT INTO dbo.AsientosContables (EntryType, ReferenceTable, ReferenceId, Note, CreatedAt)
+            VALUES (N'GASTO', N'Gastos', @ExpenseId, @Description, SYSUTCDATETIME());
+            DECLARE @EntryId int = SCOPE_IDENTITY();
+
+            INSERT INTO dbo.LineasAsientoContable (AccountingEntryId, AccountId, Debit, Credit)
+            VALUES (@EntryId, @AccountId, @Amount, 0), (@EntryId, @AccountId, 0, @Amount);
+
+            COMMIT TRAN;
+            SELECT @ExpenseId;
+            """;
+
+        var id = Convert.ToInt32(await ScalarAsync(sql,
+            new SqlParameter("@CategoryId", categoryId),
+            new SqlParameter("@PaymentMethodId", methodId),
+            new SqlParameter("@Description", input.Description.Trim()),
+            new SqlParameter("@Amount", input.Amount),
+            new SqlParameter("@AccountId", accountId)));
+
+        await AddAuditLogAsync("CONTABILIDAD_GASTO", $"Gasto #{id} registrado por {input.Amount:N2}", userEmail);
+        return id;
+    }
+
+    public async Task<int> RegisterSupplierPaymentAsync(SupplierPaymentInput input, string? userEmail = null)
+    {
+        if (string.IsNullOrWhiteSpace(input.Supplier))
+            throw new InvalidOperationException("Debe indicar el proveedor.");
+        if (input.Amount <= 0)
+            throw new InvalidOperationException("El monto del pago debe ser mayor a 0.");
+        if (string.IsNullOrWhiteSpace(input.Method))
+            throw new InvalidOperationException("Metodo de pago no valido.");
+
+        var accountId = await EnsureAccountAsync(input.Account, "Pago a proveedor", "PASIVO");
+        var supplierId = await EnsureSupplierAsync(input.Supplier);
+        var methodId = await EnsurePaymentMethodAsync(input.Method);
+
+        const string sql = """
+            SET XACT_ABORT ON;
+            BEGIN TRAN;
+
+            INSERT INTO dbo.PagosProveedor (SupplierId, PaymentMethodId, Concept, Amount, DueDate, PaidAt, CreatedAt)
+            VALUES (@SupplierId, @PaymentMethodId, @Concept, @Amount, CAST(SYSUTCDATETIME() AS date), CAST(SYSUTCDATETIME() AS date), SYSUTCDATETIME());
+            DECLARE @PaymentId int = SCOPE_IDENTITY();
+
+            INSERT INTO dbo.AsientosContables (EntryType, ReferenceTable, ReferenceId, Note, CreatedAt)
+            VALUES (N'PAGO_PROVEEDOR', N'PagosProveedor', @PaymentId, @Concept, SYSUTCDATETIME());
+            DECLARE @EntryId int = SCOPE_IDENTITY();
+
+            INSERT INTO dbo.LineasAsientoContable (AccountingEntryId, AccountId, Debit, Credit)
+            VALUES (@EntryId, @AccountId, @Amount, 0), (@EntryId, @AccountId, 0, @Amount);
+
+            COMMIT TRAN;
+            SELECT @PaymentId;
+            """;
+
+        var id = Convert.ToInt32(await ScalarAsync(sql,
+            new SqlParameter("@SupplierId", supplierId),
+            new SqlParameter("@PaymentMethodId", methodId),
+            new SqlParameter("@Concept", $"Pago a {input.Supplier.Trim()}"),
+            new SqlParameter("@Amount", input.Amount),
+            new SqlParameter("@AccountId", accountId)));
+
+        await AddAuditLogAsync("CONTABILIDAD_PAGO_PROVEEDOR", $"Pago proveedor #{id} registrado por {input.Amount:N2}", userEmail);
+        return id;
+    }
+
+    public async Task<object> ReconcilePosAsync(string? userEmail = null)
+    {
+        const string sql = """
+            SELECT
+                COUNT(1) AS Reviewed,
+                SUM(CASE WHEN e.AccountingEntryId IS NULL THEN 1 ELSE 0 END) AS Issues
+            FROM dbo.Ventas v
+            LEFT JOIN dbo.AsientosContables e ON e.ReferenceTable = N'Ventas' AND e.ReferenceId = v.SaleId;
+            """;
+
+        var row = (await QueryAsync(sql, reader => new
+        {
+            reviewed = reader.GetInt32("Reviewed"),
+            issues = reader.GetInt32("Issues")
+        })).FirstOrDefault() ?? new { reviewed = 0, issues = 0 };
+
+        await AddAuditLogAsync("CONCILIACION_POS", $"Conciliacion POS: {row.reviewed} ventas revisadas, {row.issues} diferencias", userEmail);
+        return new { status = row.issues == 0 ? "Correcto" : "Con diferencias", row.reviewed, row.issues };
+    }
+
+    public async Task<object> DailyAccountingCloseAsync(string? userEmail = null)
+    {
+        const string sql = """
+            IF OBJECT_ID(N'dbo.CierresContables', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.CierresContables
+                (
+                    AccountingCloseId int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    CloseType nvarchar(24) NOT NULL,
+                    PeriodStart date NOT NULL,
+                    PeriodEnd date NOT NULL,
+                    TotalSales decimal(18,2) NOT NULL,
+                    TotalExpenses decimal(18,2) NOT NULL,
+                    TotalSupplierPayments decimal(18,2) NOT NULL,
+                    CreatedAt datetime2 NOT NULL
+                );
+            END;
+
+            DECLARE @Today date = CAST(SYSUTCDATETIME() AS date);
+            DECLARE @Sales decimal(18,2) = COALESCE((SELECT SUM(Total) FROM dbo.Ventas WHERE CAST(CreatedAt AS date) = @Today), 0);
+            DECLARE @Expenses decimal(18,2) = COALESCE((SELECT SUM(Amount) FROM dbo.Gastos WHERE CAST(CreatedAt AS date) = @Today), 0);
+            DECLARE @SupplierPayments decimal(18,2) = COALESCE((SELECT SUM(Amount) FROM dbo.PagosProveedor WHERE CAST(CreatedAt AS date) = @Today), 0);
+
+            INSERT INTO dbo.CierresContables (CloseType, PeriodStart, PeriodEnd, TotalSales, TotalExpenses, TotalSupplierPayments, CreatedAt)
+            VALUES (N'DIARIO', @Today, @Today, @Sales, @Expenses, @SupplierPayments, SYSUTCDATETIME());
+
+            SELECT CONVERT(int, SCOPE_IDENTITY());
+            """;
+
+        var id = Convert.ToInt32(await ScalarAsync(sql));
+        await AddAuditLogAsync("CIERRE_CONTABLE", $"Cierre contable diario #{id} generado", userEmail);
+        return new { closeId = id, count = 1 };
+    }
+
+    public async Task<int> RegisterCreditNoteAsync(CreditNoteInput input, string? userEmail = null)
+    {
+        if (input.SaleId <= 0)
+            throw new InvalidOperationException("Debe indicar una venta valida.");
+        if (string.IsNullOrWhiteSpace(input.Reason))
+            throw new InvalidOperationException("Debe indicar el motivo de la nota de credito.");
+
+        const string sql = """
+            SET XACT_ABORT ON;
+            BEGIN TRAN;
+
+            IF NOT EXISTS (SELECT 1 FROM dbo.Ventas WHERE SaleId = @SaleId)
+                THROW 50150, 'La venta no existe.', 1;
+
+            IF OBJECT_ID(N'dbo.NotasCreditoPOS', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.NotasCreditoPOS
+                (
+                    CreditNoteId int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    SaleId int NOT NULL,
+                    Reason nvarchar(300) NOT NULL,
+                    Amount decimal(18,2) NOT NULL,
+                    CreatedAt datetime2 NOT NULL
+                );
+            END;
+
+            DECLARE @Amount decimal(18,2) = (SELECT Total FROM dbo.Ventas WHERE SaleId = @SaleId);
+
+            INSERT INTO dbo.NotasCreditoPOS (SaleId, Reason, Amount, CreatedAt)
+            VALUES (@SaleId, @Reason, @Amount, SYSUTCDATETIME());
+            DECLARE @CreditNoteId int = SCOPE_IDENTITY();
+
+            UPDATE dbo.PagosSesionCaja SET Amount = 0 WHERE SaleId = @SaleId;
+            UPDATE dbo.Ventas SET Subtotal = 0, Tax = 0, Total = 0 WHERE SaleId = @SaleId;
+
+            DECLARE @AccountId int = (SELECT TOP 1 AccountId FROM dbo.CatalogoCuentas ORDER BY AccountId);
+            INSERT INTO dbo.AsientosContables (EntryType, ReferenceTable, ReferenceId, Note, CreatedAt)
+            VALUES (N'NOTA_CREDITO', N'NotasCreditoPOS', @CreditNoteId, @Reason, SYSUTCDATETIME());
+            DECLARE @EntryId int = SCOPE_IDENTITY();
+
+            IF @AccountId IS NOT NULL
+                INSERT INTO dbo.LineasAsientoContable (AccountingEntryId, AccountId, Debit, Credit)
+                VALUES (@EntryId, @AccountId, @Amount, 0), (@EntryId, @AccountId, 0, @Amount);
+
+            COMMIT TRAN;
+            SELECT @CreditNoteId;
+            """;
+
+        var id = Convert.ToInt32(await ScalarAsync(sql,
+            new SqlParameter("@SaleId", input.SaleId),
+            new SqlParameter("@Reason", input.Reason.Trim())));
+
+        await AddAuditLogAsync("NOTA_CREDITO_POS", $"Nota de credito #{id} registrada para venta #{input.SaleId}", userEmail);
+        return id;
     }
 
     private async Task<object> SalesReportAsync(DateTime? start, DateTime? end)
@@ -1249,6 +1667,78 @@ public sealed class SqlStore
             new SqlParameter("@Note", string.IsNullOrWhiteSpace(note) ? DBNull.Value : note.Trim()));
     }
 
+    private async Task<int> EnsureAccountAsync(string? codeOrName, string fallbackName, string accountType)
+    {
+        var clean = string.IsNullOrWhiteSpace(codeOrName) ? fallbackName : codeOrName.Trim();
+        const string sql = """
+            DECLARE @AccountId int;
+            SELECT @AccountId = AccountId
+            FROM dbo.CatalogoCuentas
+            WHERE LOWER(AccountCode) = LOWER(@Value) OR LOWER(AccountName) = LOWER(@Value);
+
+            IF @AccountId IS NULL
+            BEGIN
+                INSERT INTO dbo.CatalogoCuentas (AccountCode, AccountName, AccountType)
+                VALUES (LEFT(REPLACE(UPPER(@Value), N' ', N'_'), 32), @Value, @AccountType);
+                SET @AccountId = SCOPE_IDENTITY();
+            END;
+
+            SELECT @AccountId;
+            """;
+
+        return Convert.ToInt32(await ScalarAsync(sql,
+            new SqlParameter("@Value", clean),
+            new SqlParameter("@AccountType", accountType)));
+    }
+
+    private async Task<int> EnsureExpenseCategoryAsync(string name)
+    {
+        const string sql = """
+            DECLARE @CategoryId int;
+            SELECT @CategoryId = ExpenseCategoryId FROM dbo.CategoriasGasto WHERE LOWER(Name) = LOWER(@Name);
+            IF @CategoryId IS NULL
+            BEGIN
+                INSERT INTO dbo.CategoriasGasto (Name) VALUES (@Name);
+                SET @CategoryId = SCOPE_IDENTITY();
+            END;
+            SELECT @CategoryId;
+            """;
+
+        return Convert.ToInt32(await ScalarAsync(sql, new SqlParameter("@Name", name.Trim())));
+    }
+
+    private async Task<int> EnsureSupplierAsync(string name)
+    {
+        const string sql = """
+            DECLARE @SupplierId int;
+            SELECT @SupplierId = SupplierId FROM dbo.Proveedores WHERE LOWER(Name) = LOWER(@Name);
+            IF @SupplierId IS NULL
+            BEGIN
+                INSERT INTO dbo.Proveedores (Name, Phone, Email) VALUES (@Name, NULL, NULL);
+                SET @SupplierId = SCOPE_IDENTITY();
+            END;
+            SELECT @SupplierId;
+            """;
+
+        return Convert.ToInt32(await ScalarAsync(sql, new SqlParameter("@Name", name.Trim())));
+    }
+
+    private async Task<int> EnsurePaymentMethodAsync(string name)
+    {
+        const string sql = """
+            DECLARE @PaymentMethodId int;
+            SELECT @PaymentMethodId = PaymentMethodId FROM dbo.MetodosPago WHERE LOWER(Name) = LOWER(@Name);
+            IF @PaymentMethodId IS NULL
+            BEGIN
+                INSERT INTO dbo.MetodosPago (Name, CommissionRate, IsActive) VALUES (@Name, 0, 1);
+                SET @PaymentMethodId = SCOPE_IDENTITY();
+            END;
+            SELECT @PaymentMethodId;
+            """;
+
+        return Convert.ToInt32(await ScalarAsync(sql, new SqlParameter("@Name", name.Trim())));
+    }
+
     private async Task ExecuteAsync(string sql, params SqlParameter[] parameters)
     {
         await using var connection = CreateConnection();
@@ -1329,7 +1819,8 @@ public sealed class SqlStore
                 ca.Label AS AddressLabel,
                 COALESCE(ca.AddressLine, u.AddressLine) AS DefaultAddressLine,
                 ca.Latitude,
-                ca.Longitude
+                ca.Longitude,
+                CAST(COALESCE(c.IsFrequent, 0) AS bit) AS IsFrequent
             FROM dbo.Usuarios u
             INNER JOIN dbo.Roles r ON r.RoleId = u.RoleId
             LEFT JOIN dbo.Clientes c ON c.UserId = u.UserId
@@ -1352,7 +1843,8 @@ public sealed class SqlStore
             reader.IsDBNull(reader.GetOrdinal("CustomerAddressId")) ? null : reader.GetInt32("CustomerAddressId"),
             reader.GetNullableString("AddressLabel") ?? "Principal",
             reader.GetNullableDecimal("Latitude"),
-            reader.GetNullableDecimal("Longitude")
+            reader.GetNullableDecimal("Longitude"),
+            reader.GetBoolean("IsFrequent")
         ), new SqlParameter("@Email", email));
 
         return rows.FirstOrDefault();
@@ -1601,6 +2093,19 @@ public sealed class SqlStore
             DECLARE @CashMethodId int = (SELECT PaymentMethodId FROM dbo.MetodosPago WHERE Name = @PaymentMethod);
             IF @CashMethodId IS NULL SELECT @CashMethodId = PaymentMethodId FROM dbo.MetodosPago WHERE Name = N'Pendiente';
 
+            DECLARE @FrequentDiscountRate decimal(18,4) = TRY_CAST((SELECT SettingValue FROM dbo.ConfiguracionesAplicacion WHERE SettingKey = N'frequentCustomerDiscount') AS decimal(18,4));
+            DECLARE @TaxRate decimal(18,4) = TRY_CAST((SELECT SettingValue FROM dbo.ConfiguracionesAplicacion WHERE SettingKey = N'iva') AS decimal(18,4));
+            IF @FrequentDiscountRate IS NULL SET @FrequentDiscountRate = 0;
+            IF @TaxRate IS NULL SET @TaxRate = 0.13;
+
+            DECLARE @EffectiveDiscount decimal(18,2) = 0;
+            IF EXISTS (SELECT 1 FROM dbo.Clientes WHERE CustomerId = @CustomerId AND IsFrequent = 1)
+                SET @EffectiveDiscount = ROUND(@Subtotal * @FrequentDiscountRate, 2);
+
+            DECLARE @DiscountedSubtotal decimal(18,2) = @Subtotal - @EffectiveDiscount;
+            DECLARE @EffectiveTax decimal(18,2) = ROUND(@DiscountedSubtotal * @TaxRate, 2);
+            DECLARE @EffectiveTotal decimal(18,2) = @DiscountedSubtotal + @EffectiveTax;
+
             INSERT INTO dbo.Pedidos
                 (CustomerId, CustomerAddressId, OrderChannelId, OrderStatusId, PaymentStatusId, PaymentMethodId,
                  Notes, Subtotal, Discount, Tax, Total, DeliveryDate,
@@ -1609,7 +2114,7 @@ public sealed class SqlStore
                  RouteMode, OriginLabel, DeliveryReference)
             VALUES
                 (@CustomerId, @ResolvedAddressId, @WebChannelId, @PendingStatusId, @PendingPaymentId, @CashMethodId,
-                 @Notes, @Subtotal, 0, @Tax, @Total, @DeliveryDate,
+                 @Notes, @Subtotal, @EffectiveDiscount, @EffectiveTax, @EffectiveTotal, @DeliveryDate,
                  @OriginLat, @OriginLng,
                  @DestLat, @DestLng, @DestLabel, N'Costa Rica',
                  CASE WHEN @DeliveryMethod = N'retiro' THEN N'pickup' ELSE N'ground' END, @OriginName, @DeliveryReference);
@@ -1816,6 +2321,27 @@ public sealed class SqlStore
             DECLARE @PaymentMethodId int = (SELECT PaymentMethodId FROM dbo.MetodosPago WHERE Name = @PaymentMethodName);
             IF @PaymentMethodId IS NULL SELECT TOP 1 @PaymentMethodId = PaymentMethodId FROM dbo.MetodosPago WHERE Name = N'Efectivo';
 
+            DECLARE @ActiveSessionId int = (SELECT TOP 1 CashSessionId FROM dbo.SesionesCaja WHERE Status = N'Abierta' ORDER BY CashSessionId DESC);
+            IF @ActiveSessionId IS NULL
+                THROW 50042, 'Debe abrir caja antes de confirmar ventas.', 1;
+
+            DECLARE @FrequentDiscountRate decimal(18,4) = TRY_CAST((SELECT SettingValue FROM dbo.ConfiguracionesAplicacion WHERE SettingKey = N'frequentCustomerDiscount') AS decimal(18,4));
+            DECLARE @TaxRate decimal(18,4) = TRY_CAST((SELECT SettingValue FROM dbo.ConfiguracionesAplicacion WHERE SettingKey = N'iva') AS decimal(18,4));
+            IF @FrequentDiscountRate IS NULL SET @FrequentDiscountRate = 0;
+            IF @TaxRate IS NULL SET @TaxRate = 0.13;
+
+            DECLARE @EffectiveDiscount decimal(18,2) = COALESCE(@Discount, 0);
+            IF EXISTS (SELECT 1 FROM dbo.Clientes WHERE CustomerId = @CustomerId AND IsFrequent = 1)
+            BEGIN
+                DECLARE @FrequentDiscount decimal(18,2) = ROUND(@Subtotal * @FrequentDiscountRate, 2);
+                IF @FrequentDiscount > @EffectiveDiscount SET @EffectiveDiscount = @FrequentDiscount;
+            END;
+
+            DECLARE @DiscountedSubtotal decimal(18,2) = @Subtotal - @EffectiveDiscount;
+            IF @DiscountedSubtotal < 0 SET @DiscountedSubtotal = 0;
+            DECLARE @EffectiveTax decimal(18,2) = ROUND(@DiscountedSubtotal * @TaxRate, 2);
+            DECLARE @EffectiveTotal decimal(18,2) = @DiscountedSubtotal + @EffectiveTax;
+
             -- Crear pedido (venta directa POS)
             INSERT INTO dbo.Pedidos
                 (CustomerId, OrderChannelId, OrderStatusId, PaymentStatusId, PaymentMethodId,
@@ -1825,7 +2351,7 @@ public sealed class SqlStore
                  RouteMode, OriginLabel, TrackingStep)
             VALUES
                 (@CustomerId, @PosChannelId, @DeliveredStatusId, @PaidStatusId, @PaymentMethodId,
-                 @Subtotal, NULLIF(@Discount, 0), @Tax, @Total, NULLIF(@Notes, N''), CAST(SYSUTCDATETIME() AS date),
+                 @Subtotal, @EffectiveDiscount, @EffectiveTax, @EffectiveTotal, NULLIF(@Notes, N''), CAST(SYSUTCDATETIME() AS date),
                  9.9142, -84.0734,
                  9.9142, -84.0734, N'Tienda BakeSmart', N'Costa Rica',
                  N'pickup', N'BakeSmart Patri', 6);
@@ -1851,15 +2377,13 @@ public sealed class SqlStore
 
             -- Crear venta
             INSERT INTO dbo.Ventas (OrderId, PaymentMethodId, Subtotal, Tax, Total, CreatedAt)
-            VALUES (@OrderId, @PaymentMethodId, @Subtotal, @Tax, @Total, SYSUTCDATETIME());
+            VALUES (@OrderId, @PaymentMethodId, @Subtotal, @EffectiveTax, @EffectiveTotal, SYSUTCDATETIME());
 
             DECLARE @SaleId int = SCOPE_IDENTITY();
 
             -- Asociar a sesión de caja activa
-            DECLARE @ActiveSessionId int = (SELECT TOP 1 CashSessionId FROM dbo.SesionesCaja WHERE Status = N'Abierta' ORDER BY CashSessionId DESC);
-            IF @ActiveSessionId IS NOT NULL
-                INSERT INTO dbo.PagosSesionCaja (CashSessionId, SaleId, Amount)
-                VALUES (@ActiveSessionId, @SaleId, @Total);
+            INSERT INTO dbo.PagosSesionCaja (CashSessionId, SaleId, Amount)
+            VALUES (@ActiveSessionId, @SaleId, @EffectiveTotal);
 
             COMMIT TRAN;
             SELECT @OrderId;
@@ -1889,6 +2413,20 @@ public sealed class SqlStore
             key = reader.GetString("SettingKey"),
             value = reader.GetString("SettingValue")
         });
+    }
+
+    public async Task<IReadOnlyDictionary<string, string>> SettingsDictionaryAsync()
+    {
+        const string sql = "SELECT SettingKey, SettingValue FROM dbo.ConfiguracionesAplicacion";
+        var rows = await QueryAsync(sql, reader => new
+        {
+            key = reader.GetString("SettingKey"),
+            value = reader.GetString("SettingValue")
+        });
+
+        return rows
+            .GroupBy(row => row.key)
+            .ToDictionary(group => group.Key, group => group.Last().value);
     }
 
     public async Task SaveSettingsAsync(Dictionary<string, string> settings)
@@ -1936,10 +2474,16 @@ public sealed class SqlStore
     public sealed record RegisterCustomerInput(string FirstName, string LastName, string Email, string? Phone, string? AddressLine, string Password);
     public sealed record UserInput(int? Id, string FirstName, string LastName, string Email, string? Phone, string? Address, string Role, string? Password);
     public sealed record ProfileInput(string FirstName, string LastName, string? Phone, string? Address, string? NewPassword, int? CustomerAddressId = null, string? AddressLabel = null, decimal? Latitude = null, decimal? Longitude = null);
-    public sealed record ProfileData(string FirstName, string LastName, string Email, string Phone, string Address, string Role, int? CustomerAddressId, string AddressLabel, decimal? Latitude, decimal? Longitude);
+    public sealed record ProfileData(string FirstName, string LastName, string Email, string Phone, string Address, string Role, int? CustomerAddressId, string AddressLabel, decimal? Latitude, decimal? Longitude, bool IsFrequent);
     public sealed record CustomerAddressData(int Id, string Label, string AddressLine, decimal? Latitude, decimal? Longitude, bool IsDefault);
     public sealed record InventoryProductInput(int? Id, string Code, string Description, string Type, string Unit, string Category, string? Subcategory, decimal Price, decimal Stock, decimal MinStock);
     public sealed record InventoryMovementInput(int ProductId, string Type, decimal Quantity, string? Note);
+    public sealed record PaymentMethodInput(int? Id, string Name, decimal CommissionRate, bool IsActive, string? Account);
+    public sealed record PromotionInput(int? Id, string Name, DateTime StartDate, DateTime EndDate, decimal Discount, bool IsActive = true);
+    public sealed record MarketingCampaignInput(string? Subject, string Message, IReadOnlyList<int> CustomerIds);
+    public sealed record AccountingExpenseInput(string Description, decimal Amount, string? Account);
+    public sealed record SupplierPaymentInput(string Supplier, decimal Amount, string? Account, string Method);
+    public sealed record CreditNoteInput(int SaleId, string Reason);
     public sealed record CreateOrderInput(string CustomerName, string Email, string? Phone, int ProductId, decimal Quantity, decimal UnitPrice, decimal Subtotal, decimal Tax, decimal Total, DateTime DeliveryDate, string? Address, string? Notes, string? PaymentMethod, decimal? DestinationLatitude = null, decimal? DestinationLongitude = null, string? DeliveryReference = null, int? CustomerAddressId = null, string? DeliveryMethod = "domicilio");
     public sealed record SaleInput(string? CustomerName, string? CustomerEmail, string? CustomerPhone, string? PaymentMethod, decimal Subtotal, decimal Discount, decimal Tax, decimal Total, string? Notes, IReadOnlyList<SaleItemInput> Items);
     public sealed record SaleItemInput(int ProductId, decimal Quantity, decimal UnitPrice);

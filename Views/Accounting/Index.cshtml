@@ -1,4 +1,3 @@
-
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/accounting-index.css" asp-append-version="true" />
 }
@@ -15,7 +14,7 @@
                 Contabilidad básica
             </h1>
             <p class="text-muted accounting-subtitle">
-                Asientos por ventas, gastos, pagos a proveedores, cierre diario y conciliación.
+                Registra gastos, pagos a proveedores, conciliación y cierre diario con trazabilidad.
             </p>
         </div>
     </div>
@@ -32,40 +31,44 @@
         </div>
 
         <div class="card accounting-kpi-card">
-            <div class="text-muted">Pagos proveedores</div>
+            <div class="text-muted">Pagos a proveedores</div>
             <h2 id="accPaymentsCount"></h2>
         </div>
 
         <div class="card accounting-kpi-card">
-            <div class="text-muted">Estado conciliación</div>
+            <div class="text-muted">Conciliación</div>
             <h2 id="accReconStatus"></h2>
         </div>
     </div>
 
     <div class="accounting-main-grid">
-        <div class="card accounting-actions-card">
+        <aside class="card accounting-actions-card">
             <div class="accounting-block">
                 <div class="accounting-section-header">
-                    <h3 class="accounting-section-title">Registrar gasto</h3>
+                    <div>
+                        <span class="accounting-eyebrow">Gastos</span>
+                        <h3 class="accounting-section-title">Registrar gasto operativo</h3>
+                    </div>
                 </div>
 
                 <form id="expenseForm" class="accounting-form">
                     <div class="accounting-form-block">
-                        <label>Descripción del gasto</label>
-                        <input class="form-control" name="description" placeholder="Descripción del gasto" required />
+                        <label>Descripción</label>
+                        <input class="form-control" name="description" placeholder="Ej. Compra de empaques" required />
                     </div>
 
                     <div class="accounting-form-block">
                         <label>Monto</label>
-                        <input class="form-control" name="amount" type="number" min="0.01" step="0.01" placeholder="Monto" required />
+                        <input class="form-control" name="amount" type="number" min="0.01" step="0.01" placeholder="0.00" required />
                     </div>
 
                     <div class="accounting-form-block">
                         <label>Cuenta contable</label>
-                        <input class="form-control" name="account" placeholder="Cuenta contable" required />
+                        <input class="form-control" name="account" placeholder="Ej. Gastos operativos" required />
                     </div>
 
                     <button class="btn btn-primary accounting-submit-btn" type="submit">
+                        <i class="fas fa-plus"></i>
                         Registrar gasto
                     </button>
                 </form>
@@ -75,27 +78,30 @@
 
             <div class="accounting-block">
                 <div class="accounting-section-header">
-                    <h3 class="accounting-section-title">Pago a proveedor</h3>
+                    <div>
+                        <span class="accounting-eyebrow">Proveedores</span>
+                        <h3 class="accounting-section-title">Pago a proveedor</h3>
+                    </div>
                 </div>
 
                 <form id="supplierPaymentForm" class="accounting-form">
                     <div class="accounting-form-block">
                         <label>Proveedor</label>
-                        <input class="form-control" name="supplier" placeholder="Proveedor" required />
+                        <input class="form-control" name="supplier" placeholder="Nombre del proveedor" required />
                     </div>
 
                     <div class="accounting-form-block">
                         <label>Monto</label>
-                        <input class="form-control" name="amount" type="number" min="0.01" step="0.01" placeholder="Monto" required />
+                        <input class="form-control" name="amount" type="number" min="0.01" step="0.01" placeholder="0.00" required />
                     </div>
 
                     <div class="accounting-form-block">
                         <label>Cuenta contable</label>
-                        <input class="form-control" name="account" placeholder="Cuenta contable" required />
+                        <input class="form-control" name="account" placeholder="Ej. Cuentas por pagar" required />
                     </div>
 
                     <div class="accounting-form-block">
-                        <label>Método</label>
+                        <label>Método de pago</label>
                         <select class="form-control" name="method">
                             <option>Transferencia</option>
                             <option>SINPE</option>
@@ -104,6 +110,7 @@
                     </div>
 
                     <button class="btn btn-outline accounting-submit-btn" type="submit">
+                        <i class="fas fa-money-bill-transfer"></i>
                         Registrar pago
                     </button>
                 </form>
@@ -111,19 +118,30 @@
 
             <div class="hr"></div>
 
+            <div class="accounting-section-header">
+                <div>
+                    <span class="accounting-eyebrow">Cierre</span>
+                    <h3 class="accounting-section-title">Control diario</h3>
+                </div>
+            </div>
             <div class="accounting-action-buttons">
                 <button class="btn btn-primary" id="accReconcileBtn" type="button">
+                    <i class="fas fa-scale-balanced"></i>
                     Conciliar operaciones
                 </button>
                 <button class="btn btn-outline" id="accCloseBtn" type="button">
+                    <i class="fas fa-calendar-check"></i>
                     Cierre diario
                 </button>
             </div>
-        </div>
+        </aside>
 
-        <div class="card accounting-entries-card">
+        <section class="card accounting-entries-card">
             <div class="accounting-section-header">
-                <h3 class="accounting-section-title">Asientos contables</h3>
+                <div>
+                    <span class="accounting-eyebrow">Libro diario</span>
+                    <h3 class="accounting-section-title">Asientos contables</h3>
+                </div>
             </div>
 
             <div class="table-container accounting-table-wrap">
@@ -142,11 +160,9 @@
                     <tbody id="entriesTable"></tbody>
                 </table>
             </div>
-        </div>
+        </section>
     </div>
 </div>
-
-
 
 @section Scripts {
     <script>
@@ -154,7 +170,8 @@
             let pageInitialized = false;
             let reconStatus = 'Pendiente';
 
-            function render() {
+            async function render() {
+                await BakeSmartStore.accounting.refresh();
                 const entries = BakeSmartStore.accounting.entries();
                 const expenses = BakeSmartStore.accounting.expenses();
                 const payments = BakeSmartStore.accounting.supplierPayments();
@@ -189,7 +206,7 @@
                             <td>${app.utils.formatCurrency(e.credit)}</td>
                             <td>
                                 <span class="badge ${e.balanced ? 'badge-success' : 'badge-warning'}">
-                                    ${e.balanced ? 'Cuadrado' : 'Error'}
+                                    ${e.balanced ? 'Cuadrado' : 'Revisar'}
                                 </span>
                             </td>
                             <td>${new Date(e.createdAt).toLocaleString('es-CR')}</td>
@@ -202,48 +219,48 @@
                 `;
             }
 
-            document.getElementById('expenseForm').addEventListener('submit', (e) => {
+            document.getElementById('expenseForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
 
                 try {
-                    BakeSmartStore.accounting.addExpense(Object.fromEntries(new FormData(e.target).entries()));
+                    await BakeSmartStore.accounting.addExpense(Object.fromEntries(new FormData(e.target).entries()));
                     e.target.reset();
                     app.toast.success('Gasto registrado.');
-                    render();
+                    await render();
                 } catch (error) {
                     app.toast.error(error.message);
                 }
             });
 
-            document.getElementById('supplierPaymentForm').addEventListener('submit', (e) => {
+            document.getElementById('supplierPaymentForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
 
                 try {
-                    BakeSmartStore.accounting.addSupplierPayment(Object.fromEntries(new FormData(e.target).entries()));
+                    await BakeSmartStore.accounting.addSupplierPayment(Object.fromEntries(new FormData(e.target).entries()));
                     e.target.reset();
                     app.toast.success('Pago a proveedor registrado.');
-                    render();
+                    await render();
                 } catch (error) {
                     app.toast.error(error.message);
                 }
             });
 
-            document.getElementById('accReconcileBtn').addEventListener('click', () => {
+            document.getElementById('accReconcileBtn').addEventListener('click', async () => {
                 try {
-                    const result = BakeSmartStore.accounting.reconcile();
+                    const result = await BakeSmartStore.accounting.reconcile();
                     reconStatus = result.status;
                     app.toast.info(`Conciliación completada: ${result.reviewed} revisadas, ${result.issues} diferencias.`);
-                    render();
+                    await render();
                 } catch (error) {
                     app.toast.error(error.message);
                 }
             });
 
-            document.getElementById('accCloseBtn').addEventListener('click', () => {
+            document.getElementById('accCloseBtn').addEventListener('click', async () => {
                 try {
-                    const result = BakeSmartStore.accounting.dailyClose();
+                    const result = await BakeSmartStore.accounting.dailyClose();
                     app.toast.success(`Cierre ${result.closeId} creado con ${result.count} operaciones.`);
-                    render();
+                    await render();
                 } catch (error) {
                     app.toast.error(error.message);
                 }
@@ -252,7 +269,7 @@
             function initializePage() {
                 if (pageInitialized) return;
                 pageInitialized = true;
-                render();
+                render().catch(error => app.toast.error(error.message));
             }
 
             app.page.ready(initializePage);

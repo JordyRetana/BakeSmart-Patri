@@ -3,75 +3,187 @@
     ViewData["Title"] = "Configuración del sitio";
 }
 
-<div class="page-shell">
-    <div class="page-header" style="margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+<div class="page-shell settings-admin-page">
+    <div class="page-header settings-admin-header">
         <div>
-            <h1 style="margin:0; display:flex; align-items:center; gap:.75rem;">
-                <i class="fas fa-cog" style="color:var(--primary);"></i> Configuración del sitio
+            <h1 class="settings-admin-title">
+                <i class="fas fa-sliders"></i> Configuración del sitio
             </h1>
-            <p class="text-muted" style="margin:.35rem 0 0;">
-                Administra la configuración general del sistema: IVA, descuentos, ubicación y contenido del sitio.
+            <p class="text-muted settings-admin-subtitle">
+                Administra el contenido visible del sitio con controles visuales, imágenes, iconos y destinos del catálogo.
             </p>
         </div>
     </div>
 
-    <form id="settingsForm" class="card" style="max-width:920px;padding:1.5rem;">
-        <h3 style="margin-top:0;">Configuración general</h3>
+    <nav class="settings-module-tabs" aria-label="Secciones de configuración">
+        <button type="button" class="settings-module-tab active" data-settings-tab="general"><i class="fas fa-gear"></i><span>General</span></button>
+        <button type="button" class="settings-module-tab" data-settings-tab="home"><i class="fas fa-house"></i><span>Inicio</span></button>
+        <button type="button" class="settings-module-tab" data-settings-tab="benefits"><i class="fas fa-star"></i><span>Beneficios</span></button>
+        <button type="button" class="settings-module-tab" data-settings-tab="delivery"><i class="fas fa-truck-fast"></i><span>Entrega</span></button>
+        <button type="button" class="settings-module-tab" data-settings-tab="contact"><i class="fas fa-address-card"></i><span>Contacto</span></button>
+    </nav>
 
-        <div class="grid grid-2" style="gap:1rem;margin-bottom:1.5rem;">
-            <div>
-                <label>IVA (%)</label>
-                <input class="form-control" name="iva" type="number" min="0" max="1" step="0.01" />
-                <small class="text-muted">Ej: 0.13 para 13%</small>
+    <form id="settingsForm" class="card settings-page-card">
+        <section class="settings-module-panel active" data-settings-panel="general">
+            <div class="settings-panel-heading">
+                <div>
+                    <span>Parámetros</span>
+                    <h3>Configuración general</h3>
+                </div>
             </div>
-            <div>
-                <label>Descuento cliente frecuente (%)</label>
-                <input class="form-control" name="frequentCustomerDiscount" type="number" min="0" max="1" step="0.01" />
-                <small class="text-muted">Ej: 0.05 para 5%</small>
+            <div class="grid grid-2 settings-grid">
+                <div>
+                    <label>IVA (%)</label>
+                    <input class="form-control" name="iva" type="number" min="0" max="1" step="0.01" />
+                    <small class="text-muted">Ej: 0.13 para 13%</small>
+                </div>
+                <div>
+                    <label>Descuento cliente frecuente (%)</label>
+                    <input class="form-control" name="frequentCustomerDiscount" type="number" min="0" max="1" step="0.01" />
+                    <small class="text-muted">Ej: 0.05 para 5%</small>
+                </div>
+                <div class="settings-toggle-card">
+                    <div>
+                        <label>Richie con catalogo en vivo</label>
+                        <small class="text-muted">Activa si el bot puede consultar Azure para responder productos, precios y stock.</small>
+                    </div>
+                    <label class="settings-switch">
+                        <input name="botUseDatabase" type="checkbox" value="true" />
+                        <span></span>
+                    </label>
+                </div>
             </div>
-        </div>
+        </section>
 
-        <h3>Ubicación del negocio</h3>
-        <p class="text-muted" style="margin-top:0;">Busca o selecciona en el mapa el origen de entregas y pedidos.</p>
-        <div class="grid grid-2" style="gap:1rem;margin-bottom:1rem;">
-            <div>
-                <label>Nombre del origen</label>
-                <input class="form-control" name="originName" id="originName" />
+            <div class="settings-subsection">
+                <h3>Ubicación del negocio</h3>
+                <p class="text-muted">Busca o selecciona en el mapa el origen de entregas y pedidos.</p>
+            <div class="grid grid-2 settings-grid">
+                <div>
+                    <label>Nombre del origen</label>
+                    <input class="form-control" name="originName" id="originName" />
+                </div>
+                <div>
+                    <label>Dirección del negocio</label>
+                    <input class="form-control" name="originAddress" id="originAddress" readonly />
+                </div>
             </div>
-            <div>
-                <label>Dirección del negocio</label>
-                <input class="form-control" name="originAddress" id="originAddress" readonly />
+            <input type="hidden" name="originLatitude" id="originLatitude" />
+            <input type="hidden" name="originLongitude" id="originLongitude" />
+            <div id="originMapPicker"></div>
             </div>
-        </div>
-        <input type="hidden" name="originLatitude" id="originLatitude" />
-        <input type="hidden" name="originLongitude" id="originLongitude" />
-        <div id="originMapPicker" style="margin-bottom:1.5rem;"></div>
+        </section>
 
-        <h3>Contenido del sitio</h3>
-        <div style="margin-bottom:1.5rem;">
-            <div style="margin-bottom:.75rem;">
-                <label>Título del hero (página principal)</label>
-                <input class="form-control" name="siteHeroTitle" placeholder="El sabor que endulza tus momentos" />
+        <section class="settings-module-panel" data-settings-panel="home">
+            <div class="settings-panel-heading">
+                <div>
+                    <span>Página de inicio</span>
+                    <h3>Hero principal</h3>
+                </div>
             </div>
-            <div style="margin-bottom:.75rem;">
-                <label>Descripción del hero</label>
-                <textarea class="form-control" name="siteHeroDescription" rows="2" placeholder="Pasteleria artesanal con amor y tradicion..."></textarea>
-            </div>
-            <div style="margin-bottom:.75rem;">
-                <label>Teléfono de contacto</label>
-                <input class="form-control" name="sitePhone" placeholder="+506 8888-8888" />
-            </div>
-            <div style="margin-bottom:.75rem;">
-                <label>Correo de contacto</label>
-                <input class="form-control" name="siteEmail" placeholder="info@bakesmart.com" />
-            </div>
-            <div style="margin-bottom:.75rem;">
-                <label>Dirección pública del sitio</label>
-                <input class="form-control" name="siteAddress" placeholder="San Jose, Costa Rica" />
-            </div>
-        </div>
+            <div class="settings-hero-editor">
+                <div class="settings-image-panel">
+                    <img id="heroImagePreview" src="/img/products/producto-sin-imagen.svg" alt="Vista previa del hero" />
+                    <input type="hidden" name="siteHeroImageUrl" id="siteHeroImageUrl" />
+                    <div class="settings-image-actions">
+                        <label class="btn btn-outline">
+                            <i class="fas fa-upload"></i> Subir imagen
+                            <input id="heroImageUpload" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+                        </label>
+                        <select id="heroImageSelect" class="form-control"></select>
+                    </div>
+                </div>
 
-        <div style="display:flex;gap:1rem;justify-content:flex-end;">
+                <div class="settings-hero-fields">
+                    <div class="grid grid-2 settings-grid">
+                        <div>
+                            <label>Etiqueta superior</label>
+                            <input class="form-control" name="siteHeroEyebrow" placeholder="Especial de temporada" />
+                        </div>
+                        <div>
+                            <label>Código o texto destacado</label>
+                            <input class="form-control" name="siteHeroCode" placeholder="BAKESMART" />
+                        </div>
+                        <div>
+                            <label>Titulo principal</label>
+                            <input class="form-control" name="siteHeroTitle" placeholder="Endulza tu dia" />
+                        </div>
+                        <div>
+                            <label>Acción del botón</label>
+                            <select id="heroButtonPreset" class="form-control"></select>
+                            <input type="hidden" name="siteHeroButtonUrl" />
+                        </div>
+                        <div>
+                            <label>Texto del boton</label>
+                            <input class="form-control" name="siteHeroButtonText" placeholder="Ver productos" />
+                        </div>
+                        <div>
+                            <label>Texto alternativo de imagen</label>
+                            <input class="form-control" name="siteHeroAltText" placeholder="Reposteria artesanal BakeSmart Patri" />
+                        </div>
+                    </div>
+                    <div>
+                        <label>Descripción del hero</label>
+                        <textarea class="form-control" name="siteHeroDescription" rows="3" placeholder="Reposteria artesanal con amor y tradicion..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-subsection">
+            <h3>Apartados editables del inicio</h3>
+            <p class="text-muted">Crea bloques promocionales escogiendo imagen, icono y destino desde el catálogo.</p>
+            <div id="homeBlocksEditor" class="settings-block-editor"></div>
+            <button type="button" class="btn btn-outline" id="addHomeBlock"><i class="fas fa-plus"></i> Agregar apartado</button>
+            </div>
+        </section>
+
+        <section class="settings-module-panel" data-settings-panel="benefits">
+            <div class="settings-panel-heading">
+                <div>
+                    <span>Confianza</span>
+                    <h3>Beneficios de compra</h3>
+                </div>
+            </div>
+            <p class="text-muted">Estos bloques alimentan la sección de ventajas del pedido.</p>
+            <div id="benefitBlocksEditor" class="settings-block-editor"></div>
+            <button type="button" class="btn btn-outline" id="addBenefitBlock"><i class="fas fa-plus"></i> Agregar beneficio</button>
+        </section>
+
+        <section class="settings-module-panel" data-settings-panel="delivery">
+            <div class="settings-panel-heading">
+                <div>
+                    <span>Servicio</span>
+                    <h3>Barra de entrega y atención</h3>
+                </div>
+            </div>
+            <p class="text-muted">Controla los mensajes cortos que aparecen antes de la suscripción.</p>
+            <div id="deliveryBlocksEditor" class="settings-block-editor"></div>
+            <button type="button" class="btn btn-outline" id="addDeliveryBlock"><i class="fas fa-plus"></i> Agregar mensaje</button>
+        </section>
+
+        <section class="settings-module-panel" data-settings-panel="contact">
+            <div class="settings-panel-heading">
+                <div>
+                    <span>Información pública</span>
+                    <h3>Datos de contacto</h3>
+                </div>
+            </div>
+            <div class="grid grid-3 settings-grid">
+                <div>
+                    <label>Teléfono de contacto</label>
+                    <input class="form-control" name="sitePhone" placeholder="+506 8888-8888" />
+                </div>
+                <div>
+                    <label>Correo de contacto</label>
+                    <input class="form-control" name="siteEmail" placeholder="info@bakesmart.com" />
+                </div>
+                <div>
+                    <label>Dirección pública del sitio</label>
+                    <input class="form-control" name="siteAddress" placeholder="San Jose, Costa Rica" />
+                </div>
+            </div>
+        </section>
+
+        <div class="settings-save-bar">
             <button type="submit" class="btn btn-primary">
                 <i class="fas fa-save"></i> Guardar configuración
             </button>
@@ -79,22 +191,651 @@
     </form>
 </div>
 
+<style>
+    .settings-admin-page {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .settings-admin-header {
+        margin-bottom: .25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .settings-admin-title {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+    }
+
+    .settings-admin-title i {
+        color: var(--primary);
+    }
+
+    .settings-admin-subtitle {
+        margin: .35rem 0 0;
+    }
+
+    .settings-module-tabs {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: .75rem;
+        padding: .75rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .settings-module-tab {
+        min-height: 58px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .55rem;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--text-muted);
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .settings-module-tab.active {
+        border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+        background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+        color: var(--primary);
+    }
+
+    .settings-page-card {
+        max-width: 1220px;
+        padding: 1.5rem;
+    }
+
+    .settings-module-panel {
+        display: none;
+    }
+
+    .settings-module-panel.active {
+        display: block;
+    }
+
+    .settings-panel-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        padding-bottom: 1rem;
+        margin-bottom: 1.25rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .settings-panel-heading span {
+        display: block;
+        margin-bottom: .25rem;
+        color: var(--primary);
+        font-size: .72rem;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+
+    .settings-panel-heading h3,
+    .settings-subsection h3 {
+        margin: 0;
+    }
+
+    .settings-subsection {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .settings-subsection > p,
+    .settings-module-panel > p {
+        margin-top: 0;
+    }
+
+    .settings-grid {
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .settings-toggle-card {
+        min-height: 92px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+    }
+
+    .settings-toggle-card label {
+        display: block;
+        margin: 0 0 .25rem;
+        font-weight: 800;
+    }
+
+    .settings-toggle-card small {
+        display: block;
+        line-height: 1.35;
+    }
+
+    .settings-switch {
+        width: 58px;
+        height: 32px;
+        flex: 0 0 auto;
+        margin: 0;
+        position: relative;
+        cursor: pointer;
+    }
+
+    .settings-switch input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .settings-switch span {
+        position: absolute;
+        inset: 0;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--surface-muted);
+        transition: background .18s ease, border-color .18s ease;
+    }
+
+    .settings-switch span::after {
+        content: "";
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        top: 3px;
+        left: 4px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: var(--shadow-sm);
+        transition: transform .18s ease;
+    }
+
+    .settings-switch input:checked + span {
+        border-color: var(--primary);
+        background: var(--primary);
+    }
+
+    .settings-switch input:checked + span::after {
+        transform: translateX(25px);
+    }
+
+    .settings-hero-editor {
+        display: grid;
+        grid-template-columns: 360px minmax(0, 1fr);
+        gap: 1.25rem;
+        align-items: start;
+    }
+
+    .settings-image-panel {
+        display: grid;
+        gap: .85rem;
+    }
+
+    .settings-image-panel img,
+    .settings-block-image img {
+        width: 100%;
+        aspect-ratio: 1.45 / 1;
+        object-fit: cover;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface-muted);
+    }
+
+    .settings-image-actions {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: .75rem;
+        align-items: center;
+    }
+
+    .settings-block-editor {
+        display: grid;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .settings-block-card {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 1rem;
+        background: var(--surface);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .settings-block-card header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .settings-block-card header strong {
+        display: inline-flex;
+        align-items: center;
+        gap: .55rem;
+    }
+
+    .settings-block-actions {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        flex-wrap: wrap;
+    }
+
+    .settings-block-layout {
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        gap: 1rem;
+    }
+
+    .settings-block-fields {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .settings-block-fields .wide {
+        grid-column: 1 / -1;
+    }
+
+    .settings-icon-picker {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(46px, 1fr));
+        gap: .45rem;
+    }
+
+    .settings-icon-option {
+        min-height: 42px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--text);
+        cursor: pointer;
+    }
+
+    .settings-icon-option.active {
+        border-color: var(--primary);
+        background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+        color: var(--primary);
+    }
+
+    .settings-save-bar {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        position: sticky;
+        bottom: 1rem;
+        background: var(--surface);
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        box-shadow: var(--shadow-md);
+        z-index: 5;
+    }
+
+    @@media (max-width: 920px) {
+        .settings-module-tabs {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .settings-hero-editor,
+        .settings-block-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media (max-width: 760px) {
+        .settings-module-tabs {
+            grid-template-columns: 1fr;
+        }
+
+        .settings-block-fields {
+            grid-template-columns: 1fr;
+        }
+
+        .settings-image-actions {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
 @section Scripts {
     <script src="~/js/bakesmart-map-picker.js" asp-append-version="true"></script>
     <script>
         (() => {
             const form = document.getElementById('settingsForm');
-            const fields = ['iva','frequentCustomerDiscount','originName','originAddress','originLatitude','originLongitude',
-                           'siteHeroTitle','siteHeroDescription','sitePhone','siteEmail','siteAddress'];
+            const fields = [
+                'iva','frequentCustomerDiscount','originName','originAddress','originLatitude','originLongitude',
+                'siteHeroEyebrow','siteHeroTitle','siteHeroDescription','siteHeroCode','siteHeroButtonText',
+                'siteHeroButtonUrl','siteHeroImageUrl','siteHeroAltText','sitePhone','siteEmail','siteAddress',
+                'botUseDatabase'
+            ];
+            const editors = {
+                home: { key: 'siteHomeBlocks', el: 'homeBlocksEditor', add: 'addHomeBlock', label: 'apartado' },
+                benefits: { key: 'siteBenefitBlocks', el: 'benefitBlocksEditor', add: 'addBenefitBlock', label: 'beneficio' },
+                delivery: { key: 'siteDeliveryBlocks', el: 'deliveryBlocksEditor', add: 'addDeliveryBlock', label: 'mensaje' }
+            };
+            const iconOptions = [
+                'fa-cake-candles','fa-cookie-bite','fa-ice-cream','fa-bread-slice','fa-mug-hot',
+                'fa-gift','fa-star','fa-heart','fa-wand-magic-sparkles','fa-leaf',
+                'fa-motorcycle','fa-truck-fast','fa-clock','fa-shield-heart','fa-face-smile',
+                'fa-bag-shopping','fa-percent','fa-fire','fa-sparkles','fa-store'
+            ];
+            const defaults = {
+                home: [
+                    { id: newId(), active: true, icon: 'fa-cake-candles', title: 'Queques personalizados', text: 'Crea pedidos especiales para cumpleanos, eventos y regalos.', imageUrl: '/img/products/cake-red-velvet.jpg', linkText: 'Ver queques', linkUrl: '/Catalog?category=Queques' }
+                ],
+                benefits: [
+                    { id: newId(), active: true, icon: 'fa-wand-magic-sparkles', title: 'Acabado artesanal', text: 'Cada creacion se prepara con atencion al detalle y una presentacion cuidada.' },
+                    { id: newId(), active: true, icon: 'fa-leaf', title: 'Ingredientes seleccionados', text: 'Sabores equilibrados y productos pensados para disfrutar desde el primer bocado.' },
+                    { id: newId(), active: true, icon: 'fa-gift', title: 'Momentos memorables', text: 'Opciones para cumpleanos, eventos, regalos y cualquier ocasion especial.' }
+                ],
+                delivery: [
+                    { id: newId(), active: true, icon: 'fa-motorcycle', title: 'Entregas rapidas y seguras', text: 'Coordinamos cada pedido con cuidado.' },
+                    { id: newId(), active: true, icon: 'fa-clock', title: 'Atencion agil', text: 'Respuesta oportuna' },
+                    { id: newId(), active: true, icon: 'fa-shield-heart', title: 'Empaque seguro', text: 'Producto protegido' },
+                    { id: newId(), active: true, icon: 'fa-face-smile', title: 'Satisfaccion', text: 'Servicio cercano' }
+                ]
+            };
+            const content = { home: [], benefits: [], delivery: [] };
             let originPicker;
+            let catalogOptions = { categories: [], products: [], images: [] };
+
+            document.querySelectorAll('[data-settings-tab]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const target = button.dataset.settingsTab;
+                    document.querySelectorAll('[data-settings-tab]').forEach(tab => tab.classList.toggle('active', tab === button));
+                    document.querySelectorAll('[data-settings-panel]').forEach(panel => {
+                        panel.classList.toggle('active', panel.dataset.settingsPanel === target);
+                    });
+                });
+            });
+
+            function newId() {
+                return crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random());
+            }
+
+            function normalizeItem(item = {}) {
+                return {
+                    id: item.id || newId(),
+                    active: item.active !== false,
+                    icon: item.icon || 'fa-star',
+                    title: item.title || '',
+                    text: item.text || '',
+                    imageUrl: item.imageUrl || '',
+                    linkText: item.linkText || '',
+                    linkUrl: item.linkUrl || ''
+                };
+            }
+
+            function parseItems(settings, key, fallback) {
+                const raw = settings.find(s => s.key === key)?.value;
+                if (!raw) return clone(fallback);
+                try {
+                    const rows = JSON.parse(raw);
+                    return Array.isArray(rows) ? rows.map(normalizeItem) : clone(fallback);
+                } catch {
+                    return clone(fallback);
+                }
+            }
+
+            function clone(value) {
+                return JSON.parse(JSON.stringify(value));
+            }
+
+            function createItem(type) {
+                const labels = { home: 'Nuevo apartado', benefits: 'Nuevo beneficio', delivery: 'Nuevo mensaje' };
+                return normalizeItem({
+                    title: labels[type] || 'Nuevo bloque',
+                    text: '',
+                    icon: type === 'delivery' ? 'fa-truck-fast' : 'fa-star'
+                });
+            }
+
+            function renderImageOptions(selected = '') {
+                const images = [...new Set(['/img/products/producto-sin-imagen.svg', ...(catalogOptions.images || [])])];
+                return [
+                    `<option value="">Seleccionar imagen existente</option>`,
+                    ...images.map(url => `<option value="${escapeAttr(url)}" ${url === selected ? 'selected' : ''}>${labelFromUrl(url)}</option>`)
+                ].join('');
+            }
+
+            function renderLinkOptions(selected = '') {
+                const options = [
+                    { value: '/Catalog', label: 'Catalogo completo' },
+                    { value: '/Catalog/Offers', label: 'Ofertas' },
+                    { value: '/Catalog/New', label: 'Novedades' },
+                    { value: '/Catalog/Combos', label: 'Combos' },
+                    ...(catalogOptions.categories || []).map(category => ({ value: category.url, label: `Categoria: ${category.name}` })),
+                    ...(catalogOptions.products || []).map(product => ({ value: product.url, label: `Producto: ${product.name}` }))
+                ];
+                const exact = options.some(option => option.value === selected);
+                return [
+                    `<option value="">Seleccionar destino</option>`,
+                    ...options.map(option => `<option value="${escapeAttr(option.value)}" ${option.value === selected ? 'selected' : ''}>${escapeHtml(option.label)}</option>`),
+                    selected && !exact ? `<option value="${escapeAttr(selected)}" selected>Destino actual: ${escapeHtml(selected)}</option>` : ''
+                ].join('');
+            }
+
+            function renderIconPicker(item) {
+                return iconOptions.map(icon => `
+                    <button type="button" class="settings-icon-option ${item.icon === icon ? 'active' : ''}" data-action="select-icon" data-icon="${escapeAttr(icon)}" title="${escapeAttr(icon)}">
+                        <i class="fas ${escapeAttr(icon)}"></i>
+                    </button>
+                `).join('');
+            }
+
+            function renderEditor(type) {
+                const config = editors[type];
+                const container = document.getElementById(config.el);
+                const items = content[type];
+                container.innerHTML = items.map((item, index) => `
+                    <article class="settings-block-card" data-type="${type}" data-index="${index}">
+                        <header>
+                            <strong><i class="fas ${escapeHtml(item.icon)}"></i> ${escapeHtml(item.title || `Nuevo ${config.label}`)}</strong>
+                            <div class="settings-block-actions">
+                                <label style="display:inline-flex;align-items:center;gap:.4rem;margin:0;">
+                                    <input type="checkbox" data-field="active" ${item.active ? 'checked' : ''} /> Activo
+                                </label>
+                                <button type="button" class="btn btn-sm btn-outline" data-action="remove"><i class="fas fa-trash"></i> Quitar</button>
+                            </div>
+                        </header>
+                        <div class="settings-block-layout">
+                            <div class="settings-block-image">
+                                <img src="${escapeAttr(item.imageUrl || '/img/products/producto-sin-imagen.svg')}" alt="Vista previa" onerror="this.src='/img/products/producto-sin-imagen.svg';" />
+                                <div class="settings-image-actions" style="margin-top:.75rem;">
+                                    <label class="btn btn-outline btn-sm">
+                                        <i class="fas fa-upload"></i> Subir
+                                        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-action="upload-image" hidden />
+                                    </label>
+                                    <select class="form-control" data-action="select-image">${renderImageOptions(item.imageUrl)}</select>
+                                </div>
+                            </div>
+                            <div class="settings-block-fields">
+                                <div>
+                                    <label>Titulo</label>
+                                    <input class="form-control" data-field="title" value="${escapeAttr(item.title)}" />
+                                </div>
+                                <div>
+                                    <label>Destino</label>
+                                    <select class="form-control" data-action="select-link">${renderLinkOptions(item.linkUrl)}</select>
+                                </div>
+                                <div class="wide">
+                                    <label>Texto</label>
+                                    <textarea class="form-control" data-field="text" rows="2">${escapeHtml(item.text)}</textarea>
+                                </div>
+                                <div>
+                                    <label>Texto del boton</label>
+                                    <input class="form-control" data-field="linkText" value="${escapeAttr(item.linkText)}" placeholder="Ver mas" />
+                                </div>
+                                <div>
+                                    <label>Icono</label>
+                                    <div class="settings-icon-picker">${renderIconPicker(item)}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                `).join('');
+            }
+
+            function setHeroImage(url) {
+                document.getElementById('siteHeroImageUrl').value = url || '';
+                document.getElementById('heroImagePreview').src = url || '/img/products/producto-sin-imagen.svg';
+                document.getElementById('heroImageSelect').innerHTML = renderImageOptions(url);
+            }
+
+            function configureHeroLink(selected = '') {
+                const select = document.getElementById('heroButtonPreset');
+                select.innerHTML = renderLinkOptions(selected || '/Catalog');
+                form.querySelector('[name="siteHeroButtonUrl"]').value = selected || '/Catalog';
+            }
+
+            async function uploadImage(file) {
+                if (!file) return null;
+                const result = await BakeSmartStore.uploadSiteImage(file);
+                catalogOptions.images = [...new Set([...(catalogOptions.images || []), result.url])];
+                return result.url;
+            }
+
+            function itemFromEvent(event) {
+                const card = event.target.closest('.settings-block-card');
+                if (!card) return null;
+                return {
+                    card,
+                    item: content[card.dataset.type][Number(card.dataset.index)],
+                    type: card.dataset.type
+                };
+            }
+
+            document.querySelectorAll('.settings-block-editor').forEach(container => {
+                container.addEventListener('input', event => {
+                    const field = event.target.dataset.field;
+                    const context = itemFromEvent(event);
+                    if (!field || !context) return;
+                    context.item[field] = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
+                });
+
+                container.addEventListener('change', async event => {
+                    const context = itemFromEvent(event);
+                    if (!context) return;
+
+                    if (event.target.dataset.field === 'active') {
+                        context.item.active = event.target.checked;
+                        return;
+                    }
+
+                    if (event.target.dataset.action === 'select-image') {
+                        context.item.imageUrl = event.target.value;
+                        context.card.querySelector('.settings-block-image img').src = context.item.imageUrl || '/img/products/producto-sin-imagen.svg';
+                    }
+
+                    if (event.target.dataset.action === 'select-link') {
+                        context.item.linkUrl = event.target.value;
+                    }
+
+                    if (event.target.dataset.action === 'upload-image') {
+                        try {
+                            const url = await uploadImage(event.target.files?.[0]);
+                            if (url) {
+                                context.item.imageUrl = url;
+                                renderEditor(context.type);
+                                app.toast.success('Imagen subida correctamente.');
+                            }
+                        } catch (error) {
+                            app.toast.error(error.message);
+                        } finally {
+                            event.target.value = '';
+                        }
+                    }
+                });
+
+                container.addEventListener('click', event => {
+                    const context = itemFromEvent(event);
+                    if (!context) return;
+
+                    if (event.target.closest('[data-action="remove"]')) {
+                        content[context.type].splice(Number(context.card.dataset.index), 1);
+                        renderEditor(context.type);
+                        return;
+                    }
+
+                    const iconButton = event.target.closest('[data-action="select-icon"]');
+                    if (iconButton) {
+                        context.item.icon = iconButton.dataset.icon;
+                        context.card.querySelectorAll('.settings-icon-option').forEach(button => button.classList.remove('active'));
+                        iconButton.classList.add('active');
+                        context.card.querySelector('header i').className = `fas ${context.item.icon}`;
+                    }
+                });
+            });
+
+            Object.entries(editors).forEach(([type, config]) => {
+                document.getElementById(config.add).addEventListener('click', () => {
+                    content[type].push(createItem(type));
+                    renderEditor(type);
+                });
+            });
+
+            document.getElementById('heroImageSelect').addEventListener('change', event => setHeroImage(event.target.value));
+            document.getElementById('heroImageUpload').addEventListener('change', async event => {
+                try {
+                    const url = await uploadImage(event.target.files?.[0]);
+                    if (url) {
+                        setHeroImage(url);
+                        app.toast.success('Imagen subida correctamente.');
+                    }
+                } catch (error) {
+                    app.toast.error(error.message);
+                } finally {
+                    event.target.value = '';
+                }
+            });
+            document.getElementById('heroButtonPreset').addEventListener('change', event => {
+                form.querySelector('[name="siteHeroButtonUrl"]').value = event.target.value;
+            });
 
             async function loadSettings() {
-                const settings = await BakeSmartStore.loadSettings();
+                const [settings, options] = await Promise.all([
+                    BakeSmartStore.loadSettings(),
+                    BakeSmartStore.loadCatalogOptions()
+                ]);
+                catalogOptions = options || catalogOptions;
+
                 fields.forEach(key => {
                     const input = form.querySelector(`[name="${key}"]`);
                     const value = settings.find(s => s.key === key)?.value;
+                    if (input?.type === 'checkbox') {
+                        input.checked = value === undefined ? true : ['true', '1', 'si', 'yes', 'on'].includes(String(value).toLowerCase());
+                        return;
+                    }
                     if (input && value !== undefined) input.value = value;
                 });
+
+                setHeroImage(form.querySelector('[name="siteHeroImageUrl"]').value || '/img/products/cupcakes-decorados.jpg');
+                configureHeroLink(form.querySelector('[name="siteHeroButtonUrl"]').value || '/Catalog');
+
+                content.home = parseItems(settings, editors.home.key, defaults.home);
+                content.benefits = parseItems(settings, editors.benefits.key, defaults.benefits);
+                content.delivery = parseItems(settings, editors.delivery.key, defaults.delivery);
+                renderEditor('home');
+                renderEditor('benefits');
+                renderEditor('delivery');
 
                 originPicker = await BakeSmartMapPicker.create('originMapPicker', {
                     label: document.getElementById('originName').value,
@@ -130,8 +871,13 @@
                     if (key === 'originAddress') value = mapValues.address || value;
                     if (key === 'originLatitude') value = String(mapValues.lat ?? '');
                     if (key === 'originLongitude') value = String(mapValues.lng ?? '');
-                    if (value !== null && value !== '') settings[key] = value;
+                    if (key === 'botUseDatabase') value = form.querySelector('[name="botUseDatabase"]').checked ? 'true' : 'false';
+                    if (value !== null) settings[key] = value;
                 });
+
+                settings.siteHomeBlocks = JSON.stringify(content.home.map(normalizeItem));
+                settings.siteBenefitBlocks = JSON.stringify(content.benefits.map(normalizeItem));
+                settings.siteDeliveryBlocks = JSON.stringify(content.delivery.map(normalizeItem));
 
                 try {
                     await BakeSmartStore.saveAllSettings(settings);
@@ -141,6 +887,23 @@
                     app.toast.error(error.message);
                 }
             });
+
+            function labelFromUrl(url = '') {
+                return String(url).split('/').pop()?.replace(/\.[^.]+$/, '').replaceAll('-', ' ') || url;
+            }
+
+            function escapeHtml(value = '') {
+                return String(value)
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#039;');
+            }
+
+            function escapeAttr(value = '') {
+                return escapeHtml(value);
+            }
 
             loadSettings().catch(error => app.toast.error(error.message));
         })();

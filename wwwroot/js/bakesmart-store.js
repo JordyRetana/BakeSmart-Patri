@@ -39,12 +39,20 @@
   async function loadPosSessions() {
     try {
       posSessionsCache = await request("/api/pos/sessions");
-      activeSessionCache = posSessionsCache.find(s => s.status === "Abierta") || null;
+      activeSessionCache = posSessionsCache.find(s => normalizeStatus(s.status).startsWith("abiert")) || null;
     } catch {
       posSessionsCache = [];
       activeSessionCache = null;
     }
     return posSessionsCache;
+  }
+
+  function normalizeStatus(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
   }
 
   function activePosSession() {
@@ -61,6 +69,7 @@
       load("users", "/api/users"),
       load("roles", "/api/roles"),
       load("posConfig", "/api/pos/config", {}),
+      load("accounting", "/api/accounting", {}),
       load("logs", "/api/logs")
     ]);
   }
@@ -115,6 +124,31 @@
 
     async loadSettings() {
       return request("/api/settings");
+    },
+
+    async loadCatalogOptions() {
+      return request("/api/catalog/options");
+    },
+
+    async uploadSiteImage(file) {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/assets/site-images", {
+        method: "POST",
+        body: formData
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        let message = text || `Error ${response.status}`;
+        try {
+          const payload = JSON.parse(text);
+          message = payload.message || payload.title || message;
+        } catch { }
+        throw new Error(message);
+      }
+
+      return response.json();
     },
 
     orders: {
@@ -199,11 +233,42 @@
           String(customer.phone || "").includes(q)
         );
       },
-      addFrequent() { throw new Error("La marca de cliente frecuente debe actualizarse desde el sistema."); }
+      async addFrequent(id) {
+        await request(`/api/customers/${id}/frequent`, { method: "POST", body: JSON.stringify({}) });
+        return load("customers", "/api/customers");
+      }
     },
     marketing: {
       promotions() { return cached("promotions"); },
-      addPromotion() { throw new Error("Crear promociones debe hacerse desde el formulario del sistema."); }
+      async addPromotion(input = {}) {
+        const result = await request("/api/promotions", {
+          method: "POST",
+          body: JSON.stringify({
+            id: input.id ? Number(input.id) : null,
+            name: input.name || "",
+            startDate: input.startDate,
+            endDate: input.endDate,
+            discount: Number(input.discount || 0),
+            isActive: input.isActive !== false
+          })
+        });
+        await load("promotions", "/api/promotions");
+        return result;
+      },
+      async togglePromotion(id) {
+        await request(`/api/promotions/${id}/toggle`, { method: "POST", body: JSON.stringify({}) });
+        return load("promotions", "/api/promotions");
+      },
+      async sendCampaign(input = {}) {
+        return request("/api/marketing/campaigns", {
+          method: "POST",
+          body: JSON.stringify({
+            subject: input.subject || "",
+            message: input.message || "",
+            customerIds: input.customerIds || []
+          })
+        });
+      }
     },
     users: {
       list() { return cached("users"); },
@@ -266,7 +331,35 @@
         await loadPosSessions();
         return result;
       },
+      async savePaymentMethod(input = {}) {
+        const result = await request("/api/pos/payment-methods", {
+          method: "POST",
+          body: JSON.stringify({
+            id: input.id ? Number(input.id) : null,
+            name: input.name || "",
+            commissionRate: Number(input.commissionRate || 0),
+            isActive: input.isActive !== false,
+            account: input.account || ""
+          })
+        });
+        await load("posConfig", "/api/pos/config", {});
+        return result;
+      },
+      async togglePaymentMethod(id) {
+        await request(`/api/pos/payment-methods/${id}/toggle`, { method: "POST", body: JSON.stringify({}) });
+        return load("posConfig", "/api/pos/config", {});
+      },
+      async creditNote(input = {}) {
+        return request("/api/pos/credit-notes", {
+          method: "POST",
+          body: JSON.stringify({
+            saleId: Number(input.saleId || 0),
+            reason: input.reason || ""
+          })
+        });
+      },
       async sell(input = {}) {
+        await loadPosSessions();
         const session = activePosSession();
         if (!session) throw new Error("Debe abrir caja antes de confirmar ventas.");
 
@@ -278,7 +371,13 @@
           const product = products.find(row => Number(row.id) === Number(item.productId));
           return sum + Number(product?.price || 0) * Number(item.quantity || 0);
         }, 0);
-        const discountRate = Math.min(Math.max(Number(input.discountRate || 0), 0), 1);
+        const customer = api.customers.list().find(row =>
+          (input.customerEmail && String(row.email || "").toLowerCase() === String(input.customerEmail).toLowerCase()) ||
+          (input.customerName && String(row.fullName || "").toLowerCase() === String(input.customerName).toLowerCase())
+        );
+        const manualDiscountRate = Math.min(Math.max(Number(input.discountRate || 0), 0), 1);
+        const frequentDiscountRate = customer?.frequent ? Number(api.pos.config().frequentCustomerDiscount || 0) : 0;
+        const discountRate = Math.max(manualDiscountRate, frequentDiscountRate);
         const taxRate = Number(api.pos.config().iva || 0);
         const discountedSubtotal = Math.max(0, subtotal - subtotal * discountRate);
         const tax = discountedSubtotal * taxRate;
@@ -303,7 +402,47 @@
 
         const result = await request("/api/pos/sell", { method: "POST", body: JSON.stringify(saleInput) });
         await loadPosSessions();
+        await load("inventory", "/api/inventory");
+        await load("inventoryMovements", "/api/inventory/movements");
         return result;
+      }
+    },
+    accounting: {
+      overview() { return cached("accounting", { entries: [], expensesCount: 0, supplierPaymentsCount: 0 }); },
+      entries() { return api.accounting.overview().entries || []; },
+      expenses() { return Array.from({ length: Number(api.accounting.overview().expensesCount || 0) }); },
+      supplierPayments() { return Array.from({ length: Number(api.accounting.overview().supplierPaymentsCount || 0) }); },
+      async refresh() { return load("accounting", "/api/accounting", {}); },
+      async addExpense(input = {}) {
+        const result = await request("/api/accounting/expenses", {
+          method: "POST",
+          body: JSON.stringify({
+            description: input.description || "",
+            amount: Number(input.amount || 0),
+            account: input.account || ""
+          })
+        });
+        await api.accounting.refresh();
+        return result;
+      },
+      async addSupplierPayment(input = {}) {
+        const result = await request("/api/accounting/supplier-payments", {
+          method: "POST",
+          body: JSON.stringify({
+            supplier: input.supplier || "",
+            amount: Number(input.amount || 0),
+            account: input.account || "",
+            method: input.method || ""
+          })
+        });
+        await api.accounting.refresh();
+        return result;
+      },
+      async reconcile() {
+        return request("/api/accounting/reconcile-pos", { method: "POST", body: JSON.stringify({}) });
+      },
+      async dailyClose() {
+        return request("/api/accounting/daily-close", { method: "POST", body: JSON.stringify({}) });
       }
     },
     reports: {

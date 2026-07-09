@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using System.Security.Claims;
 using BakeSmartPatri.Data;
 
@@ -21,19 +22,39 @@ builder.Configuration
     .AddJsonFile("appsettings.Azure.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
-var dataProtectionPath = Path.Combine(builder.Environment.ContentRootPath, ".data-protection");
-Directory.CreateDirectory(dataProtectionPath);
-builder.Services
+var dataProtection = builder.Services
     .AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath))
     .SetApplicationName("BakeSmartPatri");
 
+var dataProtectionConnectionString = builder.Configuration.GetConnectionString("BakeSmartDb");
+if (builder.Configuration.GetValue<bool>("Features:UseSqlDatabase") &&
+    !string.IsNullOrWhiteSpace(dataProtectionConnectionString))
+{
+    dataProtection.AddKeyManagementOptions(options =>
+    {
+        options.XmlRepository = new SqlDataProtectionKeyRepository(dataProtectionConnectionString);
+    });
+}
+else
+{
+    var dataProtectionPath = Path.Combine(builder.Environment.ContentRootPath, ".data-protection");
+    Directory.CreateDirectory(dataProtectionPath);
+    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath));
+}
+
 builder.Services.AddControllersWithViews();
-builder.Services.AddOutputCache();
+builder.Services.AddHttpClient();
 builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 builder.Services.AddScoped<SqlStore>();
 builder.Services.AddHttpClient("Nominatim", client =>
@@ -56,7 +77,9 @@ builder.Services
         
         o.Cookie.HttpOnly = true;
         o.Cookie.SameSite = SameSiteMode.Lax;
-        o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        o.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
     });
 
 
@@ -78,13 +101,18 @@ builder.Services.AddAntiforgery(o =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseResponseCompression();
 app.UseStaticFiles(new StaticFileOptions
 {
@@ -96,9 +124,22 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseRouting();
 
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value ?? "";
+    var isStaticAsset = Path.HasExtension(path);
+    if (!isStaticAsset)
+    {
+        context.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+        context.Response.Headers.Pragma = "no-cache";
+        context.Response.Headers.Expires = "0";
+    }
+
+    await next();
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseOutputCache();
 
 
 app.MapControllerRoute(

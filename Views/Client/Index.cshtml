@@ -179,6 +179,7 @@
                     </div>
                     <div class="quick-summary__rows">
                         <div><span>Subtotal</span><strong id="quickSubtotal">0</strong></div>
+                        <div id="quickDiscountRow" hidden><span>Descuento frecuente</span><strong id="quickDiscount">0</strong></div>
                         <div><span>IVA</span><strong id="quickTax">0</strong></div>
                         <div class="quick-summary__total"><span>Total</span><strong id="quickTotal">0</strong></div>
                     </div>
@@ -450,12 +451,17 @@
                 const price = Number(selectedProduct?.price || 0);
                 const subtotal = price * quantity;
                 const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
-                const tax = subtotal * taxRate;
+                const discountRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
+                const discount = subtotal * discountRate;
+                const discountedSubtotal = Math.max(0, subtotal - discount);
+                const tax = discountedSubtotal * taxRate;
 
                 document.getElementById('quickSummaryProduct').textContent = selectedProduct?.name || 'Seleccione un producto';
                 document.getElementById('quickSubtotal').textContent = money(subtotal);
+                document.getElementById('quickDiscountRow').hidden = discount <= 0;
+                document.getElementById('quickDiscount').textContent = `-${money(discount)}`;
                 document.getElementById('quickTax').textContent = money(tax);
-                document.getElementById('quickTotal').textContent = money(subtotal + tax);
+                document.getElementById('quickTotal').textContent = money(discountedSubtotal + tax);
             }
 
             function shouldOpenGateway(method) {
@@ -562,8 +568,11 @@
 
                     const subtotal = Number(product.price) * quantity;
                     const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
-                    const tax = subtotal * taxRate;
-                    const total = subtotal + tax;
+                    const discountRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
+                    const discount = subtotal * discountRate;
+                    const discountedSubtotal = Math.max(0, subtotal - discount);
+                    const tax = discountedSubtotal * taxRate;
+                    const total = discountedSubtotal + tax;
 
                     const result = await BakeSmartStore.createOrder({
                         customerName: data.customerName,

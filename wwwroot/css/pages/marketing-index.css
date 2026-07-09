@@ -47,9 +47,14 @@
 
     .marketing-main-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1.2fr) minmax(360px, .8fr);
+        grid-template-columns: minmax(0, 1.35fr) minmax(340px, .65fr);
         gap: 1rem;
         align-items: start;
+    }
+
+    .marketing-side-stack {
+        display: grid;
+        gap: 1rem;
     }
 
     .marketing-panel-header {
@@ -70,6 +75,15 @@
         font-size: 1.15rem;
     }
 
+    .marketing-eyebrow {
+        display: block;
+        margin-bottom: .2rem;
+        color: var(--primary);
+        font-size: .68rem;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+
     .marketing-table-wrap {
         max-width: 100%;
         overflow: auto;
@@ -77,8 +91,12 @@
 
     .marketing-table {
         width: 100%;
-        min-width: 0 !important;
+        min-width: 1040px !important;
         margin: 0;
+    }
+
+    .marketing-page .table-container .marketing-customers-table {
+        min-width: 1040px !important;
     }
 
     .marketing-customers-table {
@@ -87,7 +105,8 @@
 
         .marketing-customers-table th:nth-child(1),
         .marketing-customers-table td:nth-child(1) {
-            width: 29%;
+            width: 78px;
+            text-align: center;
         }
 
         .marketing-customers-table th:nth-child(2),
@@ -97,24 +116,29 @@
 
         .marketing-customers-table th:nth-child(3),
         .marketing-customers-table td:nth-child(3) {
-            width: 16%;
+            width: 25%;
             white-space: nowrap;
         }
 
         .marketing-customers-table th:nth-child(4),
         .marketing-customers-table td:nth-child(4) {
-            width: 12%;
+            width: 15%;
             white-space: nowrap;
         }
 
         .marketing-customers-table th:nth-child(5),
         .marketing-customers-table td:nth-child(5) {
-            width: 16%;
+            width: 110px;
+            white-space: nowrap;
+        }
+
+        .marketing-customers-table th:nth-child(6),
+        .marketing-customers-table td:nth-child(6) {
+            width: 165px;
             white-space: nowrap;
             text-align: right;
         }
 
-        .marketing-customers-table td:nth-child(1),
         .marketing-customers-table td:nth-child(2) {
             white-space: normal;
             word-break: break-word;
