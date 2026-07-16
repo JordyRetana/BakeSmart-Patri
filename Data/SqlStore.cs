@@ -1455,8 +1455,8 @@ public sealed class SqlStore
                 e.AccountingEntryId,
                 e.EntryType,
                 COALESCE(a.AccountCode + N' - ' + a.AccountName, N'Sin cuenta') AS AccountName,
-                SUM(l.Debit) AS Debit,
-                SUM(l.Credit) AS Credit,
+                COALESCE(SUM(l.Debit), 0) AS Debit,
+                COALESCE(SUM(l.Credit), 0) AS Credit,
                 e.CreatedAt
             FROM dbo.AsientosContables e
             LEFT JOIN dbo.LineasAsientoContable l ON l.AccountingEntryId = e.AccountingEntryId
