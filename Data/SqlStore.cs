@@ -599,6 +599,9 @@ public sealed class SqlStore
     public async Task<int> SaveUserAsync(UserInput input)
     {
         const string sql = """
+            SET XACT_ABORT ON;
+            BEGIN TRAN;
+
             DECLARE @RoleId int = (SELECT RoleId FROM dbo.Roles WHERE RoleName = @RoleName);
 
             IF @RoleId IS NULL
@@ -617,12 +620,14 @@ public sealed class SqlStore
             )
                 THROW 50004, 'Ya existe un usuario con ese correo.', 1;
 
+            DECLARE @SavedUserId int;
+
             IF @UserId IS NULL
             BEGIN
                 INSERT INTO dbo.Usuarios (RoleId, FirstName, LastName, Email, Phone, PasswordHash, AddressLine, IsActive, CreatedAt)
                 VALUES (@RoleId, @FirstName, @LastName, @Email, @Phone, @PasswordHash, @AddressLine, 1, SYSUTCDATETIME());
 
-                SELECT CONVERT(int, SCOPE_IDENTITY());
+                SET @SavedUserId = CONVERT(int, SCOPE_IDENTITY());
             END
             ELSE
             BEGIN
@@ -636,8 +641,52 @@ public sealed class SqlStore
                     PasswordHash = CASE WHEN NULLIF(@PasswordHash, N'') IS NULL THEN PasswordHash ELSE @PasswordHash END
                 WHERE UserId = @UserId;
 
-                SELECT @UserId;
+                SET @SavedUserId = @UserId;
             END;
+
+            IF @RoleName = N'Cliente'
+            BEGIN
+                DECLARE @CustomerId int = (SELECT CustomerId FROM dbo.Clientes WHERE UserId = @SavedUserId);
+
+                IF @CustomerId IS NULL
+                    SET @CustomerId = (SELECT CustomerId FROM dbo.Clientes WHERE LOWER(Email) = LOWER(@Email));
+
+                IF @CustomerId IS NULL
+                BEGIN
+                    INSERT INTO dbo.Clientes (UserId, FullName, Email, Phone, IsFrequent, TotalSpent, CreatedAt)
+                    VALUES (@SavedUserId, CONCAT(@FirstName, N' ', @LastName), @Email, @Phone, 0, 0, SYSUTCDATETIME());
+
+                    SET @CustomerId = CONVERT(int, SCOPE_IDENTITY());
+                END
+                ELSE
+                BEGIN
+                    UPDATE dbo.Clientes
+                    SET UserId = @SavedUserId,
+                        FullName = CONCAT(@FirstName, N' ', @LastName),
+                        Email = @Email,
+                        Phone = @Phone
+                    WHERE CustomerId = @CustomerId;
+                END;
+
+                IF NULLIF(@AddressLine, N'') IS NOT NULL
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM dbo.DireccionesCliente WHERE CustomerId = @CustomerId AND IsDefault = 1)
+                    BEGIN
+                        UPDATE dbo.DireccionesCliente
+                        SET AddressLine = @AddressLine
+                        WHERE CustomerId = @CustomerId AND IsDefault = 1;
+                    END
+                    ELSE
+                    BEGIN
+                        INSERT INTO dbo.DireccionesCliente (CustomerId, Label, AddressLine, Latitude, Longitude, IsDefault)
+                        VALUES (@CustomerId, N'Principal', @AddressLine, 9.932500, -84.079600, 1);
+                    END;
+                END;
+            END;
+
+            COMMIT TRAN;
+
+            SELECT @SavedUserId;
             """;
 
         return Convert.ToInt32(await ScalarAsync(sql,
@@ -2508,12 +2557,7 @@ public sealed class SqlStore
             IF @CashMethodId IS NULL SELECT @CashMethodId = PaymentMethodId FROM dbo.MetodosPago WHERE Name = N'Pendiente';
 
             DECLARE @FrequentDiscountRate decimal(18,4) = TRY_CAST((SELECT SettingValue FROM dbo.ConfiguracionesAplicacion WHERE SettingKey = N'frequentCustomerDiscount') AS decimal(18,4));
-            DECLARE @PromotionDiscountRate decimal(18,4) = COALESCE((
-                SELECT MAX(DiscountRate)
-                FROM dbo.Promociones
-                WHERE IsActive = 1
-                  AND CAST(SYSUTCDATETIME() AS date) BETWEEN StartDate AND EndDate
-            ), 0);
+            
             DECLARE @TaxRate decimal(18,4) = TRY_CAST((SELECT SettingValue FROM dbo.ConfiguracionesAplicacion WHERE SettingKey = N'iva') AS decimal(18,4));
             IF @FrequentDiscountRate IS NULL SET @FrequentDiscountRate = 0;
             IF @TaxRate IS NULL SET @TaxRate = 0.13;
@@ -2521,8 +2565,6 @@ public sealed class SqlStore
             DECLARE @EffectiveDiscount decimal(18,2) = 0;
             IF EXISTS (SELECT 1 FROM dbo.Clientes WHERE CustomerId = @CustomerId AND IsFrequent = 1)
                 SET @EffectiveDiscount = ROUND(@Subtotal * @FrequentDiscountRate, 2);
-            DECLARE @PromotionDiscount decimal(18,2) = ROUND(@Subtotal * @PromotionDiscountRate, 2);
-            IF @PromotionDiscount > @EffectiveDiscount SET @EffectiveDiscount = @PromotionDiscount;
 
             DECLARE @DiscountedSubtotal decimal(18,2) = @Subtotal - @EffectiveDiscount;
             DECLARE @EffectiveTax decimal(18,2) = ROUND(@DiscountedSubtotal * @TaxRate, 2);

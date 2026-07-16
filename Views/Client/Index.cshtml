@@ -1,5 +1,5 @@
 @section Styles {
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link rel="stylesheet" href="~/css/pages/client-index.css?v=20260709-client-two-column-v2" />
 }
 @{
@@ -307,571 +307,634 @@
     <script src="~/js/bakesmart-map-picker.js" asp-append-version="true"></script>
     <script>
         (() => {
-            const page = document.getElementById('clientDashboardPage');
-            const userEmail = document.body.dataset.userEmail || '';
-            const form = document.getElementById('quickOrderForm');
-            const productInput = document.getElementById('quickOrderProduct');
-            const productsGrid = document.getElementById('quickProducts');
-            const productsEmpty = document.getElementById('quickProductsEmpty');
-            const productSearch = document.getElementById('quickProductSearch');
-            const productSort = document.getElementById('quickProductSort');
-            const quantityInput = document.getElementById('quickQuantity');
-            const submitBtn = document.getElementById('quickOrderSubmitBtn');
-            const deliveryMethod = document.getElementById('quickDeliveryMethod');
-            const deliveryProfileBlock = document.getElementById('quickDeliveryProfileBlock');
-            const paymentModal = document.getElementById('clientPaymentModal');
-            const paymentForm = document.getElementById('clientPaymentForm');
-            const paymentMethod = document.getElementById('paymentGatewayMethod');
-            const paymentConfirmBtn = document.getElementById('paymentConfirmBtn');
-            const paymentConfirmText = document.getElementById('paymentConfirmText');
-            const paymentReferenceLabel = document.getElementById('paymentReferenceLabel');
-            const paymentReferenceInput = document.getElementById('paymentReferenceInput');
-            const addressModal = document.getElementById('quickAddressModal');
-            const savedAddressChoice = document.getElementById('quickSavedAddressChoice');
-            const savedAddressText = document.getElementById('quickSavedAddressText');
-            const manualAddressInput = document.getElementById('quickAddressManual');
-            const useSavedAddressBtn = document.getElementById('useSavedAddressBtn');
-            const useNewAddressBtn = document.getElementById('useNewAddressBtn');
-
-            let pageInitialized = false;
-            let products = [];
-            let selectedProduct = null;
-            let currentProfile = null;
-            let pendingPayment = null;
-            let addressPicker = null;
-            let submitAfterAddress = false;
-
-            const money = value => app.utils.formatCurrency(Number(value || 0));
-            const clean = value => String(value ?? '').replace(/[&<>"']/g, char => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            })[char]);
-
-            function showPage() {
-                page.classList.remove('client-dashboard-page--loading');
-                page.classList.add('client-dashboard-page--ready');
-            }
-
-            function normalizeProduct(product) {
-                return {
-                    ...product,
-                    id: Number(product.id),
-                    name: product.description || product.item || product.name || 'Producto',
-                    code: product.code || product.sku || '',
-                    price: Number(product.price || 0),
-                    stock: Number(product.stock || 0),
-                    active: product.active !== false,
-                    type: product.type || product.productType || ''
-                };
-            }
-
-            function isSellableProduct(product) {
-                return String(product.type || '').toLowerCase() === 'producto terminado';
-            }
-
-            function availableProducts() {
-                const query = productSearch.value.trim().toLowerCase();
-                let rows = products.filter(product =>
-                    product.active &&
-                    isSellableProduct(product) &&
-                    product.stock > 0 &&
-                    (!query ||
-                        product.name.toLowerCase().includes(query) ||
-                        product.code.toLowerCase().includes(query))
-                );
-
-                rows = rows.sort((a, b) => {
-                    if (productSort.value === 'priceAsc') return a.price - b.price;
-                    if (productSort.value === 'priceDesc') return b.price - a.price;
-                    if (productSort.value === 'stockDesc') return b.stock - a.stock;
-                    return b.stock - a.stock || a.name.localeCompare(b.name);
-                });
-
-                return rows;
-            }
-
-            function selectProduct(id) {
-                selectedProduct = products.find(product => Number(product.id) === Number(id)) || null;
-                productInput.value = selectedProduct ? selectedProduct.id : '';
-                renderProducts();
-                updateSummary();
-            }
-
-            function renderProducts() {
-                const rows = availableProducts();
-                productsEmpty.hidden = rows.length > 0;
-
-                productsGrid.innerHTML = rows.map(product => {
-                    const selected = selectedProduct && Number(selectedProduct.id) === Number(product.id);
-                    return `
-                        <button class="quick-product ${selected ? 'quick-product--selected' : ''}" type="button" data-product-id="${product.id}">
-                            <span class="quick-product__icon"><i class="fas fa-cake-candles"></i></span>
-                            <span class="quick-product__body">
-                                <strong>${clean(product.name)}</strong>
-                                <small>${clean(product.code || 'Producto disponible')}</small>
-                            </span>
-                            <span class="quick-product__meta">
-                                <strong>${money(product.price)}</strong>
-                                <small>${product.stock} disp.</small>
-                            </span>
-                        </button>
-                    `;
-                }).join('');
-            }
-
-            function fillPaymentMethods() {
-                const methods = (BakeSmartStore.pos.config().paymentMethods || []).filter(method => method.active);
-                const names = new Set(['Pago en linea', 'Pendiente', 'Tarjeta', 'SINPE']);
-                methods.forEach(method => names.add(method.name));
-
-                document.getElementById('quickPaymentMethod').innerHTML = [...names]
-                    .map(name => `<option value="${clean(name)}">${clean(name === 'Pago en linea' ? 'Pagar ahora' : name === 'Pendiente' ? 'Pagar en tienda' : name)}</option>`)
-                    .join('');
-            }
-
-            async function loadProducts() {
-                await BakeSmartStore.refreshClient();
-                products = BakeSmartStore.inventory.list().map(normalizeProduct);
-                document.getElementById('clientAvailableProducts').textContent =
-                    products.filter(product => product.active && isSellableProduct(product) && product.stock > 0).length;
-
-                fillPaymentMethods();
-                renderProducts();
-
-                const first = availableProducts()[0];
-                if (first) selectProduct(first.id);
-            }
-
-            async function loadProfile() {
-                try {
-                    currentProfile = await BakeSmartStore.loadProfile();
-                } catch (_) {
-                    currentProfile = null;
-                }
-
-                const fullName = currentProfile
-                    ? `${currentProfile.firstName || ''} ${currentProfile.lastName || ''}`.trim()
-                    : '@nameLabel';
-                const email = currentProfile?.email || userEmail || '@emailLabel';
-                const phone = currentProfile?.phone || '';
-
-                document.getElementById('quickCustomerName').value = fullName || 'Cliente';
-                document.getElementById('quickCustomerEmail').value = email;
-                document.getElementById('quickCustomerPhone').value = phone;
-                document.getElementById('quickProfileName').textContent = fullName || 'Cliente';
-                document.getElementById('quickProfileMeta').textContent = phone ? `${email} - ${phone}` : email;
-
-                document.getElementById('quickProfileAddress').textContent = currentProfile?.address || 'Sin direccion configurada';
-                document.getElementById('quickAddress').value = currentProfile?.address || '';
-                document.getElementById('quickLat').value = currentProfile?.latitude ?? '';
-                document.getElementById('quickLng').value = currentProfile?.longitude ?? '';
-                document.getElementById('quickCustomerAddressId').value = currentProfile?.customerAddressId ?? '';
-            }
-
-            function hasSavedAddress() {
-                return Boolean(currentProfile?.address && currentProfile?.latitude && currentProfile?.longitude);
-            }
-
-            function applySavedAddress() {
-                if (!hasSavedAddress()) return false;
-                document.getElementById('quickAddress').value = currentProfile.address || '';
-                document.getElementById('quickLat').value = currentProfile.latitude ?? '';
-                document.getElementById('quickLng').value = currentProfile.longitude ?? '';
-                document.getElementById('quickCustomerAddressId').value = currentProfile.customerAddressId ?? '';
-                document.getElementById('quickProfileAddress').textContent = currentProfile.address || 'Direccion guardada';
-                return true;
-            }
-
-            async function ensureAddressPicker() {
-                if (addressPicker) return addressPicker;
-                for (let i = 0; i < 20 && (!window.L || !window.BakeSmartMapPicker); i++) {
-                    await new Promise(resolve => setTimeout(resolve, 150));
-                }
-                if (!window.L || !window.BakeSmartMapPicker) {
-                    document.getElementById('quickMapPicker').innerHTML = `
-                        <div class="client-empty-state quick-map-fallback">
-                            <i class="fas fa-map-location-dot"></i>
-                            <strong>Mapa no disponible</strong>
-                            <span>Escriba la direccion y vuelva a intentarlo en unos segundos.</span>
-                        </div>
-                    `;
-                    return null;
-                }
-                const origin = BakeSmartStore.geo.origin();
-                addressPicker = await BakeSmartMapPicker.create('quickMapPicker', {
-                    lat: currentProfile?.latitude || origin.lat,
-                    lng: currentProfile?.longitude || origin.lng,
-                    address: currentProfile?.address || '',
-                    onChange: values => {
-                        manualAddressInput.value = values.address || manualAddressInput.value || '';
-                    }
-                });
-                return addressPicker;
-            }
-
-            async function openAddressModal(continueAfterSelection = false) {
-                submitAfterAddress = continueAfterSelection;
-                savedAddressChoice.hidden = !hasSavedAddress();
-                savedAddressText.textContent = currentProfile?.address || 'Sin direccion guardada';
-                manualAddressInput.value = currentProfile?.address || '';
-                addressModal.hidden = false;
-                await ensureAddressPicker();
-                if (addressPicker) {
-                    addressPicker.setValues({
-                        address: currentProfile?.address || '',
-                        lat: currentProfile?.latitude || BakeSmartStore.geo.origin().lat,
-                        lng: currentProfile?.longitude || BakeSmartStore.geo.origin().lng
-                    });
-                    requestAnimationFrame(() => addressPicker.map?.invalidateSize?.());
-                    setTimeout(() => addressPicker.map?.invalidateSize?.(), 250);
-                    setTimeout(() => addressPicker.map?.invalidateSize?.(), 900);
-                }
-            }
-
-            function closeAddressModal() {
-                addressModal.hidden = true;
-                submitAfterAddress = false;
-            }
-
-            function continuePendingSubmit() {
-                const shouldContinue = submitAfterAddress;
-                closeAddressModal();
-                if (shouldContinue) {
-                    requestAnimationFrame(() => form.requestSubmit());
-                }
-            }
-
-            function renderSummary() {
-                const orders = BakeSmartStore.orders.byClient(userEmail);
-                const total = orders.reduce((acc, order) => acc + Number(order.total || 0), 0);
-                const active = orders.filter(order => !['Entregado', 'Cancelado'].includes(order.status)).length;
-
-                document.getElementById('clientOrderCount').textContent = orders.length;
-                document.getElementById('clientSpent').textContent = money(total);
-                document.getElementById('clientActive').textContent = active;
-
-                const recent = orders.slice(0, 5);
-                document.getElementById('clientMiniOrders').innerHTML = recent.map(order => `
-                    <article class="client-order-row">
-                        <span class="client-order-row__icon"><i class="fas fa-bag-shopping"></i></span>
-                        <span class="client-order-row__main">
-                            <strong>#${order.id} · ${clean((order.items || []).map(item => item.name).join(', ') || 'Pedido')}</strong>
-                            <small>${clean(order.deliveryDate || order.createdAt || '')}</small>
-                        </span>
-                        <span class="client-order-row__status">
-                            <span class="badge badge-primary">${clean(order.status || 'Pendiente')}</span>
-                            <strong>${money(order.total)}</strong>
-                        </span>
-                    </article>
-                `).join('') || `
-                    <div class="client-empty-state">
-                        <i class="fas fa-clipboard-list"></i>
-                        <strong>Aun no tienes pedidos</strong>
-                        <span>Cuando registres uno, aparecera aqui.</span>
-                    </div>
-                `;
-                decorateMiniOrders(orders);
-            }
-
-            function decorateMiniOrders(orders) {
-                const rows = document.querySelectorAll('.client-order-row');
-                rows.forEach((row, index) => {
-                    const order = orders[index];
-                    if (!order || !String(order.paymentStatus || '').toLowerCase().includes('pendiente')) return;
-                    row.classList.add('client-order-row--payable');
-                    if (row.querySelector('[data-pay-deposit]')) return;
-                    const target = row.querySelector('.client-order-row__status');
-                    if (!target) return;
-                    const button = document.createElement('button');
-                    button.type = 'button';
-                    button.className = 'btn btn-outline btn-sm client-deposit-btn';
-                    button.dataset.payDeposit = order.id;
-                    button.innerHTML = '<i class="fas fa-money-bill-transfer"></i> Pagar abono';
-                    target.appendChild(button);
-                });
-            }
-
-            function updateSummary() {
-                const quantity = Math.max(1, Number(quantityInput.value || 1));
-                const price = Number(selectedProduct?.price || 0);
-                const subtotal = price * quantity;
-                const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
-                const frequentRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
-                const promotionRate = Number(BakeSmartStore.pos.config().activePromotionDiscount || 0);
-                const discountRate = Math.max(frequentRate, promotionRate);
-                const discount = subtotal * discountRate;
-                const discountedSubtotal = Math.max(0, subtotal - discount);
-                const tax = discountedSubtotal * taxRate;
-
-                document.getElementById('quickSummaryProduct').textContent = selectedProduct?.name || 'Seleccione un producto';
-                document.getElementById('quickSubtotal').textContent = money(subtotal);
-                document.getElementById('quickDiscountRow').hidden = discount <= 0;
-                document.getElementById('quickDiscount').textContent = `-${money(discount)}`;
-                document.getElementById('quickTax').textContent = money(tax);
-                document.getElementById('quickTotal').textContent = money(discountedSubtotal + tax);
-            }
-
-            function normalizeGatewayMethod(method) {
-                const value = String(method || '').toLowerCase();
-                if (value.includes('sinpe')) return 'SINPE';
-                if (value.includes('transfer')) return 'Transferencia';
-                if (value.includes('efectivo')) return 'Efectivo';
-                return 'Tarjeta';
-            }
-
-            function shouldOpenGateway(method) {
-                const value = String(method || '').toLowerCase();
-                return value.includes('linea') || value.includes('tarjeta') || value.includes('sinpe') || value.includes('transfer');
-            }
-
-            function openPaymentGateway(orderId, total, method, mode = 'full') {
-                const amount = mode === 'deposit' ? Math.max(1, Number(total || 0) * 0.3) : Number(total || 0);
-                pendingPayment = { orderId, total: amount, method, mode };
-                if (paymentModal.parentElement !== document.body) {
-                    document.body.appendChild(paymentModal);
-                }
-                document.getElementById('paymentModalTotal').textContent = money(amount);
-                paymentMethod.value = normalizeGatewayMethod(method);
-                paymentConfirmText.textContent = mode === 'deposit' ? 'Pagar abono' : 'Pagar pedido';
-                paymentMethod.dispatchEvent(new Event('change', { bubbles: true }));
-                syncPaymentFields();
-                paymentModal.hidden = false;
-                paymentForm.holder.value = document.getElementById('quickCustomerName').value || '';
-            }
-
-            function closePaymentGateway() {
-                paymentModal.hidden = true;
-                pendingPayment = null;
-                paymentForm.reset();
-                paymentConfirmText.textContent = 'Pagar pedido';
-                syncPaymentFields();
-            }
-
-            function syncPaymentFields() {
-                const value = String(paymentMethod.value || '').toLowerCase();
-                const isCard = value.includes('tarjeta');
-                document.querySelectorAll('.payment-card-field').forEach(field => {
-                    field.hidden = !isCard;
-                    field.style.display = isCard ? '' : 'none';
-                    field.querySelectorAll('input').forEach(input => {
-                        input.disabled = !isCard;
-                        input.required = isCard;
-                        if (!isCard) input.value = '';
-                    });
-                });
-
-                if (value.includes('sinpe')) {
-                    paymentReferenceLabel.textContent = 'Referencia SINPE';
-                    paymentReferenceInput.placeholder = 'Telefono o comprobante SINPE';
-                    paymentReferenceInput.required = true;
-                } else if (value.includes('transfer')) {
-                    paymentReferenceLabel.textContent = 'Referencia de transferencia';
-                    paymentReferenceInput.placeholder = 'Banco o numero de comprobante';
-                    paymentReferenceInput.required = true;
-                } else if (value.includes('efectivo')) {
-                    paymentReferenceLabel.textContent = 'Recibido por';
-                    paymentReferenceInput.placeholder = 'Nombre de quien recibe el efectivo';
-                    paymentReferenceInput.required = false;
-                } else {
-                    paymentReferenceLabel.textContent = 'Titular de la tarjeta';
-                    paymentReferenceInput.placeholder = 'Nombre del titular';
-                    paymentReferenceInput.required = true;
-                }
-            }
-
-            function toggleQuickDelivery() {
-                const isPickup = deliveryMethod.value === 'retiro';
-                deliveryProfileBlock.hidden = isPickup;
-            }
-
-            productsGrid.addEventListener('click', event => {
-                const button = event.target.closest('[data-product-id]');
-                if (!button) return;
-                selectProduct(button.dataset.productId);
-            });
-
-            productSearch.addEventListener('input', renderProducts);
-            productSort.addEventListener('change', renderProducts);
-            quantityInput.addEventListener('input', updateSummary);
-            deliveryMethod.addEventListener('change', toggleQuickDelivery);
-            paymentMethod.addEventListener('change', syncPaymentFields);
-            document.getElementById('clientMiniOrders').addEventListener('click', event => {
-                const button = event.target.closest('[data-pay-deposit]');
-                if (!button) return;
-                const order = BakeSmartStore.orders.byClient(userEmail)
-                    .find(row => Number(row.id) === Number(button.dataset.payDeposit));
-                if (!order) {
-                    app.toast.error('No se encontro el pedido para pagar el abono.');
-                    return;
-                }
-                openPaymentGateway(order.id, Number(order.total || 0), 'SINPE', 'deposit');
-            });
-
-            document.querySelectorAll('[data-payment-close]').forEach(button => {
-                button.addEventListener('click', closePaymentGateway);
-            });
-
-            document.querySelectorAll('[data-address-close]').forEach(button => {
-                button.addEventListener('click', closeAddressModal);
-            });
-
-            useSavedAddressBtn.addEventListener('click', () => {
-                if (applySavedAddress()) {
-                    app.toast.success('Usaremos tu direccion guardada para este pedido.');
-                    continuePendingSubmit();
-                }
-            });
-
-            useNewAddressBtn.addEventListener('click', () => {
-                if (addressPicker) {
-                    addressPicker.applyToFields({
-                        address: 'quickAddress',
-                        lat: 'quickLat',
-                        lng: 'quickLng'
-                    });
-                }
-
-                if (manualAddressInput.value.trim()) {
-                    document.getElementById('quickAddress').value = manualAddressInput.value.trim();
-                }
-
-                document.getElementById('quickCustomerAddressId').value = '';
-
-                if (!document.getElementById('quickAddress').value || !document.getElementById('quickLat').value || !document.getElementById('quickLng').value) {
-                    app.toast.error('Seleccione una ubicacion en el mapa para continuar.');
-                    return;
-                }
-
-                document.getElementById('quickProfileAddress').textContent = document.getElementById('quickAddress').value;
-                continuePendingSubmit();
-            });
-
-            paymentForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                if (!pendingPayment) return;
-
-                const data = Object.fromEntries(new FormData(paymentForm).entries());
-                if (data.method === 'Tarjeta') {
-                    const digits = String(data.card || '').replace(/\D/g, '');
-                    if (digits.length < 12 || !data.expiry || !data.cvv) {
-                        app.toast.error('Complete los datos de tarjeta para simular el pago.');
-                        return;
-                    }
-                }
-
-                try {
-                    paymentConfirmBtn.disabled = true;
-                    await BakeSmartStore.orders.markPaid(pendingPayment.orderId, data.method);
-                    await BakeSmartStore.refresh({ force: true });
-                    renderSummary();
-                    app.toast.success(`Pago aprobado. Pedido #${pendingPayment.orderId} confirmado para produccion.`);
-                    closePaymentGateway();
-                } catch (error) {
-                    app.toast.error(error.message);
-                } finally {
-                    paymentConfirmBtn.disabled = false;
-                }
-            });
-
-            form.addEventListener('submit', async (event) => {
-                event.preventDefault();
-
-                const data = Object.fromEntries(new FormData(form).entries());
-                const isPickup = data.deliveryMethod === 'retiro';
-                const quantity = Math.max(1, Number(data.quantity || 1));
-                const product = selectedProduct || products.find(item => Number(item.id) === Number(data.productId));
-
-                if (!product) {
-                    app.toast.error('Seleccione un producto disponible.');
-                    return;
-                }
-
-                if (quantity > product.stock) {
-                    app.toast.error('La cantidad supera el stock disponible.');
-                    return;
-                }
-
-                if (!isPickup && (!data.address || !data.destinationLatitude || !data.destinationLongitude)) {
-                    await openAddressModal(true);
-                    return;
-                }
-
-                try {
-                    submitBtn.disabled = true;
-
-                    const subtotal = Number(product.price) * quantity;
-                    const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
-                    const frequentRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
-                    const promotionRate = Number(BakeSmartStore.pos.config().activePromotionDiscount || 0);
-                    const discountRate = Math.max(frequentRate, promotionRate);
-                    const discount = subtotal * discountRate;
-                    const discountedSubtotal = Math.max(0, subtotal - discount);
-                    const tax = discountedSubtotal * taxRate;
-                    const total = discountedSubtotal + tax;
-
-                    const result = await BakeSmartStore.createOrder({
-                        customerName: data.customerName,
-                        email: data.customerEmail,
-                        phone: data.customerPhone,
-                        productId: Number(product.id),
-                        quantity,
-                        unitPrice: Number(product.price),
-                        subtotal,
-                        tax,
-                        total,
-                        deliveryDate: data.deliveryDate,
-                        address: isPickup ? null : data.address,
-                        notes: data.notes || null,
-                        paymentMethod: data.paymentMethod,
-                        destinationLatitude: isPickup ? null : Number(data.destinationLatitude),
-                        destinationLongitude: isPickup ? null : Number(data.destinationLongitude),
-                        deliveryReference: isPickup ? null : data.address,
-                        customerAddressId: isPickup ? null : (data.customerAddressId ? Number(data.customerAddressId) : null),
-                        deliveryMethod: data.deliveryMethod
-                    });
-
-                    await BakeSmartStore.refresh({ force: true });
-                    products = BakeSmartStore.inventory.list().map(normalizeProduct);
-                    document.getElementById('clientAvailableProducts').textContent =
-                        products.filter(item => item.active && isSellableProduct(item) && item.stock > 0).length;
-                    renderProducts();
-                    renderSummary();
-                    updateSummary();
-                    if (shouldOpenGateway(data.paymentMethod)) {
-                        openPaymentGateway(result.id, total, data.paymentMethod);
-                    } else {
-                        app.toast.warning('Pedido registrado. Para iniciar produccion se requiere un abono anticipado o pago en tienda.');
-                    }
-                    form.quantity.value = 1;
-                    form.notes.value = '';
-                } catch (error) {
-                    app.toast.error(error.message);
-                } finally {
-                    submitBtn.disabled = false;
-                }
-            });
-
-            async function initializePage() {
-                if (pageInitialized) return;
-                pageInitialized = true;
-
-                const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-                form.deliveryDate.value = tomorrow;
-                showPage();
-
-                await Promise.all([
-                    loadProducts(),
-                    loadProfile()
-                ]);
-                toggleQuickDelivery();
-                renderSummary();
-                updateSummary();
-            }
-
-            app.page.ready(() => initializePage());
+        const page = document.getElementById('clientDashboardPage');
+        const userEmail = document.body.dataset.userEmail || '';
+        const form = document.getElementById('quickOrderForm');
+        const productInput = document.getElementById('quickOrderProduct');
+        const productsGrid = document.getElementById('quickProducts');
+        const productsEmpty = document.getElementById('quickProductsEmpty');
+        const productSearch = document.getElementById('quickProductSearch');
+        const productSort = document.getElementById('quickProductSort');
+        const quantityInput = document.getElementById('quickQuantity');
+        const submitBtn = document.getElementById('quickOrderSubmitBtn');
+        const deliveryMethod = document.getElementById('quickDeliveryMethod');
+        const deliveryProfileBlock = document.getElementById('quickDeliveryProfileBlock');
+        const paymentModal = document.getElementById('clientPaymentModal');
+        const paymentForm = document.getElementById('clientPaymentForm');
+        const paymentMethod = document.getElementById('paymentGatewayMethod');
+        const paymentConfirmBtn = document.getElementById('paymentConfirmBtn');
+        const paymentConfirmText = document.getElementById('paymentConfirmText');
+        const paymentReferenceLabel = document.getElementById('paymentReferenceLabel');
+        const paymentReferenceInput = document.getElementById('paymentReferenceInput');
+        const addressModal = document.getElementById('quickAddressModal');
+        const savedAddressChoice = document.getElementById('quickSavedAddressChoice');
+        const savedAddressText = document.getElementById('quickSavedAddressText');
+        const manualAddressInput = document.getElementById('quickAddressManual');
+        const useSavedAddressBtn = document.getElementById('useSavedAddressBtn');
+        const useNewAddressBtn = document.getElementById('useNewAddressBtn');
+
+        let pageInitialized = false;
+        let products = [];
+        let selectedProduct = null;
+        let currentProfile = null;
+        let pendingPayment = null;
+        let addressPicker = null;
+        let submitAfterAddress = false;
+        let cartCheckoutItems = [];
+
+        const cartStorageKey = () => `bakesmart:catalog-cart:${(userEmail || 'guest').trim().toLowerCase()}`;
+        function readCatalogCart() {
+        try {
+        return JSON.parse(localStorage.getItem(cartStorageKey()) || '[]')
+        .map(item => ({ id: Number(item.id), name: String(item.name || 'Producto'), price: Number(item.price || 0), quantity: Math.max(1, Number(item.quantity || 1)) }))
+        .filter(item => item.id > 0 && item.quantity > 0);
+        } catch {
+        return [];
+        }
+        }
+
+        function clearCatalogCart() {
+        try { localStorage.removeItem(cartStorageKey()); } catch { }
+        }
+
+        const money = value => app.utils.formatCurrency(Number(value || 0));
+        const clean = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+        })[char]);
+
+        function showPage() {
+        page.classList.remove('client-dashboard-page--loading');
+        page.classList.add('client-dashboard-page--ready');
+        }
+
+        function normalizeProduct(product) {
+        return {
+        ...product,
+        id: Number(product.id),
+        name: product.description || product.item || product.name || 'Producto',
+        code: product.code || product.sku || '',
+        price: Number(product.price || 0),
+        stock: Number(product.stock || 0),
+        active: product.active !== false,
+        type: product.type || product.productType || ''
+        };
+        }
+
+        function isSellableProduct(product) {
+        return String(product.type || '').toLowerCase() === 'producto terminado';
+        }
+
+        function availableProducts() {
+        const query = productSearch.value.trim().toLowerCase();
+        let rows = products.filter(product =>
+        product.active &&
+        isSellableProduct(product) &&
+        product.stock > 0 &&
+        (!query ||
+        product.name.toLowerCase().includes(query) ||
+        product.code.toLowerCase().includes(query))
+        );
+
+        rows = rows.sort((a, b) => {
+        if (productSort.value === 'priceAsc') return a.price - b.price;
+        if (productSort.value === 'priceDesc') return b.price - a.price;
+        if (productSort.value === 'stockDesc') return b.stock - a.stock;
+        return b.stock - a.stock || a.name.localeCompare(b.name);
+        });
+
+        return rows;
+        }
+
+        function selectProduct(id) {
+        selectedProduct = products.find(product => Number(product.id) === Number(id)) || null;
+        productInput.value = selectedProduct ? selectedProduct.id : '';
+        renderProducts();
+        updateSummary();
+        }
+
+        function renderProducts() {
+        const rows = availableProducts();
+        productsEmpty.hidden = rows.length > 0;
+
+        productsGrid.innerHTML = rows.map(product => {
+        const selected = selectedProduct && Number(selectedProduct.id) === Number(product.id);
+        return `
+        <button class="quick-product ${selected ? 'quick-product--selected' : ''}" type="button" data-product-id="${product.id}">
+        <span class="quick-product__icon"><i class="fas fa-cake-candles"></i></span>
+        <span class="quick-product__body">
+        <strong>${clean(product.name)}</strong>
+        <small>${clean(product.code || 'Producto disponible')}</small>
+        </span>
+        <span class="quick-product__meta">
+        <strong>${money(product.price)}</strong>
+        <small>${product.stock} disp.</small>
+        </span>
+        </button>
+        `;
+        }).join('');
+        }
+
+        function fillPaymentMethods() {
+        const methods = (BakeSmartStore.pos.config().paymentMethods || []).filter(method => method.active);
+        const names = new Set(['Pago en linea', 'Pendiente', 'Tarjeta', 'SINPE']);
+        methods.forEach(method => names.add(method.name));
+
+        document.getElementById('quickPaymentMethod').innerHTML = [...names]
+        .map(name => `<option value="${clean(name)}">${clean(name === 'Pago en linea' ? 'Pagar ahora' : name === 'Pendiente' ? 'Pagar en tienda' : name)}</option>`)
+        .join('');
+        }
+
+        async function loadProducts() {
+        await BakeSmartStore.refreshClient();
+        products = BakeSmartStore.inventory.list().map(normalizeProduct);
+        document.getElementById('clientAvailableProducts').textContent =
+        products.filter(product => product.active && isSellableProduct(product) && product.stock > 0).length;
+
+        fillPaymentMethods();
+        renderProducts();
+
+        const first = availableProducts()[0];
+        if (first) selectProduct(first.id);
+        applyCatalogCartCheckout();
+        }
+
+        async function loadProfile() {
+        try {
+        currentProfile = await BakeSmartStore.loadProfile();
+        } catch (_) {
+        currentProfile = null;
+        }
+
+        const fullName = currentProfile
+        ? `${currentProfile.firstName || ''} ${currentProfile.lastName || ''}`.trim()
+        : '@nameLabel';
+        const email = currentProfile?.email || userEmail || '@emailLabel';
+        const phone = currentProfile?.phone || '';
+
+        document.getElementById('quickCustomerName').value = fullName || 'Cliente';
+        document.getElementById('quickCustomerEmail').value = email;
+        document.getElementById('quickCustomerPhone').value = phone;
+        document.getElementById('quickProfileName').textContent = fullName || 'Cliente';
+        document.getElementById('quickProfileMeta').textContent = phone ? `${email} - ${phone}` : email;
+
+        document.getElementById('quickProfileAddress').textContent = currentProfile?.address || 'Sin direccion configurada';
+        document.getElementById('quickAddress').value = currentProfile?.address || '';
+        document.getElementById('quickLat').value = currentProfile?.latitude ?? '';
+        document.getElementById('quickLng').value = currentProfile?.longitude ?? '';
+        document.getElementById('quickCustomerAddressId').value = currentProfile?.customerAddressId ?? '';
+        }
+
+        function hasSavedAddress() {
+        return Boolean(currentProfile?.address && currentProfile?.latitude && currentProfile?.longitude);
+        }
+
+        function applySavedAddress() {
+        if (!hasSavedAddress()) return false;
+        document.getElementById('quickAddress').value = currentProfile.address || '';
+        document.getElementById('quickLat').value = currentProfile.latitude ?? '';
+        document.getElementById('quickLng').value = currentProfile.longitude ?? '';
+        document.getElementById('quickCustomerAddressId').value = currentProfile.customerAddressId ?? '';
+        document.getElementById('quickProfileAddress').textContent = currentProfile.address || 'Direccion guardada';
+        return true;
+        }
+
+        async function ensureAddressPicker() {
+        if (addressPicker) return addressPicker;
+        for (let i = 0; i < 20 && (!window.L || !window.BakeSmartMapPicker); i++) {
+        await new Promise(resolve => setTimeout(resolve, 150));
+        }
+        if (!window.L || !window.BakeSmartMapPicker) {
+        document.getElementById('quickMapPicker').innerHTML = `
+        <div class="client-empty-state quick-map-fallback">
+        <i class="fas fa-map-location-dot"></i>
+        <strong>Mapa no disponible</strong>
+        <span>Escriba la direccion y vuelva a intentarlo en unos segundos.</span>
+        </div>
+        `;
+        return null;
+        }
+        const origin = BakeSmartStore.geo.origin();
+        addressPicker = await BakeSmartMapPicker.create('quickMapPicker', {
+        lat: currentProfile?.latitude || origin.lat,
+        lng: currentProfile?.longitude || origin.lng,
+        address: currentProfile?.address || '',
+        onChange: values => {
+        manualAddressInput.value = values.address || manualAddressInput.value || '';
+        }
+        });
+        return addressPicker;
+        }
+
+        async function openAddressModal(continueAfterSelection = false) {
+        submitAfterAddress = continueAfterSelection;
+        savedAddressChoice.hidden = !hasSavedAddress();
+        savedAddressText.textContent = currentProfile?.address || 'Sin direccion guardada';
+        manualAddressInput.value = currentProfile?.address || '';
+        addressModal.hidden = false;
+        await ensureAddressPicker();
+        if (addressPicker) {
+        addressPicker.setValues({
+        address: currentProfile?.address || '',
+        lat: currentProfile?.latitude || BakeSmartStore.geo.origin().lat,
+        lng: currentProfile?.longitude || BakeSmartStore.geo.origin().lng
+        });
+        requestAnimationFrame(() => addressPicker.map?.invalidateSize?.());
+        setTimeout(() => addressPicker.map?.invalidateSize?.(), 250);
+        setTimeout(() => addressPicker.map?.invalidateSize?.(), 900);
+        }
+        }
+
+        function closeAddressModal() {
+        addressModal.hidden = true;
+        submitAfterAddress = false;
+        }
+
+        function continuePendingSubmit() {
+        const shouldContinue = submitAfterAddress;
+        closeAddressModal();
+        if (shouldContinue) {
+        requestAnimationFrame(() => form.requestSubmit());
+        }
+        }
+
+
+        function applyCatalogCartCheckout() {
+        const parameters = new URLSearchParams(window.location.search);
+        if (parameters.get('cart') !== 'checkout') return;
+
+        const availableIds = new Set(availableProducts().map(product => Number(product.id)));
+        cartCheckoutItems = readCatalogCart()
+        .filter(item => availableIds.has(Number(item.id)))
+        .map(item => {
+        const product = products.find(row => Number(row.id) === Number(item.id));
+        return {
+        ...item,
+        product,
+        quantity: Math.min(Number(item.quantity || 1), Number(product?.stock || 0))
+        };
+        })
+        .filter(item => item.product && item.quantity > 0);
+
+        if (!cartCheckoutItems.length) return;
+
+        const first = cartCheckoutItems[0];
+        selectProduct(first.id);
+        quantityInput.value = first.quantity;
+        updateSummary();
+        submitBtn.innerHTML = `<i class="fas fa-receipt"></i> Registrar ${cartCheckoutItems.length} producto${cartCheckoutItems.length === 1 ? '' : 's'} del carrito`;
+        app.toast.success('Carrito cargado. Completa entrega y pago para crear un pedido nuevo.');
+        }
+
+        function renderSummary() {
+        const orders = BakeSmartStore.orders.byClient(userEmail);
+        const total = orders.reduce((acc, order) => acc + Number(order.total || 0), 0);
+        const active = orders.filter(order => !['Entregado', 'Cancelado'].includes(order.status)).length;
+
+        document.getElementById('clientOrderCount').textContent = orders.length;
+        document.getElementById('clientSpent').textContent = money(total);
+        document.getElementById('clientActive').textContent = active;
+
+        const recent = orders.slice(0, 5);
+        document.getElementById('clientMiniOrders').innerHTML = recent.map(order => `
+        <article class="client-order-row">
+        <span class="client-order-row__icon"><i class="fas fa-bag-shopping"></i></span>
+        <span class="client-order-row__main">
+        <strong>#${order.id} · ${clean((order.items || []).map(item => item.name).join(', ') || 'Pedido')}</strong>
+        <small>${clean(order.deliveryDate || order.createdAt || '')}</small>
+        </span>
+        <span class="client-order-row__status">
+        <span class="badge badge-primary">${clean(order.status || 'Pendiente')}</span>
+        <strong>${money(order.total)}</strong>
+        </span>
+        </article>
+        `).join('') || `
+        <div class="client-empty-state">
+        <i class="fas fa-clipboard-list"></i>
+        <strong>Aun no tienes pedidos</strong>
+        <span>Cuando registres uno, aparecera aqui.</span>
+        </div>
+        `;
+        decorateMiniOrders(orders);
+        }
+
+        function decorateMiniOrders(orders) {
+        const rows = document.querySelectorAll('.client-order-row');
+        rows.forEach((row, index) => {
+        const order = orders[index];
+        if (!order || !String(order.paymentStatus || '').toLowerCase().includes('pendiente')) return;
+        row.classList.add('client-order-row--payable');
+        if (row.querySelector('[data-pay-deposit]')) return;
+        const target = row.querySelector('.client-order-row__status');
+        if (!target) return;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-outline btn-sm client-deposit-btn';
+        button.dataset.payDeposit = order.id;
+        button.innerHTML = '<i class="fas fa-money-bill-transfer"></i> Pagar abono';
+        target.appendChild(button);
+        });
+        }
+
+        function updateSummary() {
+        const quantity = Math.max(1, Number(quantityInput.value || 1));
+        const price = Number(selectedProduct?.price || 0);
+        const subtotal = price * quantity;
+        const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
+        const frequentRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
+        const promotionRate = Number(BakeSmartStore.pos.config().activePromotionDiscount || 0);
+        const discountRate = Math.max(frequentRate, promotionRate);
+        const discount = subtotal * discountRate;
+        const discountedSubtotal = Math.max(0, subtotal - discount);
+        const tax = discountedSubtotal * taxRate;
+
+        document.getElementById('quickSummaryProduct').textContent = selectedProduct?.name || 'Seleccione un producto';
+        document.getElementById('quickSubtotal').textContent = money(subtotal);
+        document.getElementById('quickDiscountRow').hidden = discount <= 0;
+        document.getElementById('quickDiscount').textContent = `-${money(discount)}`;
+        document.getElementById('quickTax').textContent = money(tax);
+        document.getElementById('quickTotal').textContent = money(discountedSubtotal + tax);
+        }
+
+        function normalizeGatewayMethod(method) {
+        const value = String(method || '').toLowerCase();
+        if (value.includes('sinpe')) return 'SINPE';
+        if (value.includes('transfer')) return 'Transferencia';
+        if (value.includes('efectivo')) return 'Efectivo';
+        return 'Tarjeta';
+        }
+
+        function shouldOpenGateway(method) {
+        const value = String(method || '').toLowerCase();
+        return value.includes('linea') || value.includes('tarjeta') || value.includes('sinpe') || value.includes('transfer');
+        }
+
+        function openPaymentGateway(orderId, total, method, mode = 'full') {
+        const amount = mode === 'deposit' ? Math.max(1, Number(total || 0) * 0.3) : Number(total || 0);
+        pendingPayment = { orderId, total: amount, method, mode };
+        if (paymentModal.parentElement !== document.body) {
+        document.body.appendChild(paymentModal);
+        }
+        document.getElementById('paymentModalTotal').textContent = money(amount);
+        paymentMethod.value = normalizeGatewayMethod(method);
+        paymentConfirmText.textContent = mode === 'deposit' ? 'Pagar abono' : 'Pagar pedido';
+        paymentMethod.dispatchEvent(new Event('change', { bubbles: true }));
+        syncPaymentFields();
+        paymentModal.hidden = false;
+        paymentForm.holder.value = document.getElementById('quickCustomerName').value || '';
+        }
+
+        function closePaymentGateway() {
+        paymentModal.hidden = true;
+        pendingPayment = null;
+        paymentForm.reset();
+        paymentConfirmText.textContent = 'Pagar pedido';
+        syncPaymentFields();
+        }
+
+        function syncPaymentFields() {
+        const value = String(paymentMethod.value || '').toLowerCase();
+        const isCard = value.includes('tarjeta');
+        document.querySelectorAll('.payment-card-field').forEach(field => {
+        field.hidden = !isCard;
+        field.style.display = isCard ? '' : 'none';
+        field.querySelectorAll('input').forEach(input => {
+        input.disabled = !isCard;
+        input.required = isCard;
+        if (!isCard) input.value = '';
+        });
+        });
+
+        if (value.includes('sinpe')) {
+        paymentReferenceLabel.textContent = 'Referencia SINPE';
+        paymentReferenceInput.placeholder = 'Telefono o comprobante SINPE';
+        paymentReferenceInput.required = true;
+        } else if (value.includes('transfer')) {
+        paymentReferenceLabel.textContent = 'Referencia de transferencia';
+        paymentReferenceInput.placeholder = 'Banco o numero de comprobante';
+        paymentReferenceInput.required = true;
+        } else if (value.includes('efectivo')) {
+        paymentReferenceLabel.textContent = 'Recibido por';
+        paymentReferenceInput.placeholder = 'Nombre de quien recibe el efectivo';
+        paymentReferenceInput.required = false;
+        } else {
+        paymentReferenceLabel.textContent = 'Titular de la tarjeta';
+        paymentReferenceInput.placeholder = 'Nombre del titular';
+        paymentReferenceInput.required = true;
+        }
+        }
+
+        function toggleQuickDelivery() {
+        const isPickup = deliveryMethod.value === 'retiro';
+        deliveryProfileBlock.hidden = isPickup;
+        }
+
+        productsGrid.addEventListener('click', event => {
+        const button = event.target.closest('[data-product-id]');
+        if (!button) return;
+        selectProduct(button.dataset.productId);
+        });
+
+        productSearch.addEventListener('input', renderProducts);
+        productSort.addEventListener('change', renderProducts);
+        quantityInput.addEventListener('input', updateSummary);
+        deliveryMethod.addEventListener('change', toggleQuickDelivery);
+        paymentMethod.addEventListener('change', syncPaymentFields);
+        document.getElementById('clientMiniOrders').addEventListener('click', event => {
+        const button = event.target.closest('[data-pay-deposit]');
+        if (!button) return;
+        const order = BakeSmartStore.orders.byClient(userEmail)
+        .find(row => Number(row.id) === Number(button.dataset.payDeposit));
+        if (!order) {
+        app.toast.error('No se encontro el pedido para pagar el abono.');
+        return;
+        }
+        openPaymentGateway(order.id, Number(order.total || 0), 'SINPE', 'deposit');
+        });
+
+        document.querySelectorAll('[data-payment-close]').forEach(button => {
+        button.addEventListener('click', closePaymentGateway);
+        });
+
+        document.querySelectorAll('[data-address-close]').forEach(button => {
+        button.addEventListener('click', closeAddressModal);
+        });
+
+        useSavedAddressBtn.addEventListener('click', () => {
+        if (applySavedAddress()) {
+        app.toast.success('Usaremos tu direccion guardada para este pedido.');
+        continuePendingSubmit();
+        }
+        });
+
+        useNewAddressBtn.addEventListener('click', () => {
+        if (addressPicker) {
+        addressPicker.applyToFields({
+        address: 'quickAddress',
+        lat: 'quickLat',
+        lng: 'quickLng'
+        });
+        }
+
+        if (manualAddressInput.value.trim()) {
+        document.getElementById('quickAddress').value = manualAddressInput.value.trim();
+        }
+
+        document.getElementById('quickCustomerAddressId').value = '';
+
+        if (!document.getElementById('quickAddress').value || !document.getElementById('quickLat').value || !document.getElementById('quickLng').value) {
+        app.toast.error('Seleccione una ubicacion en el mapa para continuar.');
+        return;
+        }
+
+        document.getElementById('quickProfileAddress').textContent = document.getElementById('quickAddress').value;
+        continuePendingSubmit();
+        });
+
+        paymentForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!pendingPayment) return;
+
+        const data = Object.fromEntries(new FormData(paymentForm).entries());
+        if (data.method === 'Tarjeta') {
+        const digits = String(data.card || '').replace(/\D/g, '');
+        if (digits.length < 12 || !data.expiry || !data.cvv) {
+        app.toast.error('Complete los datos de tarjeta para simular el pago.');
+        return;
+        }
+        }
+
+        try {
+        paymentConfirmBtn.disabled = true;
+        await BakeSmartStore.orders.markPaid(pendingPayment.orderId, data.method);
+        await BakeSmartStore.refresh({ force: true });
+        renderSummary();
+        app.toast.success(`Pago aprobado. Pedido #${pendingPayment.orderId} confirmado para produccion.`);
+        closePaymentGateway();
+        } catch (error) {
+        app.toast.error(error.message);
+        } finally {
+        paymentConfirmBtn.disabled = false;
+        }
+        });
+
+        form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const data = Object.fromEntries(new FormData(form).entries());
+        const isPickup = data.deliveryMethod === 'retiro';
+        const quantity = Math.max(1, Number(data.quantity || 1));
+        const product = selectedProduct || products.find(item => Number(item.id) === Number(data.productId));
+        const orderItems = cartCheckoutItems.length
+        ? cartCheckoutItems.map(item => ({ product: item.product, quantity: item.quantity }))
+        : [{ product, quantity }];
+
+        if (orderItems.some(item => !item.product)) {
+        app.toast.error('Seleccione un producto disponible.');
+        return;
+        }
+
+        if (orderItems.some(item => item.quantity > item.product.stock)) {
+        app.toast.error('La cantidad supera el stock disponible en uno de los articulos.');
+        return;
+        }
+
+        if (!isPickup && (!data.address || !data.destinationLatitude || !data.destinationLongitude)) {
+        await openAddressModal(true);
+        return;
+        }
+
+        try {
+        submitBtn.disabled = true;
+
+        const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
+        const frequentRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
+        const promotionRate = Number(BakeSmartStore.pos.config().activePromotionDiscount || 0);
+        const discountRate = Math.max(frequentRate, promotionRate);
+        const createdOrders = [];
+
+        for (const item of orderItems) {
+        const lineProduct = item.product;
+        const lineQuantity = Math.max(1, Number(item.quantity || 1));
+        const subtotal = Number(lineProduct.price) * lineQuantity;
+        const discount = subtotal * discountRate;
+        const discountedSubtotal = Math.max(0, subtotal - discount);
+        const tax = discountedSubtotal * taxRate;
+        const total = discountedSubtotal + tax;
+
+        const result = await BakeSmartStore.createOrder({
+        customerName: data.customerName,
+        email: data.customerEmail,
+        phone: data.customerPhone,
+        productId: Number(lineProduct.id),
+        quantity: lineQuantity,
+        unitPrice: Number(lineProduct.price),
+        subtotal,
+        tax,
+        total,
+        deliveryDate: data.deliveryDate,
+        address: isPickup ? null : data.address,
+        notes: orderItems.length > 1 ? `${data.notes || ''}
+        Pedido generado desde carrito (${lineProduct.name}).`.trim() : (data.notes || null),
+        paymentMethod: data.paymentMethod,
+        destinationLatitude: isPickup ? null : Number(data.destinationLatitude),
+        destinationLongitude: isPickup ? null : Number(data.destinationLongitude),
+        deliveryReference: isPickup ? null : data.address,
+        customerAddressId: isPickup ? null : (data.customerAddressId ? Number(data.customerAddressId) : null),
+        deliveryMethod: data.deliveryMethod
+        });
+        createdOrders.push({ ...result, total });
+        }
+
+        const result = createdOrders[0];
+        const total = createdOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+
+        await BakeSmartStore.refresh({ force: true });
+        products = BakeSmartStore.inventory.list().map(normalizeProduct);
+        document.getElementById('clientAvailableProducts').textContent =
+        products.filter(item => item.active && isSellableProduct(item) && item.stock > 0).length;
+        renderProducts();
+        renderSummary();
+        updateSummary();
+        if (cartCheckoutItems.length) {
+        clearCatalogCart();
+        cartCheckoutItems = [];
+        }
+        if (shouldOpenGateway(data.paymentMethod) && createdOrders.length === 1) {
+        openPaymentGateway(result.id, total, data.paymentMethod);
+        } else {
+        app.toast.warning(createdOrders.length > 1 ? 'Pedidos registrados desde el carrito. Puedes pagar cada abono desde Mis pedidos.' : 'Pedido registrado. Para iniciar produccion se requiere un abono anticipado o pago en tienda.');
+        }
+        form.quantity.value = 1;
+        form.notes.value = '';
+        } catch (error) {
+        app.toast.error(error.message);
+        } finally {
+        submitBtn.disabled = false;
+        }
+        });
+
+        async function initializePage() {
+        if (pageInitialized) return;
+        pageInitialized = true;
+
+        const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+        form.deliveryDate.value = tomorrow;
+        showPage();
+
+        await Promise.all([
+        loadProducts(),
+        loadProfile()
+        ]);
+        toggleQuickDelivery();
+        renderSummary();
+        updateSummary();
+        }
+
+        app.page.ready(() => initializePage());
         })();
     </script>
 }

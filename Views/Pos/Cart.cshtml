@@ -144,10 +144,10 @@
 
             function renderCustomers() {
                 document.getElementById('checkoutCustomerOptions').innerHTML = store.customers.list().map(customer => `
-                    <option value="${customer.fullName || customer.name || ''}">
-                        ${customer.email || customer.phone || 'Cliente registrado'}
-                    </option>
-                `).join('');
+                            <option value="${customer.fullName || customer.name || ''}">
+                                ${customer.email || customer.phone || 'Cliente registrado'}
+                            </option>
+                        `).join('');
             }
 
             function renderPayments() {
@@ -174,15 +174,21 @@
                 }
             }
 
-            function currentDiscountRate() {
-                const manual = Math.min(Math.max(Number(form.discountRate?.value || 0), 0), 1);
-                const customer = store.customers.list().find(row =>
-                    (form.customerEmail.value && String(row.email || '').toLowerCase() === String(form.customerEmail.value).toLowerCase()) ||
-                    (form.customerName.value && String(row.fullName || '').toLowerCase() === String(form.customerName.value).toLowerCase())
+            function selectedCustomer() {
+                const email = String(form.customerEmail.value || '').trim().toLowerCase();
+                const name = String(form.customerName.value || '').trim().toLowerCase();
+                return store.customers.list().find(row =>
+                    (email && String(row.email || '').trim().toLowerCase() === email) ||
+                    (name && String(row.fullName || row.name || '').trim().toLowerCase() === name)
                 );
-                const frequent = customer?.frequent ? Number(store.pos.config().frequentCustomerDiscount || 0) : 0;
-                const promotion = Number(store.pos.config().activePromotionDiscount || 0);
-                return Math.max(manual, frequent, promotion);
+            }
+
+            function currentDiscountBreakdown() {
+                const manual = Math.min(Math.max(Number(form.discountRate?.value || 0), 0), 1);
+                const customer = selectedCustomer();
+                const frequent = customer?.frequent ? Math.min(Math.max(Number(store.pos.config().frequentCustomerDiscount || 0), 0), 1) : 0;
+                const totalRate = Math.min(manual + frequent, 1);
+                return { manual, frequent, totalRate, customer };
             }
 
             function remainingStock(productId) {
@@ -201,42 +207,45 @@
                 }
 
                 itemsEl.innerHTML = cart.map(item => `
-                    <div class="pos-cart-item">
-                        <div class="pos-cart-item-header">
-                            <div>
-                                <strong>${item.name}</strong>
-                                <div class="text-muted" style="font-size:.82rem;">${item.code} - ${fmt(item.unitPrice)} c/u · ${remainingStock(item.productId)} disponibles</div>
+                            <div class="pos-cart-item">
+                                <div class="pos-cart-item-header">
+                                    <div>
+                                        <strong>${item.name}</strong>
+                                        <div class="text-muted" style="font-size:.82rem;">${item.code} - ${fmt(item.unitPrice)} c/u · ${remainingStock(item.productId)} disponibles</div>
+                                    </div>
+                                    <button class="btn btn-ghost btn-sm" type="button" onclick="removeCheckoutItem(${item.productId})">
+                                        <i class="fas fa-trash-can"></i>
+                                    </button>
+                                </div>
+                                <div class="pos-cart-item-footer">
+                                    <div class="pos-cart-actions">
+                                        <button class="btn btn-outline btn-sm" type="button" onclick="changeCheckoutQty(${item.productId}, -1)"><i class="fas fa-minus"></i></button>
+                                        <span style="font-weight:800;min-width:24px;text-align:center;">${item.quantity}</span>
+                                        <button class="btn btn-outline btn-sm" type="button" onclick="changeCheckoutQty(${item.productId}, 1)" ${remainingStock(item.productId) <= 0 ? 'disabled' : ''}><i class="fas fa-plus"></i></button>
+                                    </div>
+                                    <strong style="color:var(--primary);">${fmt(item.quantity * item.unitPrice)}</strong>
+                                </div>
                             </div>
-                            <button class="btn btn-ghost btn-sm" type="button" onclick="removeCheckoutItem(${item.productId})">
-                                <i class="fas fa-trash-can"></i>
-                            </button>
-                        </div>
-                        <div class="pos-cart-item-footer">
-                            <div class="pos-cart-actions">
-                                <button class="btn btn-outline btn-sm" type="button" onclick="changeCheckoutQty(${item.productId}, -1)"><i class="fas fa-minus"></i></button>
-                                <span style="font-weight:800;min-width:24px;text-align:center;">${item.quantity}</span>
-                                <button class="btn btn-outline btn-sm" type="button" onclick="changeCheckoutQty(${item.productId}, 1)" ${remainingStock(item.productId) <= 0 ? 'disabled' : ''}><i class="fas fa-plus"></i></button>
-                            </div>
-                            <strong style="color:var(--primary);">${fmt(item.quantity * item.unitPrice)}</strong>
-                        </div>
-                    </div>
-                `).join('');
+                        `).join('');
 
                 const subtotal = cart.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-                const discountRate = currentDiscountRate();
+                const discountBreakdown = currentDiscountBreakdown();
+                const discountRate = discountBreakdown.totalRate;
                 const discount = subtotal * discountRate;
                 const discountedSubtotal = Math.max(0, subtotal - discount);
                 const tax = discountedSubtotal * Number(store.pos.config().iva || 0);
                 const total = pendingOrder?.total ? Number(pendingOrder.total) : discountedSubtotal + tax;
                 pendingTotals = { subtotal, discount, tax, total };
                 totalsEl.innerHTML = `
-                    ${pendingOrder ? `<div class="pos-total-row"><span>Pedido existente</span><strong>#${pendingOrder.id}</strong></div>` : ''}
-                    <div class="pos-total-row"><span>Subtotal</span><strong>${fmt(subtotal)}</strong></div>
-                    ${discount > 0 ? `<div class="pos-total-row"><span>Descuento ${Math.round(discountRate * 100)}%</span><strong>-${fmt(discount)}</strong></div>` : ''}
-                    <div class="pos-total-row"><span>IVA</span><strong>${fmt(tax)}</strong></div>
-                    <div class="hr"></div>
-                    <div class="pos-total-row total-final"><span>Total</span><strong>${fmt(total)}</strong></div>
-                `;
+                            ${pendingOrder ? `<div class="pos-total-row"><span>Pedido existente</span><strong>#${pendingOrder.id}</strong></div>` : ''}
+                            <div class="pos-total-row"><span>Subtotal</span><strong>${fmt(subtotal)}</strong></div>
+                            ${discountBreakdown.frequent > 0 ? `<div class="pos-total-row"><span>Cliente frecuente ${Math.round(discountBreakdown.frequent * 100)}%</span><strong>Aplica</strong></div>` : `<div class="pos-total-row"><span>Cliente frecuente</span><strong>0%</strong></div>`}
+                            ${discountBreakdown.manual > 0 ? `<div class="pos-total-row"><span>Descuento adicional ${Math.round(discountBreakdown.manual * 100)}%</span><strong>Aplica</strong></div>` : ''}
+                            ${discount > 0 ? `<div class="pos-total-row"><span>Descuento total ${Math.round(discountRate * 100)}%</span><strong>-${fmt(discount)}</strong></div>` : ''}
+                            <div class="pos-total-row"><span>IVA</span><strong>${fmt(tax)}</strong></div>
+                            <div class="hr"></div>
+                            <div class="pos-total-row total-final"><span>Total</span><strong>${fmt(total)}</strong></div>
+                        `;
             }
 
             function shouldShowCardFields(method) {
@@ -283,8 +292,8 @@
                 const method = form.paymentMethod.value || 'Tarjeta';
                 gatewayMethod.value = String(method).toLowerCase().includes('sinpe') ? 'SINPE'
                     : String(method).toLowerCase().includes('efectivo') ? 'Efectivo'
-                    : String(method).toLowerCase().includes('transfer') ? 'Transferencia'
-                    : 'Tarjeta';
+                        : String(method).toLowerCase().includes('transfer') ? 'Transferencia'
+                            : 'Tarjeta';
                 document.getElementById('posPaymentTotal').textContent = fmt(pendingTotals?.total || 0);
                 paymentForm.holder.value = form.customerName.value || '';
                 gatewayMethod.dispatchEvent(new Event('change', { bubbles: true }));
@@ -329,6 +338,7 @@
 
             form.discountRate.addEventListener('input', renderCart);
             form.customerEmail.addEventListener('input', renderCart);
+            form.customerName.addEventListener('input', renderCart);
 
             async function completeCheckout(paymentData) {
                 try {
