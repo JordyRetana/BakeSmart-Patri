@@ -701,6 +701,14 @@
         bottom: 166px;
         }
 
+        body[data-page="/catalog"] #chat-toggle-btn {
+        bottom: 104px;
+        }
+
+        body[data-page="/catalog"] #chat-widget {
+        bottom: 174px;
+        }
+
         @@media (max-width: 650px) {
         body[data-page^="/pos"] #chat-toggle-btn {
         right: 14px;
@@ -710,6 +718,17 @@
         body[data-page^="/pos"] #chat-widget {
         right: 10px;
         bottom: 154px;
+        width: calc(100vw - 20px);
+        }
+
+        body[data-page="/catalog"] #chat-toggle-btn {
+        right: 14px;
+        bottom: 100px;
+        }
+
+        body[data-page="/catalog"] #chat-widget {
+        right: 10px;
+        bottom: 166px;
         width: calc(100vw - 20px);
         }
         }

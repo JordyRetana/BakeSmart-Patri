@@ -162,7 +162,7 @@
         <span id="cartTotal" style="color:var(--primary);font-size:1.15rem;">₡0</span>
     </div>
 
-    <a href="/Orders/Create" class="btn btn-primary btn-block catalog-checkout-link" style="min-height:50px;">
+    <a href="/Client?cart=checkout" class="btn btn-primary btn-block catalog-checkout-link" style="min-height:50px;">
         <i class="fas fa-arrow-right"></i>
         Finalizar pedido
     </a>
@@ -182,7 +182,7 @@
         <span>Total:</span>
         <span id="cartTotalDesktop" style="color:var(--primary);">₡0</span>
     </div>
-    <a href="/Orders/Create" class="btn btn-primary btn-block catalog-checkout-link">
+    <a href="/Client?cart=checkout" class="btn btn-primary btn-block catalog-checkout-link">
         <i class="fas fa-arrow-right"></i>
         Finalizar pedido
     </a>
@@ -192,6 +192,7 @@
     let currentCategory = 'all';
     let cart = [];
     let shouldAutoOpenCart = false;
+    const cartStorageKey = () => `bakesmart:catalog-cart:${currentUserEmail() || 'guest'}`;
 
     const currentUserEmail = () => (document.body.dataset.userEmail || '').trim().toLowerCase();
     const favoriteStorageKey = () => `bakesmart:favorites:${currentUserEmail()}`;
@@ -218,6 +219,22 @@
     function saveFavorites(ids) {
         if (!currentUserEmail()) return;
         localStorage.setItem(favoriteStorageKey(), JSON.stringify([...ids]));
+    }
+
+    function loadCart() {
+        try {
+            cart = JSON.parse(localStorage.getItem(cartStorageKey()) || '[]')
+                .map(item => ({ id: Number(item.id), name: String(item.name || 'Producto'), price: Number(item.price || 0), quantity: Math.max(1, Number(item.quantity || 1)) }))
+                .filter(item => item.id > 0 && item.price >= 0);
+        } catch {
+            cart = [];
+        }
+    }
+
+    function saveCart() {
+        try {
+            localStorage.setItem(cartStorageKey(), JSON.stringify(cart));
+        } catch { }
     }
 
     function syncFavoriteButtons() {
@@ -323,25 +340,42 @@
             cart.push({ id: productId, name, price, quantity: 1 });
         }
 
+        saveCart();
         updateCartDisplay();
         app.toast.show(`${name} agregado al carrito`, 'success');
     }
 
     function removeFromCart(productId) {
         cart = cart.filter(item => item.id !== productId);
+        saveCart();
         updateCartDisplay();
     }
 
     function openCartSheet() {
+        if (!cart.length) {
+            app.toast.warning('Agrega productos al carrito antes de abrirlo.');
+            return;
+        }
         const sheet = document.getElementById('catalogCartSheet');
         const backdrop = document.getElementById('catalogCartBackdrop');
         if (sheet) {
             sheet.style.display = 'block';
+            sheet.style.position = 'fixed';
+            sheet.style.left = 'auto';
+            sheet.style.right = '1rem';
+            sheet.style.bottom = '5.5rem';
+            sheet.style.zIndex = '5300';
+            sheet.style.width = 'min(420px, calc(100vw - 2rem))';
+            sheet.style.maxHeight = 'min(78vh, 620px)';
+            sheet.style.overflow = 'auto';
             sheet.classList.add('open');
             sheet.setAttribute('aria-hidden', 'false');
         }
         if (backdrop) {
             backdrop.style.display = 'block';
+            backdrop.style.position = 'fixed';
+            backdrop.style.inset = '0';
+            backdrop.style.zIndex = '5290';
             backdrop.classList.add('open');
         }
     }
@@ -362,7 +396,15 @@
 
     document.getElementById('catalogCartClose').addEventListener('click', closeCartSheet);
     document.getElementById('catalogCartBackdrop').addEventListener('click', closeCartSheet);
-    document.getElementById('catalogCartButton').addEventListener('click', openCartSheet);
+    document.getElementById('catalogCartButton').addEventListener('click', () => {
+        if (!cart.length) {
+            app.toast.warning('Agrega productos al carrito antes de finalizar el pedido.');
+            return;
+        }
+
+        if (!requireLogin('Inicia sesion para finalizar el pedido.', '/Client?cart=checkout')) return;
+        window.location.href = '/Client?cart=checkout';
+    });
 
     function updateCartDisplay() {
         const cartSummary = document.getElementById('cartSummary');
@@ -407,10 +449,16 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         syncFavoriteButtons();
+        loadCart();
+        updateCartDisplay();
         document.querySelectorAll('.catalog-checkout-link').forEach(link => {
             link.addEventListener('click', event => {
-                if (!requireLogin('Inicia sesion para finalizar el pedido.', '/Orders/Create')) {
+                if (!requireLogin('Inicia sesion para finalizar el pedido.', '/Client?cart=checkout')) {
                     event.preventDefault();
+                }
+                if (!cart.length) {
+                    event.preventDefault();
+                    app.toast.warning('Agrega productos al carrito antes de finalizar el pedido.');
                 }
             });
         });
