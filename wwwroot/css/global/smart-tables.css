@@ -256,6 +256,51 @@
     font-size: .7rem;
 }
 
+body.app-body select,
+body.app-body select.form-control,
+body.app-body select.input,
+body.app-body .form-control:is(select),
+body.app-body .input:is(select) {
+    min-height: 46px !important;
+    padding: .72rem 2.8rem .72rem .95rem !important;
+    color: var(--text, #25293b) !important;
+    border: 1px solid var(--border, #e5dcec) !important;
+    border-radius: 8px !important;
+    background-color: var(--bg-card, #fff) !important;
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--primary-dark, #6c2da0) 50%),
+        linear-gradient(135deg, var(--primary-dark, #6c2da0) 50%, transparent 50%),
+        linear-gradient(to right, color-mix(in srgb, var(--primary-light, #f2e9ff) 55%, transparent), color-mix(in srgb, var(--primary-light, #f2e9ff) 55%, transparent)) !important;
+    background-position:
+        calc(100% - 20px) 50%,
+        calc(100% - 14px) 50%,
+        calc(100% - 44px) 50% !important;
+    background-size: 6px 6px, 6px 6px, 1px 62% !important;
+    background-repeat: no-repeat !important;
+    box-shadow: 0 8px 20px rgba(45, 33, 58, .06) !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+}
+
+body.app-body select:hover,
+body.app-body select.form-control:hover,
+body.app-body select.input:hover {
+    border-color: color-mix(in srgb, var(--primary, #7c3aed) 42%, var(--border, #e5dcec)) !important;
+}
+
+body.app-body select:focus,
+body.app-body select.form-control:focus,
+body.app-body select.input:focus {
+    border-color: var(--primary, #7c3aed) !important;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary, #7c3aed) 16%, transparent) !important;
+    outline: none !important;
+}
+
+body.app-body select option {
+    color: #25293b;
+    background: #fff;
+}
+
 body.dark .smart-table-toolbar,
 body.dark .smart-table-dock {
     border-color: #3b3547;

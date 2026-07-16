@@ -22,6 +22,12 @@ builder.Configuration
     .AddJsonFile("appsettings.Azure.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -38,7 +44,15 @@ var dataProtection = builder.Services
     .SetApplicationName("BakeSmartPatri");
 
 var dataProtectionConnectionString = builder.Configuration.GetConnectionString("BakeSmartDb");
-if (builder.Configuration.GetValue<bool>("Features:UseSqlDatabase") &&
+var disableSqlDataProtection = builder.Configuration.GetValue<bool>("Features:DisableSqlDataProtection");
+var explicitSqlDataProtection = builder.Configuration.GetSection("Features:UseSqlDataProtection").Exists();
+var useSqlDataProtection = !builder.Environment.IsDevelopment() &&
+    (explicitSqlDataProtection
+        ? builder.Configuration.GetValue<bool>("Features:UseSqlDataProtection")
+        : (!disableSqlDataProtection &&
+           builder.Configuration.GetValue<bool>("Features:UseSqlDatabase")));
+
+if (useSqlDataProtection &&
     !string.IsNullOrWhiteSpace(dataProtectionConnectionString))
 {
     dataProtection.AddKeyManagementOptions(options =>
@@ -48,7 +62,10 @@ if (builder.Configuration.GetValue<bool>("Features:UseSqlDatabase") &&
 }
 else
 {
-    var dataProtectionPath = Path.Combine(builder.Environment.ContentRootPath, ".data-protection");
+    var dataProtectionRoot = !builder.Environment.IsDevelopment()
+        ? Path.GetTempPath()
+        : builder.Environment.ContentRootPath;
+    var dataProtectionPath = Path.Combine(dataProtectionRoot, ".bakesmart-data-protection");
     Directory.CreateDirectory(dataProtectionPath);
     dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath));
 }
@@ -145,5 +162,7 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.MapGet("/ping", () => Results.Text("ok", "text/plain"));
 
 app.Run();

@@ -3,38 +3,192 @@
     min-width: 0;
 }
 
-.roles-page .table-container {
-    max-width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+.roles-page {
+    display: grid;
+    gap: 1rem;
 }
 
-.roles-page .table {
-    min-width: 720px;
+.roles-hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    padding: 1.15rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
 }
 
-@media (max-width: 768px) {
-    .roles-page .grid {
-        grid-template-columns: 1fr !important;
-    }
-
-    .roles-page .card {
-        padding: 1rem !important;
-    }
-
-    .roles-page .btn,
-    .roles-page input,
-    .roles-page select {
-        width: 100%;
-    }
+.roles-eyebrow {
+    display: block;
+    margin-bottom: .2rem;
+    color: var(--text-light);
+    font-size: .72rem;
+    font-weight: 900;
+    text-transform: uppercase;
 }
 
-@media (max-width: 520px) {
-    .roles-page .page-header .btn {
-        width: 100%;
-    }
+.roles-hero h1 {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    margin: 0;
+    color: var(--text);
+    font-size: clamp(1.7rem, 3vw, 2.35rem);
+}
 
-    .roles-page .badge {
-        white-space: normal;
+.roles-hero h1 i {
+    color: var(--primary);
+}
+
+.roles-hero p {
+    margin: .35rem 0 0;
+    color: var(--text-light);
+}
+
+.roles-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.roles-list {
+    display: grid;
+    gap: .65rem;
+    max-height: min(60vh, 620px);
+    overflow: auto;
+}
+
+.role-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: .8rem;
+    align-items: center;
+    width: 100%;
+    padding: .85rem;
+    text-align: left;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-card);
+    cursor: pointer;
+}
+
+.role-card--active,
+.role-card:hover {
+    border-color: color-mix(in srgb, var(--primary) 42%, var(--border));
+    background: color-mix(in srgb, var(--primary-light) 28%, var(--bg-card));
+}
+
+.role-card > span {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    color: var(--primary-dark);
+    border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border));
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--primary-light) 60%, var(--bg));
+}
+
+.role-card strong,
+.role-card small {
+    display: block;
+}
+
+.role-card small {
+    margin-top: .15rem;
+    color: var(--text-light);
+    font-size: .78rem;
+}
+
+.role-card b {
+    display: grid;
+    place-items: center;
+    min-width: 42px;
+    height: 34px;
+    color: var(--primary-dark);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--primary-light) 50%, var(--bg));
+}
+
+.roles-detail-card,
+.roles-matrix-card {
+    padding: 1rem !important;
+}
+
+.roles-matrix-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: .9rem;
+}
+
+.roles-matrix-head h2 {
+    margin: 0;
+    color: var(--text);
+    font-size: 1.2rem;
+}
+
+.role-permissions-large {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: .6rem;
+}
+
+.role-permissions-large span {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .7rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    font-weight: 800;
+}
+
+.role-permissions-large i,
+.roles-matrix-table i.fa-check {
+    color: var(--success);
+}
+
+.roles-matrix-card .table-container {
+    max-height: 420px;
+    overflow: auto;
+}
+
+.roles-matrix-table {
+    min-width: 900px;
+}
+
+.roles-matrix-table th,
+.roles-matrix-table td {
+    text-align: center;
+}
+
+.roles-matrix-table th:first-child,
+.roles-matrix-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    text-align: left;
+    background: var(--bg-card);
+}
+
+.roles-matrix-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bg-card);
+}
+
+@media (max-width: 920px) {
+    .roles-hero,
+    .roles-layout {
+        display: grid;
+        grid-template-columns: 1fr;
     }
 }

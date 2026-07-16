@@ -1,0 +1,179 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Productos vendibles";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/inventory-index.css" asp-append-version="true" />
+}
+
+<div class="page-shell inventory-page products-page">
+    <div class="page-header inventory-header">
+        <div>
+            <h1 class="inventory-title">
+                <i class="fas fa-cake-candles"></i>
+                Productos vendibles
+            </h1>
+            <p class="text-muted inventory-subtitle">Queques, galletas, cupcakes y productos que aparecen en cliente, catalogo y POS.</p>
+        </div>
+        <div class="page-actions inventory-actions">
+            <input id="productSearch" class="form-control" placeholder="Buscar producto, codigo o categoria" />
+            <select id="productCategory" class="form-control inventory-category"></select>
+            <a class="btn btn-outline" href="/Inventory"><i class="fas fa-wheat-awn"></i> Ingredientes</a>
+            <button type="button" class="btn btn-primary" onclick="openSellableProduct()"><i class="fas fa-plus"></i> Nuevo producto</button>
+        </div>
+    </div>
+
+    <section class="products-board" id="productsBoard"></section>
+</div>
+
+<template id="sellableProductTemplate">
+    <form id="sellableProductForm" class="inventory-modal-form">
+        <input type="hidden" name="id" />
+        <div><label>Codigo</label><input class="form-control" name="code" required /></div>
+        <div><label>Precio de venta</label><input class="form-control" name="price" type="number" min="0" step="0.01" required /></div>
+        <div class="inventory-modal-full"><label>Nombre del producto</label><input class="form-control" name="description" required /></div>
+        <div><label>Categoria</label><input class="form-control" name="category" placeholder="Queques, Galletas, Cupcakes" required /></div>
+        <div><label>Subcategoria</label><input class="form-control" name="subcategory" /></div>
+        <div><label>Disponibles</label><input class="form-control" name="stock" type="number" min="0" step="1" required /></div>
+        <div><label>Minimo</label><input class="form-control" name="minStock" type="number" min="0" step="1" value="2" required /></div>
+        <input type="hidden" name="type" value="Producto terminado" />
+        <input type="hidden" name="unit" value="unidad" />
+        <div class="inventory-modal-actions inventory-modal-full">
+            <button class="btn btn-primary" type="submit"><i class="fas fa-save"></i> Guardar producto</button>
+        </div>
+    </form>
+</template>
+
+@section Scripts {
+<script>
+(() => {
+    let products = [];
+    const search = document.getElementById('productSearch');
+    const category = document.getElementById('productCategory');
+    const board = document.getElementById('productsBoard');
+
+    const clean = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+    const money = value => app.utils.formatCurrency(Number(value || 0));
+    const normalize = p => ({
+        id: Number(p.id),
+        code: p.sku || p.code || '',
+        description: p.item || p.description || '',
+        type: p.type || p.productType || 'Producto terminado',
+        unit: p.unidad || p.unit || 'unidad',
+        category: p.category || 'General',
+        subcategory: p.subcategory || '',
+        price: Number(p.price || p.costo || 0),
+        stock: Number(p.stock || 0),
+        minStock: Number(p.min || p.minStock || 0),
+        active: p.active !== false
+    });
+
+    async function postJson(url, payload = {}) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            let message = 'No se pudo guardar.';
+            try { message = (await response.json()).message || message; } catch { }
+            throw new Error(message);
+        }
+        return response.json();
+    }
+
+    async function loadProducts() {
+        products = (await fetch('/api/inventory').then(r => r.json()))
+            .map(normalize)
+            .filter(p => String(p.type).toLowerCase() === 'producto terminado');
+        const selected = category.value || 'Todas';
+        const categories = ['Todas', ...new Set(products.map(p => p.category).filter(Boolean))];
+        category.innerHTML = categories.map(c => `<option value="${clean(c)}">${clean(c)}</option>`).join('');
+        category.value = categories.includes(selected) ? selected : 'Todas';
+    }
+
+    function render() {
+        const q = search.value.trim().toLowerCase();
+        const cat = category.value || 'Todas';
+        const rows = products.filter(p =>
+            (cat === 'Todas' || p.category === cat) &&
+            (!q || `${p.code} ${p.description} ${p.category}`.toLowerCase().includes(q))
+        );
+
+        board.innerHTML = rows.map(p => {
+            const low = p.stock <= p.minStock;
+            return `
+                <article class="product-tile ${!p.active ? 'product-tile--inactive' : ''}">
+                    <div class="product-tile__icon"><i class="fas fa-cake-candles"></i></div>
+                    <div class="product-tile__body">
+                        <span>${clean(p.code)}</span>
+                        <h3>${clean(p.description)}</h3>
+                        <p>${clean(p.category)}${p.subcategory ? ` / ${clean(p.subcategory)}` : ''}</p>
+                    </div>
+                    <div class="product-tile__meta">
+                        <strong>${money(p.price)}</strong>
+                        <span class="badge ${p.stock === 0 ? 'badge-danger' : low ? 'badge-warning' : 'badge-success'}">${p.stock} disp.</span>
+                    </div>
+                    <div class="product-tile__actions">
+                        <button class="btn btn-outline btn-sm" type="button" onclick="editSellableProduct(${p.id})"><i class="fas fa-pen"></i> Editar</button>
+                        <button class="btn btn-ghost btn-sm" type="button" onclick="toggleSellableProduct(${p.id})">${p.active ? 'Pausar' : 'Activar'}</button>
+                    </div>
+                </article>`;
+        }).join('') || `<div class="client-empty-state"><i class="fas fa-cake-candles"></i><strong>No hay productos vendibles</strong><span>Agregue queques, galletas o cupcakes para venderlos.</span></div>`;
+    }
+
+    function bindForm(item = null) {
+        const form = document.getElementById('sellableProductForm');
+        if (!form) return;
+        if (item) {
+            Object.entries(item).forEach(([key, value]) => {
+                const input = form.querySelector(`[name="${key}"]`);
+                if (input) input.value = value ?? '';
+            });
+        }
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+            const data = Object.fromEntries(new FormData(form).entries());
+            await postJson('/api/inventory', {
+                id: data.id ? Number(data.id) : null,
+                code: data.code,
+                description: data.description,
+                type: 'Producto terminado',
+                unit: 'unidad',
+                category: data.category,
+                subcategory: data.subcategory || null,
+                price: Number(data.price || 0),
+                stock: Number(data.stock || 0),
+                minStock: Number(data.minStock || 0)
+            });
+            app.modal.close();
+            app.toast.success('Producto actualizado.');
+            await loadProducts();
+            render();
+        });
+    }
+
+    window.openSellableProduct = () => {
+        app.modal.open({ title: 'Producto vendible', maxWidth: '760px', content: document.getElementById('sellableProductTemplate').innerHTML });
+        bindForm();
+    };
+
+    window.editSellableProduct = id => {
+        const item = products.find(p => p.id === Number(id));
+        app.modal.open({ title: 'Editar producto vendible', maxWidth: '760px', content: document.getElementById('sellableProductTemplate').innerHTML });
+        bindForm(item);
+    };
+
+    window.toggleSellableProduct = async id => {
+        await postJson(`/api/inventory/${id}/toggle`);
+        await loadProducts();
+        render();
+    };
+
+    search.addEventListener('input', render);
+    category.addEventListener('change', render);
+    loadProducts().then(render).catch(error => app.toast.error(error.message));
+})();
+</script>
+}

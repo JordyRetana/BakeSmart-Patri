@@ -1,4 +1,4 @@
-@{
+﻿@{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Inventario";
 }
@@ -12,15 +12,15 @@
         <div>
             <h1 class="inventory-title">
                 <i class="fas fa-boxes-stacked"></i>
-                Gestión de inventario
+                Inventario operativo
             </h1>
             <p class="text-muted inventory-subtitle">
-                Materias primas, productos terminados, empaques y movimientos conectados a pedidos y POS.
+                Materias primas, empaques y movimientos. Los queques, galletas y cupcakes se administran en Productos vendibles.
             </p>
         </div>
 
         <div class="page-actions inventory-actions">
-            <input id="inventorySearch" class="form-control" placeholder="Buscar por código o descripción" />
+            <input id="inventorySearch" class="form-control" placeholder="Buscar por cÃ³digo o descripciÃ³n" />
             <select id="inventoryTypeFilter" class="form-control inventory-type-filter">
                 <option value="todos">Todo el inventario</option>
                 <option value="operativo">Materia prima / empaque</option>
@@ -31,13 +31,17 @@
             <select id="inventoryCategory" class="form-control inventory-category"></select>
             <select id="inventoryStockFilter" class="form-control inventory-stock-filter">
                 <option value="todas">Todo el stock</option>
-                <option value="bajo">Stock bajo (&lt;= mínimo)</option>
-                <option value="critico">Stock crítico (= 0)</option>
+                <option value="bajo">Stock bajo (&lt;= minimo)</option>
+                <option value="critico">Stock crÃ­tico (= 0)</option>
                 <option value="disponible">Con stock (&gt; 0)</option>
             </select>
+            <a class="btn btn-outline" href="/Inventory/Products">
+                <i class="fas fa-cake-candles"></i>
+                Productos vendibles
+            </a>
             <button type="button" id="inventoryQuickActions" class="btn btn-primary">
                 <i class="fas fa-bolt"></i>
-                Nuevo producto
+                Nueva materia prima
             </button>
             <button type="button" id="inventoryMovementActions" class="btn btn-outline">
                 <i class="fas fa-right-left"></i>
@@ -48,7 +52,7 @@
 
     <div class="grid grid-4 inventory-kpi-grid">
         <div class="card inventory-kpi-card">
-            <div class="text-muted">Productos</div>
+            <div class="text-muted">Items</div>
             <h2 id="invTotal"></h2>
         </div>
         <div class="card inventory-kpi-card">
@@ -60,7 +64,7 @@
             <h2 id="invLow"></h2>
         </div>
         <div class="card inventory-kpi-card">
-            <div class="text-muted">Materias primas</div>
+            <div class="text-muted">Materia prima</div>
             <h2 id="invRaw"></h2>
         </div>
     </div>
@@ -68,28 +72,22 @@
     <div class="card inventory-presets-card">
         <div class="inventory-panel-header">
             <div>
-                <h3 class="inventory-panel-title">Alta rápida de materia prima</h3>
-                <p class="text-muted" style="margin:.35rem 0 0;">Plantillas comunes para registrar inventario real de repostería.</p>
+                <h3 class="inventory-panel-title">Alta rapida de materia prima</h3>
+                <p class="text-muted" style="margin:.35rem 0 0;">Plantillas comunes para registrar inventario real de reposteria.</p>
             </div>
         </div>
         <div class="inventory-preset-grid">
             <button type="button" class="inventory-preset-btn" onclick="openIngredientPreset('MP-HAR-', 'Harina pastelera', 'Secos', 'kg', 25, 15, 950)">
                 <i class="fas fa-wheat-awn"></i><span>Harina</span><small>kg</small>
             </button>
-            <button type="button" class="inventory-preset-btn" onclick="openIngredientPreset('MP-AZU-', 'Azúcar blanca', 'Secos', 'kg', 20, 10, 780)">
-                <i class="fas fa-cubes-stacked"></i><span>Azúcar</span><small>kg</small>
+            <button type="button" class="inventory-preset-btn" onclick="openIngredientPreset('MP-AZU-', 'Azucar blanca', 'Secos', 'kg', 20, 10, 780)">
+                <i class="fas fa-cubes-stacked"></i><span>Azucar</span><small>kg</small>
             </button>
-            <button type="button" class="inventory-preset-btn" onclick="openIngredientPreset('MP-MAN-', 'Mantequilla sin sal', 'Lácteos', 'kg', 8, 5, 4200)">
+            <button type="button" class="inventory-preset-btn" onclick="openIngredientPreset('MP-MAN-', 'Mantequilla sin sal', 'Lacteos', 'kg', 8, 5, 4200)">
                 <i class="fas fa-cheese"></i><span>Mantequilla</span><small>kg</small>
             </button>
             <button type="button" class="inventory-preset-btn" onclick="openIngredientPreset('EMP-CAJ-', 'Caja para entregas', 'Cajas', 'unidad', 50, 20, 420, 'Empaque', 'Empaques')">
                 <i class="fas fa-box"></i><span>Cajas</span><small>unidad</small>
-            </button>
-            <button type="button" class="inventory-preset-btn inventory-preset-btn--sale" onclick="openIngredientPreset('PAST-', 'Queque personalizado', 'Queques', 'unidad', 6, 2, 30000, 'Producto terminado', 'Pasteles')">
-                <i class="fas fa-cake-candles"></i><span>Queque</span><small>venta</small>
-            </button>
-            <button type="button" class="inventory-preset-btn inventory-preset-btn--sale" onclick="openIngredientPreset('GAL-', 'Galletas decoradas', 'Galletas', 'unidad', 12, 4, 12000, 'Producto terminado', 'Galletas')">
-                <i class="fas fa-cookie"></i><span>Galletas</span><small>venta</small>
             </button>
         </div>
     </div>
@@ -97,14 +95,14 @@
     <template id="inventoryProductTemplate">
         <div class="inventory-modal-shell">
             <div class="inventory-modal-head">
-                <h3 class="inventory-modal-title">Producto o materia prima</h3>
+                <h3 class="inventory-modal-title">Materia prima o empaque</h3>
             </div>
 
             <form id="inventoryForm" class="inventory-modal-form">
                 <input type="hidden" name="id" />
 
                 <div>
-                    <label>Código</label>
+                    <label>Codigo</label>
                     <input class="form-control" name="code" required />
                 </div>
 
@@ -137,17 +135,17 @@
                 </div>
 
                 <div class="inventory-modal-full">
-                    <label>Descripción</label>
+                    <label>Descripcion</label>
                     <input class="form-control" name="description" required />
                 </div>
 
                 <div>
-                    <label>Categoría</label>
+                    <label>Categoria</label>
                     <input class="form-control" name="category" required />
                 </div>
 
                 <div>
-                    <label>Subcategoría</label>
+                    <label>Subcategoria</label>
                     <input class="form-control" name="subcategory" />
                 </div>
 
@@ -157,14 +155,14 @@
                 </div>
 
                 <div>
-                    <label>Stock mínimo</label>
+                    <label>Stock minimo</label>
                     <input class="form-control" name="minStock" type="number" min="0" step="0.01" value="5" required />
                 </div>
 
                 <div class="inventory-modal-actions inventory-modal-full">
                     <button class="btn btn-primary" type="submit">
                         <i class="fas fa-save"></i>
-                        Guardar en SQL
+                        Guardar inventario
                     </button>
                 </div>
             </form>
@@ -174,7 +172,7 @@
     <template id="inventoryMovementTemplate">
         <div class="inventory-modal-shell">
             <div class="inventory-modal-head">
-                <h3 class="inventory-modal-title">Movimiento rápido</h3>
+                <h3 class="inventory-modal-title">Movimiento rÃ¡pido</h3>
             </div>
 
             <form id="movementForm" class="inventory-modal-form">
@@ -215,7 +213,7 @@
     <div class="card inventory-products-card">
         <div class="inventory-panel-header">
             <div>
-                <h3 class="inventory-panel-title">Productos</h3>
+                <h3 class="inventory-panel-title">Inventario operativo</h3>
             </div>
         </div>
 
@@ -223,13 +221,13 @@
             <table class="table inventory-table inventory-products-table">
                 <thead>
                     <tr>
-                        <th>Código</th>
-                        <th>Descripción</th>
+                        <th>Codigo</th>
+                        <th>Descripcion</th>
                         <th>Tipo</th>
-                        <th>Categoría</th>
+                        <th>Categoria</th>
                         <th>Costo / precio</th>
                         <th>Cantidad</th>
-                        <th>Mínimo</th>
+                        <th>Minimo</th>
                         <th>Estado</th>
                         <th class="text-right">Acciones</th>
                     </tr>
@@ -277,7 +275,7 @@
                 });
 
                 if (!response.ok) {
-                    let message = 'No se pudo guardar la información.';
+                    let message = 'No se pudo guardar la informaciÃ³n.';
                     try {
                         const error = await response.json();
                         message = error.message || message;
@@ -415,7 +413,7 @@
                         <td><strong style="color:var(--primary);font-size:.85rem;">${p.code}</strong></td>
                         <td>
                             <strong style="font-size:.92rem;">${p.description}</strong>
-                            <div class="text-muted" style="font-size:.75rem;">${p.subcategory || 'Sin subcategoría'} · ${p.unit || 'unidad'}</div>
+                            <div class="text-muted" style="font-size:.75rem;">${p.subcategory || 'Sin subcategorÃ­a'} Â· ${p.unit || 'unidad'}</div>
                         </td>
                         <td><span class="inventory-type-chip">${p.type}</span></td>
                         <td><span style="font-size:.85rem;">${p.category}</span></td>
@@ -455,7 +453,7 @@
 
             window.openInventoryQuickActions = (section = 'product') => {
                 const templates = {
-                    product: { title: 'Producto o materia prima', selector: '#inventoryProductTemplate', maxWidth: '980px' },
+                    product: { title: 'Materia prima o empaque', selector: '#inventoryProductTemplate', maxWidth: '980px' },
                     movement: { title: 'Movimiento', selector: '#inventoryMovementTemplate', maxWidth: '980px' }
                 };
 
@@ -520,3 +518,4 @@
         })();
     </script>
 }
+

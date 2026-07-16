@@ -1,4 +1,4 @@
-
+﻿
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/client-track.css" asp-append-version="true" />
 }
@@ -68,16 +68,13 @@
             <div class="card">
                 <div class="track-side-header">
                     <h3 class="track-section-title">Progreso del pedido</h3>
-                    <button class="btn btn-primary btn-sm" id="simulateRoute" type="button">
-                        <i class="fas fa-truck-fast"></i>
-                        Simular avance
-                    </button>
+                    <span class="badge badge-info"><i class="fas fa-eye"></i> Solo lectura</span>
                 </div>
                 <div id="trackingTimeline" class="tracking-timeline"></div>
             </div>
 
             <div class="card">
-                <h3 class="track-section-title track-summary-title">Resumen logístico</h3>
+            <h3 class="track-section-title track-summary-title">Resumen logistico</h3>
                 <div id="trackingSummary" class="tracking-summary text-muted"></div>
             </div>
         </div>
@@ -91,11 +88,18 @@
 <script>
 (() => {
     const page = document.getElementById('trackPage');
-    const origin = BakeSmartStore.geo.origin();
+    const defaultOrigin = {
+        name: 'BakeSmart Patri',
+        address: '',
+        city: 'San Jose',
+        country: 'Costa Rica',
+        lat: 9.9281,
+        lng: -84.0907
+    };
     const presetSelect = document.getElementById('trackPresetSelect');
     const orderSelect = document.getElementById('trackOrderSelect');
-    const simulateButton = document.getElementById('simulateRoute');
     const userEmail = document.body.dataset.userEmail || '';
+    let origin = sanitizeLocation(BakeSmartStore.geo.origin(), defaultOrigin);
 
     const presetOptions = [
         { id: 'auto', name: 'Destino real del pedido', country: '-' },
@@ -109,6 +113,81 @@
     let activeOrderId = null;
     let activeAnimatedMarker = null;
     let pageInitialized = false;
+
+    function isValidCoordinate(lat, lng) {
+        const latitude = Number(lat);
+        const longitude = Number(lng);
+        return Number.isFinite(latitude) &&
+            Number.isFinite(longitude) &&
+            latitude >= -90 && latitude <= 90 &&
+            longitude >= -180 && longitude <= 180;
+    }
+
+    function normalizeStatus(value) {
+        return String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toLowerCase();
+    }
+
+    function canShowLiveRoute(order) {
+        const status = normalizeStatus(order.status);
+        return status.includes('camino') || status.includes('entregado');
+    }
+
+    function isDelivered(order) {
+        return normalizeStatus(order.status).includes('entregado');
+    }
+
+    function routeWaitingMessage(order) {
+        const status = normalizeStatus(order.status);
+        if (status.includes('produccion')) {
+            return {
+                title: 'Pedido en produccion',
+                text: 'La ruta se activara cuando el equipo marque el pedido como En camino.'
+            };
+        }
+        if (status.includes('listo')) {
+            return {
+                title: 'Pedido listo para despacho',
+                text: 'El mapa mostrara la ruta real apenas se confirme la salida del pedido.'
+            };
+        }
+        if (status.includes('confirmado')) {
+            return {
+                title: 'Pedido confirmado',
+                text: 'Todavia no hay ruta activa. Primero debe pasar a produccion y luego a envio.'
+            };
+        }
+        if (status.includes('pendiente')) {
+            return {
+                title: 'Pedido pendiente',
+                text: 'Cuando el pedido avance, aqui veras el estado y la ruta de entrega.'
+            };
+        }
+        return {
+            title: 'Ruta aun no iniciada',
+            text: 'El seguimiento en mapa aparece cuando el pedido sale a entrega.'
+        };
+    }
+
+    function sanitizeLocation(location, fallback) {
+        const source = location || {};
+        const safeFallback = fallback || defaultOrigin;
+        const lat = Number(source.lat ?? source.latitude);
+        const lng = Number(source.lng ?? source.longitude);
+        return {
+            ...safeFallback,
+            ...source,
+            name: source.name || source.label || safeFallback.name || 'Destino',
+            label: source.label || source.name || safeFallback.label || safeFallback.name || 'Destino',
+            country: source.country || safeFallback.country || 'Costa Rica',
+            city: source.city || safeFallback.city || '',
+            lat: isValidCoordinate(lat, lng) ? lat : safeFallback.lat,
+            lng: isValidCoordinate(lat, lng) ? lng : safeFallback.lng
+        };
+    }
 
     function showPage() {
         page.classList.remove('track-page--loading');
@@ -155,6 +234,7 @@
     function ensureMap() {
         if (!window.L) return null;
         if (map) return map;
+        origin = sanitizeLocation(origin, defaultOrigin);
 
         map = L.map('deliveryMap', {
             zoomControl: true,
@@ -174,6 +254,7 @@
     function clearVisuals() {
         markers.forEach(m => m.remove());
         layers.forEach(l => l.remove());
+        document.querySelectorAll('.track-map-notice').forEach(node => node.remove());
         markers = [];
         layers = [];
 
@@ -248,6 +329,16 @@
         };
     }
 
+    function currentPointForOrder(order, fallbackPoint) {
+        const tracking = order.tracking || {};
+        const currentLat = Number(tracking.currentLat);
+        const currentLng = Number(tracking.currentLng);
+        if (isValidCoordinate(currentLat, currentLng) && !(currentLat === 0 && currentLng === 0)) {
+            return [currentLat, currentLng];
+        }
+        return fallbackPoint;
+    }
+
     function animateMarker(points, icon) {
         if (!points.length) return;
 
@@ -262,39 +353,51 @@
 
     function activePreset(order) {
         const presetId = presetSelect.value;
+        const tracking = order.tracking || {};
+        const destinationFallback = {
+            ...origin,
+            name: order.address || 'Destino del pedido',
+            label: order.address || 'Destino del pedido',
+            country: 'Costa Rica'
+        };
 
         if (!presetId || presetId === 'auto') {
-            return BakeSmartStore.geo.resolveDestination(order.address, {
-                lat: order.tracking.destinationLat,
-                lng: order.tracking.destinationLng
-            });
+            return sanitizeLocation(BakeSmartStore.geo.resolveDestination(order.address, {
+                lat: tracking.destinationLat,
+                lng: tracking.destinationLng
+            }), destinationFallback);
         }
 
         const preset = BakeSmartStore.geo.presets().find(p => p.id === presetId);
-        return BakeSmartStore.geo.resolveDestination(preset?.name || order.address, preset || {});
+        return sanitizeLocation(BakeSmartStore.geo.resolveDestination(preset?.name || order.address, preset || {}), destinationFallback);
     }
 
-    function renderTimeline(order, destination) {
-        const currentStep = order.tracking.currentStep || 0;
+    function renderTimeline(order, destination, hasLiveRoute) {
+        const currentStep = order.tracking?.currentStep || 0;
         const isInternational = destination.country !== 'Costa Rica';
-        const extraLabel = isInternational ? 'Salida aérea internacional' : 'Ruta terrestre metropolitana';
-        const steps = [...order.tracking.steps];
+        const extraLabel = isInternational ? 'Salida aerea internacional' : 'Ruta terrestre metropolitana';
+        const steps = [...(order.tracking?.steps || ['Pedido recibido', 'Confirmado', 'En produccion', 'Listo', 'Entregado'])];
 
-        if (!steps.includes(extraLabel)) {
+        if (hasLiveRoute && !steps.includes(extraLabel)) {
             steps.splice(4, 0, extraLabel);
         }
 
         document.getElementById('trackingTimeline').innerHTML = steps.map((step, index) => {
-            const normalizedCurrent = isInternational && currentStep >= 3 ? currentStep + 1 : currentStep;
+            const normalizedCurrent = hasLiveRoute && isInternational && currentStep >= 3 ? currentStep + 1 : currentStep;
             const state = index < normalizedCurrent ? 'done' : index === normalizedCurrent ? 'current' : 'pending';
             const icon = state === 'done' ? 'fa-check' : state === 'current' ? 'fa-bolt' : 'fa-clock';
+            const detail = state === 'done'
+                ? 'Completado'
+                : state === 'current'
+                    ? (hasLiveRoute ? 'Estado activo' : 'En espera operativa')
+                    : 'Pendiente';
 
             return `
                 <div class="timeline-item timeline-${state}">
                     <div class="timeline-dot"><i class="fas ${icon}"></i></div>
                     <div class="timeline-content">
                         <div class="timeline-title">${step}</div>
-                        <div class="text-muted">${state === 'done' ? 'Completado' : state === 'current' ? 'Estado actual' : 'Pendiente'}</div>
+                        <div class="text-muted">${detail}</div>
                     </div>
                 </div>
             `;
@@ -310,7 +413,7 @@
             <div class="summary-row"><span>Latitud / longitud</span><strong>${destination.lat.toFixed(5)}, ${destination.lng.toFixed(5)}</strong></div>
             <div class="summary-row"><span>Modalidad</span><strong>${routeType}</strong></div>
             <div class="summary-row"><span>Entrega</span><strong>${new Date(order.deliveryDate).toLocaleDateString('es-CR')}</strong></div>
-            <div class="summary-row"><span>Productos</span><strong>${order.items.map(i => `${i.quantity} x ${i.name}`).join(', ')}</strong></div>
+            <div class="summary-row"><span>Productos</span><strong>${(order.items || []).map(i => `${i.quantity} x ${i.name}`).join(', ') || 'Sin detalle'}</strong></div>
             <div class="summary-row"><span>Pago</span><strong>${order.paymentStatus} (${order.paymentMethod || 'Pendiente'})</strong></div>
         `;
     }
@@ -336,6 +439,41 @@
         `;
     }
 
+    function renderWaitingMap(order, destination, routeType, mapInstance, icons) {
+        const message = routeWaitingMessage(order);
+        document.getElementById('trackMeta').textContent = `${message.title}. ${message.text}`;
+
+        if (!mapInstance) {
+            document.getElementById('deliveryMap').innerHTML = `
+                <div class="track-empty-state">
+                    <i class="fas fa-clock"></i>
+                    <strong>${message.title}</strong>
+                    <span>${message.text}</span>
+                </div>
+            `;
+            return;
+        }
+
+        const startLatLng = [origin.lat, origin.lng];
+        const originMarker = L.marker(startLatLng, { icon: icons.origin })
+            .addTo(mapInstance)
+            .bindPopup(`${origin.name}<br>${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)}`);
+        markers.push(originMarker);
+        mapInstance.setView(startLatLng, 13);
+
+        const notice = document.createElement('div');
+        notice.className = 'track-map-notice';
+        notice.innerHTML = `
+            <span><i class="fas fa-bell"></i></span>
+            <div>
+                <strong>${message.title}</strong>
+                <p>${message.text}</p>
+            </div>
+        `;
+        document.getElementById('deliveryMap').appendChild(notice);
+        requestAnimationFrame(() => mapInstance.invalidateSize(true));
+    }
+
     function renderOrder(orderId) {
         const orders = getOrders();
         const order = orders.find(x => Number(x.id) === Number(orderId)) || orders[0];
@@ -345,7 +483,8 @@
 
         const destination = activePreset(order);
         const isInternational = destination.country !== 'Costa Rica';
-        const routeType = isInternational ? 'Trayectoria aérea' : 'Trayecto local';
+        const hasLiveRoute = canShowLiveRoute(order);
+        const routeType = hasLiveRoute ? (isInternational ? 'Trayectoria aerea' : 'Trayecto local') : 'Ruta pendiente';
         document.getElementById('trackOrderId').textContent = `#${order.id}`;
         document.getElementById('trackStatus').textContent = order.status;
         document.getElementById('trackRouteType').textContent = routeType;
@@ -353,21 +492,27 @@
         document.getElementById('trackMeta').textContent = `${origin.city}, ${origin.country} -> ${destination.name}, ${destination.country}`;
 
         clearVisuals();
-        renderTimeline(order, destination);
+        renderTimeline(order, destination, hasLiveRoute);
         renderTrackingSummary(order, destination, routeType);
 
         const mapInstance = ensureMap();
-        if (!mapInstance) {
+        const startLatLng = [origin.lat, origin.lng];
+        const destinationLatLng = [destination.lat, destination.lng];
+        if (!mapInstance || !isValidCoordinate(startLatLng[0], startLatLng[1]) || !isValidCoordinate(destinationLatLng[0], destinationLatLng[1])) {
             renderMapFallback(order, destination, routeType);
             return;
         }
 
         const icons = getIcons();
 
-        const startLatLng = [origin.lat, origin.lng];
-        const destinationLatLng = [destination.lat, destination.lng];
+        if (!hasLiveRoute) {
+            renderWaitingMap(order, destination, routeType, mapInstance, icons);
+            return;
+        }
+
         const flightPath = curveBetween(startLatLng, destinationLatLng, true, -1);
-        const localRoute = buildLocalRoute(startLatLng, destinationLatLng, order.tracking.currentStep || 0);
+        const localRoute = buildLocalRoute(startLatLng, destinationLatLng, order.tracking?.currentStep || 0);
+        const delivered = isDelivered(order);
 
         const originMarker = L.marker(startLatLng, { icon: icons.origin }).addTo(mapInstance).bindPopup(`${origin.name}<br>${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)}`);
         const destinationMarker = L.marker(destinationLatLng, { icon: icons.destination }).addTo(mapInstance).bindPopup(`${destination.name}<br>${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)}`);
@@ -391,11 +536,17 @@
             }).addTo(mapInstance);
 
             layers.push(routeShadow, route);
-            animateMarker(flightPath, icons.plane);
+            const activePoint = delivered
+                ? destinationLatLng
+                : currentPointForOrder(order, flightPath[Math.floor(flightPath.length * .72)]);
+            const routeMarker = L.marker(activePoint, { icon: icons.plane })
+                .addTo(mapInstance)
+                .bindPopup(delivered ? 'Pedido entregado' : 'Ubicacion actual estimada');
+            markers.push(routeMarker);
         } else {
             const operationMarker = L.marker(localRoute.operationPoint, {
                 icon: icons.courier
-            }).addTo(mapInstance).bindPopup('Operación local');
+            }).addTo(mapInstance).bindPopup('Operacion local');
 
             const firstLeg = L.polyline(localRoute.firstLeg, {
                 color: '#f59e0b',
@@ -414,7 +565,13 @@
 
             markers.push(operationMarker);
             layers.push(firstLeg, secondLeg);
-            animateMarker(localRoute.secondLeg, icons.courier);
+            const activePoint = delivered
+                ? destinationLatLng
+                : currentPointForOrder(order, localRoute.courierLatLng);
+            const courierMarker = L.marker(activePoint, { icon: icons.courier })
+                .addTo(mapInstance)
+                .bindPopup(delivered ? 'Pedido entregado' : 'Ubicacion actual estimada');
+            markers.push(courierMarker);
         }
 
         const fitPoints = isInternational
@@ -427,30 +584,51 @@
             mapInstance.invalidateSize(true);
         });
 
-        renderTimeline(order, destination);
-
-        document.getElementById('trackingSummary').innerHTML = `
-            <div class="summary-row"><span>Origen</span><strong>${origin.name}</strong></div>
-            <div class="summary-row"><span>Cliente</span><strong>${order.customerName}</strong></div>
-            <div class="summary-row"><span>Dirección</span><strong>${order.address}</strong></div>
-            <div class="summary-row"><span>Destino visual</span><strong>${destination.name}</strong></div>
-            <div class="summary-row"><span>Latitud / longitud</span><strong>${destination.lat.toFixed(5)}, ${destination.lng.toFixed(5)}</strong></div>
-            <div class="summary-row"><span>Modalidad</span><strong>${routeType}</strong></div>
-            <div class="summary-row"><span>Entrega</span><strong>${new Date(order.deliveryDate).toLocaleDateString('es-CR')}</strong></div>
-            <div class="summary-row"><span>Productos</span><strong>${order.items.map(i => `${i.quantity} x ${i.name}`).join(', ')}</strong></div>
-            <div class="summary-row"><span>Pago</span><strong>${order.paymentStatus} (${order.paymentMethod || 'Pendiente'})</strong></div>
-        `;
+        renderTimeline(order, destination, hasLiveRoute);
+        renderTrackingSummary(order, destination, routeType);
     }
 
     function renderSelector() {
         const orders = getOrders();
 
+        if (!orders.length) {
+            orderSelect.innerHTML = '<option>Sin pedidos</option>';
+            orderSelect.disabled = true;
+            presetSelect.innerHTML = presetOptions.map(p =>
+                `<option value="${p.id}">${p.name}${p.country && p.country !== '-' ? ` - ${p.country}` : ''}</option>`
+            ).join('');
+            presetSelect.disabled = true;
+            document.getElementById('trackOrderId').textContent = '-';
+            document.getElementById('trackStatus').textContent = 'Sin actividad';
+            document.getElementById('trackRouteType').textContent = '-';
+            document.getElementById('trackDestinationCountry').textContent = '-';
+            document.getElementById('trackMeta').textContent = 'Todavia no hay pedidos para mostrar.';
+            document.getElementById('deliveryMap').innerHTML = `
+                <div class="track-empty-state">
+                    <i class="fas fa-box-open"></i>
+                    <strong>No tienes pedidos en seguimiento</strong>
+                    <span>Cuando registres un pedido, aqui veras su ruta y progreso.</span>
+                </div>
+            `;
+            document.getElementById('trackingTimeline').innerHTML = `
+                <div class="track-empty-state track-empty-state--compact">
+                    <i class="fas fa-route"></i>
+                    <strong>Sin recorrido activo</strong>
+                    <span>El seguimiento se activa despues de crear un pedido.</span>
+                </div>
+            `;
+            document.getElementById('trackingSummary').innerHTML = `
+                <div class="summary-row"><span>Estado</span><strong>Sin pedidos registrados</strong></div>
+            `;
+            return;
+        }
+
         orderSelect.innerHTML = orders.map(o =>
-            `<option value="${o.id}">#${o.id} · ${o.customerName} · ${o.status}</option>`
+            `<option value="${o.id}">#${o.id} - ${o.customerName} - ${o.status}</option>`
         ).join('');
 
         presetSelect.innerHTML = presetOptions.map(p =>
-            `<option value="${p.id}">${p.name}${p.country && p.country !== '-' ? ` · ${p.country}` : ''}</option>`
+            `<option value="${p.id}">${p.name}${p.country && p.country !== '-' ? ` - ${p.country}` : ''}</option>`
         ).join('');
 
         renderOrder(orders[0]?.id);
@@ -459,29 +637,13 @@
     orderSelect.addEventListener('change', () => renderOrder(orderSelect.value));
     presetSelect.addEventListener('change', () => renderOrder(orderSelect.value));
 
-    simulateButton.addEventListener('click', () => {
-        try {
-            const current = BakeSmartStore.orders.list().find(x => x.id === Number(activeOrderId));
-            if (!current) return;
-
-            if (current.status === 'Listo') {
-                BakeSmartStore.orders.updateStatus(current.id, 'En camino');
-            }
-
-            BakeSmartStore.orders.simulateTracking(current.id);
-            app.toast.info('Ubicación del pedido actualizada.');
-            renderOrder(current.id);
-        } catch (error) {
-            app.toast.error(error.message);
-        }
-    });
-
     async function initializePage() {
         if (pageInitialized) return;
         pageInitialized = true;
 
         try {
-            await BakeSmartStore.refresh();
+            await BakeSmartStore.refresh({ keys: ['orders', 'posConfig'] });
+            origin = sanitizeLocation(BakeSmartStore.geo.origin(), defaultOrigin);
             renderSelector();
         } finally {
             requestAnimationFrame(() => {
@@ -497,3 +659,4 @@
 })();
 </script>
 }
+

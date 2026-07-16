@@ -7,5 +7,7 @@ namespace BakeSmartPatri.Controllers
     public class InventoryController : Controller
     {
         public IActionResult Index() => View();
+
+        public IActionResult Products() => View();
     }
 }

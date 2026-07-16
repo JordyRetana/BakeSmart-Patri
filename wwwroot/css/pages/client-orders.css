@@ -49,6 +49,72 @@
         gap: .9rem;
     }
 
+    .client-notifications-card {
+        display: grid;
+        gap: .85rem;
+        padding: 1rem;
+    }
+
+    .client-notifications-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .client-notifications-head h2 {
+        margin: .1rem 0 0;
+        color: var(--text);
+        font-size: 1.15rem;
+    }
+
+    .client-notifications-eyebrow {
+        color: var(--text-muted);
+        font-size: .72rem;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+
+    .client-notifications-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: .75rem;
+    }
+
+    .client-notification {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: .75rem;
+        padding: .8rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg-alt);
+    }
+
+    .client-notification__icon {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        color: var(--primary);
+        border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--primary-light) 70%, white 30%);
+    }
+
+    .client-notification strong,
+    .client-notification small {
+        display: block;
+    }
+
+    .client-notification small {
+        margin-top: .15rem;
+        color: var(--text-muted);
+        font-size: .82rem;
+    }
+
     .client-order-card {
         padding: 1.1rem;
     }

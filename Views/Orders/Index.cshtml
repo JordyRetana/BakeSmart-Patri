@@ -1,10 +1,10 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Pedidos";
+}
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/orders-index.css" asp-append-version="true" />
-}
-﻿@{
-    Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Pedidos";
 }
 
 <div class="page-shell orders-page">
@@ -12,20 +12,20 @@
         <div>
             <h1 class="orders-title">
                 <i class="fas fa-clipboard-list"></i>
-                Gestión de pedidos
+                Gestion de pedidos
             </h1>
             <p class="text-muted orders-subtitle">
-                Pedidos creados desde web, POS y otros canales, con seguimiento centralizado.
+                Controla pedidos de web, POS y tienda desde un flujo operativo conectado al seguimiento.
             </p>
         </div>
 
         <div class="orders-filters">
-            <input id="ordersSearch" class="form-control" placeholder="Buscar por cliente o pedido" />
+            <input id="ordersSearch" class="form-control" placeholder="Buscar pedido, cliente o correo" />
             <select id="ordersStatus" class="form-control orders-status-filter">
                 <option value="Todos">Todos los estados</option>
                 <option>Pendiente pago</option>
                 <option>Confirmado</option>
-                <option>En producción</option>
+                <option>En produccion</option>
                 <option>Listo</option>
                 <option>En camino</option>
                 <option>Entregado</option>
@@ -35,226 +35,374 @@
 
     <div class="grid grid-4 orders-kpi-grid">
         <div class="card orders-kpi-card">
-            <div class="text-muted">Total pedidos</div>
-            <h2 id="ordersTotal"></h2>
+            <span>Total pedidos</span>
+            <h2 id="ordersTotal">0</h2>
         </div>
-
         <div class="card orders-kpi-card">
-            <div class="text-muted">Pendientes de pago</div>
-            <h2 id="ordersPending"></h2>
+            <span>Pendientes de pago</span>
+            <h2 id="ordersPending">0</h2>
         </div>
-
         <div class="card orders-kpi-card">
-            <div class="text-muted">En producción</div>
-            <h2 id="ordersProduction"></h2>
+            <span>En produccion</span>
+            <h2 id="ordersProduction">0</h2>
         </div>
-
         <div class="card orders-kpi-card">
-            <div class="text-muted">Ventas cerradas</div>
-            <h2 id="ordersSales"></h2>
+            <span>Ventas cerradas</span>
+            <h2 id="ordersSales">0</h2>
         </div>
     </div>
 
-    <div class="card orders-table-card">
-        <div class="orders-section-header">
-            <h3 class="orders-section-title">Pedidos</h3>
-        </div>
+    <div class="orders-workspace">
+        <section class="card orders-list-card">
+            <div class="orders-section-header">
+                <div>
+                    <span class="orders-section-kicker">Bandeja operativa</span>
+                    <h3 class="orders-section-title">Pedidos activos</h3>
+                </div>
+                <strong id="ordersVisibleCount" class="orders-count-pill">0</strong>
+            </div>
+            <div id="ordersList" class="orders-list"></div>
+        </section>
 
-        <div class="table-container orders-table-wrap">
-            <table class="table orders-table">
-                <thead>
-                    <tr>
-                        <th>Pedido</th>
-                        <th>Cliente</th>
-                        <th>Canal</th>
-                        <th>Entrega</th>
-                        <th>Estado</th>
-                        <th>Pago</th>
-                        <th>Total</th>
-                        <th class="text-right">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="ordersTable"></tbody>
-            </table>
-        </div>
+        <aside class="card orders-detail-card" id="ordersDetail">
+            <div class="orders-empty-detail">
+                <i class="fas fa-clipboard-check"></i>
+                <strong>Selecciona un pedido</strong>
+                <span>Revisa estado, cobro, entrega y seguimiento operativo.</span>
+            </div>
+        </aside>
     </div>
 </div>
 
-
-
 @section Scripts {
-    <script>
-        (() => {
-            const search = document.getElementById('ordersSearch');
-            const status = document.getElementById('ordersStatus');
-            let orders = [];
-            let pageInitialized = false;
+<script>
+(() => {
+    const search = document.getElementById('ordersSearch');
+    const status = document.getElementById('ordersStatus');
+    const list = document.getElementById('ordersList');
+    const detail = document.getElementById('ordersDetail');
+    const visibleCount = document.getElementById('ordersVisibleCount');
+    const statuses = ['Pendiente pago', 'Confirmado', 'En produccion', 'Listo', 'En camino', 'Entregado'];
+    let orders = [];
+    let activeOrderId = null;
+    let pageInitialized = false;
 
-            function getStatusClass(value) {
-                switch (value) {
-                    case 'Pendiente pago': return 'status-pending';
-                    case 'Confirmado': return 'status-confirmed';
-                    case 'En produccion': return 'status-production';
-                    case 'En producción': return 'status-production';
-                    case 'Listo': return 'status-ready';
-                    case 'En camino': return 'status-route';
-                    case 'Entregado': return 'status-delivered';
-                    default: return '';
-                }
-            }
+    function clean(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
 
-            function getPaymentMethodClass(value) {
-                switch ((value || '').toLowerCase()) {
-                    case 'efectivo': return 'method-cash';
-                    case 'transferencia': return 'method-transfer';
-                    case 'sinpe': return 'method-sinpe';
-                    case 'tarjeta': return 'method-card';
-                    default: return '';
-                }
-            }
+    function normalizeText(value) {
+        return String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toLowerCase();
+    }
 
-            function normalizeOrder(o) {
-                return {
-                    id: o.id,
-                    customerName: o.cliente || o.customerName || '-',
-                    customerEmail: o.customerEmail || '',
-                    channel: o.canal || o.channel || '-',
-                    deliveryDate: o.entrega || o.deliveryDate,
-                    status: o.estado || o.status || '-',
-                    paymentStatus: o.paymentStatus || '-',
-                    paymentMethod: o.paymentMethod || '',
-                    total: Number(o.total || 0),
-                    createdAt: o.createdAt || o.entrega || new Date().toISOString()
-                };
-            }
+    function normalizeStatus(value) {
+        const text = normalizeText(value);
+        if (text.includes('pendiente')) return 'Pendiente pago';
+        if (text.includes('confirmado')) return 'Confirmado';
+        if (text.includes('produccion')) return 'En produccion';
+        if (text.includes('listo')) return 'Listo';
+        if (text.includes('camino')) return 'En camino';
+        if (text.includes('entregado')) return 'Entregado';
+        return value || 'Pendiente pago';
+    }
 
-            async function loadOrders() {
-                orders = (await fetch('/api/orders').then(r => r.json())).map(normalizeOrder);
-            }
+    function statusIndex(value) {
+        return Math.max(0, statuses.indexOf(normalizeStatus(value)));
+    }
 
-            function render() {
-                const all = orders;
+    function getStatusClass(value) {
+        switch (normalizeStatus(value)) {
+            case 'Pendiente pago': return 'status-pending';
+            case 'Confirmado': return 'status-confirmed';
+            case 'En produccion': return 'status-production';
+            case 'Listo': return 'status-ready';
+            case 'En camino': return 'status-route';
+            case 'Entregado': return 'status-delivered';
+            default: return '';
+        }
+    }
 
-                document.getElementById('ordersTotal').textContent = all.length;
-                document.getElementById('ordersPending').textContent = all.filter(x => x.paymentStatus !== 'Pagado').length;
-                document.getElementById('ordersProduction').textContent = all.filter(x => x.status === 'En producción').length;
-                document.getElementById('ordersSales').textContent = all.filter(x => x.paymentStatus === 'Pagado').length;
+    function normalizeOrder(o) {
+        return {
+            id: o.id,
+            customerName: o.cliente || o.customerName || '-',
+            customerEmail: o.customerEmail || '',
+            channel: o.canal || o.channel || '-',
+            deliveryDate: o.entrega || o.deliveryDate,
+            status: normalizeStatus(o.estado || o.status || '-'),
+            paymentStatus: o.paymentStatus || '-',
+            paymentMethod: o.paymentMethod || '',
+            total: Number(o.total || 0),
+            productId: Number(o.productId || 0),
+            quantity: Number(o.quantity || 1),
+            unitPrice: Number(o.unitPrice || 0),
+            producto: o.producto || '',
+            address: o.address || '',
+            createdAt: o.createdAt || o.entrega || new Date().toISOString()
+        };
+    }
 
-                const q = search.value.trim().toLowerCase();
-                const st = status.value;
+    async function loadOrders() {
+        const response = await fetch('/api/orders');
+        if (!response.ok) throw new Error(await response.text());
+        orders = (await response.json()).map(normalizeOrder);
+    }
 
-                const rows = all.filter(o =>
-                    (!q || o.customerName.toLowerCase().includes(q) || String(o.id).includes(q)) &&
-                    (st === 'Todos' || o.status === st)
-                );
+    function filteredOrders() {
+        const q = search.value.trim().toLowerCase();
+        const st = normalizeStatus(status.value);
+        return orders.filter(o =>
+            (!q || o.customerName.toLowerCase().includes(q) || o.customerEmail.toLowerCase().includes(q) || String(o.id).includes(q)) &&
+            (status.value === 'Todos' || o.status === st)
+        );
+    }
 
-                document.getElementById('ordersTable').innerHTML = rows.map(o => `
-                    <tr>
-                        <td>
-                            <strong>#${o.id}</strong>
-                            <div class="text-muted orders-order-meta">${new Date(o.createdAt).toLocaleString('es-CR')}</div>
-                        </td>
-                        <td>
-                            ${o.customerName}
-                            <div class="text-muted orders-customer-meta">${o.customerEmail || '-'}</div>
-                        </td>
-                        <td>${o.channel}</td>
-                        <td>${new Date(o.deliveryDate).toLocaleDateString('es-CR')}</td>
-                        <td>
-                            <span class="orders-status-badge ${getStatusClass(o.status)}">
-                                ${o.status}
-                            </span>
-                        </td>
-                        <td>
-                            <div class="orders-payment-cell">
-                                <span class="badge ${o.paymentStatus === 'Pagado' ? 'badge-success' : 'badge-warning'}">
-                                    ${o.paymentStatus}
-                                </span>
-                                ${o.paymentMethod
-                                    ? `<span class="orders-payment-method ${getPaymentMethodClass(o.paymentMethod)}">${o.paymentMethod}</span>`
-                                    : `<span class="text-muted orders-order-meta">Sin método</span>`}
-                            </div>
-                        </td>
-                        <td>${app.utils.formatCurrency(o.total)}</td>
-                        <td class="text-right">
-                            <div class="orders-actions-cell">
-                                <select onchange="changeStatus(${o.id}, this.value)" class="form-control">
-                                    ${['Pendiente pago','Confirmado','En producción','Listo','En camino','Entregado']
-                                        .map(s => `<option ${s === o.status ? 'selected' : ''}>${s}</option>`)
-                                        .join('')}
-                                </select>
-                                ${o.paymentStatus !== 'Pagado'
-                                    ? `<button class="btn btn-outline btn-sm" onclick="payOrder(${o.id})">Marcar pagado</button>`
-                                    : ''}
-                                <button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="deleteOrder(${o.id})">
-                                    <i class="fas fa-trash-can"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `).join('') || `
-                    <tr>
-                        <td colspan="8" class="text-center text-muted">No hay pedidos.</td>
-                    </tr>
-                `;
-            }
+    function nextStatus(order) {
+        return statuses[Math.min(statusIndex(order.status) + 1, statuses.length - 1)];
+    }
 
-            window.changeStatus = (id, value) => {
-                try {
-                    fetch(`/api/orders/${id}/status`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ status: value })
-                    }).then(async response => {
-                        if (!response.ok) throw new Error(await response.text());
-                        await loadOrders();
-                        render();
-                    }).catch(error => app.toast.error(error.message));
-                    if (value === 'En camino') {
-                        app.toast.info('El pedido ya puede visualizarse en el mapa en tiempo real.');
-                    }
-                } catch (error) {
-                    app.toast.error(error.message);
-                }
-            };
+    function nextActionLabel(order) {
+        if (order.paymentStatus !== 'Pagado') return 'Cobrar pedido';
+        if (order.status === 'Pendiente pago') return 'Confirmar pedido';
+        if (order.status === 'Confirmado') return 'Enviar a produccion';
+        if (order.status === 'En produccion') return 'Marcar listo';
+        if (order.status === 'Listo') return 'Enviar pedido';
+        if (order.status === 'En camino') return 'Marcar entregado';
+        return 'Pedido cerrado';
+    }
 
-            window.payOrder = (id) => {
-                fetch(`/api/orders/${id}/pay`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ method: 'Efectivo' })
-                }).then(async response => {
-                    if (!response.ok) throw new Error(await response.text());
-                    await loadOrders();
-                    app.toast.success('Pedido marcado como pagado.');
-                    render();
-                }).catch(error => app.toast.error(error.message));
-            };
+    function renderProgress(order) {
+        const current = statusIndex(order.status);
+        return `
+            <div class="orders-progress" aria-label="Progreso del pedido">
+                ${statuses.map((step, index) => `
+                    <span class="${index < current ? 'is-done' : index === current ? 'is-current' : ''}" title="${clean(step)}">
+                        <i class="fas ${index < current ? 'fa-check' : index === current ? 'fa-circle' : 'fa-minus'}"></i>
+                        <em>${clean(step)}</em>
+                    </span>
+                `).join('')}
+            </div>
+        `;
+    }
 
-            window.deleteOrder = (id) => {
-                if (!confirm(`Eliminar pedido #${id}? Esto lo quitara del cliente, rastreo y flujo operativo.`)) return;
+    function renderList(rows) {
+        visibleCount.textContent = rows.length;
+        list.innerHTML = rows.map(o => `
+            <button type="button" class="orders-list-item ${Number(activeOrderId) === Number(o.id) ? 'is-active' : ''}" onclick="selectOrder(${o.id})">
+                <span class="orders-list-icon"><i class="fas ${o.status === 'En camino' ? 'fa-truck-fast' : o.status === 'Entregado' ? 'fa-circle-check' : 'fa-box'}"></i></span>
+                <span class="orders-list-main">
+                    <span class="orders-list-top">
+                        <strong>#${o.id} - ${clean(o.customerName)}</strong>
+                        <b>${app.utils.formatCurrency(o.total)}</b>
+                    </span>
+                    <span class="orders-list-sub">${clean(o.producto || 'Pedido sin detalle')}</span>
+                    <span class="orders-list-meta">
+                        <small>${clean(o.channel)}</small>
+                        <small>${new Date(o.deliveryDate).toLocaleDateString('es-CR')}</small>
+                        <small>${clean(o.paymentStatus)}</small>
+                    </span>
+                </span>
+                <span class="orders-status-badge ${getStatusClass(o.status)}">${clean(o.status)}</span>
+            </button>
+        `).join('') || `
+            <div class="orders-empty-list">
+                <i class="fas fa-magnifying-glass"></i>
+                <strong>No hay pedidos con esos filtros</strong>
+                <span>Ajusta la busqueda o cambia el estado.</span>
+            </div>
+        `;
+    }
 
-                fetch(`/api/orders/${id}`, {
-                    method: 'DELETE'
-                }).then(async response => {
-                    if (!response.ok) throw new Error(await response.text());
-                    await loadOrders();
-                    app.toast.success(`Pedido #${id} eliminado.`);
-                    render();
-                }).catch(error => app.toast.error(error.message));
-            };
+    function cleanupDetailSelectMenus() {
+        detail.querySelectorAll('.bs-select').forEach(wrapper => {
+            if (wrapper._bsSelectMenu) wrapper._bsSelectMenu.remove();
+        });
+    }
 
-            search.addEventListener('input', render);
-            status.addEventListener('change', render);
+    function renderDetail(order) {
+        cleanupDetailSelectMenus();
+        if (!order) {
+            detail.innerHTML = `
+                <div class="orders-empty-detail">
+                    <i class="fas fa-clipboard-check"></i>
+                    <strong>Selecciona un pedido</strong>
+                    <span>Revisa estado, cobro, entrega y seguimiento operativo.</span>
+                </div>
+            `;
+            return;
+        }
 
-            async function initializePage() {
-                if (pageInitialized) return;
-                pageInitialized = true;
+        detail.innerHTML = `
+            <div class="orders-detail-head">
+                <div>
+                    <span class="orders-section-kicker">Pedido #${order.id}</span>
+                    <h3>${clean(order.customerName)}</h3>
+                    <p>${clean(order.customerEmail || 'Sin correo registrado')}</p>
+                </div>
+                <span class="orders-status-badge ${getStatusClass(order.status)}">${clean(order.status)}</span>
+            </div>
+
+            ${renderProgress(order)}
+
+            <div class="orders-detail-grid">
+                <div><span>Canal</span><strong>${clean(order.channel)}</strong></div>
+                <div><span>Entrega</span><strong>${new Date(order.deliveryDate).toLocaleDateString('es-CR')}</strong></div>
+                <div><span>Total</span><strong>${app.utils.formatCurrency(order.total)}</strong></div>
+                <div><span>Pago</span><strong>${clean(order.paymentStatus)}${order.paymentMethod ? ` / ${clean(order.paymentMethod)}` : ''}</strong></div>
+            </div>
+
+            <div class="orders-detail-block">
+                <span>Productos</span>
+                <strong>${clean(order.producto || 'Sin detalle')}</strong>
+            </div>
+
+            <div class="orders-detail-block">
+                <span>Direccion de entrega</span>
+                <strong>${clean(order.address || 'Sin direccion registrada')}</strong>
+            </div>
+
+            <div class="orders-detail-actions">
+                <label>
+                    <span>Actualizar estado</span>
+                    <select onchange="changeStatus(${order.id}, this.value)" class="form-control">
+                        ${statuses.map(s => `<option ${s === order.status ? 'selected' : ''}>${s}</option>`).join('')}
+                    </select>
+                </label>
+                <button class="btn btn-primary" onclick="advanceOrder(${order.id})" ${order.status === 'Entregado' ? 'disabled' : ''}>
+                    <i class="fas fa-arrow-right"></i> ${clean(nextActionLabel(order))}
+                </button>
+                ${order.paymentStatus !== 'Pagado'
+                    ? `<button class="btn btn-outline" onclick="chargeOrder(${order.id})"><i class="fas fa-credit-card"></i> Cobrar</button>`
+                    : `<a class="btn btn-outline" href="/Client/Track" data-full-reload><i class="fas fa-route"></i> Ver seguimiento</a>`}
+                <button class="btn btn-ghost orders-danger" onclick="deleteOrder(${order.id})">
+                    <i class="fas fa-trash-can"></i> Eliminar pedido
+                </button>
+            </div>
+        `;
+        requestAnimationFrame(() => app.selects?.enhanceAll?.());
+    }
+
+    function render() {
+        document.getElementById('ordersTotal').textContent = orders.length;
+        document.getElementById('ordersPending').textContent = orders.filter(x => x.paymentStatus !== 'Pagado').length;
+        document.getElementById('ordersProduction').textContent = orders.filter(x => x.status === 'En produccion').length;
+        document.getElementById('ordersSales').textContent = orders.filter(x => x.paymentStatus === 'Pagado').length;
+
+        const rows = filteredOrders();
+        if (!rows.some(o => Number(o.id) === Number(activeOrderId))) {
+            activeOrderId = rows[0]?.id || null;
+        }
+
+        renderList(rows);
+        renderDetail(rows.find(o => Number(o.id) === Number(activeOrderId)));
+    }
+
+    async function saveStatus(id, value) {
+        const normalized = normalizeStatus(value);
+        const response = await fetch(`/api/orders/${id}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: normalized })
+        });
+        if (!response.ok) throw new Error(await response.text());
+        await loadOrders();
+        activeOrderId = id;
+        render();
+
+        if (normalized === 'En camino') {
+            app.toast.info('Ruta activada: el cliente ya puede ver el pedido en el mapa.');
+        } else if (normalized === 'Entregado') {
+            app.toast.success('Pedido entregado y seguimiento cerrado.');
+        } else {
+            app.toast.success(`Pedido #${id} actualizado a ${normalized}.`);
+        }
+    }
+
+    window.selectOrder = (id) => {
+        activeOrderId = id;
+        render();
+    };
+
+    window.changeStatus = async (id, value) => {
+        try {
+            await saveStatus(id, value);
+        } catch (error) {
+            app.toast.error(error.message);
+        }
+    };
+
+    window.advanceOrder = async (id) => {
+        const order = orders.find(item => Number(item.id) === Number(id));
+        if (!order) return;
+        if (order.paymentStatus !== 'Pagado') {
+            chargeOrder(id);
+            return;
+        }
+        try {
+            await saveStatus(id, nextStatus(order));
+        } catch (error) {
+            app.toast.error(error.message);
+        }
+    };
+
+    window.chargeOrder = (id) => {
+        const order = orders.find(item => Number(item.id) === Number(id));
+        if (!order) return;
+
+        const cartItem = {
+            productId: Number(order.productId),
+            name: order.producto || 'Pedido',
+            code: `PED-${order.id}`,
+            unitPrice: Number(order.unitPrice || order.total || 0),
+            quantity: Number(order.quantity || 1)
+        };
+
+        sessionStorage.setItem('bakesmart.pos.pendingOrder', JSON.stringify({
+            id: order.id,
+            customerName: order.customerName || '',
+            customerEmail: order.customerEmail || '',
+            paymentMethod: order.paymentMethod || 'Tarjeta',
+            total: Number(order.total || 0),
+            item: cartItem
+        }));
+        sessionStorage.setItem('bakesmart.pos.cart', JSON.stringify([cartItem]));
+        window.location.assign('/Pos/Cart?orderId=' + encodeURIComponent(order.id));
+    };
+
+    window.deleteOrder = (id) => {
+        if (!confirm(`Eliminar pedido #${id}? Esto lo quitara del cliente, rastreo y flujo operativo.`)) return;
+
+        fetch(`/api/orders/${id}`, { method: 'DELETE' })
+            .then(async response => {
+                if (!response.ok) throw new Error(await response.text());
                 await loadOrders();
+                app.toast.success(`Pedido #${id} eliminado.`);
                 render();
-            }
+            })
+            .catch(error => app.toast.error(error.message));
+    };
 
-            app.page.ready(initializePage);
-        })();
-    </script>
+    search.addEventListener('input', render);
+    status.addEventListener('change', render);
+
+    async function initializePage() {
+        if (pageInitialized) return;
+        pageInitialized = true;
+        await loadOrders();
+        activeOrderId = orders[0]?.id || null;
+        render();
+    }
+
+    app.page.ready(initializePage);
+})();
+</script>
 }

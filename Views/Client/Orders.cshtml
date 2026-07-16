@@ -21,8 +21,9 @@
             <input id="clientOrderSearch" class="form-control" placeholder="Buscar pedido o producto" />
             <select id="clientStatusFilter" class="form-control">
                 <option value="">Todos los estados</option>
-                <option>Recibido</option>
-                <option>En producción</option>
+                <option>Pendiente pago</option>
+                <option>Confirmado</option>
+                <option>En produccion</option>
                 <option>Listo</option>
                 <option>En camino</option>
                 <option>Entregado</option>
@@ -52,6 +53,17 @@
             <h2 id="clientOrdersTotal">₡0</h2>
         </div>
     </div>
+
+    <section class="card client-notifications-card">
+        <div class="client-notifications-head">
+            <div>
+                <span class="client-notifications-eyebrow">Notificaciones</span>
+                <h2>Actualizaciones de tus pedidos</h2>
+            </div>
+            <span class="badge badge-info" id="clientNotificationsCount">0 avisos</span>
+        </div>
+        <div id="clientNotificationsList" class="client-notifications-list"></div>
+    </section>
 
     <div class="client-orders-list" id="clientOrdersList"></div>
 </div>
@@ -143,6 +155,37 @@
                 });
             }
 
+            function renderNotifications(allOrders) {
+                const notifications = allOrders.slice(0, 8).map(order => {
+                    const paid = order.paymentStatus === 'Pagado';
+                    return {
+                        icon: paid ? 'fa-bell' : 'fa-credit-card',
+                        title: paid ? `Pedido #${order.id}: ${order.status}` : `Pedido #${order.id}: pago pendiente`,
+                        message: paid
+                            ? `Tu pedido esta en estado "${order.status}". Revisa seguimiento para ver su avance.`
+                            : 'Confirma el pago para que el pedido avance al flujo operativo.'
+                    };
+                });
+
+                document.getElementById('clientNotificationsCount').textContent =
+                    `${notifications.length} aviso${notifications.length === 1 ? '' : 's'}`;
+                document.getElementById('clientNotificationsList').innerHTML = notifications.map(item => `
+                    <article class="client-notification">
+                        <span class="client-notification__icon"><i class="fas ${item.icon}"></i></span>
+                        <span>
+                            <strong>${item.title}</strong>
+                            <small>${item.message}</small>
+                        </span>
+                        <a class="btn btn-outline btn-sm" href="/Client/Track">Ver</a>
+                    </article>
+                `).join('') || `
+                    <div class="client-empty-state client-empty-state--compact">
+                        <h3>Sin notificaciones</h3>
+                        <p class="text-muted">Cuando un pedido cambie de estado, aparecera aqui.</p>
+                    </div>
+                `;
+            }
+
             function render() {
                 const allOrders = BakeSmartStore.orders.byClient(userEmail);
                 const rows = filteredOrders();
@@ -154,6 +197,7 @@
                 document.getElementById('clientOrdersActive').textContent = allOrders.filter(order => order.status !== 'Entregado').length;
                 document.getElementById('clientOrdersPending').textContent = app.utils.formatCurrency(pendingTotal);
                 document.getElementById('clientOrdersTotal').textContent = app.utils.formatCurrency(allOrders.reduce((acc, order) => acc + order.total, 0));
+                renderNotifications(allOrders);
 
                 list.innerHTML = rows.map(order => `
                     <article class="card client-order-card">

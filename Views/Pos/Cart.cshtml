@@ -70,6 +70,54 @@
     </div>
 </div>
 
+<div class="pos-payment-modal" id="posPaymentModal" hidden>
+    <div class="pos-payment-modal__backdrop" data-pos-payment-close></div>
+    <section class="pos-payment-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="posPaymentTitle">
+        <button class="pos-payment-modal__close" type="button" data-pos-payment-close aria-label="Cerrar">
+            <i class="fas fa-xmark"></i>
+        </button>
+        <div class="pos-payment-modal__header">
+            <span><i class="fas fa-shield-halved"></i></span>
+            <div>
+                <div class="pos-panel-eyebrow">Pasarela de pago</div>
+                <h2 id="posPaymentTitle">Confirmar cobro</h2>
+            </div>
+        </div>
+        <div class="pos-payment-modal__amount">
+            <span>Total a cobrar</span>
+            <strong id="posPaymentTotal">0</strong>
+        </div>
+        <form id="posPaymentForm" class="pos-payment-form">
+            <label>
+                <span>Metodo</span>
+                <select class="form-control" name="method" id="posGatewayMethod">
+                    <option>Tarjeta</option>
+                    <option>SINPE</option>
+                    <option>Efectivo</option>
+                    <option>Transferencia</option>
+                </select>
+            </label>
+            <label>
+                <span id="posGatewayReferenceLabel">Referencia o titular</span>
+                <input class="form-control" name="holder" id="posGatewayReference" placeholder="Nombre, SINPE o referencia" required />
+            </label>
+            <label class="pos-card-field">
+                <span>Numero de tarjeta</span>
+                <input class="form-control" name="card" inputmode="numeric" maxlength="19" placeholder="4242 4242 4242 4242" />
+            </label>
+            <div class="pos-payment-form__grid pos-card-field">
+                <label><span>Vence</span><input class="form-control" name="expiry" maxlength="5" placeholder="MM/AA" /></label>
+                <label><span>CVV</span><input class="form-control" name="cvv" inputmode="numeric" maxlength="4" placeholder="123" /></label>
+            </div>
+            <p class="pos-payment-modal__note">Simulacion de pasarela: valida datos minimos y registra el cobro en el sistema.</p>
+            <button class="btn btn-primary pos-submit-btn" type="submit" id="posPaymentConfirmBtn">
+                <i class="fas fa-lock"></i>
+                Aprobar cobro
+            </button>
+        </form>
+    </section>
+</div>
+
 @section Scripts {
     <script>
         (() => {
@@ -81,6 +129,14 @@
             const countEl = document.getElementById('checkoutCartCount');
             const totalsEl = document.getElementById('checkoutTotals');
             const form = document.getElementById('checkoutCartForm');
+            const paymentModal = document.getElementById('posPaymentModal');
+            const paymentForm = document.getElementById('posPaymentForm');
+            const gatewayMethod = document.getElementById('posGatewayMethod');
+            const gatewayReferenceLabel = document.getElementById('posGatewayReferenceLabel');
+            const gatewayReference = document.getElementById('posGatewayReference');
+            const paymentConfirmBtn = document.getElementById('posPaymentConfirmBtn');
+            let pendingOrder = null;
+            let pendingTotals = null;
 
             function saveCart() {
                 sessionStorage.setItem('bakesmart.pos.cart', JSON.stringify(cart));
@@ -101,6 +157,23 @@
                     .join('');
             }
 
+            function readPendingOrder() {
+                try {
+                    const raw = sessionStorage.getItem('bakesmart.pos.pendingOrder');
+                    pendingOrder = raw ? JSON.parse(raw) : null;
+                } catch {
+                    pendingOrder = null;
+                }
+
+                if (!pendingOrder) return;
+                form.customerName.value = pendingOrder.customerName || '';
+                form.customerEmail.value = pendingOrder.customerEmail || '';
+                if (pendingOrder.paymentMethod) {
+                    form.paymentMethod.value = pendingOrder.paymentMethod;
+                    form.paymentMethod.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+
             function currentDiscountRate() {
                 const manual = Math.min(Math.max(Number(form.discountRate?.value || 0), 0), 1);
                 const customer = store.customers.list().find(row =>
@@ -108,7 +181,8 @@
                     (form.customerName.value && String(row.fullName || '').toLowerCase() === String(form.customerName.value).toLowerCase())
                 );
                 const frequent = customer?.frequent ? Number(store.pos.config().frequentCustomerDiscount || 0) : 0;
-                return Math.max(manual, frequent);
+                const promotion = Number(store.pos.config().activePromotionDiscount || 0);
+                return Math.max(manual, frequent, promotion);
             }
 
             function remainingStock(productId) {
@@ -153,14 +227,75 @@
                 const discount = subtotal * discountRate;
                 const discountedSubtotal = Math.max(0, subtotal - discount);
                 const tax = discountedSubtotal * Number(store.pos.config().iva || 0);
-                const total = discountedSubtotal + tax;
+                const total = pendingOrder?.total ? Number(pendingOrder.total) : discountedSubtotal + tax;
+                pendingTotals = { subtotal, discount, tax, total };
                 totalsEl.innerHTML = `
+                    ${pendingOrder ? `<div class="pos-total-row"><span>Pedido existente</span><strong>#${pendingOrder.id}</strong></div>` : ''}
                     <div class="pos-total-row"><span>Subtotal</span><strong>${fmt(subtotal)}</strong></div>
                     ${discount > 0 ? `<div class="pos-total-row"><span>Descuento ${Math.round(discountRate * 100)}%</span><strong>-${fmt(discount)}</strong></div>` : ''}
                     <div class="pos-total-row"><span>IVA</span><strong>${fmt(tax)}</strong></div>
                     <div class="hr"></div>
                     <div class="pos-total-row total-final"><span>Total</span><strong>${fmt(total)}</strong></div>
                 `;
+            }
+
+            function shouldShowCardFields(method) {
+                const value = String(method || '').toLowerCase();
+                return value.includes('tarjeta');
+            }
+
+            function syncGatewayFields() {
+                const show = shouldShowCardFields(gatewayMethod.value);
+                document.querySelectorAll('.pos-card-field').forEach(field => {
+                    field.hidden = !show;
+                    field.style.display = show ? '' : 'none';
+                    field.querySelectorAll('input').forEach(input => {
+                        input.disabled = !show;
+                        input.required = show;
+                        if (!show) input.value = '';
+                    });
+                });
+
+                const method = String(gatewayMethod.value || '').toLowerCase();
+                if (method.includes('efectivo')) {
+                    gatewayReferenceLabel.textContent = 'Recibido por';
+                    gatewayReference.placeholder = 'Nombre de quien recibe el efectivo';
+                    gatewayReference.required = false;
+                } else if (method.includes('sinpe')) {
+                    gatewayReferenceLabel.textContent = 'Referencia SINPE';
+                    gatewayReference.placeholder = 'Telefono o comprobante SINPE';
+                    gatewayReference.required = true;
+                } else if (method.includes('transfer')) {
+                    gatewayReferenceLabel.textContent = 'Referencia de transferencia';
+                    gatewayReference.placeholder = 'Numero de comprobante o banco';
+                    gatewayReference.required = true;
+                } else {
+                    gatewayReferenceLabel.textContent = 'Titular de la tarjeta';
+                    gatewayReference.placeholder = 'Nombre del titular';
+                    gatewayReference.required = true;
+                }
+            }
+
+            function openPaymentModal() {
+                if (paymentModal.parentElement !== document.body) {
+                    document.body.appendChild(paymentModal);
+                }
+                const method = form.paymentMethod.value || 'Tarjeta';
+                gatewayMethod.value = String(method).toLowerCase().includes('sinpe') ? 'SINPE'
+                    : String(method).toLowerCase().includes('efectivo') ? 'Efectivo'
+                    : String(method).toLowerCase().includes('transfer') ? 'Transferencia'
+                    : 'Tarjeta';
+                document.getElementById('posPaymentTotal').textContent = fmt(pendingTotals?.total || 0);
+                paymentForm.holder.value = form.customerName.value || '';
+                gatewayMethod.dispatchEvent(new Event('change', { bubbles: true }));
+                syncGatewayFields();
+                paymentModal.hidden = false;
+            }
+
+            function closePaymentModal() {
+                paymentModal.hidden = true;
+                paymentForm.reset();
+                syncGatewayFields();
             }
 
             window.changeCheckoutQty = (productId, delta) => {
@@ -195,24 +330,65 @@
             form.discountRate.addEventListener('input', renderCart);
             form.customerEmail.addEventListener('input', renderCart);
 
-            form.addEventListener('submit', async event => {
-                event.preventDefault();
+            async function completeCheckout(paymentData) {
                 try {
                     await store.pos.sessions();
-                    if (!store.pos.activeSession()) throw new Error('Debe abrir caja antes de confirmar ventas.');
+                    if (!pendingOrder && !store.pos.activeSession()) throw new Error('Debe abrir caja antes de confirmar ventas.');
                     if (!cart.length) throw new Error('Agregue productos al carrito antes de cobrar.');
 
-                    await store.pos.sell({
-                        ...Object.fromEntries(new FormData(form).entries()),
-                        items: cart.map(item => ({ productId: item.productId, quantity: item.quantity }))
-                    });
+                    if (pendingOrder) {
+                        await store.orders.markPaid(pendingOrder.id, paymentData.method || form.paymentMethod.value || 'Tarjeta');
+                        sessionStorage.removeItem('bakesmart.pos.pendingOrder');
+                    } else {
+                        await store.pos.sell({
+                            ...Object.fromEntries(new FormData(form).entries()),
+                            paymentMethod: paymentData.method || form.paymentMethod.value,
+                            items: cart.map(item => ({ productId: item.productId, quantity: item.quantity }))
+                        });
+                    }
 
                     cart = [];
                     saveCart();
-                    app.toast.success('Venta registrada correctamente.');
-                    app.navigation.navigate('/Pos');
+                    app.toast.success(pendingOrder ? 'Pago del pedido confirmado.' : 'Venta registrada correctamente.');
+                    app.navigation.navigate(pendingOrder ? '/Production' : '/Pos');
                 } catch (error) {
                     app.toast.error(error.message);
+                    throw error;
+                }
+            }
+
+            form.addEventListener('submit', async event => {
+                event.preventDefault();
+                try {
+                    if (!cart.length) throw new Error('Agregue productos al carrito antes de cobrar.');
+                    openPaymentModal();
+                } catch (error) {
+                    app.toast.error(error.message);
+                }
+            });
+
+            gatewayMethod.addEventListener('change', syncGatewayFields);
+            document.querySelectorAll('[data-pos-payment-close]').forEach(button => button.addEventListener('click', closePaymentModal));
+
+            paymentForm.addEventListener('submit', async event => {
+                event.preventDefault();
+                const data = Object.fromEntries(new FormData(paymentForm).entries());
+                if (shouldShowCardFields(data.method)) {
+                    const digits = String(data.card || '').replace(/\D/g, '');
+                    if (digits.length < 12 || !data.expiry || !data.cvv) {
+                        app.toast.error('Complete los datos de tarjeta para aprobar el cobro.');
+                        return;
+                    }
+                }
+
+                try {
+                    paymentConfirmBtn.disabled = true;
+                    await completeCheckout(data);
+                    closePaymentModal();
+                } catch {
+                    // completeCheckout already reports the error.
+                } finally {
+                    paymentConfirmBtn.disabled = false;
                 }
             });
 
@@ -222,6 +398,7 @@
                     await store.refresh();
                     renderCustomers();
                     renderPayments();
+                    readPendingOrder();
                     renderCart();
                 } catch (error) {
                     app.toast.error(error.message);

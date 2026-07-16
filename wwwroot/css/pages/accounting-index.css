@@ -56,11 +56,26 @@
         border-left-color: var(--success);
     }
 
-    .accounting-main-grid {
-        display: grid;
-        grid-template-columns: minmax(320px, .72fr) minmax(0, 1.28fr);
-        gap: 1rem;
-        align-items: start;
+    .accounting-page .accounting-main-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+        align-items: start !important;
+    }
+
+    .accounting-page .accounting-actions-card {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(320px, 1fr)) !important;
+        gap: 1.1rem !important;
+    }
+
+    .accounting-page .accounting-actions-card > .hr {
+        display: none !important;
+    }
+
+    .accounting-page .accounting-actions-card > .accounting-section-header,
+    .accounting-page .accounting-actions-card > .accounting-action-buttons {
+        grid-column: 1 / -1 !important;
     }
 
     .accounting-actions-card,
@@ -264,8 +279,8 @@
     }
 
     @media (max-width: 1200px) {
-        .accounting-main-grid {
-            grid-template-columns: 1fr;
+        .accounting-page .accounting-actions-card {
+            grid-template-columns: 1fr !important;
         }
     }
 

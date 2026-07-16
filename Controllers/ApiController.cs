@@ -34,7 +34,7 @@ public class ApiController : Controller
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new
+            return Ok(new
             {
                 enabled = true,
                 status = "error",
@@ -145,7 +145,7 @@ public class ApiController : Controller
     public async Task<IActionResult> Promotions() => Json(await _sqlStore.PromotionsAsync());
 
     [HttpGet("catalog/options")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [AllowAnonymous]
     public async Task<IActionResult> CatalogOptions()
     {
         var categoriesTask = _sqlStore.CatalogCategoriesAsync();
@@ -331,7 +331,7 @@ public class ApiController : Controller
     public async Task<IActionResult> PosConfig() => Json(await _sqlStore.PosConfigAsync());
 
     [HttpPost("pos/payment-methods")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize(Roles = "Admin,Staff")]
     public async Task<IActionResult> SavePaymentMethod([FromBody] SqlStore.PaymentMethodInput request)
     {
         try
@@ -346,7 +346,7 @@ public class ApiController : Controller
     }
 
     [HttpPost("pos/payment-methods/{id:int}/toggle")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize(Roles = "Admin,Staff")]
     public async Task<IActionResult> TogglePaymentMethod(int id)
     {
         await _sqlStore.TogglePaymentMethodAsync(id, CurrentUserEmail);
@@ -476,13 +476,28 @@ public class ApiController : Controller
     [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> CloseCashSession([FromBody] CloseCashSessionRequest request)
     {
-        await _sqlStore.CloseCashSessionAsync(request.Id, request.DeclaredAmount, CurrentUserEmail);
-        return Ok(new { ok = true });
+        try
+        {
+            await _sqlStore.CloseCashSessionAsync(request.Id, request.DeclaredAmount, CurrentUserEmail);
+            return Ok(new { ok = true });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpGet("pos/sessions")]
     [Authorize(Policy = "StaffOrAdmin")]
-    public async Task<IActionResult> CashSessions() => Json(await _sqlStore.CashSessionsAsync());
+    public async Task<IActionResult> CashSessions()
+    {
+        var canSeeAll = User.IsInRole("Admin") || User.IsInRole("Staff") || User.IsInRole("Supervisor");
+        return Json(await _sqlStore.CashSessionsAsync(CurrentUserEmail, canSeeAll));
+    }
+
+    [HttpGet("pos/sales")]
+    [Authorize(Roles = "Admin,Staff,Supervisor")]
+    public async Task<IActionResult> RecentPosSales() => Json(await _sqlStore.RecentPosSalesAsync());
 
     [AllowAnonymous]
     [HttpPost("auth/forgot-password")]
@@ -524,7 +539,7 @@ public class ApiController : Controller
     }
 
     [HttpPost("pos/credit-notes")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize(Roles = "Admin,Staff")]
     public async Task<IActionResult> RegisterCreditNote([FromBody] SqlStore.CreditNoteInput request)
     {
         try
@@ -533,6 +548,10 @@ public class ApiController : Controller
             return Ok(new { ok = true, id });
         }
         catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
         {
             return BadRequest(new { message = ex.Message });
         }
@@ -576,16 +595,31 @@ public class ApiController : Controller
     [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> ReconcilePos()
     {
-        var result = await _sqlStore.ReconcilePosAsync(CurrentUserEmail);
-        return Ok(result);
+        try
+        {
+            var result = await _sqlStore.ReconcilePosAsync(CurrentUserEmail);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPost("accounting/daily-close")]
     [Authorize(Policy = "StaffOrAdmin")]
-    public async Task<IActionResult> DailyAccountingClose()
+    public async Task<IActionResult> DailyAccountingClose([FromBody] AccountingCloseRequest? request = null)
     {
-        var result = await _sqlStore.DailyAccountingCloseAsync(CurrentUserEmail);
-        return Ok(result);
+        try
+        {
+            var type = string.IsNullOrWhiteSpace(request?.Type) ? "DIARIO" : request.Type;
+            var result = await _sqlStore.AccountingCloseAsync(type, CurrentUserEmail);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpGet("settings")]
@@ -618,6 +652,7 @@ public class ApiController : Controller
     public sealed record MarkPaidRequest(string Method);
     public sealed record OpenCashSessionRequest(decimal Amount);
     public sealed record CloseCashSessionRequest(int Id, decimal DeclaredAmount);
+    public sealed record AccountingCloseRequest(string? Type);
     public sealed record ForgotPasswordRequest(string Email);
 
     private static bool IsValidEmail(string email)

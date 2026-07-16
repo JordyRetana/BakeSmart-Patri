@@ -1,0 +1,116 @@
+@model BakeSmartPatri.Models.CatalogIndexViewModel
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Favoritos";
+    var culture = new System.Globalization.CultureInfo("es-CR");
+}
+
+<main class="catalog-favorites-page">
+    <header class="catalog-favorites-hero">
+        <div>
+            <span><i class="fas fa-heart"></i> Favoritos</span>
+            <h1>Productos guardados</h1>
+            <p>Encuentra rapido los productos que marcaste con me gusta.</p>
+        </div>
+        <a class="btn btn-outline" href="/Catalog"><i class="fas fa-arrow-left"></i> Volver al catalogo</a>
+    </header>
+
+    <section class="catalog-favorites-login" id="favoritesLoginNotice" hidden>
+        <i class="fas fa-lock"></i>
+        <div>
+            <strong>Inicia sesion para usar favoritos</strong>
+            <p>Asi podemos separar tus productos guardados de los demas clientes.</p>
+        </div>
+        <a class="btn btn-primary" href="/Account/Login?ReturnUrl=/Catalog/Favorites">Iniciar sesion</a>
+    </section>
+
+    <section class="catalog-favorites-empty" id="favoritesEmpty" hidden>
+        <i class="far fa-heart"></i>
+        <h2>Aun no tienes favoritos</h2>
+        <p>Marca productos con el corazon en el catalogo y apareceran aqui.</p>
+        <a class="btn btn-primary" href="/Catalog">Explorar productos</a>
+    </section>
+
+    <section class="catalog-favorites-grid" id="favoritesGrid">
+        @foreach (var product in Model.Products)
+        {
+            <article class="card product-card favorite-product-card" data-favorite-card data-id="@product.Id" hidden>
+                <img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';">
+                <div class="favorite-product-card__body">
+                    <span class="badge badge-primary">@product.Category</span>
+                    <h2>@product.Name</h2>
+                    <p>@product.Description</p>
+                    <div class="favorite-product-card__meta">
+                        <span>@product.Code</span>
+                        <strong>@product.UnitPrice.ToString("C0", culture)</strong>
+                    </div>
+                    <div class="favorite-product-card__actions">
+                        <a class="btn btn-outline btn-sm" href="/Catalog/Details/@product.Id"><i class="fas fa-eye"></i> Ver</a>
+                        <button class="btn btn-ghost btn-sm" type="button" data-remove-favorite="@product.Id">
+                            <i class="fas fa-heart-crack"></i> Quitar
+                        </button>
+                    </div>
+                </div>
+            </article>
+        }
+    </section>
+</main>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/catalog-index.css" asp-append-version="true" />
+}
+
+@section Scripts {
+<script>
+(() => {
+    const email = (document.body.dataset.userEmail || '').trim().toLowerCase();
+    const key = `bakesmart:favorites:${email}`;
+    const loginNotice = document.getElementById('favoritesLoginNotice');
+    const empty = document.getElementById('favoritesEmpty');
+    const cards = [...document.querySelectorAll('[data-favorite-card]')];
+
+    function readFavorites() {
+        try {
+            return new Set(JSON.parse(localStorage.getItem(key) || '[]').map(Number));
+        } catch {
+            return new Set();
+        }
+    }
+
+    function saveFavorites(ids) {
+        localStorage.setItem(key, JSON.stringify([...ids]));
+    }
+
+    function render() {
+        if (!email) {
+            loginNotice.hidden = false;
+            empty.hidden = true;
+            cards.forEach(card => card.hidden = true);
+            return;
+        }
+
+        const ids = readFavorites();
+        let visible = 0;
+        cards.forEach(card => {
+            const active = ids.has(Number(card.dataset.id));
+            card.hidden = !active;
+            if (active) visible++;
+        });
+        loginNotice.hidden = true;
+        empty.hidden = visible > 0;
+    }
+
+    document.querySelectorAll('[data-remove-favorite]').forEach(button => {
+        button.addEventListener('click', () => {
+            const ids = readFavorites();
+            ids.delete(Number(button.dataset.removeFavorite));
+            saveFavorites(ids);
+            app.toast.show('Producto eliminado de favoritos', 'success');
+            render();
+        });
+    });
+
+    render();
+})();
+</script>
+}

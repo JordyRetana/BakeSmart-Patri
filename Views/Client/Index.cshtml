@@ -1,5 +1,6 @@
 @section Styles {
-    <link rel="stylesheet" href="~/css/pages/client-index.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="~/css/pages/client-index.css?v=20260709-client-two-column-v2" />
 }
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -141,10 +142,10 @@
                             <label>
                                 <span>Pago</span>
                                 <select class="form-control" name="paymentMethod" id="quickPaymentMethod">
-                                    <option>Pendiente</option>
-                                    <option>Pago en linea</option>
-                                    <option>SINPE</option>
-                                    <option>Tarjeta</option>
+                                    <option value="Pago en linea">Pagar ahora</option>
+                                    <option value="Pendiente">Pagar en tienda</option>
+                                    <option value="SINPE">SINPE</option>
+                                    <option value="Tarjeta">Tarjeta</option>
                                 </select>
                             </label>
                         </div>
@@ -179,7 +180,7 @@
                     </div>
                     <div class="quick-summary__rows">
                         <div><span>Subtotal</span><strong id="quickSubtotal">0</strong></div>
-                        <div id="quickDiscountRow" hidden><span>Descuento frecuente</span><strong id="quickDiscount">0</strong></div>
+                        <div id="quickDiscountRow" hidden><span>Descuento aplicado</span><strong id="quickDiscount">0</strong></div>
                         <div><span>IVA</span><strong id="quickTax">0</strong></div>
                         <div class="quick-summary__total"><span>Total</span><strong id="quickTotal">0</strong></div>
                     </div>
@@ -207,6 +208,46 @@
     </section>
 </div>
 
+<div class="payment-modal quick-address-modal" id="quickAddressModal" hidden>
+    <div class="payment-modal__backdrop" data-address-close></div>
+    <section class="payment-modal__dialog quick-address-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="quickAddressModalTitle">
+        <button class="payment-modal__close" type="button" data-address-close aria-label="Cerrar">
+            <i class="fas fa-xmark"></i>
+        </button>
+        <div class="payment-modal__header">
+            <span class="payment-modal__icon"><i class="fas fa-map-location-dot"></i></span>
+            <div>
+                <span class="client-panel__eyebrow">Entrega a domicilio</span>
+                <h2 id="quickAddressModalTitle">Elige la direccion de entrega</h2>
+            </div>
+        </div>
+        <div class="quick-address-choice" id="quickSavedAddressChoice" hidden>
+            <div>
+                <span>Direccion guardada</span>
+                <strong id="quickSavedAddressText">Sin direccion</strong>
+            </div>
+            <button class="btn btn-outline" type="button" id="useSavedAddressBtn">
+                <i class="fas fa-check"></i>
+                Usar esta
+            </button>
+        </div>
+        <div class="quick-address-picker">
+            <label>
+                <span>Direccion nueva</span>
+                <input class="form-control" id="quickAddressManual" placeholder="Ej. Escazu, San Jose, cerca del parque" autocomplete="street-address" />
+            </label>
+            <div id="quickMapPicker" class="quick-address-map"></div>
+        </div>
+        <div class="quick-address-modal__actions">
+            <button class="btn btn-outline" type="button" data-address-close>Cancelar</button>
+            <button class="btn btn-primary" type="button" id="useNewAddressBtn">
+                <i class="fas fa-location-dot"></i>
+                Usar direccion nueva
+            </button>
+        </div>
+    </section>
+</div>
+
 <div class="payment-modal" id="clientPaymentModal" hidden>
     <div class="payment-modal__backdrop" data-payment-close></div>
     <section class="payment-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="paymentModalTitle">
@@ -230,11 +271,13 @@
                 <select class="form-control" name="method" id="paymentGatewayMethod">
                     <option>Tarjeta</option>
                     <option>SINPE</option>
+                    <option>Transferencia</option>
+                    <option>Efectivo</option>
                 </select>
             </label>
             <label>
-                <span>Nombre del titular</span>
-                <input class="form-control" name="holder" placeholder="Nombre en la tarjeta o SINPE" required />
+                <span id="paymentReferenceLabel">Nombre del titular</span>
+                <input class="form-control" name="holder" id="paymentReferenceInput" placeholder="Nombre en la tarjeta o SINPE" required />
             </label>
             <label class="payment-card-field">
                 <span>Numero de tarjeta</span>
@@ -253,13 +296,15 @@
             <p class="payment-modal__note">Simulacion segura para desarrollo: no se guarda informacion sensible.</p>
             <button class="btn btn-primary quick-submit" type="submit" id="paymentConfirmBtn">
                 <i class="fas fa-lock"></i>
-                Pagar pedido
+                <span id="paymentConfirmText">Pagar pedido</span>
             </button>
         </form>
     </section>
 </div>
 
 @section Scripts {
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="~/js/bakesmart-map-picker.js" asp-append-version="true"></script>
     <script>
         (() => {
             const page = document.getElementById('clientDashboardPage');
@@ -278,12 +323,23 @@
             const paymentForm = document.getElementById('clientPaymentForm');
             const paymentMethod = document.getElementById('paymentGatewayMethod');
             const paymentConfirmBtn = document.getElementById('paymentConfirmBtn');
+            const paymentConfirmText = document.getElementById('paymentConfirmText');
+            const paymentReferenceLabel = document.getElementById('paymentReferenceLabel');
+            const paymentReferenceInput = document.getElementById('paymentReferenceInput');
+            const addressModal = document.getElementById('quickAddressModal');
+            const savedAddressChoice = document.getElementById('quickSavedAddressChoice');
+            const savedAddressText = document.getElementById('quickSavedAddressText');
+            const manualAddressInput = document.getElementById('quickAddressManual');
+            const useSavedAddressBtn = document.getElementById('useSavedAddressBtn');
+            const useNewAddressBtn = document.getElementById('useNewAddressBtn');
 
             let pageInitialized = false;
             let products = [];
             let selectedProduct = null;
             let currentProfile = null;
             let pendingPayment = null;
+            let addressPicker = null;
+            let submitAfterAddress = false;
 
             const money = value => app.utils.formatCurrency(Number(value || 0));
             const clean = value => String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -368,16 +424,16 @@
 
             function fillPaymentMethods() {
                 const methods = (BakeSmartStore.pos.config().paymentMethods || []).filter(method => method.active);
-                const names = new Set(['Pendiente', 'Pago en linea', 'Tarjeta', 'SINPE Movil']);
+                const names = new Set(['Pago en linea', 'Pendiente', 'Tarjeta', 'SINPE']);
                 methods.forEach(method => names.add(method.name));
 
                 document.getElementById('quickPaymentMethod').innerHTML = [...names]
-                    .map(name => `<option>${clean(name)}</option>`)
+                    .map(name => `<option value="${clean(name)}">${clean(name === 'Pago en linea' ? 'Pagar ahora' : name === 'Pendiente' ? 'Pagar en tienda' : name)}</option>`)
                     .join('');
             }
 
             async function loadProducts() {
-                await BakeSmartStore.refresh();
+                await BakeSmartStore.refreshClient();
                 products = BakeSmartStore.inventory.list().map(normalizeProduct);
                 document.getElementById('clientAvailableProducts').textContent =
                     products.filter(product => product.active && isSellableProduct(product) && product.stock > 0).length;
@@ -415,6 +471,79 @@
                 document.getElementById('quickCustomerAddressId').value = currentProfile?.customerAddressId ?? '';
             }
 
+            function hasSavedAddress() {
+                return Boolean(currentProfile?.address && currentProfile?.latitude && currentProfile?.longitude);
+            }
+
+            function applySavedAddress() {
+                if (!hasSavedAddress()) return false;
+                document.getElementById('quickAddress').value = currentProfile.address || '';
+                document.getElementById('quickLat').value = currentProfile.latitude ?? '';
+                document.getElementById('quickLng').value = currentProfile.longitude ?? '';
+                document.getElementById('quickCustomerAddressId').value = currentProfile.customerAddressId ?? '';
+                document.getElementById('quickProfileAddress').textContent = currentProfile.address || 'Direccion guardada';
+                return true;
+            }
+
+            async function ensureAddressPicker() {
+                if (addressPicker) return addressPicker;
+                for (let i = 0; i < 20 && (!window.L || !window.BakeSmartMapPicker); i++) {
+                    await new Promise(resolve => setTimeout(resolve, 150));
+                }
+                if (!window.L || !window.BakeSmartMapPicker) {
+                    document.getElementById('quickMapPicker').innerHTML = `
+                        <div class="client-empty-state quick-map-fallback">
+                            <i class="fas fa-map-location-dot"></i>
+                            <strong>Mapa no disponible</strong>
+                            <span>Escriba la direccion y vuelva a intentarlo en unos segundos.</span>
+                        </div>
+                    `;
+                    return null;
+                }
+                const origin = BakeSmartStore.geo.origin();
+                addressPicker = await BakeSmartMapPicker.create('quickMapPicker', {
+                    lat: currentProfile?.latitude || origin.lat,
+                    lng: currentProfile?.longitude || origin.lng,
+                    address: currentProfile?.address || '',
+                    onChange: values => {
+                        manualAddressInput.value = values.address || manualAddressInput.value || '';
+                    }
+                });
+                return addressPicker;
+            }
+
+            async function openAddressModal(continueAfterSelection = false) {
+                submitAfterAddress = continueAfterSelection;
+                savedAddressChoice.hidden = !hasSavedAddress();
+                savedAddressText.textContent = currentProfile?.address || 'Sin direccion guardada';
+                manualAddressInput.value = currentProfile?.address || '';
+                addressModal.hidden = false;
+                await ensureAddressPicker();
+                if (addressPicker) {
+                    addressPicker.setValues({
+                        address: currentProfile?.address || '',
+                        lat: currentProfile?.latitude || BakeSmartStore.geo.origin().lat,
+                        lng: currentProfile?.longitude || BakeSmartStore.geo.origin().lng
+                    });
+                    requestAnimationFrame(() => addressPicker.map?.invalidateSize?.());
+                    setTimeout(() => addressPicker.map?.invalidateSize?.(), 250);
+                    setTimeout(() => addressPicker.map?.invalidateSize?.(), 900);
+                }
+            }
+
+            function closeAddressModal() {
+                addressModal.hidden = true;
+                submitAfterAddress = false;
+            }
+
+            function continuePendingSubmit() {
+                const shouldContinue = submitAfterAddress;
+                closeAddressModal();
+                if (shouldContinue) {
+                    requestAnimationFrame(() => form.requestSubmit());
+                }
+            }
+
             function renderSummary() {
                 const orders = BakeSmartStore.orders.byClient(userEmail);
                 const total = orders.reduce((acc, order) => acc + Number(order.total || 0), 0);
@@ -444,6 +573,25 @@
                         <span>Cuando registres uno, aparecera aqui.</span>
                     </div>
                 `;
+                decorateMiniOrders(orders);
+            }
+
+            function decorateMiniOrders(orders) {
+                const rows = document.querySelectorAll('.client-order-row');
+                rows.forEach((row, index) => {
+                    const order = orders[index];
+                    if (!order || !String(order.paymentStatus || '').toLowerCase().includes('pendiente')) return;
+                    row.classList.add('client-order-row--payable');
+                    if (row.querySelector('[data-pay-deposit]')) return;
+                    const target = row.querySelector('.client-order-row__status');
+                    if (!target) return;
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'btn btn-outline btn-sm client-deposit-btn';
+                    button.dataset.payDeposit = order.id;
+                    button.innerHTML = '<i class="fas fa-money-bill-transfer"></i> Pagar abono';
+                    target.appendChild(button);
+                });
             }
 
             function updateSummary() {
@@ -451,7 +599,9 @@
                 const price = Number(selectedProduct?.price || 0);
                 const subtotal = price * quantity;
                 const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
-                const discountRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
+                const frequentRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
+                const promotionRate = Number(BakeSmartStore.pos.config().activePromotionDiscount || 0);
+                const discountRate = Math.max(frequentRate, promotionRate);
                 const discount = subtotal * discountRate;
                 const discountedSubtotal = Math.max(0, subtotal - discount);
                 const tax = discountedSubtotal * taxRate;
@@ -464,15 +614,29 @@
                 document.getElementById('quickTotal').textContent = money(discountedSubtotal + tax);
             }
 
-            function shouldOpenGateway(method) {
+            function normalizeGatewayMethod(method) {
                 const value = String(method || '').toLowerCase();
-                return value.includes('linea') || value.includes('tarjeta') || value.includes('sinpe');
+                if (value.includes('sinpe')) return 'SINPE';
+                if (value.includes('transfer')) return 'Transferencia';
+                if (value.includes('efectivo')) return 'Efectivo';
+                return 'Tarjeta';
             }
 
-            function openPaymentGateway(orderId, total, method) {
-                pendingPayment = { orderId, total, method };
-                document.getElementById('paymentModalTotal').textContent = money(total);
-                paymentMethod.value = String(method || '').toLowerCase().includes('sinpe') ? 'SINPE' : 'Tarjeta';
+            function shouldOpenGateway(method) {
+                const value = String(method || '').toLowerCase();
+                return value.includes('linea') || value.includes('tarjeta') || value.includes('sinpe') || value.includes('transfer');
+            }
+
+            function openPaymentGateway(orderId, total, method, mode = 'full') {
+                const amount = mode === 'deposit' ? Math.max(1, Number(total || 0) * 0.3) : Number(total || 0);
+                pendingPayment = { orderId, total: amount, method, mode };
+                if (paymentModal.parentElement !== document.body) {
+                    document.body.appendChild(paymentModal);
+                }
+                document.getElementById('paymentModalTotal').textContent = money(amount);
+                paymentMethod.value = normalizeGatewayMethod(method);
+                paymentConfirmText.textContent = mode === 'deposit' ? 'Pagar abono' : 'Pagar pedido';
+                paymentMethod.dispatchEvent(new Event('change', { bubbles: true }));
                 syncPaymentFields();
                 paymentModal.hidden = false;
                 paymentForm.holder.value = document.getElementById('quickCustomerName').value || '';
@@ -482,14 +646,40 @@
                 paymentModal.hidden = true;
                 pendingPayment = null;
                 paymentForm.reset();
+                paymentConfirmText.textContent = 'Pagar pedido';
                 syncPaymentFields();
             }
 
             function syncPaymentFields() {
-                const isSinpe = paymentMethod.value === 'SINPE';
+                const value = String(paymentMethod.value || '').toLowerCase();
+                const isCard = value.includes('tarjeta');
                 document.querySelectorAll('.payment-card-field').forEach(field => {
-                    field.hidden = isSinpe;
+                    field.hidden = !isCard;
+                    field.style.display = isCard ? '' : 'none';
+                    field.querySelectorAll('input').forEach(input => {
+                        input.disabled = !isCard;
+                        input.required = isCard;
+                        if (!isCard) input.value = '';
+                    });
                 });
+
+                if (value.includes('sinpe')) {
+                    paymentReferenceLabel.textContent = 'Referencia SINPE';
+                    paymentReferenceInput.placeholder = 'Telefono o comprobante SINPE';
+                    paymentReferenceInput.required = true;
+                } else if (value.includes('transfer')) {
+                    paymentReferenceLabel.textContent = 'Referencia de transferencia';
+                    paymentReferenceInput.placeholder = 'Banco o numero de comprobante';
+                    paymentReferenceInput.required = true;
+                } else if (value.includes('efectivo')) {
+                    paymentReferenceLabel.textContent = 'Recibido por';
+                    paymentReferenceInput.placeholder = 'Nombre de quien recibe el efectivo';
+                    paymentReferenceInput.required = false;
+                } else {
+                    paymentReferenceLabel.textContent = 'Titular de la tarjeta';
+                    paymentReferenceInput.placeholder = 'Nombre del titular';
+                    paymentReferenceInput.required = true;
+                }
             }
 
             function toggleQuickDelivery() {
@@ -508,9 +698,55 @@
             quantityInput.addEventListener('input', updateSummary);
             deliveryMethod.addEventListener('change', toggleQuickDelivery);
             paymentMethod.addEventListener('change', syncPaymentFields);
+            document.getElementById('clientMiniOrders').addEventListener('click', event => {
+                const button = event.target.closest('[data-pay-deposit]');
+                if (!button) return;
+                const order = BakeSmartStore.orders.byClient(userEmail)
+                    .find(row => Number(row.id) === Number(button.dataset.payDeposit));
+                if (!order) {
+                    app.toast.error('No se encontro el pedido para pagar el abono.');
+                    return;
+                }
+                openPaymentGateway(order.id, Number(order.total || 0), 'SINPE', 'deposit');
+            });
 
             document.querySelectorAll('[data-payment-close]').forEach(button => {
                 button.addEventListener('click', closePaymentGateway);
+            });
+
+            document.querySelectorAll('[data-address-close]').forEach(button => {
+                button.addEventListener('click', closeAddressModal);
+            });
+
+            useSavedAddressBtn.addEventListener('click', () => {
+                if (applySavedAddress()) {
+                    app.toast.success('Usaremos tu direccion guardada para este pedido.');
+                    continuePendingSubmit();
+                }
+            });
+
+            useNewAddressBtn.addEventListener('click', () => {
+                if (addressPicker) {
+                    addressPicker.applyToFields({
+                        address: 'quickAddress',
+                        lat: 'quickLat',
+                        lng: 'quickLng'
+                    });
+                }
+
+                if (manualAddressInput.value.trim()) {
+                    document.getElementById('quickAddress').value = manualAddressInput.value.trim();
+                }
+
+                document.getElementById('quickCustomerAddressId').value = '';
+
+                if (!document.getElementById('quickAddress').value || !document.getElementById('quickLat').value || !document.getElementById('quickLng').value) {
+                    app.toast.error('Seleccione una ubicacion en el mapa para continuar.');
+                    return;
+                }
+
+                document.getElementById('quickProfileAddress').textContent = document.getElementById('quickAddress').value;
+                continuePendingSubmit();
             });
 
             paymentForm.addEventListener('submit', async (event) => {
@@ -529,7 +765,7 @@
                 try {
                     paymentConfirmBtn.disabled = true;
                     await BakeSmartStore.orders.markPaid(pendingPayment.orderId, data.method);
-                    await BakeSmartStore.refresh();
+                    await BakeSmartStore.refresh({ force: true });
                     renderSummary();
                     app.toast.success(`Pago aprobado. Pedido #${pendingPayment.orderId} confirmado para produccion.`);
                     closePaymentGateway();
@@ -559,7 +795,7 @@
                 }
 
                 if (!isPickup && (!data.address || !data.destinationLatitude || !data.destinationLongitude)) {
-                    app.toast.error('Configure una direccion valida desde Perfil antes de pedir a domicilio.');
+                    await openAddressModal(true);
                     return;
                 }
 
@@ -568,7 +804,9 @@
 
                     const subtotal = Number(product.price) * quantity;
                     const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
-                    const discountRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
+                    const frequentRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
+                    const promotionRate = Number(BakeSmartStore.pos.config().activePromotionDiscount || 0);
+                    const discountRate = Math.max(frequentRate, promotionRate);
                     const discount = subtotal * discountRate;
                     const discountedSubtotal = Math.max(0, subtotal - discount);
                     const tax = discountedSubtotal * taxRate;
@@ -590,11 +828,12 @@
                         paymentMethod: data.paymentMethod,
                         destinationLatitude: isPickup ? null : Number(data.destinationLatitude),
                         destinationLongitude: isPickup ? null : Number(data.destinationLongitude),
+                        deliveryReference: isPickup ? null : data.address,
                         customerAddressId: isPickup ? null : (data.customerAddressId ? Number(data.customerAddressId) : null),
                         deliveryMethod: data.deliveryMethod
                     });
 
-                    await BakeSmartStore.refresh();
+                    await BakeSmartStore.refresh({ force: true });
                     products = BakeSmartStore.inventory.list().map(normalizeProduct);
                     document.getElementById('clientAvailableProducts').textContent =
                         products.filter(item => item.active && isSellableProduct(item) && item.stock > 0).length;
@@ -604,7 +843,7 @@
                     if (shouldOpenGateway(data.paymentMethod)) {
                         openPaymentGateway(result.id, total, data.paymentMethod);
                     } else {
-                        app.toast.success('Pedido registrado correctamente. Queda pendiente de pago.');
+                        app.toast.warning('Pedido registrado. Para iniciar produccion se requiere un abono anticipado o pago en tienda.');
                     }
                     form.quantity.value = 1;
                     form.notes.value = '';
@@ -621,14 +860,15 @@
 
                 const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
                 form.deliveryDate.value = tomorrow;
+                showPage();
 
-                await loadProducts();
-                await loadProfile();
+                await Promise.all([
+                    loadProducts(),
+                    loadProfile()
+                ]);
                 toggleQuickDelivery();
                 renderSummary();
                 updateSummary();
-
-                requestAnimationFrame(showPage);
             }
 
             app.page.ready(() => initializePage());

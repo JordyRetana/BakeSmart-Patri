@@ -29,7 +29,7 @@
 </div>
 
 <div style="padding: 0 1.5rem;">
-    <div class="catalog-toolbar" style="max-width: 600px; margin: 0 auto 2rem;">
+    <div class="catalog-toolbar">
         <div class="catalog-search-row" style="display: flex; gap: 0.5rem;">
             <div class="catalog-search-field" style="flex: 1; position: relative;">
                 <i class="fas fa-search" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
@@ -38,21 +38,15 @@
             <button class="btn btn-primary catalog-search-button" type="button" onclick="filterProducts()">
                 <i class="fas fa-search"></i>
             </button>
-        </div>
-    </div>
-
-    <div class="catalog-category-list" style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 3rem; flex-wrap: wrap;">
-        <button class="btn btn-primary category-btn active" data-category="all" style="border-radius: 9999px;" type="button" onclick="filterCategory('all')">
-            <i class="fas fa-th-large"></i>
-            Todos
-        </button>
-        @foreach (var category in Model.Categories)
-        {
-            <button class="btn btn-outline category-btn" data-category="@category.Name" style="border-radius: 9999px;" type="button" onclick="filterCategory('@category.Name')">
-                <i class="fas @category.Icon"></i>
-                @category.Name
+            <button class="btn btn-outline catalog-categories-trigger" type="button" id="openCategoriesSidebar">
+                <i class="fas fa-layer-group"></i>
+                Categorias
             </button>
-        }
+        </div>
+        <div class="catalog-active-filter" id="catalogActiveFilter">
+            <i class="fas fa-filter"></i>
+            <span>Todas las categorias</span>
+        </div>
     </div>
 
     <div class="grid grid-3" id="productsGrid" style="gap: clamp(1rem, 1.8vw, 2rem);">
@@ -112,6 +106,36 @@
     </div>
 </div>
 
+<div class="catalog-categories-backdrop" id="catalogCategoriesBackdrop" hidden></div>
+<aside class="catalog-categories-sidebar" id="catalogCategoriesSidebar" aria-hidden="true" aria-labelledby="catalogCategoriesTitle">
+    <div class="catalog-categories-sidebar__header">
+        <div>
+            <span>Catalogo</span>
+            <h2 id="catalogCategoriesTitle">Categorias</h2>
+        </div>
+        <button class="catalog-sidebar-close" type="button" id="closeCategoriesSidebar" aria-label="Cerrar categorias">
+            <i class="fas fa-xmark"></i>
+        </button>
+    </div>
+
+    <div class="catalog-categories-sidebar__body">
+        <button class="catalog-category-option category-btn active" data-category="all" type="button">
+            <span><i class="fas fa-th-large"></i></span>
+            <strong>Todas las categorias</strong>
+            <small>@Model.Products.Count productos</small>
+        </button>
+        @foreach (var category in Model.Categories)
+        {
+            var count = Model.Products.Count(product => product.Category == category.Name);
+            <button class="catalog-category-option category-btn" data-category="@category.Name" type="button">
+                <span><i class="fas @category.Icon"></i></span>
+                <strong>@category.Name</strong>
+                <small>@count productos</small>
+            </button>
+        }
+    </div>
+</aside>
+
 <!-- Mobile cart backdrop -->
 <div class="mobile-sheet-backdrop" id="catalogCartBackdrop" style="display:none;"></div>
 
@@ -138,7 +162,7 @@
         <span id="cartTotal" style="color:var(--primary);font-size:1.15rem;">₡0</span>
     </div>
 
-    <a href="/Orders/Create" class="btn btn-primary btn-block" style="min-height:50px;">
+    <a href="/Orders/Create" class="btn btn-primary btn-block catalog-checkout-link" style="min-height:50px;">
         <i class="fas fa-arrow-right"></i>
         Finalizar pedido
     </a>
@@ -158,7 +182,7 @@
         <span>Total:</span>
         <span id="cartTotalDesktop" style="color:var(--primary);">₡0</span>
     </div>
-    <a href="/Orders/Create" class="btn btn-primary btn-block">
+    <a href="/Orders/Create" class="btn btn-primary btn-block catalog-checkout-link">
         <i class="fas fa-arrow-right"></i>
         Finalizar pedido
     </a>
@@ -169,6 +193,47 @@
     let cart = [];
     let shouldAutoOpenCart = false;
 
+    const currentUserEmail = () => (document.body.dataset.userEmail || '').trim().toLowerCase();
+    const favoriteStorageKey = () => `bakesmart:favorites:${currentUserEmail()}`;
+
+    function requireLogin(message, returnUrl) {
+        if (currentUserEmail()) return true;
+        app.toast.warning(message || 'Inicia sesion para continuar.');
+        const target = returnUrl || `${window.location.pathname}${window.location.search}`;
+        window.setTimeout(() => {
+            window.location.href = `/Account/Login?ReturnUrl=${encodeURIComponent(target)}`;
+        }, 650);
+        return false;
+    }
+
+    function readFavorites() {
+        if (!currentUserEmail()) return new Set();
+        try {
+            return new Set(JSON.parse(localStorage.getItem(favoriteStorageKey()) || '[]').map(Number));
+        } catch {
+            return new Set();
+        }
+    }
+
+    function saveFavorites(ids) {
+        if (!currentUserEmail()) return;
+        localStorage.setItem(favoriteStorageKey(), JSON.stringify([...ids]));
+    }
+
+    function syncFavoriteButtons() {
+        const ids = readFavorites();
+        document.querySelectorAll('.product-card').forEach(card => {
+            const button = card.querySelector('.favorite-btn');
+            const icon = button?.querySelector('i');
+            if (!button || !icon) return;
+            const active = ids.has(Number(card.dataset.id));
+            icon.classList.toggle('far', !active);
+            icon.classList.toggle('fas', active);
+            icon.style.color = active ? '#ec4899' : '';
+            button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+    }
+
     function filterCategory(category) {
         currentCategory = category;
         const buttons = document.querySelectorAll('.category-btn');
@@ -176,7 +241,10 @@
             const active = btn.dataset.category === category || (category === 'all' && btn.dataset.category === 'all');
             btn.classList.toggle('btn-primary', active);
             btn.classList.toggle('btn-outline', !active);
+            btn.classList.toggle('active', active);
         });
+        const activeLabel = category === 'all' ? 'Todas las categorias' : category;
+        document.querySelector('#catalogActiveFilter span').textContent = activeLabel;
         filterProducts();
     }
 
@@ -191,19 +259,59 @@
 
     document.getElementById('searchProduct').addEventListener('input', app.utils.debounce(filterProducts, 250));
 
+    function openCategoriesSidebar() {
+        const sidebar = document.getElementById('catalogCategoriesSidebar');
+        const backdrop = document.getElementById('catalogCategoriesBackdrop');
+        sidebar.classList.add('is-open');
+        sidebar.setAttribute('aria-hidden', 'false');
+        backdrop.hidden = false;
+        document.body.classList.add('catalog-sidebar-open');
+    }
+
+    function closeCategoriesSidebar() {
+        const sidebar = document.getElementById('catalogCategoriesSidebar');
+        const backdrop = document.getElementById('catalogCategoriesBackdrop');
+        sidebar.classList.remove('is-open');
+        sidebar.setAttribute('aria-hidden', 'true');
+        backdrop.hidden = true;
+        document.body.classList.remove('catalog-sidebar-open');
+    }
+
+    document.getElementById('openCategoriesSidebar').addEventListener('click', openCategoriesSidebar);
+    document.getElementById('closeCategoriesSidebar').addEventListener('click', closeCategoriesSidebar);
+    document.getElementById('catalogCategoriesBackdrop').addEventListener('click', closeCategoriesSidebar);
+    document.getElementById('catalogCategoriesSidebar').addEventListener('click', event => {
+        const button = event.target.closest('[data-category]');
+        if (!button) return;
+        filterCategory(button.dataset.category);
+        closeCategoriesSidebar();
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeCategoriesSidebar();
+    });
+
     function toggleFavorite(btn) {
-        const icon = btn.querySelector('i');
-        icon.classList.toggle('far');
-        icon.classList.toggle('fas');
-        if (icon.classList.contains('fas')) {
-            icon.style.color = '#ec4899';
-            app.toast.show('Agregado a favoritos', 'success');
+        if (!requireLogin('Inicia sesion para guardar favoritos.')) return;
+        const card = btn.closest('.product-card');
+        const productId = Number(card?.dataset.id || 0);
+        const ids = readFavorites();
+        const isActive = ids.has(productId);
+        if (isActive) {
+            ids.delete(productId);
         } else {
-            icon.style.color = '';
+            ids.add(productId);
         }
+        saveFavorites(ids);
+        const icon = btn.querySelector('i');
+        icon.classList.toggle('far', isActive);
+        icon.classList.toggle('fas', !isActive);
+        icon.style.color = isActive ? '' : '#ec4899';
+        btn.setAttribute('aria-pressed', isActive ? 'false' : 'true');
+        app.toast.show(isActive ? 'Eliminado de favoritos' : 'Agregado a favoritos', 'success');
     }
 
     function addProductButton(button) {
+        if (!requireLogin('Inicia sesion para ordenar productos.')) return;
         addToCart(Number(button.dataset.id), button.dataset.name, Number(button.dataset.price));
     }
 
@@ -298,9 +406,19 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        syncFavoriteButtons();
+        document.querySelectorAll('.catalog-checkout-link').forEach(link => {
+            link.addEventListener('click', event => {
+                if (!requireLogin('Inicia sesion para finalizar el pedido.', '/Orders/Create')) {
+                    event.preventDefault();
+                }
+            });
+        });
+
         const parameters = new URLSearchParams(window.location.search);
         const search = parameters.get('search');
         const category = parameters.get('category');
+        const categoriesOpen = parameters.get('categories') === 'open';
         const productId = Number(parameters.get('add'));
 
         if (search) {
@@ -312,6 +430,10 @@
             const categoryButton = Array.from(document.querySelectorAll('.category-btn'))
                 .find(button => button.dataset.category.toLowerCase() === category.toLowerCase());
             if (categoryButton) filterCategory(categoryButton.dataset.category);
+        }
+
+        if (categoriesOpen) {
+            openCategoriesSidebar();
         }
 
         if (productId) {

@@ -1,5 +1,6 @@
 .auth-page-shell {
-    max-width: 780px;
+    width: min(1080px, calc(100% - 2rem));
+    max-width: none;
     margin: 2rem auto;
     display: grid;
     gap: 1rem;
@@ -10,16 +11,35 @@
     width: 100%;
 }
 
+.register-card {
+    display: grid;
+    grid-template-columns: minmax(260px, .62fr) minmax(0, 1fr);
+    gap: 0;
+    overflow: hidden;
+    padding: 0 !important;
+    border-radius: 8px;
+}
+
 .auth-hero {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    min-height: 100%;
+    margin: 0;
+    padding: 2rem;
     text-align: center;
-    margin-bottom: 2rem;
+    color: #fff;
+    background:
+        linear-gradient(145deg, rgba(124, 58, 237, .96), rgba(200, 60, 134, .92)),
+        var(--gradient-primary);
 }
 
 .auth-logo-wrap {
-    width: 84px;
-    height: 84px;
-    background: var(--gradient-primary);
-    border-radius: 50%;
+    width: 78px;
+    height: 78px;
+    background: rgba(255, 255, 255, .18);
+    border: 1px solid rgba(255, 255, 255, .34);
+    border-radius: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -34,17 +54,29 @@
 
 .auth-title {
     margin: 0;
+    color: #fff;
+    font-size: 2rem;
+    line-height: 1.08;
 }
 
 .auth-subtitle {
-    margin: .5rem 0 0;
+    max-width: 28ch;
+    margin: .65rem auto 0;
+    color: rgba(255, 255, 255, .88) !important;
+    line-height: 1.55;
 }
 
 .auth-alert {
-    margin-bottom: 1rem;
+    grid-column: 2;
+    margin: 1rem 1.25rem 0;
+    min-height: auto;
+    padding: .85rem 1rem;
+    border-radius: 8px;
 }
 
 .register-form {
+    grid-column: 2;
+    padding: 1.25rem;
     text-align: left;
 }
 
@@ -62,10 +94,22 @@
     display: flex;
     align-items: center;
     gap: .4rem;
+    margin-bottom: .35rem;
+    color: var(--text);
+    font-size: .84rem;
+    font-weight: 800;
+}
+
+.register-form .input {
+    width: 100%;
+    min-height: 46px;
+    border-radius: 8px;
+    font-size: .95rem;
 }
 
 .register-submit-btn {
     margin-top: 1rem;
+    min-height: 50px;
 }
 
 .auth-help-card {
@@ -112,6 +156,21 @@
     .auth-page-shell {
         margin: 1rem auto;
         padding: 0 1rem;
+    }
+
+    .register-card {
+        grid-template-columns: 1fr;
+    }
+
+    .auth-hero,
+    .auth-alert,
+    .register-form {
+        grid-column: auto;
+    }
+
+    .auth-hero {
+        min-height: auto;
+        padding: 1.5rem;
     }
 
     .register-grid {

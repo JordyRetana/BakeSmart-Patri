@@ -23,6 +23,9 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Punto de venta";
+    var canManagePayments = User.IsInRole("Admin") || User.IsInRole("Staff");
+    var canViewCashSessions = User.IsInRole("Admin") || User.IsInRole("Staff") || User.IsInRole("Supervisor");
+    var canManageCreditNotes = User.IsInRole("Admin") || User.IsInRole("Staff");
 }
 
 <div class="page-shell pos-page">
@@ -66,41 +69,56 @@
 
     <div class="pos-layout">
         <aside class="card pos-side-card">
-            <div class="pos-panel-header">
-                <div>
-                    <div class="pos-panel-eyebrow">Caja</div>
-                    <h3 class="pos-panel-title">Control de caja</h3>
+            <section class="pos-admin-block pos-admin-block--cash">
+                <div class="pos-panel-header">
+                    <div>
+                        <div class="pos-panel-eyebrow">Caja</div>
+                        <h3 class="pos-panel-title">Control de caja</h3>
+                    </div>
+                    <span class="status-chip pos-box-chip" id="posBoxChip">Sin turno</span>
                 </div>
-                <span class="status-chip pos-box-chip" id="posBoxChip">Sin turno</span>
-            </div>
 
-            <div id="posSessionPanel"></div>
+                <div id="posSessionPanel"></div>
+            </section>
 
-            <div class="hr"></div>
-
-            <div class="pos-panel-header pos-panel-header--compact">
-                <div>
-                    <div class="pos-panel-eyebrow">Cobro</div>
-                    <h4 class="pos-panel-title-sm">Formas de pago</h4>
+            <section class="pos-admin-block pos-admin-block--sessions">
+                <div class="pos-sessions-board" id="posSessionsBoard">
+                    <div class="pos-panel-header pos-panel-header--compact">
+                        <div>
+                            <div class="pos-panel-eyebrow">Supervision</div>
+                            <h4 class="pos-panel-title-sm">Estado de cajas</h4>
+                        </div>
+                    </div>
+                    <div id="posSessionsList" class="pos-sessions-list"></div>
                 </div>
-            </div>
+            </section>
 
-            <div id="paymentMethodsPanel" class="payment-methods-panel"></div>
+            <section class="pos-admin-block pos-admin-block--payments">
+                <div class="pos-panel-header pos-panel-header--compact">
+                    <div>
+                        <div class="pos-panel-eyebrow">Cobro</div>
+                        <h4 class="pos-panel-title-sm">Formas de pago</h4>
+                    </div>
+                </div>
 
-            <form id="paymentMethodForm" class="pos-payment-config-form">
-                <input class="form-control" name="name" placeholder="Forma de pago" required />
-                <input class="form-control" name="commissionRate" type="number" min="0" step="0.01" placeholder="Comisión" required />
-                <input class="form-control" name="account" placeholder="Cuenta contable" required />
-                <button class="btn btn-outline btn-sm" type="submit">Guardar forma</button>
-            </form>
+                <div id="paymentMethodsPanel" class="payment-methods-panel"></div>
 
-            <div class="hr"></div>
+                <form id="paymentMethodForm" class="pos-payment-config-form" hidden="@(!canManagePayments)">
+                    <input class="form-control" name="name" placeholder="Forma de pago" required />
+                    <input class="form-control" name="commissionRate" type="number" min="0" step="0.01" placeholder="Comisión" required />
+                    <input class="form-control" name="account" placeholder="Cuenta contable" required />
+                    <button class="btn btn-outline btn-sm" type="submit">Guardar forma</button>
+                </form>
+            </section>
 
-            <form id="creditNoteForm" class="pos-payment-config-form">
-                <input class="form-control" name="saleId" type="number" min="1" placeholder="ID de venta" required />
-                <input class="form-control" name="reason" placeholder="Motivo de nota de crédito" required />
-                <button class="btn btn-ghost btn-sm" type="submit">Registrar nota</button>
-            </form>
+            <section class="pos-admin-block pos-admin-block--credit" hidden="@(!canManageCreditNotes)">
+                <form id="creditNoteForm" class="pos-payment-config-form">
+                    <input class="form-control" name="saleId" type="number" min="1" placeholder="ID de venta o pedido" required />
+                    <input class="form-control" name="reason" placeholder="Motivo de nota de crédito" required />
+                    <button class="btn btn-ghost btn-sm" type="submit">Registrar nota</button>
+                </form>
+                <div class="pos-recent-sales" id="posRecentSales"></div>
+            </section>
         </aside>
 
         <section class="card pos-main-card">
@@ -264,10 +282,17 @@
             const checkoutForm = document.getElementById('posCheckoutForm');
             const cart = [];
             const fmt = app.utils.formatCurrency;
+            let recentSales = [];
+            const permissions = {
+                canManagePayments: @canManagePayments.ToString().ToLowerInvariant(),
+                canViewCashSessions: @canViewCashSessions.ToString().ToLowerInvariant(),
+                canManageCreditNotes: @canManageCreditNotes.ToString().ToLowerInvariant()
+            };
 
             const getConfig = () => store.pos.config();
             const getActiveSession = () => store.pos.activeSession();
             const getProducts = () => store.pos.searchProducts(searchInput.value);
+            const money = value => app.utils.formatCurrency(Number(value || 0));
 
             ['posCartToggle', 'posCartBackdrop', 'posCartSheet', 'posCartPanel'].forEach(id => {
                 const element = document.getElementById(id);
@@ -294,6 +319,10 @@
             function renderSessionPanel() {
                 const session = getActiveSession();
                 const container = document.getElementById('posSessionPanel');
+                document.getElementById('posSessionsBoard')?.toggleAttribute('hidden', !permissions.canViewCashSessions);
+                document.getElementById('paymentMethodForm')?.toggleAttribute('hidden', !permissions.canManagePayments);
+                document.getElementById('creditNoteForm')?.toggleAttribute('hidden', !permissions.canManageCreditNotes);
+                document.getElementById('posRecentSales')?.toggleAttribute('hidden', !permissions.canManageCreditNotes);
 
                 if (session) {
                     container.innerHTML = `
@@ -323,6 +352,48 @@
                 }
 
                 renderPaymentMethods();
+                if (permissions.canViewCashSessions) renderSessionsList();
+                if (permissions.canManageCreditNotes) renderRecentSales();
+            }
+
+            function renderSessionsList() {
+                const container = document.getElementById('posSessionsList');
+                const sessions = store.pos.cachedSessions ? store.pos.cachedSessions() : [];
+                container.innerHTML = sessions.slice(0, 5).map(session => `
+                    <article class="pos-session-row">
+                        <div>
+                            <strong>Caja #${session.id}</strong>
+                            <span>${session.userName || 'Sistema'} · ${new Date(session.openedAt).toLocaleString('es-CR')}</span>
+                        </div>
+                        <div>
+                            <span class="badge ${String(session.status || '').toLowerCase().startsWith('abiert') ? 'badge-success' : 'badge-warning'}">${session.status}</span>
+                            <b>${money(session.totalSales)}</b>
+                        </div>
+                    </article>
+                `).join('') || '<div class="text-muted pos-small-empty">No hay cajas registradas.</div>';
+            }
+
+            function renderRecentSales() {
+                const container = document.getElementById('posRecentSales');
+                container.innerHTML = `
+                    <div class="pos-panel-header pos-panel-header--compact">
+                        <div>
+                            <div class="pos-panel-eyebrow">Notas de credito</div>
+                            <h4 class="pos-panel-title-sm">Ventas recientes</h4>
+                        </div>
+                    </div>
+                    <div class="pos-sales-list">
+                        ${recentSales.slice(0, 6).map(sale => `
+                            <button class="pos-sale-row" type="button" onclick="selectCreditNoteSale(${sale.saleId})" ${sale.hasCreditNote ? 'disabled' : ''}>
+                                <span>
+                                    <strong>Venta #${sale.saleId}</strong>
+                                    <small>Pedido #${sale.orderId} · ${sale.customerName}</small>
+                                </span>
+                                <b>${money(sale.total)}</b>
+                            </button>
+                        `).join('') || '<div class="text-muted pos-small-empty">Aun no hay ventas POS.</div>'}
+                    </div>
+                `;
             }
 
             function renderPaymentMethods() {
@@ -338,9 +409,9 @@
                                     <div class="payment-method-name">${method.name}</div>
                                     <div class="payment-method-account">Cuenta: ${method.account} · Comisión: ${Number(method.commissionRate || 0).toFixed(2)}</div>
                                 </div>
-                            <button class="badge ${method.active ? 'badge-success' : 'badge-warning'}" type="button" onclick="togglePaymentMethod(${method.id})">
-                                ${method.active ? 'Activo' : 'Inactivo'}
-                            </button>
+                            ${permissions.canManagePayments
+                                ? `<button class="badge ${method.active ? 'badge-success' : 'badge-warning'}" type="button" onclick="togglePaymentMethod(${method.id})">${method.active ? 'Activo' : 'Inactivo'}</button>`
+                                : `<span class="badge ${method.active ? 'badge-success' : 'badge-warning'}">${method.active ? 'Activo' : 'Inactivo'}</span>`}
                         </div>
                     </div>
                 `).join('');
@@ -654,6 +725,10 @@
             };
 
             window.togglePaymentMethod = async (id) => {
+                if (!permissions.canManagePayments) {
+                    app.toast.warning('Solo Admin o Staff puede modificar formas de pago.');
+                    return;
+                }
                 try {
                     await store.pos.togglePaymentMethod(id);
                     app.toast.success('Forma de pago actualizada.');
@@ -663,8 +738,9 @@
                 }
             };
 
-            document.getElementById('paymentMethodForm').addEventListener('submit', async (event) => {
+            document.getElementById('paymentMethodForm')?.addEventListener('submit', async (event) => {
                 event.preventDefault();
+                if (!permissions.canManagePayments) return;
 
                 try {
                     await store.pos.savePaymentMethod(Object.fromEntries(new FormData(event.target).entries()));
@@ -676,11 +752,13 @@
                 }
             });
 
-            document.getElementById('creditNoteForm').addEventListener('submit', async (event) => {
+            document.getElementById('creditNoteForm')?.addEventListener('submit', async (event) => {
                 event.preventDefault();
+                if (!permissions.canManageCreditNotes) return;
 
                 try {
                     await store.pos.creditNote(Object.fromEntries(new FormData(event.target).entries()));
+                    recentSales = await store.pos.recentSales();
                     event.target.reset();
                     app.toast.success('Nota de credito registrada.');
                     await renderAll();
@@ -708,6 +786,7 @@
                             }))
                         });
 
+                        recentSales = await store.pos.recentSales();
                         cart.splice(0, cart.length);
                         formEl.reset();
 
@@ -792,8 +871,21 @@
                 renderCart();
             }
 
+            window.selectCreditNoteSale = (saleId) => {
+                const input = document.querySelector('#creditNoteForm [name="saleId"]');
+                if (input) {
+                    input.value = saleId;
+                    input.focus();
+                }
+            };
+
             // Cargar sesiones de caja primero, luego refresh general
-            store.refreshPos().then(() => store.refresh().then(renderAll).catch(error => app.toast.error(error.message)));
+            store.refreshPos().then(() => store.refresh().then(async () => {
+                if (permissions.canManageCreditNotes) {
+                    try { recentSales = await store.pos.recentSales(); } catch { recentSales = []; }
+                }
+                renderAll();
+            }).catch(error => app.toast.error(error.message)));
         })();
     </script>
 }

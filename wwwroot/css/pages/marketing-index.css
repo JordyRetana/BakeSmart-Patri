@@ -45,16 +45,17 @@
         margin: .35rem 0 0;
     }
 
-    .marketing-main-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 1.35fr) minmax(340px, .65fr);
-        gap: 1rem;
-        align-items: start;
+    .marketing-page .marketing-main-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+        align-items: start !important;
     }
 
-    .marketing-side-stack {
-        display: grid;
-        gap: 1rem;
+    .marketing-page .marketing-side-stack {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(280px, 1fr)) !important;
+        gap: 1rem !important;
     }
 
     .marketing-panel-header {
@@ -252,8 +253,8 @@
     }
 
     @media (max-width: 1200px) {
-        .marketing-main-grid {
-            grid-template-columns: 1fr;
+        .marketing-page .marketing-side-stack {
+            grid-template-columns: 1fr !important;
         }
     }
 

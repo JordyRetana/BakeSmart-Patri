@@ -10,7 +10,8 @@ RUN dotnet publish BakeSmartPatri.csproj -c Release -o /app/publish /p:UseAppHos
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
-ENV ASPNETCORE_URLS=http://+:80
+ENV PORT=80
+ENV ASPNETCORE_URLS=http://0.0.0.0:80
 EXPOSE 80
 
 COPY --from=build /app/publish ./

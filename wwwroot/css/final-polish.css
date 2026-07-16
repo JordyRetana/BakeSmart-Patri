@@ -1,0 +1,483 @@
+/* Final cascade layer: keeps late global styles from flattening key UI. */
+
+body.app-body select,
+body.app-body select.form-control,
+body.app-body select.input,
+body.app-body .form-control:is(select),
+body.app-body .input:is(select) {
+    width: 100% !important;
+    min-height: 46px !important;
+    padding: .72rem 2.85rem .72rem .95rem !important;
+    color: var(--text, #25293b) !important;
+    border: 1px solid var(--border, #e4d9ea) !important;
+    border-radius: 9px !important;
+    background-color: var(--bg-card, #fff) !important;
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--primary-dark, #6a31a2) 50%),
+        linear-gradient(135deg, var(--primary-dark, #6a31a2) 50%, transparent 50%),
+        linear-gradient(to right, color-mix(in srgb, var(--primary-light, #f1e8ff) 58%, transparent), color-mix(in srgb, var(--primary-light, #f1e8ff) 58%, transparent)) !important;
+    background-position:
+        calc(100% - 20px) 50%,
+        calc(100% - 14px) 50%,
+        calc(100% - 44px) 50% !important;
+    background-size: 6px 6px, 6px 6px, 1px 62% !important;
+    background-repeat: no-repeat !important;
+    box-shadow: 0 8px 20px rgba(45, 33, 58, .06) !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+}
+
+body.app-body select:focus,
+body.app-body select.form-control:focus,
+body.app-body select.input:focus {
+    border-color: var(--primary, #7c3aed) !important;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary, #7c3aed) 17%, transparent) !important;
+    outline: none !important;
+}
+
+body.app-body select option {
+    color: #25293b !important;
+    background: #fff !important;
+    font-size: .95rem !important;
+}
+
+.bs-select {
+    position: relative !important;
+    min-width: 0 !important;
+    width: 100% !important;
+}
+
+.bs-select__native {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.bs-select__button {
+    width: 100% !important;
+    min-height: 46px !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 34px !important;
+    align-items: center !important;
+    gap: .65rem !important;
+    padding: .72rem .55rem .72rem .95rem !important;
+    color: var(--text, #25293b) !important;
+    text-align: left !important;
+    border: 1px solid var(--border, #e4d9ea) !important;
+    border-radius: 9px !important;
+    background: linear-gradient(180deg, #fff, #fffafd) !important;
+    box-shadow: 0 8px 20px rgba(45, 33, 58, .06) !important;
+    cursor: pointer !important;
+}
+
+.bs-select__label {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-weight: 800 !important;
+}
+
+.bs-select__button i {
+    width: 34px !important;
+    height: 34px !important;
+    display: grid !important;
+    place-items: center !important;
+    color: #6c2da0 !important;
+    border-left: 1px solid #eadff1 !important;
+}
+
+.bs-select__menu {
+    position: fixed !important;
+    z-index: 40000 !important;
+    top: calc(100% + .35rem) !important;
+    left: 0 !important;
+    right: 0 !important;
+    max-height: 260px !important;
+    overflow: auto !important;
+    padding: .35rem !important;
+    border: 1px solid #ddcfeb !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+    box-shadow: 0 22px 55px rgba(39, 23, 51, .18) !important;
+}
+
+.bs-select.is-open {
+    z-index: 40000 !important;
+}
+
+.payment-modal,
+.pos-payment-modal {
+    z-index: 50000 !important;
+}
+
+.payment-modal__dialog,
+.pos-payment-modal__dialog {
+    z-index: 50001 !important;
+}
+
+.bs-select__menu[hidden] {
+    display: none !important;
+}
+
+.bs-select__option {
+    width: 100% !important;
+    min-height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: .55rem .7rem !important;
+    color: #25293b !important;
+    text-align: left !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    font-weight: 800 !important;
+    cursor: pointer !important;
+}
+
+.bs-select__option:hover,
+.bs-select__option[aria-selected="true"] {
+    color: #5d2390 !important;
+    background: #f3edff !important;
+}
+
+body.app-body input:not([type="checkbox"]):not([type="radio"]),
+body.app-body textarea,
+body.app-body .form-control,
+body.app-body .input {
+    border-color: #d8cde4 !important;
+    background: #fff !important;
+}
+
+body.app-body input::placeholder,
+body.app-body textarea::placeholder {
+    color: #77717e !important;
+    opacity: 1 !important;
+}
+
+.navbar .user-profile,
+.storefront-account .user-profile {
+    width: auto !important;
+    min-width: 238px !important;
+    min-height: 56px !important;
+    display: grid !important;
+    grid-template-columns: 42px minmax(0, 1fr) 30px !important;
+    align-items: center !important;
+    gap: .7rem !important;
+    padding: .35rem .45rem .35rem .38rem !important;
+    border: 1px solid #e2d7eb !important;
+    border-radius: 999px !important;
+    background: linear-gradient(180deg, #fff, #fffafd) !important;
+    box-shadow: 0 12px 30px rgba(42, 28, 56, .07) !important;
+}
+
+.navbar .user-avatar,
+.storefront-account .user-avatar {
+    width: 42px !important;
+    height: 42px !important;
+    display: grid !important;
+    place-items: center !important;
+    color: #fff !important;
+    border-radius: 50% !important;
+    background: linear-gradient(135deg, #7c3aed, #c83c86) !important;
+    font-weight: 950 !important;
+}
+
+.navbar .user-name,
+.storefront-account .user-name {
+    color: #25293b !important;
+    font-size: .86rem !important;
+    font-weight: 900 !important;
+}
+
+.navbar .user-role,
+.storefront-account .user-role {
+    color: #7d8390 !important;
+    font-size: .72rem !important;
+    font-weight: 700 !important;
+}
+
+.navbar .user-chevron,
+.storefront-account .user-chevron {
+    width: 30px !important;
+    height: 30px !important;
+    display: grid !important;
+    place-items: center !important;
+    color: #6c2da0 !important;
+    border-radius: 50% !important;
+    background: #f3edff !important;
+}
+
+body[data-page="/"] .storefront-product-card {
+    position: relative !important;
+}
+
+body[data-page="/"] .storefront-favorite-btn {
+    position: absolute !important;
+    top: .75rem !important;
+    right: .75rem !important;
+    z-index: 5 !important;
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    max-width: 42px !important;
+    padding: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    color: #bd3d83 !important;
+    border: 1px solid rgba(255, 255, 255, .88) !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, .94) !important;
+    box-shadow: 0 10px 24px rgba(43, 24, 58, .18) !important;
+    cursor: pointer !important;
+}
+
+body[data-page="/"] .storefront-favorite-btn i {
+    font-size: 1.05rem !important;
+    line-height: 1 !important;
+}
+
+body[data-page="/"] .storefront-favorite-btn.is-active {
+    color: #ec4899 !important;
+    background: #fff4fa !important;
+}
+
+body[data-page="/dashboard"] .dashboard-hero {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 1.25rem !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-card {
+    display: grid !important;
+    gap: .85rem !important;
+    min-width: 0 !important;
+    padding: 1rem !important;
+    border: 1px solid rgba(124, 58, 237, .18) !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, .82) !important;
+    box-shadow: 0 16px 42px rgba(67, 39, 88, .1) !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-user {
+    display: grid !important;
+    grid-template-columns: 46px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: .75rem !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-user > span {
+    width: 46px !important;
+    height: 46px !important;
+    display: grid !important;
+    place-items: center !important;
+    color: #fff !important;
+    border-radius: 11px !important;
+    background: linear-gradient(135deg, #7c3aed, #c83c86) !important;
+    font-size: 1rem !important;
+    font-weight: 950 !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-user small,
+body[data-page="/dashboard"] .dashboard-welcome-user strong {
+    display: block !important;
+    margin: 0 !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-user small {
+    color: #777d8a !important;
+    font-size: .67rem !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-user strong {
+    color: #17375d !important;
+    font-size: .95rem !important;
+    line-height: 1.25 !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-meta,
+body[data-page="/dashboard"] .dashboard-welcome-actions {
+    display: grid !important;
+    gap: .45rem !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-meta div,
+body[data-page="/dashboard"] .dashboard-welcome-actions a {
+    display: grid !important;
+    grid-template-columns: 30px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: .5rem !important;
+    color: #626b7a !important;
+    text-decoration: none !important;
+    font-size: .78rem !important;
+    font-weight: 850 !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-meta i,
+body[data-page="/dashboard"] .dashboard-welcome-actions i {
+    width: 30px !important;
+    height: 30px !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 8px !important;
+    background: #f1eaff !important;
+    color: #6c2da0 !important;
+    font-size: .85rem !important;
+}
+
+body[data-page="/pos"] .pos-layout {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+}
+
+body[data-page="/pos"] .pos-side-card {
+    position: static !important;
+    display: grid !important;
+    grid-template-columns: minmax(250px, .75fr) minmax(340px, 1.05fr) minmax(360px, 1.15fr) !important;
+    gap: 1rem !important;
+    align-items: start !important;
+    width: 100% !important;
+}
+
+body[data-page="/pos"] .pos-admin-block {
+    min-width: 0 !important;
+    height: auto !important;
+    padding: .9rem !important;
+    border: 1px solid #e9e2ee !important;
+    border-radius: 10px !important;
+    background: linear-gradient(180deg, #fff, #fffafd) !important;
+}
+
+body[data-page="/pos"] .pos-admin-block--credit {
+    grid-column: 1 / -1 !important;
+    display: grid !important;
+    grid-template-columns: minmax(320px, .55fr) minmax(0, 1fr) !important;
+    gap: 1rem !important;
+}
+
+body[data-page="/pos"] .pos-sessions-list,
+body[data-page="/pos"] .payment-methods-panel,
+body[data-page="/pos"] .pos-sales-list {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+    gap: .6rem !important;
+    max-height: 310px !important;
+    overflow: auto !important;
+    padding-right: .2rem !important;
+}
+
+body[data-page="/pos"] .pos-payment-config-form {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto !important;
+    gap: .6rem !important;
+}
+
+body[data-page="/pos"] .pos-admin-block--credit .pos-payment-config-form {
+    grid-template-columns: minmax(170px, .8fr) minmax(220px, 1fr) !important;
+}
+
+body[data-page="/pos"] .pos-admin-block--credit .pos-payment-config-form .btn {
+    grid-column: 1 / -1 !important;
+}
+
+#chat-toggle-btn {
+    width: auto !important;
+    min-width: 72px !important;
+    height: 62px !important;
+    gap: .45rem !important;
+    padding: .35rem .72rem .35rem .38rem !important;
+    border: 1px solid rgba(255, 255, 255, .7) !important;
+    border-radius: 999px !important;
+    background: linear-gradient(135deg, #ff8fb3, #8b5cf6) !important;
+    box-shadow: 0 18px 42px rgba(188, 61, 131, .34) !important;
+}
+
+#chat-toggle-btn img {
+    width: 48px !important;
+    height: 48px !important;
+    object-fit: cover !important;
+    border: 2px solid rgba(255, 255, 255, .75) !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+}
+
+#chat-toggle-btn span {
+    color: #fff !important;
+    font-size: .72rem !important;
+    font-weight: 950 !important;
+}
+
+#chat-widget {
+    overflow: hidden !important;
+    border: 1px solid #efd7e6 !important;
+    border-radius: 18px !important;
+    background: linear-gradient(180deg, #fff8fb, #fff) !important;
+    box-shadow: 0 28px 75px rgba(62, 35, 70, .28) !important;
+}
+
+#chat-header {
+    min-height: 78px !important;
+    background: linear-gradient(135deg, #ff8fb3, #8b5cf6) !important;
+}
+
+#chat-header .avatar {
+    width: 52px !important;
+    height: 52px !important;
+    overflow: hidden !important;
+    border: 2px solid rgba(255, 255, 255, .78) !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+}
+
+#chat-header .avatar img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+}
+
+#chat-header strong,
+#chat-header small {
+    color: #fff !important;
+}
+
+#chat-box {
+    background:
+        radial-gradient(circle at 18% 0%, rgba(255, 214, 231, .55), transparent 34%),
+        #fffafc !important;
+}
+
+#chat-input-row {
+    gap: .55rem !important;
+    padding: .85rem !important;
+    border-top: 1px solid #f0deea !important;
+    background: #fff !important;
+}
+
+#chat-input {
+    min-height: 44px !important;
+    border: 1px solid #e2d2e5 !important;
+    border-radius: 999px !important;
+    background: #fff8fb !important;
+}
+
+#chat-send {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 50% !important;
+    background: linear-gradient(135deg, #8b5cf6, #c83c86) !important;
+}
+
+@media (max-width: 1180px) {
+    body[data-page="/dashboard"] .dashboard-hero,
+    body[data-page="/pos"] .pos-side-card,
+    body[data-page="/pos"] .pos-admin-block--credit {
+        grid-template-columns: 1fr !important;
+    }
+}

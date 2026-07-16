@@ -185,8 +185,10 @@
                         <article class="storefront-product-card">
                             <a class="storefront-product-image" href="/Catalog/Details/@product.Id">
                                 <img src="@product.ImageUrl" alt="@product.AltText" width="480" height="420" loading="lazy" decoding="async" onerror="this.src='/img/products/producto-sin-imagen.svg';" />
-                                <span><i class="far fa-heart"></i></span>
                             </a>
+                            <button class="storefront-favorite-btn" type="button" data-home-favorite="@product.Id" aria-label="Guardar @product.Name en favoritos" aria-pressed="false">
+                                <i class="far fa-heart"></i>
+                            </button>
                             <div class="storefront-product-body">
                                 <small>@product.Category</small>
                                 <h3>@product.Name</h3>
@@ -271,6 +273,60 @@ else
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/home-storefront.css" asp-append-version="true" />
+}
+
+@section Scripts {
+    @if (!isAuth)
+    {
+        <script>
+        (() => {
+            const email = () => (document.body.dataset.userEmail || '').trim().toLowerCase();
+            const key = () => `bakesmart:favorites:${email()}`;
+            const read = () => {
+                if (!email()) return new Set();
+                try { return new Set(JSON.parse(localStorage.getItem(key()) || '[]').map(Number)); }
+                catch { return new Set(); }
+            };
+            const save = ids => {
+                if (email()) localStorage.setItem(key(), JSON.stringify([...ids]));
+            };
+            const requireLogin = () => {
+                if (email()) return true;
+                app.toast.warning('Inicia sesion para guardar favoritos.');
+                window.setTimeout(() => {
+                    window.location.href = `/Account/Login?ReturnUrl=${encodeURIComponent(window.location.pathname)}`;
+                }, 650);
+                return false;
+            };
+            const sync = () => {
+                const ids = read();
+                document.querySelectorAll('[data-home-favorite]').forEach(button => {
+                    const active = ids.has(Number(button.dataset.homeFavorite));
+                    const icon = button.querySelector('i');
+                    icon.classList.toggle('far', !active);
+                    icon.classList.toggle('fas', active);
+                    button.classList.toggle('is-active', active);
+                    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+                });
+            };
+            document.querySelectorAll('[data-home-favorite]').forEach(button => {
+                button.addEventListener('click', event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (!requireLogin()) return;
+                    const ids = read();
+                    const id = Number(button.dataset.homeFavorite);
+                    const active = ids.has(id);
+                    if (active) ids.delete(id); else ids.add(id);
+                    save(ids);
+                    sync();
+                    app.toast.show(active ? 'Eliminado de favoritos' : 'Agregado a favoritos', 'success');
+                });
+            });
+            sync();
+        })();
+        </script>
+    }
 }
 
 @functions {

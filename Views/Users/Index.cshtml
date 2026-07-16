@@ -1,104 +1,86 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Usuarios";
+}
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/users-index.css" asp-append-version="true" />
 }
-﻿@{
-    Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Usuarios";
-}
-<div class="page-shell">
-    <div class="page-header" style="margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+
+<div class="page-shell users-page">
+    <header class="users-hero">
         <div>
-            <h1 style="margin:0; display:flex; align-items:center; gap:.75rem;"><i class="fas fa-users" style="color:var(--primary);"></i> Gestión de usuarios</h1>
-            <p class="text-muted" style="margin:.35rem 0 0;">Registro, edición, duplicidad y control de estado según las historias GUR.</p>
+            <span class="users-eyebrow">Administracion</span>
+            <h1><i class="fas fa-users"></i> Gestion de usuarios</h1>
+            <p>Controle altas, roles y estados sin formularios ocupando toda la pantalla.</p>
         </div>
-        <div class="page-actions">
-            <input id="userSearch" class="form-control" placeholder="Buscar por nombre, correo o teléfono" style="min-width:260px;" />
-            <button type="button" id="resetStoreUsers" class="btn btn-outline"><i class="fas fa-rotate"></i> Recargar</button>
-            <button type="button" id="openUserQuickActions" class="btn btn-primary"><i class="fas fa-user-plus"></i> Acciones rápidas</button>
+        <div class="users-hero-actions">
+            <input id="userSearch" class="form-control" placeholder="Buscar nombre, correo o telefono" />
+            <button type="button" id="openUserQuickActions" class="btn btn-primary"><i class="fas fa-user-plus"></i> Nuevo usuario</button>
+            <a class="btn btn-outline" href="/Roles"><i class="fas fa-shield-halved"></i> Roles</a>
         </div>
-    </div>
+    </header>
 
-    <div class="grid grid-3" style="gap:1rem; margin-bottom:1rem;">
-        <div class="card"><div class="text-muted">Usuarios totales</div><h2 id="usersTotal" style="margin:0;"></h2></div>
-        <div class="card"><div class="text-muted">Usuarios activos</div><h2 id="usersActive" style="margin:0;"></h2></div>
-        <div class="card"><div class="text-muted">Roles disponibles</div><h2 id="rolesCount" style="margin:0;"></h2></div>
-    </div>
+    <section class="users-kpis">
+        <article><span>Usuarios</span><strong id="usersTotal">0</strong></article>
+        <article><span>Activos</span><strong id="usersActive">0</strong></article>
+        <article><span>Roles</span><strong id="rolesCount">0</strong></article>
+    </section>
 
-    <div class="users-workspace">
-        <div class="card users-action-card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; gap:1rem; flex-wrap:wrap;">
+    <section class="users-layout">
+        <article class="card users-table-card">
+            <div class="users-section-head">
                 <div>
-                    <h3 style="margin:0;">Acciones rápidas</h3>
-                    <p class="text-muted" style="margin:.35rem 0 0;">El formulario completo se mueve a un popup para que la vista principal quede más limpia.</p>
+                    <span class="users-eyebrow">Directorio</span>
+                    <h2>Listado de usuarios</h2>
                 </div>
-                <span class="badge badge-primary">GUR-001 / GUR-002</span>
+                <span class="badge badge-info" id="usersVisibleCount">0 visibles</span>
             </div>
-            <div class="quick-panel-grid">
-                <div class="quick-panel-card">
-                    <h4><i class="fas fa-user-plus" style="color:var(--primary); margin-right:.45rem;"></i>Registrar usuario</h4>
-                    <p class="text-muted">Crea o edita usuarios sin ocupar media pantalla con el formulario fijo.</p>
-                    <button type="button" class="btn btn-outline" onclick="openUserModal()">Abrir formulario</button>
+            <div class="table-container users-table-scroll">
+                <table class="table users-table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Contacto</th>
+                            <th>Rol</th>
+                            <th>Estado</th>
+                            <th>Creado</th>
+                            <th class="text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody"></tbody>
+                </table>
+            </div>
+        </article>
+
+        <aside class="card users-roles-card">
+            <div class="users-section-head">
+                <div>
+                    <span class="users-eyebrow">Accesos</span>
+                    <h2>Roles disponibles</h2>
                 </div>
-                <div class="quick-panel-card">
-                    <h4><i class="fas fa-shield-halved" style="color:var(--secondary); margin-right:.45rem;"></i>Roles disponibles</h4>
-                    <p class="text-muted">Resumen compacto de permisos y acceso rápido al detalle de roles.</p>
-                    <a class="btn btn-outline" href="/Roles">Ver roles</a>
-                </div>
             </div>
-        </div>
-
-        <div class="card users-roles-card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; gap:1rem; flex-wrap:wrap;">
-                <h3 style="margin:0;">Matriz rápida de roles</h3>
-                <a class="btn btn-outline btn-sm" href="/Roles">Ver detalle de roles</a>
-            </div>
-            <div id="rolePreview" style="display:grid; gap:.75rem;"></div>
-        </div>
-    </div>
-
-    <template id="userFormTemplate">
-        <form id="userForm" style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem;">
-            <input type="hidden" name="id" />
-            <div><label>Nombre</label><input class="form-control" name="firstName" required /></div>
-            <div><label>Apellidos</label><input class="form-control" name="lastName" required /></div>
-            <div><label>Correo</label><input class="form-control" name="email" type="email" required /></div>
-            <div><label>Teléfono</label><input class="form-control" name="phone" required /></div>
-            <div><label>Contraseña</label><input class="form-control" name="password" type="text" placeholder="1234" /></div>
-            <div><label>Rol</label><select class="form-control" name="role" id="userRole" required></select></div>
-            <div style="grid-column:1/-1;"><label>Dirección</label><input class="form-control" name="address" /></div>
-            <div style="grid-column:1/-1; display:flex; gap:.75rem; flex-wrap:wrap; justify-content:flex-end;">
-                <button class="btn btn-outline" type="button" id="clearUserForm">Limpiar</button>
-                <button class="btn btn-primary" type="submit"><i class="fas fa-save"></i> Guardar usuario</button>
-            </div>
-        </form>
-    </template>
-
-    <div class="card" style="margin-top:1rem;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h3 style="margin:0;">Listado de usuarios</h3>
-            <span class="badge badge-success">Vista simplificada</span>
-        </div>
-        <div class="table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Usuario</th>
-                        <th>Correo</th>
-                        <th>Teléfono</th>
-                        <th>Rol</th>
-                        <th>Estado</th>
-                        <th>Creado</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="usersTableBody"></tbody>
-            </table>
-        </div>
-    </div>
+            <div id="rolePreview" class="users-role-list"></div>
+        </aside>
+    </section>
 </div>
 
-
+<template id="userFormTemplate">
+    <form id="userForm" class="users-form">
+        <input type="hidden" name="id" />
+        <div><label>Nombre</label><input class="form-control" name="firstName" required /></div>
+        <div><label>Apellidos</label><input class="form-control" name="lastName" required /></div>
+        <div><label>Correo</label><input class="form-control" name="email" type="email" required /></div>
+        <div><label>Telefono</label><input class="form-control" name="phone" required /></div>
+        <div><label>Contrasena</label><input class="form-control" name="password" type="text" placeholder="Minimo 8 caracteres" /></div>
+        <div><label>Rol</label><select class="form-control" name="role" id="userRole" required></select></div>
+        <div class="users-form-full"><label>Direccion</label><input class="form-control" name="address" /></div>
+        <div class="users-form-actions users-form-full">
+            <button class="btn btn-outline" type="button" id="clearUserForm">Limpiar</button>
+            <button class="btn btn-primary" type="submit"><i class="fas fa-save"></i> Guardar usuario</button>
+        </div>
+    </form>
+</template>
 
 @section Scripts {
 <script>
@@ -107,169 +89,120 @@
     const body = document.getElementById('usersTableBody');
     const search = document.getElementById('userSearch');
     const rolePreview = document.getElementById('rolePreview');
-    const openQuickActions = document.getElementById('openUserQuickActions');
+
+    const clean = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 
     function roleOptions() {
-        return store.roles.list().map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+        return store.roles.list().map(r => `<option value="${clean(r.name)}">${clean(r.name)}</option>`).join('');
     }
 
     function validateUserData(data) {
-        const required = [
-            ['firstName', 'nombre'],
-            ['lastName', 'apellidos'],
-            ['email', 'correo'],
-            ['phone', 'telefono'],
-            ['role', 'rol']
-        ];
-
-        for (const [field, label] of required) {
+        for (const field of ['firstName', 'lastName', 'email', 'phone', 'role']) {
             if (!String(data[field] || '').trim()) {
-                app.toast.warning(`Complete el campo ${label}.`, { title: 'Dato requerido' });
+                app.toast.warning('Complete los datos obligatorios.');
                 return false;
             }
         }
-
-        if (!new RegExp('^[^\\s@@]+@@[^\\s@@]+\\.[^\\s@@]+$').test(String(data.email || '').trim())) {
-            app.toast.warning('Ingrese un correo valido.', { title: 'Correo incorrecto' });
+        if (!/^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/.test(String(data.email || '').trim())) {
+            app.toast.warning('Ingrese un correo valido.');
             return false;
         }
-
         if (!data.id && String(data.password || '').trim().length < 8) {
-            app.toast.warning('La contrasena debe tener al menos 8 caracteres.', { title: 'Contrasena requerida' });
+            app.toast.warning('La contrasena debe tener al menos 8 caracteres.');
             return false;
         }
-
         if (data.id && data.password && String(data.password).trim().length < 8) {
-            app.toast.warning('La nueva contrasena debe tener al menos 8 caracteres.', { title: 'Contrasena corta' });
+            app.toast.warning('La nueva contrasena debe tener al menos 8 caracteres.');
             return false;
         }
-
         return true;
     }
 
     function bindUserForm(item = null) {
         const form = document.getElementById('userForm');
         const roleSelect = document.getElementById('userRole');
-        if (!form || !roleSelect) return;
-
         roleSelect.innerHTML = roleOptions();
-
         if (item) {
             Object.entries(item).forEach(([key, value]) => {
                 const input = form.querySelector(`[name="${key}"]`);
                 if (input) input.value = value ?? '';
             });
-            const pass = form.querySelector('[name="password"]');
-            if (pass) pass.value = '';
+            form.password.value = '';
         }
-
-        form.addEventListener('submit', async (e) => {
+        form.addEventListener('submit', async e => {
             e.preventDefault();
             const data = Object.fromEntries(new FormData(form).entries());
             if (!validateUserData(data)) return;
-            try {
-                await store.users.save(data);
-                app.toast.success(
-                    data.id ? 'Los datos del usuario se actualizaron correctamente.' : 'El usuario quedó creado correctamente.',
-                    { title: data.id ? 'Usuario actualizado' : 'Usuario agregado' }
-                );
-                app.modal.close();
-                renderRoles();
-                renderUsers();
-            } catch (error) {
-                app.toast.error(error.message);
-            }
+            await store.users.save(data);
+            app.modal.close();
+            app.toast.success(data.id ? 'Usuario actualizado.' : 'Usuario creado.');
+            await store.refresh();
+            renderRoles();
+            renderUsers();
         });
-
-        document.getElementById('clearUserForm')?.addEventListener('click', () => {
-            form.reset();
-            form.id.value = '';
-        });
+        document.getElementById('clearUserForm')?.addEventListener('click', () => form.reset());
     }
 
     function renderRoles() {
         const roles = store.roles.list();
         rolePreview.innerHTML = roles.map(r => `
-            <div style="border:1px solid var(--border); border-radius:var(--radius); padding:1rem;">
-                <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center;">
-                    <div>
-                        <div style="font-weight:700;">${r.name}</div>
-                        <div class="text-muted">${r.description}</div>
-                    </div>
-                    <span class="badge badge-info">${r.permissions.length} permisos</span>
+            <article class="users-role-chip">
+                <div>
+                    <strong>${clean(r.name)}</strong>
+                    <span>${clean(r.description || 'Acceso del sistema')}</span>
                 </div>
-                <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.75rem;">
-                    ${r.permissions.map(p => `<span class="badge">${p}</span>`).join('')}
-                </div>
-            </div>
+                <b>${(r.permissions || []).length}</b>
+            </article>
         `).join('');
         document.getElementById('rolesCount').textContent = roles.length;
     }
 
     function renderUsers() {
+        const all = store.users.list();
         const q = search.value.trim().toLowerCase();
-        const users = store.users.list().filter(u =>
-            !q || `${u.firstName} ${u.lastName}`.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || String(u.phone).includes(q)
+        const users = all.filter(u =>
+            !q ||
+            `${u.firstName} ${u.lastName}`.toLowerCase().includes(q) ||
+            String(u.email || '').toLowerCase().includes(q) ||
+            String(u.phone || '').includes(q)
         );
 
-        document.getElementById('usersTotal').textContent = store.users.list().length;
-        document.getElementById('usersActive').textContent = store.users.list().filter(x => x.active).length;
+        document.getElementById('usersTotal').textContent = all.length;
+        document.getElementById('usersActive').textContent = all.filter(x => x.active).length;
+        document.getElementById('usersVisibleCount').textContent = `${users.length} visibles`;
 
         body.innerHTML = users.map(u => `
             <tr>
-                <td><strong>${u.firstName} ${u.lastName}</strong><div class="text-muted" style="font-size:.8rem;">${u.address || 'Sin dirección'}</div></td>
-                <td>${u.email}</td>
-                <td>${u.phone}</td>
-                <td><span class="badge badge-primary">${u.role}</span></td>
+                <td><strong>${clean(u.firstName)} ${clean(u.lastName)}</strong><small>${clean(u.address || 'Sin direccion')}</small></td>
+                <td><span>${clean(u.email)}</span><small>${clean(u.phone)}</small></td>
+                <td><span class="badge badge-primary">${clean(u.role)}</span></td>
                 <td><span class="badge ${u.active ? 'badge-success' : 'badge-warning'}">${u.active ? 'Activo' : 'Inactivo'}</span></td>
                 <td>${new Date(u.createdAt).toLocaleDateString('es-CR')}</td>
                 <td class="text-right">
-                    <button class="btn btn-outline btn-sm" onclick="editUser(${u.id})">Editar</button>
-                    <button class="btn btn-outline btn-sm" onclick="toggleUser(${u.id})">${u.active ? 'Desactivar' : 'Activar'}</button>
+                    <div class="users-row-actions">
+                        <button class="btn btn-outline btn-sm" onclick="editUser(${u.id})"><i class="fas fa-pen"></i></button>
+                        <button class="btn btn-outline btn-sm" onclick="toggleUser(${u.id})">${u.active ? 'Desactivar' : 'Activar'}</button>
+                    </div>
                 </td>
             </tr>
-        `).join('') || `<tr><td colspan="7" class="text-center text-muted">No hay usuarios para mostrar.</td></tr>`;
+        `).join('') || `<tr><td colspan="6" class="text-center text-muted">No hay usuarios para mostrar.</td></tr>`;
     }
 
-    window.openUserModal = (userId = null) => {
-        const template = document.getElementById('userFormTemplate');
-        const user = userId ? store.users.list().find(x => x.id === userId) : null;
-        app.modal.open({
-            title: user ? 'Editar usuario' : 'Nuevo usuario',
-            maxWidth: '760px',
-            content: template ? template.innerHTML : ''
-        });
+    window.openUserModal = userId => {
+        const user = userId ? store.users.list().find(x => Number(x.id) === Number(userId)) : null;
+        app.modal.open({ title: user ? 'Editar usuario' : 'Nuevo usuario', maxWidth: '760px', content: document.getElementById('userFormTemplate').innerHTML });
         bindUserForm(user);
     };
-
-    window.editUser = (id) => openUserModal(id);
-
-    window.toggleUser = async (id) => {
-        try {
-            const user = await store.users.toggle(id);
-            app.toast.success(
-                user?.active ? 'El usuario quedó activo nuevamente.' : 'El usuario quedó inactivo.',
-                { title: 'Estado de usuario actualizado' }
-            );
-            renderUsers();
-        } catch (error) {
-            app.toast.error(error.message);
-        }
+    window.editUser = id => openUserModal(id);
+    window.toggleUser = async id => {
+        await store.users.toggle(id);
+        app.toast.success('Estado actualizado.');
+        renderUsers();
     };
 
-    document.getElementById('resetStoreUsers')?.addEventListener('click', () => {
-        app.toast.info('La información visible fue actualizada.', { title: 'Usuarios actualizados' });
-        renderRoles();
-        renderUsers();
-    });
-
-    openQuickActions.addEventListener('click', () => openUserModal());
+    document.getElementById('openUserQuickActions').addEventListener('click', () => openUserModal());
     search.addEventListener('input', renderUsers);
-
-    store.refresh().then(() => {
-        renderRoles();
-        renderUsers();
-    }).catch(error => app.toast.error(error.message));
+    store.refresh().then(() => { renderRoles(); renderUsers(); }).catch(error => app.toast.error(error.message));
 })();
 </script>
 }

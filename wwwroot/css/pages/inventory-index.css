@@ -293,6 +293,82 @@
         transform: none;
     }
 
+    .products-page {
+        max-width: 1400px;
+    }
+
+    .products-board {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: .9rem;
+    }
+
+    .product-tile {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: .8rem;
+        align-items: start;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg-card);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .product-tile--inactive {
+        opacity: .62;
+    }
+
+    .product-tile__icon {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        color: var(--primary-dark);
+        border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--primary-light) 58%, var(--bg));
+    }
+
+    .product-tile__body span,
+    .product-tile__body p {
+        color: var(--text-light);
+        font-size: .78rem;
+        font-weight: 800;
+    }
+
+    .product-tile__body h3 {
+        margin: .18rem 0;
+        color: var(--text);
+        font-size: 1rem;
+        line-height: 1.25;
+    }
+
+    .product-tile__body p {
+        margin: 0;
+    }
+
+    .product-tile__meta {
+        display: grid;
+        justify-items: end;
+        gap: .35rem;
+        white-space: nowrap;
+    }
+
+    .product-tile__meta strong {
+        color: var(--primary-dark);
+        font-size: 1rem;
+    }
+
+    .product-tile__actions {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: flex-end;
+        gap: .55rem;
+        padding-top: .75rem;
+        border-top: 1px solid var(--border);
+    }
+
     @media (max-width: 900px) {
         .inventory-modal-form {
             grid-template-columns: 1fr;
@@ -330,6 +406,19 @@
         .inventory-modal-actions {
             align-items: stretch;
             flex-direction: column;
+        }
+
+        .product-tile,
+        .products-board {
+            grid-template-columns: 1fr;
+        }
+
+        .product-tile__meta {
+            justify-items: start;
+        }
+
+        .product-tile__actions {
+            display: grid;
         }
     }
 

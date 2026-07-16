@@ -53,9 +53,10 @@
         } catch (_) { }
     </script>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    @await RenderSectionAsync("Styles", required: false)
     <link rel="stylesheet" href="~/css/global/workspace-layout.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/global/smart-tables.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+    <link rel="stylesheet" href="~/css/final-polish.css" asp-append-version="true" />
     <style>
         
         @@keyframes slideIn {
@@ -155,13 +156,47 @@
                 <div class="storefront-tools">
                     @if (isAuth)
                     {
-                        <a href="/Account/Profile"><i class="far fa-user"></i><span>Mi cuenta</span></a>
-                        <a href="/Client/Orders"><i class="fas fa-box"></i><span>Pedidos</span></a>
+                        <div class="user-menu storefront-account" id="userMenu">
+                            <button type="button" class="storefront-account__toggle user-profile" id="userMenuToggle" aria-haspopup="true" aria-expanded="false">
+                                <span class="user-avatar">@userInitials</span>
+                                <span class="user-info">
+                                    <span class="user-name">@userName</span>
+                                    <span class="user-role">Cliente</span>
+                                </span>
+                                <span class="user-chevron"><i class="fas fa-chevron-down"></i></span>
+                            </button>
+
+                            <div class="user-dropdown storefront-account__menu" id="userDropdown" role="menu" hidden>
+                                <div class="user-dropdown-head">
+                                    <span class="user-avatar user-avatar-sm">@userInitials</span>
+                                    <span>
+                                        <strong>@userName</strong>
+                                        <small>Perfil de cliente</small>
+                                    </span>
+                                </div>
+                                <a class="user-dropdown-item" href="/Account/Profile" role="menuitem">
+                                    <i class="fas fa-user-pen"></i>
+                                    <span>Mi perfil</span>
+                                </a>
+                                <a class="user-dropdown-item" href="/Client/Orders" role="menuitem">
+                                    <i class="fas fa-box-open"></i>
+                                    <span>Mis pedidos</span>
+                                </a>
+                                <div class="user-dropdown-divider"></div>
+                                <form method="post" action="/Account/Logout" class="user-dropdown-form">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="user-dropdown-item user-dropdown-danger" role="menuitem">
+                                        <i class="fas fa-right-from-bracket"></i>
+                                        <span>Cerrar sesión</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
                     }
                     else
                     {
                         <a href="/Account/Login"><i class="far fa-user"></i><span>Mi cuenta</span></a>
-                        <a href="/Catalog"><i class="far fa-heart"></i><span>Favoritos</span></a>
+                        <a href="/Catalog/Favorites"><i class="far fa-heart"></i><span>Favoritos</span></a>
                     }
                     <a href="/Catalog?cart=open"><i class="fas fa-cart-shopping"></i><span>Carrito</span></a>
                     <button class="storefront-theme theme-toggle" type="button" onclick="window.app.theme.toggle()" aria-label="Cambiar tema"><i class="fas fa-moon"></i></button>
@@ -169,7 +204,7 @@
             </div>
             <nav class="storefront-nav" aria-label="Navegación principal">
                 <div class="container storefront-nav-inner">
-                    <a class="storefront-category-link" href="/Catalog/Categories"><i class="fas fa-bars"></i> Todas las categorías</a>
+                    <a class="storefront-category-link" href="/Catalog?categories=open" data-open-global-categories><i class="fas fa-bars"></i> Todas las categorias</a>
                     <div class="storefront-nav-links">
                         <a href="/">Inicio</a><a href="/Catalog">Productos</a><a href="/Catalog/Offers">Ofertas</a><a href="/Catalog/New">Novedades</a><a href="/Catalog/Combos">Combos</a><a href="/Home/About">Nosotros</a><a href="/Home/Contact">Contacto</a>
                         @if (isClient) { <a href="/Client">Mi panel</a> }
@@ -339,7 +374,7 @@
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="user-dropdown-item user-dropdown-danger" role="menuitem">
                                     <i class="fas fa-right-from-bracket"></i>
-                                    <span>Cerrar sesion</span>
+                                    <span>Cerrar sesión</span>
                                 </button>
                             </form>
                         </div>
@@ -418,9 +453,103 @@
     
     <div id="toastContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;"></div>
 
+    <div class="global-categories-backdrop" id="globalCategoriesBackdrop" hidden></div>
+    <aside class="global-categories-sidebar" id="globalCategoriesSidebar" aria-hidden="true" aria-labelledby="globalCategoriesTitle">
+        <div class="global-categories-sidebar__header">
+            <div>
+                <span>Catalogo</span>
+                <h2 id="globalCategoriesTitle">Todas las categorias</h2>
+            </div>
+            <button class="global-categories-close" type="button" id="globalCategoriesClose" aria-label="Cerrar categorias">
+                <i class="fas fa-xmark"></i>
+            </button>
+        </div>
+        <div class="global-categories-sidebar__body" id="globalCategoriesList">
+            <div class="global-categories-loading">Cargando categorias...</div>
+        </div>
+    </aside>
+
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/bakesmart-store.js" asp-append-version="true"></script>
     <script src="~/js/smart-tables.js" asp-append-version="true"></script>
+    <script>
+        (() => {
+            const sidebar = document.getElementById('globalCategoriesSidebar');
+            const backdrop = document.getElementById('globalCategoriesBackdrop');
+            const closeButton = document.getElementById('globalCategoriesClose');
+            const list = document.getElementById('globalCategoriesList');
+            let loaded = false;
+
+            const clean = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            })[char]);
+
+            async function loadCategories() {
+                if (loaded) return;
+                try {
+                    const response = await fetch('/api/catalog/options');
+                    if (!response.ok) throw new Error('No se pudieron cargar las categorias.');
+                    const contentType = response.headers.get('content-type') || '';
+                    if (!contentType.includes('application/json')) throw new Error('El catalogo devolvio una respuesta invalida.');
+                    const data = await response.json();
+                    const categories = data.categories || [];
+                    const products = data.products || [];
+                    list.innerHTML = `
+                        <a class="global-category-option global-category-option--active" href="/Catalog">
+                            <span><i class="fas fa-th-large"></i></span>
+                            <strong>Todas las categorias</strong>
+                            <small>${products.length} productos</small>
+                        </a>
+                        ${categories.map(category => {
+                            const count = products.filter(product => product.category === category.name || product.Category === category.name).length;
+                            const url = category.url || `/Catalog?category=${encodeURIComponent(category.name)}`;
+                            return `
+                                <a class="global-category-option" href="${url}">
+                                    <span><i class="fas ${clean(category.icon || 'fa-cake-candles')}"></i></span>
+                                    <strong>${clean(category.name)}</strong>
+                                    <small>${count} productos</small>
+                                </a>
+                            `;
+                        }).join('')}
+                    `;
+                    loaded = true;
+                } catch (error) {
+                    list.innerHTML = `<div class="global-categories-loading">${clean(error.message)}</div>`;
+                }
+            }
+
+            async function openGlobalCategories(event) {
+                if (event) event.preventDefault();
+                await loadCategories();
+                sidebar.classList.add('is-open');
+                sidebar.setAttribute('aria-hidden', 'false');
+                backdrop.hidden = false;
+                document.body.classList.add('global-categories-open');
+            }
+
+            function closeGlobalCategories() {
+                sidebar.classList.remove('is-open');
+                sidebar.setAttribute('aria-hidden', 'true');
+                backdrop.hidden = true;
+                document.body.classList.remove('global-categories-open');
+            }
+
+            document.querySelectorAll('[data-open-global-categories]').forEach(link => {
+                link.addEventListener('click', openGlobalCategories);
+            });
+            closeButton?.addEventListener('click', closeGlobalCategories);
+            backdrop?.addEventListener('click', closeGlobalCategories);
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape') closeGlobalCategories();
+            });
+
+            window.BakeSmartOpenCategories = openGlobalCategories;
+        })();
+    </script>
 
     
     @await RenderSectionAsync("Scripts", required: false)
@@ -563,21 +692,42 @@
         cursor: pointer;
         font-size: 18px;
         }
+
+        body[data-page^="/pos"] #chat-toggle-btn {
+        bottom: 96px;
+        }
+
+        body[data-page^="/pos"] #chat-widget {
+        bottom: 166px;
+        }
+
+        @@media (max-width: 650px) {
+        body[data-page^="/pos"] #chat-toggle-btn {
+        right: 14px;
+        bottom: 88px;
+        }
+
+        body[data-page^="/pos"] #chat-widget {
+        right: 10px;
+        bottom: 154px;
+        width: calc(100vw - 20px);
+        }
+        }
     </style>
 
-    <button id="chat-toggle-btn" aria-label="Abrir chat"><i class="fas fa-comment-dots"></i></button>
+    <button id="chat-toggle-btn" aria-label="Abrir chat"><img src="~/img/richie-bot.png" alt="" /><span>Richie</span></button>
 
     <div id="chat-widget">
         <div id="chat-header">
-            <div class="avatar"><i class="fas fa-cookie-bite"></i></div>
+            <div class="avatar"><img src="~/img/richie-bot.png" alt="Richie" /></div>
             <div>
                 <strong>Richie</strong>
-                <small>Asistente de BakeSmart Patri</small>
+                <small>Asistente pastelero</small>
             </div>
         </div>
         <div id="chat-box"></div>
         <div id="chat-input-row">
-            <input id="chat-input" placeholder="Escribi tu mensaje..." />
+            <input id="chat-input" placeholder="Pregunta por queques, cupcakes o pedidos..." />
             <button id="chat-send" aria-label="Enviar"><i class="fas fa-paper-plane"></i></button>
         </div>
     </div>
@@ -593,7 +743,7 @@
         toggleBtn.addEventListener('click', () => {
         widget.classList.toggle('open');
         if (widget.classList.contains('open') && box.children.length === 0) {
-        addMsg('bot', 'Hola, soy Richie. En que te puedo ayudar hoy?');
+        addMsg('bot', 'Hola, soy Richie 🧁 ¿Buscamos algo dulce para hoy?');
         }
         });
 
@@ -611,7 +761,7 @@
         if (!msg) return;
         input.value = '';
         addMsg('user', msg);
-        const typingEl = addMsg('typing', 'Richie esta escribiendo...');
+        const typingEl = addMsg('typing', 'Richie esta decorando la respuesta... 🍰');
 
         try {
         const res = await fetch('/api/chat', {
@@ -624,7 +774,7 @@
         addMsg('bot', data.reply);
         } catch (err) {
         typingEl.remove();
-        addMsg('bot', 'Uy, tuve un problema para responder. Proba de nuevo en un momento.');
+        addMsg('bot', 'Uy, se me cayo un poquito de merengue 🍰 Proba de nuevo en un momento.');
         }
         }
 

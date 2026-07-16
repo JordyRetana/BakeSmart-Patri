@@ -120,7 +120,9 @@
     function ticket(order, mode) {
         const status = statusOf(order);
         const meta = statusMeta[status] || statusMeta.Confirmado;
-        const action = status !== 'Entregado'
+        const action = status === 'Pendiente pago'
+            ? `<button class="btn btn-primary btn-sm" onclick="chargeProductionOrder(${order.id})"><i class="fas fa-money-bill-wave"></i> Cobrar</button>`
+            : status !== 'Entregado'
             ? `<button class="btn btn-primary btn-sm" onclick="moveProductionOrder(${order.id}, '${meta.next}')"><i class="fas ${meta.icon}"></i> ${meta.action}</button>`
             : `<span class="badge badge-success">Completado</span>`;
 
@@ -179,6 +181,34 @@
             renderProduction();
             app.toast.success(`Pedido #${orderId} actualizado.`);
         }).catch(error => app.toast.error(error.message));
+    };
+
+    window.chargeProductionOrder = (orderId) => {
+        const order = store.orders.list().find(item => Number(item.id) === Number(orderId));
+        if (!order) {
+            app.toast.error('No se encontro el pedido para cobrar.');
+            return;
+        }
+
+        const product = store.inventory.list().find(item => Number(item.id) === Number(order.productId));
+        const cartItem = {
+            productId: Number(order.productId),
+            name: product?.description || product?.item || order.producto || 'Pedido',
+            code: product?.code || product?.sku || `PED-${order.id}`,
+            unitPrice: Number(order.unitPrice || product?.price || order.total || 0),
+            quantity: Number(order.quantity || 1)
+        };
+
+        sessionStorage.setItem('bakesmart.pos.pendingOrder', JSON.stringify({
+            id: order.id,
+            customerName: order.customerName || order.cliente || '',
+            customerEmail: order.customerEmail || '',
+            paymentMethod: order.paymentMethod || 'Tarjeta',
+            total: Number(order.total || 0),
+            item: cartItem
+        }));
+        sessionStorage.setItem('bakesmart.pos.cart', JSON.stringify([cartItem]));
+        window.location.assign('/Pos/Cart?orderId=' + encodeURIComponent(order.id));
     };
 
     store.refresh().then(renderProduction).catch(error => app.toast.error(error.message));

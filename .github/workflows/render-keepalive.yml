@@ -1,4 +1,4 @@
-name: Keep Render App Warm
+name: Keep BakeSmart Vercel App Warm
 
 on:
   workflow_dispatch:
@@ -10,18 +10,18 @@ permissions:
   contents: read
 
 concurrency:
-  group: keep-render-app-warm
+  group: keep-bakesmart-vercel-warm
   cancel-in-progress: false
 
 jobs:
   keep-alive:
-    name: Wake and warm Render app
+    name: Wake and warm Vercel app
     runs-on: ubuntu-latest
     timeout-minutes: 12
 
     env:
-      APP_URL: "https://bakesmart-patri.onrender.com"
-      KEEPALIVE_PATHS: "/ /api/health /Client"
+      APP_URL: "https://bake-smart-patri.vercel.app"
+      KEEPALIVE_PATHS: "/ping /api/health /"
 
     steps:
       - name: Show trigger info
@@ -31,7 +31,7 @@ jobs:
           echo "Branch: ${{ github.ref_name }}"
           echo "UTC: $(date -u '+%Y-%m-%d %H:%M:%S')"
 
-      - name: Keep Render app warm
+      - name: Keep Vercel app warm
         shell: bash
         run: |
           set -u
@@ -40,14 +40,18 @@ jobs:
           stamp="$(date +%s)"
 
           for path in $KEEPALIVE_PATHS; do
-            url="${APP_URL%/}${path}?keepalive=github-actions-${stamp}"
+            separator="?"
+            if [[ "$path" == *"?"* ]]; then
+              separator="&"
+            fi
+            url="${APP_URL%/}${path}${separator}keepalive=github-actions-${stamp}"
             echo ""
             echo "Pinging $url"
 
-            code=$(curl -L -sS -o /tmp/render_body.html -w "%{http_code}" \
+            code=$(curl -L -sS -o /tmp/keepalive_body.html -w "%{http_code}" \
               --max-time 45 \
               --connect-timeout 15 \
-              --retry 2 \
+              --retry 3 \
               --retry-all-errors \
               --retry-delay 3 \
               -A "GitHubActions-KeepAlive-BakeSmartPatri" \
@@ -56,7 +60,7 @@ jobs:
               "$url" || echo "000")
 
             echo "HTTP code: $code"
-            head -n 12 /tmp/render_body.html 2>/dev/null || true
+            head -n 12 /tmp/keepalive_body.html 2>/dev/null || true
 
             if [[ ! "$code" =~ ^(2|3)[0-9][0-9]$ ]]; then
               failed=1

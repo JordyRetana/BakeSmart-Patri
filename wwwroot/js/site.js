@@ -1054,6 +1054,7 @@
         },
 
         spawnParticles() {
+            return;
             const container = $('#bgParticles');
             if (!container || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
@@ -1080,6 +1081,7 @@
         },
 
         setupCursorGlow() {
+            return;
             const glow = $('.cursor-glow');
             if (!glow || window.innerWidth < 1024) return;
 
@@ -1097,8 +1099,8 @@
             const loader = $('#pageLoader');
             if (!loader) return;
             const dismiss = () => loader.classList.add('is-hidden');
-            window.addEventListener('load', () => setTimeout(dismiss, 350), { once: true });
-            setTimeout(dismiss, 1400);
+            window.addEventListener('load', () => setTimeout(dismiss, 100), { once: true });
+            setTimeout(dismiss, 550);
         }
     };
 
@@ -1107,52 +1109,55 @@
         _docListener: null,
 
         init() {
-            const toggle = document.getElementById('userMenuToggle');
-            const menu = document.getElementById('userMenu');
-            const dropdown = document.getElementById('userDropdown');
+            const menus = $$('.user-menu');
+            if (!menus.length) return;
 
-            if (!toggle || !menu || !dropdown) return;
+            menus.forEach(menu => {
+                const toggle = $('.user-profile', menu);
+                const dropdown = $('.user-dropdown', menu);
 
-            const self = this;
+                if (!toggle || !dropdown || menu.dataset.userMenuReady === 'true') return;
+                menu.dataset.userMenuReady = 'true';
 
-            const closeMenu = () => {
-                menu.classList.remove('user-menu-open');
-                dropdown.hidden = true;
-                toggle.setAttribute('aria-expanded', 'false');
-                self._detachDocListener();
-            };
+                const self = this;
 
-            const openMenu = () => {
-                menu.classList.add('user-menu-open');
-                dropdown.hidden = false;
-                toggle.setAttribute('aria-expanded', 'true');
-                self._attachDocListener(menu, closeMenu);
-            };
+                const closeMenu = () => {
+                    menu.classList.remove('user-menu-open');
+                    dropdown.hidden = true;
+                    toggle.setAttribute('aria-expanded', 'false');
+                    self._detachDocListener();
+                };
 
-            toggle.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
+                const openMenu = () => {
+                    menu.classList.add('user-menu-open');
+                    dropdown.hidden = false;
+                    toggle.setAttribute('aria-expanded', 'true');
+                    self._attachDocListener(menu, closeMenu);
+                };
 
-                const isOpen = menu.classList.contains('user-menu-open');
-                if (isOpen) {
-                    closeMenu();
-                } else {
-                    openMenu();
-                }
-            });
+                toggle.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
 
-            // Cerrar con Escape
-            document.addEventListener('keydown', (event) => {
-                if (event.key === 'Escape' && menu.classList.contains('user-menu-open')) {
-                    closeMenu();
-                }
-            });
+                    const isOpen = menu.classList.contains('user-menu-open');
+                    if (isOpen) {
+                        closeMenu();
+                    } else {
+                        openMenu();
+                    }
+                });
 
-            // Cerrar al hacer clic en cualquier enlace o boton dentro del dropdown
-            dropdown.addEventListener('click', (event) => {
-                if (event.target.closest('a, button[type="submit"]')) {
-                    setTimeout(() => closeMenu(), 200);
-                }
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape' && menu.classList.contains('user-menu-open')) {
+                        closeMenu();
+                    }
+                });
+
+                dropdown.addEventListener('click', (event) => {
+                    if (event.target.closest('a, button[type="submit"]')) {
+                        setTimeout(() => closeMenu(), 200);
+                    }
+                });
             });
         },
 
@@ -1174,6 +1179,157 @@
         }
     };
 
+    app.selects = {
+        init() {
+            this.enhanceAll();
+            if (this._observer) return;
+            this._observer = new MutationObserver(mutations => {
+                const shouldEnhance = mutations.some(mutation =>
+                    Array.from(mutation.addedNodes || []).some(node => {
+                        if (node.nodeType !== 1 || node.closest?.('.bs-select')) return false;
+                        return node.matches?.('select:not([multiple]):not([size])') ||
+                            node.querySelector?.('select:not([multiple]):not([size])');
+                    })
+                );
+                if (!shouldEnhance || this._enhanceScheduled) return;
+                this._enhanceScheduled = true;
+                requestAnimationFrame(() => {
+                    this._enhanceScheduled = false;
+                    this.enhanceAll();
+                });
+            });
+            this._observer.observe(document.body, { childList: true, subtree: true });
+            document.addEventListener('click', event => {
+                if (!event.target.closest('.bs-select') && !event.target.closest('.bs-select__menu')) this.closeAll();
+            });
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape') this.closeAll();
+            });
+            window.addEventListener('resize', () => this.closeAll(), { passive: true });
+            window.addEventListener('scroll', () => this.closeAll(), { passive: true, capture: true });
+        },
+
+        enhanceAll() {
+            $$('select:not([multiple]):not([size])').forEach(select => this.enhance(select));
+        },
+
+        enhance(select) {
+            if (!select || select.dataset.bsSelectReady === 'true' || select.closest('.bs-select')) return;
+            select.dataset.bsSelectReady = 'true';
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'bs-select';
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'bs-select__button';
+            button.setAttribute('aria-haspopup', 'listbox');
+            button.setAttribute('aria-expanded', 'false');
+
+            const label = document.createElement('span');
+            label.className = 'bs-select__label';
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-chevron-down';
+            button.append(label, icon);
+
+            const menu = document.createElement('div');
+            menu.className = 'bs-select__menu';
+            menu.hidden = true;
+            menu.setAttribute('role', 'listbox');
+
+            select.parentNode.insertBefore(wrapper, select);
+            wrapper.append(select, button);
+            document.body.appendChild(menu);
+            wrapper._bsSelectMenu = menu;
+            select.classList.add('bs-select__native');
+
+            const render = () => {
+                label.textContent = select.options[select.selectedIndex]?.text || select.getAttribute('placeholder') || 'Seleccionar';
+                menu.innerHTML = '';
+                [...select.options].forEach(option => {
+                    const item = document.createElement('button');
+                    item.type = 'button';
+                    item.className = 'bs-select__option';
+                    item.setAttribute('role', 'option');
+                    item.setAttribute('aria-selected', option.selected ? 'true' : 'false');
+                    item.dataset.value = option.value;
+                    item.textContent = option.text;
+                    if (option.disabled) item.disabled = true;
+                    item.addEventListener('click', event => {
+                        event.preventDefault();
+                        select.value = option.value;
+                        select.dispatchEvent(new Event('change', { bubbles: true }));
+                        this.close(wrapper);
+                        render();
+                    });
+                    menu.appendChild(item);
+                });
+            };
+
+            button.addEventListener('click', event => {
+                event.preventDefault();
+                if (select.disabled) return;
+                render();
+                const isOpen = wrapper.classList.contains('is-open');
+                this.closeAll();
+                if (!isOpen) this.open(wrapper);
+            });
+
+            select.addEventListener('change', render);
+            render();
+        },
+
+        open(wrapper) {
+            const button = $('.bs-select__button', wrapper);
+            const menu = wrapper._bsSelectMenu || $('.bs-select__menu', wrapper);
+            wrapper.classList.add('is-open');
+            button?.setAttribute('aria-expanded', 'true');
+            if (menu && button) {
+                const rect = button.getBoundingClientRect();
+                const margin = 10;
+                const availableBelow = window.innerHeight - rect.bottom - margin;
+                const availableAbove = rect.top - margin;
+                const maxAvailable = Math.max(availableBelow, availableAbove, 160);
+                const maxHeight = Math.min(320, Math.max(160, maxAvailable));
+                const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+                const menuWidth = Math.min(Math.max(180, rect.width), viewportWidth - (margin * 2));
+                const left = Math.min(Math.max(margin, rect.left), viewportWidth - menuWidth - margin);
+                const openAbove = availableBelow < 190 && availableAbove > availableBelow;
+
+                menu.hidden = false;
+                menu.style.setProperty('position', 'fixed', 'important');
+                menu.style.setProperty('left', `${left}px`, 'important');
+                menu.style.setProperty('width', `${menuWidth}px`, 'important');
+                menu.style.setProperty('right', 'auto', 'important');
+                menu.style.setProperty('bottom', 'auto', 'important');
+                menu.style.setProperty('max-height', `${maxHeight}px`, 'important');
+                menu.style.setProperty('z-index', '40000', 'important');
+
+                const measuredHeight = Math.min(menu.scrollHeight || maxHeight, maxHeight);
+                const top = openAbove
+                    ? Math.max(margin, rect.top - measuredHeight - 6)
+                    : Math.min(rect.bottom + 6, window.innerHeight - measuredHeight - margin);
+                menu.style.setProperty('top', `${top}px`, 'important');
+            }
+        },
+
+        close(wrapper) {
+            const button = $('.bs-select__button', wrapper);
+            const menu = wrapper._bsSelectMenu || $('.bs-select__menu', wrapper);
+            wrapper.classList.remove('is-open');
+            button?.setAttribute('aria-expanded', 'false');
+            if (menu) {
+                menu.hidden = true;
+                ['position', 'left', 'width', 'right', 'top', 'bottom', 'max-height', 'z-index'].forEach(property => {
+                    menu.style.removeProperty(property);
+                });
+            }
+        },
+
+        closeAll() {
+            $$('.bs-select.is-open').forEach(wrapper => this.close(wrapper));
+        }
+    };
+
     document.addEventListener('DOMContentLoaded', () => {
         app.theme.init();
         app.navigation.init();
@@ -1181,6 +1337,7 @@
         app.mobileNav.init();
         app.dropdown.init();
         app.userMenu.init();
+        app.selects.init();
         app.copy.init();
         app.motion.init();
 

@@ -20,6 +20,8 @@
     var roleTitle = isAdmin ? "Centro de administracion" : isCashier ? "Caja y ventas" : isBaker ? "Produccion de reposteria" : isSupervisor ? "Supervision general" : "Operacion diaria";
     var roleSubtitle = isAdmin ? "Una lectura completa de ventas, pedidos, inventario y operacion." : isCashier ? "Controla caja, pedidos y cobros desde un espacio enfocado." : isBaker ? "Organiza la produccion y anticipa necesidades de inventario." : isSupervisor ? "Supervisa el rendimiento de cada area y toma decisiones con datos." : "Coordina pedidos y el trabajo diario desde un solo lugar.";
     var roleIcon = isAdmin ? "fa-crown" : isCashier ? "fa-cash-register" : isBaker ? "fa-cake-candles" : isSupervisor ? "fa-chart-line" : "fa-store";
+    var displayName = User?.FindFirst("FullName")?.Value ?? User?.Identity?.Name ?? roleLabel;
+    var todayLabel = DateTime.Now.ToString("dddd, dd 'de' MMMM", new System.Globalization.CultureInfo("es-CR"));
 }
 
 @section Styles {
@@ -136,8 +138,14 @@
     }
 
     async function renderDashboard() {
-        await BakeSmartStore.refresh();
-        const dashboard = await fetch('/api/dashboard').then(response => response.json());
+        const dashboardRequest = fetch('/api/dashboard')
+            .then(response => response.ok ? response.json() : { kpis: [] })
+            .catch(() => ({ kpis: [] }));
+        await BakeSmartStore.refresh({ keys: ['orders', 'inventory', 'posConfig'] });
+        const dashboard = await Promise.race([
+            dashboardRequest,
+            new Promise(resolve => setTimeout(() => resolve({ kpis: [] }), 4500))
+        ]);
         const orders = BakeSmartStore.orders.list();
         const inventory = BakeSmartStore.reports.inventory();
         const kpis = dashboard.kpis || [];

@@ -129,9 +129,14 @@
                     <i class="fas fa-scale-balanced"></i>
                     Conciliar operaciones
                 </button>
+                <select class="form-control" id="accCloseType" aria-label="Tipo de cierre">
+                    <option value="DIARIO">Diario</option>
+                    <option value="SEMANAL">Semanal</option>
+                    <option value="MENSUAL">Mensual</option>
+                </select>
                 <button class="btn btn-outline" id="accCloseBtn" type="button">
                     <i class="fas fa-calendar-check"></i>
-                    Cierre diario
+                    Generar cierre
                 </button>
             </div>
         </aside>
@@ -258,8 +263,9 @@
 
             document.getElementById('accCloseBtn').addEventListener('click', async () => {
                 try {
-                    const result = await BakeSmartStore.accounting.dailyClose();
-                    app.toast.success(`Cierre ${result.closeId} creado con ${result.count} operaciones.`);
+                    const closeType = document.getElementById('accCloseType').value;
+                    const result = await BakeSmartStore.accounting.dailyClose(closeType);
+                    app.toast.success(`Cierre ${result.type || closeType} #${result.closeId} creado.`);
                     await render();
                 } catch (error) {
                     app.toast.error(error.message);
