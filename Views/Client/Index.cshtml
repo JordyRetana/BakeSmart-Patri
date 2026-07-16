@@ -342,19 +342,42 @@
         let submitAfterAddress = false;
         let cartCheckoutItems = [];
 
-        const cartStorageKey = () => `bakesmart:catalog-cart:${(userEmail || 'guest').trim().toLowerCase()}`;
-        function readCatalogCart() {
-        try {
-        return JSON.parse(localStorage.getItem(cartStorageKey()) || '[]')
+        const cartStorageKeyFor = identity => `bakesmart:catalog-cart:${(identity || 'guest').trim().toLowerCase()}`;
+        const cartStorageKey = () => cartStorageKeyFor(userEmail || 'guest');
+
+        function normalizeCartItems(rawItems) {
+        return (Array.isArray(rawItems) ? rawItems : [])
         .map(item => ({ id: Number(item.id), name: String(item.name || 'Producto'), price: Number(item.price || 0), quantity: Math.max(1, Number(item.quantity || 1)) }))
         .filter(item => item.id > 0 && item.quantity > 0);
+        }
+
+        function readCatalogCart() {
+        try {
+        const userKey = cartStorageKey();
+        const guestKey = cartStorageKeyFor('guest');
+        const itemsById = new Map();
+        [guestKey, userKey].forEach(key => {
+        normalizeCartItems(JSON.parse(localStorage.getItem(key) || '[]')).forEach(item => {
+        const existing = itemsById.get(item.id);
+        itemsById.set(item.id, existing ? { ...item, quantity: existing.quantity + item.quantity } : item);
+        });
+        });
+        const items = [...itemsById.values()];
+        if (userEmail && guestKey !== userKey && items.length) {
+        localStorage.setItem(userKey, JSON.stringify(items));
+        localStorage.removeItem(guestKey);
+        }
+        return items;
         } catch {
         return [];
         }
         }
 
         function clearCatalogCart() {
-        try { localStorage.removeItem(cartStorageKey()); } catch { }
+        try {
+        localStorage.removeItem(cartStorageKey());
+        localStorage.removeItem(cartStorageKeyFor('guest'));
+        } catch { }
         }
 
         const money = value => app.utils.formatCurrency(Number(value || 0));
