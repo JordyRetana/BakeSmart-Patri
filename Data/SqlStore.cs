@@ -1321,12 +1321,15 @@ public sealed class SqlStore
                     SET @IncomeAccountId = SCOPE_IDENTITY();
                 END;
 
-                INSERT INTO dbo.AsientosContables (EntryType, ReferenceTable, ReferenceId, Note, CreatedAt)
-                VALUES (N'VENTA', N'Ventas', @SaleId, CONCAT(N'Pago web pedido #', @OrderId), SYSUTCDATETIME());
-                DECLARE @EntryId int = SCOPE_IDENTITY();
+                IF @Total > 0
+                BEGIN
+                    INSERT INTO dbo.AsientosContables (EntryType, ReferenceTable, ReferenceId, Note, CreatedAt)
+                    VALUES (N'VENTA', N'Ventas', @SaleId, CONCAT(N'Pago web pedido #', @OrderId), SYSUTCDATETIME());
+                    DECLARE @EntryId int = SCOPE_IDENTITY();
 
-                INSERT INTO dbo.LineasAsientoContable (AccountingEntryId, AccountId, Debit, Credit)
-                VALUES (@EntryId, @CashAccountId, @Total, 0), (@EntryId, @IncomeAccountId, 0, @Total);
+                    INSERT INTO dbo.LineasAsientoContable (AccountingEntryId, AccountId, Debit, Credit)
+                    VALUES (@EntryId, @CashAccountId, @Total, 0), (@EntryId, @IncomeAccountId, 0, @Total);
+                END;
             END;
 
             COMMIT TRAN;
@@ -1517,6 +1520,9 @@ public sealed class SqlStore
     public async Task<object> ReconcilePosAsync(string? userEmail = null)
     {
         const string sql = """
+            SET XACT_ABORT ON;
+            BEGIN TRAN;
+
             DECLARE @CashAccountId int;
             DECLARE @IncomeAccountId int;
 
@@ -1536,54 +1542,102 @@ public sealed class SqlStore
                 SET @IncomeAccountId = SCOPE_IDENTITY();
             END;
 
-            DECLARE @Missing TABLE (SaleId int NOT NULL, Total decimal(18,2) NOT NULL);
+            DECLARE @Pending TABLE
+            (
+                SaleId int NOT NULL,
+                Total decimal(18,2) NOT NULL,
+                AccountingEntryId int NULL
+            );
 
-            INSERT INTO @Missing (SaleId, Total)
-            SELECT v.SaleId, v.Total
+            INSERT INTO @Pending (SaleId, Total, AccountingEntryId)
+            SELECT v.SaleId, v.Total, e.AccountingEntryId
             FROM dbo.Ventas v
-            LEFT JOIN dbo.AsientosContables e ON e.ReferenceTable = N'Ventas' AND e.ReferenceId = v.SaleId
-            WHERE e.AccountingEntryId IS NULL;
+            OUTER APPLY
+            (
+                SELECT TOP 1 entry.AccountingEntryId
+                FROM dbo.AsientosContables entry
+                WHERE entry.ReferenceTable = N'Ventas' AND entry.ReferenceId = v.SaleId
+                ORDER BY entry.AccountingEntryId
+            ) e
+            OUTER APPLY
+            (
+                SELECT
+                    COUNT(1) AS LineCount,
+                    COALESCE(SUM(line.Debit), 0) AS DebitTotal,
+                    COALESCE(SUM(line.Credit), 0) AS CreditTotal
+                FROM dbo.LineasAsientoContable line
+                WHERE line.AccountingEntryId = e.AccountingEntryId
+            ) totals
+            WHERE v.Total > 0
+              AND (
+                    e.AccountingEntryId IS NULL
+                    OR totals.LineCount < 2
+                    OR ABS(totals.DebitTotal - v.Total) > 0.01
+                    OR ABS(totals.CreditTotal - v.Total) > 0.01
+                  );
 
             DECLARE @SaleId int;
             DECLARE @Total decimal(18,2);
+            DECLARE @EntryId int;
+            DECLARE @Generated int = 0;
 
-            DECLARE missing_cursor CURSOR LOCAL FAST_FORWARD FOR
-                SELECT SaleId, Total FROM @Missing;
+            DECLARE pending_cursor CURSOR LOCAL FAST_FORWARD FOR
+                SELECT SaleId, Total, AccountingEntryId FROM @Pending;
 
-            OPEN missing_cursor;
-            FETCH NEXT FROM missing_cursor INTO @SaleId, @Total;
+            OPEN pending_cursor;
+            FETCH NEXT FROM pending_cursor INTO @SaleId, @Total, @EntryId;
 
             WHILE @@FETCH_STATUS = 0
             BEGIN
-                INSERT INTO dbo.AsientosContables (EntryType, ReferenceTable, ReferenceId, Note, CreatedAt)
-                VALUES (N'VENTA', N'Ventas', @SaleId, CONCAT(N'Asiento generado por conciliacion POS venta #', @SaleId), SYSUTCDATETIME());
+                IF @EntryId IS NULL
+                BEGIN
+                    INSERT INTO dbo.AsientosContables (EntryType, ReferenceTable, ReferenceId, Note, CreatedAt)
+                    VALUES (N'VENTA', N'Ventas', @SaleId, CONCAT(N'Asiento generado por conciliacion POS venta #', @SaleId), SYSUTCDATETIME());
 
-                DECLARE @EntryId int = SCOPE_IDENTITY();
+                    SET @EntryId = SCOPE_IDENTITY();
+                END
+                ELSE
+                BEGIN
+                    DELETE FROM dbo.LineasAsientoContable
+                    WHERE AccountingEntryId = @EntryId;
+                END;
 
                 INSERT INTO dbo.LineasAsientoContable (AccountingEntryId, AccountId, Debit, Credit)
                 VALUES (@EntryId, @CashAccountId, @Total, 0), (@EntryId, @IncomeAccountId, 0, @Total);
 
-                FETCH NEXT FROM missing_cursor INTO @SaleId, @Total;
+                SET @Generated += 1;
+
+                FETCH NEXT FROM pending_cursor INTO @SaleId, @Total, @EntryId;
             END;
 
-            CLOSE missing_cursor;
-            DEALLOCATE missing_cursor;
+            CLOSE pending_cursor;
+            DEALLOCATE pending_cursor;
+
+            COMMIT TRAN;
 
             SELECT
                 COUNT(1) AS Reviewed,
-                COALESCE(SUM(CASE WHEN e.AccountingEntryId IS NULL THEN 1 ELSE 0 END), 0) AS Issues
+                COALESCE(SUM(CASE WHEN v.Total < 0 THEN 1 ELSE 0 END), 0) AS Issues,
+                @Generated AS Generated
             FROM dbo.Ventas v
-            LEFT JOIN dbo.AsientosContables e ON e.ReferenceTable = N'Ventas' AND e.ReferenceId = v.SaleId;
+            OUTER APPLY
+            (
+                SELECT TOP 1 entry.AccountingEntryId
+                FROM dbo.AsientosContables entry
+                WHERE entry.ReferenceTable = N'Ventas' AND entry.ReferenceId = v.SaleId
+                ORDER BY entry.AccountingEntryId
+            ) e;
             """;
 
         var row = (await QueryAsync(sql, reader => new
         {
             reviewed = reader.GetInt32("Reviewed"),
-            issues = reader.GetInt32("Issues")
-        })).FirstOrDefault() ?? new { reviewed = 0, issues = 0 };
+            issues = reader.GetInt32("Issues"),
+            generated = reader.GetInt32("Generated")
+        })).FirstOrDefault() ?? new { reviewed = 0, issues = 0, generated = 0 };
 
-        await AddAuditLogAsync("CONCILIACION_POS", $"Conciliacion POS: {row.reviewed} ventas revisadas, {row.issues} diferencias", userEmail);
-        return new { status = row.issues == 0 ? "Correcto" : "Con diferencias", row.reviewed, row.issues };
+        await AddAuditLogAsync("CONCILIACION_POS", $"Conciliacion POS: {row.reviewed} ventas revisadas, {row.generated} asientos reparados, {row.issues} diferencias", userEmail);
+        return new { status = row.issues == 0 ? "Correcto" : "Con diferencias", row.reviewed, row.issues, row.generated };
     }
 
     public async Task<object> DailyAccountingCloseAsync(string? userEmail = null)
@@ -2863,12 +2917,15 @@ public sealed class SqlStore
                 SET @IncomeAccountId = SCOPE_IDENTITY();
             END;
 
-            INSERT INTO dbo.AsientosContables (EntryType, ReferenceTable, ReferenceId, Note, CreatedAt)
-            VALUES (N'VENTA', N'Ventas', @SaleId, CONCAT(N'Venta POS pedido #', @OrderId), SYSUTCDATETIME());
-            DECLARE @EntryId int = SCOPE_IDENTITY();
+            IF @EffectiveTotal > 0
+            BEGIN
+                INSERT INTO dbo.AsientosContables (EntryType, ReferenceTable, ReferenceId, Note, CreatedAt)
+                VALUES (N'VENTA', N'Ventas', @SaleId, CONCAT(N'Venta POS pedido #', @OrderId), SYSUTCDATETIME());
+                DECLARE @EntryId int = SCOPE_IDENTITY();
 
-            INSERT INTO dbo.LineasAsientoContable (AccountingEntryId, AccountId, Debit, Credit)
-            VALUES (@EntryId, @CashAccountId, @EffectiveTotal, 0), (@EntryId, @IncomeAccountId, 0, @EffectiveTotal);
+                INSERT INTO dbo.LineasAsientoContable (AccountingEntryId, AccountId, Debit, Credit)
+                VALUES (@EntryId, @CashAccountId, @EffectiveTotal, 0), (@EntryId, @IncomeAccountId, 0, @EffectiveTotal);
+            END;
 
             COMMIT TRAN;
             SELECT @OrderId;

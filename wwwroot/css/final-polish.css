@@ -481,3 +481,13 @@ body[data-page="/pos"] .pos-admin-block--credit .pos-payment-config-form .btn {
         grid-template-columns: 1fr !important;
     }
 }
+
+body[data-page="/accounting"] #accReconStatus {
+    flex: 1 1 100% !important;
+    margin: -.15rem 0 0 calc(48px + .9rem) !important;
+    font-size: clamp(1.15rem, 1.35vw, 1.45rem) !important;
+    line-height: 1.08 !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    white-space: nowrap !important;
+}

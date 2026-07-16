@@ -21,22 +21,32 @@
 
     <div class="grid grid-4 accounting-kpi-grid">
         <div class="card accounting-kpi-card">
-            <div class="text-muted">Asientos</div>
-            <h2 id="accEntriesCount"></h2>
+            <span class="accounting-kpi-icon"><i class="fas fa-book-open"></i></span>
+            <div>
+                <div class="text-muted">Asientos</div>
+                <h2 id="accEntriesCount"></h2>
+            </div>
         </div>
 
         <div class="card accounting-kpi-card">
-            <div class="text-muted">Gastos</div>
-            <h2 id="accExpensesCount"></h2>
+            <span class="accounting-kpi-icon accounting-kpi-icon--expense"><i class="fas fa-receipt"></i></span>
+            <div>
+                <div class="text-muted">Gastos</div>
+                <h2 id="accExpensesCount"></h2>
+            </div>
         </div>
 
         <div class="card accounting-kpi-card">
-            <div class="text-muted">Pagos a proveedores</div>
-            <h2 id="accPaymentsCount"></h2>
+            <span class="accounting-kpi-icon accounting-kpi-icon--supplier"><i class="fas fa-truck-field"></i></span>
+            <div>
+                <div class="text-muted">Pagos a proveedores</div>
+                <h2 id="accPaymentsCount"></h2>
+            </div>
         </div>
 
         <div class="card accounting-kpi-card">
             <div class="text-muted">Conciliación</div>
+            <span class="accounting-kpi-icon accounting-kpi-icon--reconcile"><i class="fas fa-scale-balanced"></i></span>
             <h2 id="accReconStatus"></h2>
         </div>
     </div>
