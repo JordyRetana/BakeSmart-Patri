@@ -687,7 +687,7 @@ public sealed class SqlStore
             COMMIT TRAN;
 
             SELECT @SavedUserId;
-            """; 
+            """;
 
         return Convert.ToInt32(await ScalarAsync(sql,
             new SqlParameter("@UserId", (object?)input.Id ?? DBNull.Value),
