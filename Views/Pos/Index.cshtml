@@ -26,7 +26,7 @@
     var canManagePayments = User.IsInRole("Admin") || User.IsInRole("Staff");
     var canViewCashSessions = User.IsInRole("Admin") || User.IsInRole("Staff") || User.IsInRole("Supervisor");
     var canManageCreditNotes = User.IsInRole("Admin") || User.IsInRole("Staff");
-    var isCashierView = User.IsInRole("Cajero") && !canManagePayments && !canViewCashSessions;
+    var isCashierView = !canManagePayments && !canViewCashSessions && !canManageCreditNotes;
     var currentUserEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
 }
 
