@@ -112,7 +112,7 @@
 
     observe() {
       this.observer = new MutationObserver(() => this.scheduleRender());
-      this.observer.observe(this.body, { childList: true, subtree: true, characterData: true });
+      this.observer.observe(this.body, { childList: true });
     }
 
     scheduleRender() {
@@ -203,6 +203,7 @@
     if (!(table instanceof HTMLTableElement)) return;
     if (table.dataset.smartTable === "off" || table.dataset.smartTableReady === "true") return;
     if (!table.tHead || !table.tBodies.length) return;
+    if (table.tBodies[0].rows.length > 80) return;
     instances.set(table, new SmartTable(table));
   }
 
@@ -213,12 +214,6 @@
 
   function init() {
     scan(document);
-    const pageObserver = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
-        if (node instanceof HTMLElement) scan(node);
-      }));
-    });
-    pageObserver.observe(document.body, { childList: true, subtree: true });
   }
 
   if (document.readyState === "loading") {
