@@ -4,7 +4,7 @@
 }
 
 @section Styles {
-    <link rel="stylesheet" href="/css/pages/account-register.css?v=auth-redesign-20260717" />
+    <link rel="stylesheet" href="/css/pages/account-register.css?v=auth-redesign-20260718" />
 }
 
 <div class="auth-page-shell register-page">
@@ -85,8 +85,8 @@
                     </div>
                 </div>
 
-                <div class="password-strength" aria-hidden="true">
-                    <div class="password-strength__labels"><span>Seguridad de la contrasena:</span><b>Debil</b><b>Media</b><b>Fuerte</b></div>
+                <div class="password-strength" data-password-strength data-level="empty" aria-live="polite">
+                    <div class="password-strength__labels"><span>Seguridad de la contrasena:</span><b data-strength-label>Debil</b><b>Media</b><b>Fuerte</b></div>
                     <div class="password-strength__bars"><span></span><span></span><span></span></div>
                 </div>
 
@@ -121,6 +121,30 @@
             toggle.querySelector('i')?.classList.toggle('fa-eye-slash');
         });
     });
+
+    const passwordInput = document.getElementById('registerPassword');
+    const strength = document.querySelector('[data-password-strength]');
+    const strengthLabel = document.querySelector('[data-strength-label]');
+    const calculateStrength = value => {
+        let score = 0;
+        if (value.length >= 8) score++;
+        if (value.length >= 12) score++;
+        if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score++;
+        if (/\d/.test(value)) score++;
+        if (/[^A-Za-z0-9]/.test(value)) score++;
+        if (!value) return { level: 'empty', text: 'Debil' };
+        if (score >= 4) return { level: 'strong', text: 'Fuerte' };
+        if (score >= 2) return { level: 'medium', text: 'Media' };
+        return { level: 'weak', text: 'Debil' };
+    };
+
+    if (passwordInput && strength) {
+        passwordInput.addEventListener('input', () => {
+            const result = calculateStrength(passwordInput.value);
+            strength.dataset.level = result.level;
+            if (strengthLabel) strengthLabel.textContent = result.text;
+        });
+    }
 
     const form = document.getElementById('registerForm');
     const submit = document.getElementById('registerSubmitBtn');
