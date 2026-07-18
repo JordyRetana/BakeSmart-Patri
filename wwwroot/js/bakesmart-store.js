@@ -3,6 +3,7 @@
     let posSessionsCache = [];
     let activeSessionCache = null;
     let refreshAllPromise = null;
+    let refreshAllKeySignature = "";
     let refreshAllCompletedAt = 0;
     const refreshAllTtlMs = 15000;
     const persistentCacheTtlMs = 5 * 60 * 1000;
@@ -11,7 +12,7 @@
         const method = String(options.method || "GET").toUpperCase();
         const shouldTimeout = method === "GET";
         const controller = shouldTimeout ? new AbortController() : null;
-        const timeout = controller ? window.setTimeout(() => controller.abort(), 8000) : null;
+        const timeout = controller ? window.setTimeout(() => controller.abort(), 4500) : null;
 
         let response;
         try {
@@ -86,8 +87,13 @@
             return cachedData;
         }
 
-        const data = await request(url);
-        return publish(key, data);
+        try {
+            const data = await request(url);
+            return publish(key, data);
+        } catch (error) {
+            if (cachedData != null) return publish(key, cachedData);
+            return publish(key, fallback);
+        }
     }
 
     function cached(key, fallback = []) {
@@ -167,18 +173,21 @@
         const force = options === true || Boolean(options.force);
         const now = Date.now();
         const keys = Array.isArray(options.keys) ? options.keys : refreshKeysForCurrentPage();
-        if (!force && refreshAllPromise) return refreshAllPromise;
+        const keySignature = keys.slice().sort().join("|");
+        if (!force && refreshAllPromise && refreshAllKeySignature === keySignature) return refreshAllPromise;
         if (!force && keys.every(key => cache.has(key)) && now - refreshAllCompletedAt < refreshAllTtlMs) {
             return Promise.resolve([]);
         }
 
         const missingOrForcedKeys = force ? keys : keys.filter(key => !cache.has(key) || now - refreshAllCompletedAt >= refreshAllTtlMs);
+        refreshAllKeySignature = keySignature;
         refreshAllPromise = Promise.allSettled(missingOrForcedKeys.map(key => {
             const loader = loaders[key];
             return loader ? loader({ force }) : null;
         }).filter(Boolean)).finally(() => {
             refreshAllCompletedAt = Date.now();
             refreshAllPromise = null;
+            refreshAllKeySignature = "";
         });
 
         return refreshAllPromise;

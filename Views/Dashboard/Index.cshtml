@@ -137,21 +137,18 @@
             <div class="payment-total"><span>Total cobrado</span><strong>${format(paidValue)}</strong></div>`;
     }
 
-    async function renderDashboard() {
-        const dashboardRequest = fetch('/api/dashboard')
-            .then(response => response.ok ? response.json() : { kpis: [] })
-            .catch(() => ({ kpis: [] }));
-        await BakeSmartStore.refresh({ keys: ['orders', 'inventory', 'posConfig'] });
-        const dashboard = await Promise.race([
-            dashboardRequest,
-            new Promise(resolve => setTimeout(() => resolve({ kpis: [] }), 4500))
-        ]);
+    function readDashboardState(dashboard = { kpis: [] }) {
         const orders = BakeSmartStore.orders.list();
         const inventory = BakeSmartStore.reports.inventory();
         const kpis = dashboard.kpis || [];
+        return { orders, inventory, kpis };
+    }
+
+    function paintDashboard(dashboard = { kpis: [] }) {
+        const { orders, inventory, kpis } = readDashboardState(dashboard);
         const getKpi = (label, fallback) => kpis.find(item => item.label === label)?.value ?? fallback;
         const pendingPayments = orders.filter(order => (order.paymentStatus || '') !== 'Pagado');
-        const production = orders.filter(order => ['Confirmado','En produccion','En produccion','Listo','En camino'].includes(statusOf(order)));
+        const production = orders.filter(order => ['Confirmado','En produccion','En producción','Listo','En camino'].includes(statusOf(order)));
         const lowStock = Number(getKpi('Alertas inventario', inventory.lowStock));
 
         document.getElementById('dbOrders').textContent = getKpi('Pedidos hoy', orders.length);
@@ -179,7 +176,27 @@
         renderPayments(orders);
     }
 
-    renderDashboard().catch(error => app.toast.error(error.message));
+    async function renderDashboard() {
+        paintDashboard();
+
+        const dashboardRequest = fetch('/api/dashboard')
+            .then(response => response.ok ? response.json() : { kpis: [] })
+            .catch(() => ({ kpis: [] }));
+        await Promise.race([
+            BakeSmartStore.refresh({ keys: ['orders', 'inventory', 'posConfig'] }),
+            new Promise(resolve => setTimeout(resolve, 2500))
+        ]);
+        const dashboard = await Promise.race([
+            dashboardRequest,
+            new Promise(resolve => setTimeout(() => resolve({ kpis: [] }), 2500))
+        ]);
+        paintDashboard(dashboard);
+    }
+
+    renderDashboard().catch(error => {
+        paintDashboard();
+        app.toast.error(error.message);
+    });
 })();
 </script>
 }
