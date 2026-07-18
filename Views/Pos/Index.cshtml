@@ -84,21 +84,6 @@
                     </div>
 
                     <div class="pos-products-grid" id="posProductsGrid"></div>
-
-                    <div class="table-container pos-products-table-wrapper">
-                        <table class="table pos-products-table">
-                            <thead>
-                                <tr>
-                                    <th>Código</th>
-                                    <th>Producto</th>
-                                    <th>Precio</th>
-                                    <th>Stock</th>
-                                    <th class="text-right">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody id="posProductsTable"></tbody>
-                        </table>
-                    </div>
                 </section>
 
                 <button class="pos-cart-fab" type="button" id="posCartToggle" aria-label="Abrir carrito">
@@ -472,16 +457,10 @@
 
             function renderProducts() {
                 const products = getProducts();
-                const tableBody = document.getElementById('posProductsTable');
                 const productsGrid = document.getElementById('posProductsGrid');
 
                 if (!products.length) {
                     productsGrid.innerHTML = `<div class="card pos-empty-products">No se encontraron productos.</div>`;
-                    tableBody.innerHTML = `
-                        <tr>
-                            <td colspan="5" class="text-center text-muted">No se encontraron productos.</td>
-                        </tr>
-                    `;
                     return;
                 }
 
@@ -514,19 +493,6 @@
                     </article>
                 `}).join('');
 
-                tableBody.innerHTML = products.map(product => `
-                    <tr>
-                        <td>${product.code}</td>
-                        <td>${product.description}</td>
-                        <td>${fmt(product.price)}</td>
-                        <td>${remainingStock(product.id, product.stock)} / ${product.stock}</td>
-                        <td class="text-right">
-                            <button class="btn btn-outline btn-sm" type="button" onclick="addToCart(${product.id})" ${remainingStock(product.id, product.stock) <= 0 ? 'disabled' : ''}>
-                                Agregar
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
             }
 
             function cartQuantity(productId) {
