@@ -1,10 +1,10 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Iniciar sesión";
+    ViewData["Title"] = "Iniciar sesion";
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/pages/account-login.css" asp-append-version="true" />
+    <link rel="stylesheet" href="/css/pages/account-login.css?v=auth-redesign-20260717" />
 }
 
 <main class="login-page-shell">
@@ -14,16 +14,22 @@
             <div class="login-hero-shade"></div>
             <div class="login-hero-content">
                 <div class="login-logo-wrap"><img src="/img/logo.png" alt="BakeSmart Patri" /></div>
-                <span class="login-eyebrow">Repostería artesanal</span>
+                <span class="login-eyebrow">Reposteria artesanal</span>
                 <h1>Bienvenido a BakeSmart Patri</h1>
-                <p>Ingresa para administrar tu trabajo o continuar con tus pedidos.</p>
+                <div class="login-heart-divider"><span></span><i class="fas fa-heart"></i><span></span></div>
+                <p>La plataforma creada para administrar tu negocio de reposteria, gestionar pedidos y hacer crecer tu marca cada dia.</p>
+                <div class="login-feature-row" aria-label="Beneficios de BakeSmart Patri">
+                    <span><i class="fas fa-cake-candles"></i>Pedidos<br />organizados</span>
+                    <span><i class="fas fa-cube"></i>Inventario<br />controlado</span>
+                    <span><i class="fas fa-chart-line"></i>Negocio<br />en crecimiento</span>
+                </div>
             </div>
         </aside>
 
         <div class="login-form-panel">
             <div class="login-form-heading">
                 <span>Acceso seguro</span>
-                <h2>Iniciar sesión</h2>
+                <h2>Iniciar sesion</h2>
                 <p>Utiliza las credenciales asignadas a tu cuenta.</p>
             </div>
 
@@ -35,30 +41,42 @@
             <form method="post" action="/Account/Login" class="login-form" id="loginForm">
                 @Html.AntiForgeryToken()
                 <div class="input-group">
-                    <label class="input-label" for="loginEmail"><i class="fas fa-envelope"></i> Correo electrónico</label>
+                    <label class="input-label" for="loginEmail"><i class="fas fa-envelope"></i> Correo electronico</label>
                     <input id="loginEmail" type="email" class="input" name="email" placeholder="tu@correo.com" required autocomplete="username" />
                 </div>
                 <div class="input-group">
-                    <label class="input-label" for="loginPassword"><i class="fas fa-lock"></i> Contraseña</label>
-                    <input id="loginPassword" type="password" class="input" name="password" placeholder="Escribe tu contraseña" required autocomplete="current-password" />
+                    <label class="input-label" for="loginPassword"><i class="fas fa-lock"></i> Contrasena</label>
+                    <div class="password-field">
+                        <input id="loginPassword" type="password" class="input" name="password" placeholder="Escribe tu contrasena" required autocomplete="current-password" />
+                        <button type="button" class="password-toggle" data-password-toggle="loginPassword" aria-label="Mostrar contrasena"><i class="fas fa-eye"></i></button>
+                    </div>
                 </div>
                 <div class="login-options">
                     <label class="login-remember"><input type="checkbox" name="remember" /><span>Recordarme</span></label>
-                    <a href="/Account/ForgotPassword" class="login-forgot">¿Olvidaste tu contraseña?</a>
+                    <a href="/Account/ForgotPassword" class="login-forgot">Olvidaste tu contrasena?</a>
                 </div>
-                <button type="submit" class="btn btn-primary btn-block btn-lg login-submit-btn" id="loginSubmitBtn"><i class="fas fa-right-to-bracket"></i> Iniciar sesión</button>
+                <button type="submit" class="btn btn-primary btn-block btn-lg login-submit-btn" id="loginSubmitBtn"><i class="fas fa-right-to-bracket"></i> Iniciar sesion</button>
                 <div class="login-divider"><span>o</span></div>
-                <a href="/Account/Register" class="btn btn-outline btn-block"><i class="fas fa-user-plus"></i> Crear cuenta de cliente</a>
+                <a href="/Account/Register" class="btn btn-outline btn-block login-create-btn"><i class="fas fa-user-plus"></i> Crear cuenta de cliente</a>
             </form>
+
+            <div class="login-security-note"><i class="fas fa-shield-halved"></i><span><strong>Conexion protegida.</strong> Tus credenciales se validan de forma segura.</span></div>
         </div>
     </section>
-
-    <div class="login-security-note"><i class="fas fa-shield-halved"></i><span><strong>Conexión protegida</strong> Tus credenciales se validan de forma segura.</span></div>
 </main>
 
 @section Scripts {
 <script>
 (() => {
+    document.querySelectorAll('[data-password-toggle]').forEach(toggle => {
+        toggle.addEventListener('click', () => {
+            const input = document.getElementById(toggle.dataset.passwordToggle);
+            if (!input) return;
+            input.type = input.type === 'password' ? 'text' : 'password';
+            toggle.querySelector('i')?.classList.toggle('fa-eye-slash');
+        });
+    });
+
     const form = document.getElementById('loginForm');
     const button = document.getElementById('loginSubmitBtn');
     if (!form || !button) return;

@@ -4,7 +4,8 @@
 }
 
 <div class="page-shell pos-cart-page">
-    <div class="page-header">
+    <div class="page-header pos-cart-hero">
+        <img class="pos-cart-hero__image" src="/img/products/cupcakes-decorados.jpg" alt="Cupcakes BakeSmart Patri" />
         <div>
             <div class="eyebrow"><i class="fas fa-cash-register"></i> Punto de venta</div>
             <h1>Finalizar venta</h1>
@@ -28,7 +29,7 @@
             <div id="checkoutCartItems" class="pos-cart-list"></div>
         </section>
 
-        <aside class="card pos-cart-checkout-card">
+        <aside class="card pos-cart-checkout-card pos-cart-checkout-card--payment">
             <div class="pos-panel-header">
                 <div>
                     <div class="pos-panel-eyebrow">Cliente y cobro</div>
@@ -39,24 +40,24 @@
             <form id="checkoutCartForm" class="pos-checkout-form">
                 <div class="pos-form-block">
                     <label>Cliente</label>
-                    <input class="form-control" name="customerName" id="checkoutCustomerName" list="checkoutCustomerOptions" placeholder="Buscar cliente o escribir manualmente" />
+                    <div class="pos-input-shell"><i class="fas fa-user"></i><input class="form-control" name="customerName" id="checkoutCustomerName" list="checkoutCustomerOptions" placeholder="Buscar cliente o escribir manualmente" /></div>
                     <datalist id="checkoutCustomerOptions"></datalist>
                 </div>
                 <div class="pos-form-block">
                     <label>Correo</label>
-                    <input class="form-control" name="customerEmail" placeholder="correo@cliente.com" />
+                    <div class="pos-input-shell"><i class="fas fa-envelope"></i><input class="form-control" name="customerEmail" placeholder="correo@cliente.com" /></div>
                 </div>
                 <div class="pos-form-block">
                     <label>Telefono</label>
-                    <input class="form-control" name="customerPhone" placeholder="Telefono" />
+                    <div class="pos-input-shell"><i class="fas fa-phone"></i><input class="form-control" name="customerPhone" placeholder="Telefono" /></div>
                 </div>
                 <div class="pos-form-block">
                     <label>Metodo de pago</label>
-                    <select class="form-control" name="paymentMethod" id="checkoutPaymentMethod"></select>
+                    <div class="pos-input-shell"><i class="fas fa-money-bill-wave"></i><select class="form-control" name="paymentMethod" id="checkoutPaymentMethod"></select></div>
                 </div>
                 <div class="pos-form-block">
                     <label>Descuento adicional</label>
-                    <input class="form-control" type="number" min="0" step="0.01" name="discountRate" value="0" />
+                    <div class="pos-input-shell"><i class="fas fa-tag"></i><input class="form-control" type="number" min="0" step="0.01" name="discountRate" value="0" /></div>
                 </div>
 
                 <div id="checkoutTotals" class="pos-cart-totals"></div>
@@ -206,8 +207,12 @@
                     return;
                 }
 
-                itemsEl.innerHTML = cart.map(item => `
+                itemsEl.innerHTML = cart.map(item => {
+                    const imageUrl = item.imageUrl || item.image || item.photo || '/img/products/cupcakes-decorados.jpg';
+                    return `
                             <div class="pos-cart-item">
+                                <img class="pos-cart-item-image" src="${imageUrl}" alt="${item.name}" />
+                                <div class="pos-cart-item-body">
                                 <div class="pos-cart-item-header">
                                     <div>
                                         <strong>${item.name}</strong>
@@ -225,8 +230,10 @@
                                     </div>
                                     <strong style="color:var(--primary);">${fmt(item.quantity * item.unitPrice)}</strong>
                                 </div>
+                                </div>
                             </div>
-                        `).join('');
+                        `;
+                }).join('');
 
                 const subtotal = cart.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
                 const discountBreakdown = currentDiscountBreakdown();
@@ -421,5 +428,5 @@
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/pages/pos-index.css" asp-append-version="true" />
+    <link rel="stylesheet" href="/css/pages/pos-index.css?v=checkout-redesign-20260717" />
 }
