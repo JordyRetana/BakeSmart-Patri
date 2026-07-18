@@ -199,7 +199,21 @@
         URL.revokeObjectURL(url);
     }
 
-    const api = {
+    const productImageFor = product => {
+        const direct = product?.imageUrl || product?.image || product?.photo || product?.imagePath || product?.ImageUrl;
+        if (direct) return direct;
+
+        const text = `${product?.code || product?.sku || ""} ${product?.description || product?.item || ""} ${product?.category || ""}`.toLowerCase();
+        if (text.includes("gal") || text.includes("galleta")) return "/img/products/galletas-decoradas.jpg";
+        if (text.includes("cup") || text.includes("cupcake")) return "/img/products/cupcakes-decorados.jpg";
+        if (text.includes("red") || text.includes("velvet")) return "/img/products/cake-red-velvet.jpg";
+        if (text.includes("cheese") || text.includes("frutos")) return "/img/products/cheesecake-frutos-rojos.jpg";
+        if (text.includes("brown")) return "/img/products/brownie-gourmet.jpg";
+        if (text.includes("past") || text.includes("queque") || text.includes("cake")) return "/img/products/pastel-decorado.jpg";
+        return "/img/products/producto-sin-imagen.svg";
+    };
+
+        const api = {
         refresh: refreshAll,
         refreshClient() {
             return Promise.allSettled([
@@ -275,7 +289,7 @@
                     const normalized = String(status || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                     const index = trackingSteps.findIndex(step => step === normalized);
                     return index >= 0 ? index : 0;
-                };
+        };
 
                 return cached("orders").map(order => ({
                     ...order,
@@ -333,7 +347,8 @@
                     description: product.description || product.item,
                     unit: product.unit || product.unidad,
                     minStock: product.minStock ?? product.min,
-                    productType: product.productType || product.type || ""
+                    productType: product.productType || product.type || "",
+                    imageUrl: productImageFor(product)
                 }));
             },
             sellable() {
@@ -447,7 +462,8 @@
                         description: product.description || product.item,
                         name: product.description || product.item,
                         price: product.price,
-                        stock: product.stock
+                        stock: product.stock,
+                        imageUrl: productImageFor(product)
                     }));
             },
             async openSession(amount = 0) {

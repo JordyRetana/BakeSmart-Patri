@@ -1184,6 +1184,13 @@
             this.enhanceAll();
             if (this._observer) return;
             this._observer = new MutationObserver(mutations => {
+                const changedSelectWrappers = new Set();
+                mutations.forEach(mutation => {
+                    const select = mutation.target?.closest?.('.bs-select')?.querySelector?.('select');
+                    if (select?.closest('.bs-select')) changedSelectWrappers.add(select.closest('.bs-select'));
+                });
+                changedSelectWrappers.forEach(wrapper => wrapper._bsSelectRender?.());
+
                 const shouldEnhance = mutations.some(mutation =>
                     Array.from(mutation.addedNodes || []).some(node => {
                         if (node.nodeType !== 1 || node.closest?.('.bs-select')) return false;
@@ -1264,6 +1271,7 @@
                     menu.appendChild(item);
                 });
             };
+            wrapper._bsSelectRender = render;
 
             button.addEventListener('click', event => {
                 event.preventDefault();

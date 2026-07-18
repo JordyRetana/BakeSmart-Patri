@@ -286,6 +286,10 @@ body[data-page="/pos/cart"] .pos-input-shell .form-control {
     background-color: #fff;
 }
 
+body[data-page="/pos/cart"] .pos-payment-select.bs-select__native + .bs-select__button {
+    min-height: 47px !important;
+}
+
 body[data-page="/pos/cart"] .pos-cart-totals {
     grid-column: 2;
     grid-row: 1 / span 5;
@@ -417,4 +421,30 @@ body[data-page="/pos/cart"] .pos-payment-modal__note {
         width: 100%;
         height: 160px;
     }
+}
+
+body[data-page^="/pos"] .pos-cart-summary-panel {
+    right: 6.5rem !important;
+    bottom: 1.25rem !important;
+    border-radius: 14px !important;
+    box-shadow: 0 24px 70px rgba(31, 22, 44, .24) !important;
+}
+
+body[data-page^="/pos"] #chat-toggle-btn {
+    right: 1rem !important;
+    bottom: 1rem !important;
+    width: 58px !important;
+    min-width: 58px !important;
+    height: 58px !important;
+    padding: .25rem !important;
+    border-radius: 50% !important;
+}
+
+body[data-page^="/pos"] #chat-toggle-btn span {
+    display: none !important;
+}
+
+body[data-page^="/pos"] #chat-widget {
+    right: 1rem !important;
+    bottom: 5rem !important;
 }

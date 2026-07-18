@@ -1,6 +1,6 @@
 @section Styles {
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <link rel="stylesheet" href="~/css/pages/client-index.css?v=20260709-client-two-column-v2" />
+    <link rel="stylesheet" href="~/css/pages/client-index.css?v=20260718-visual-quick-order" />
 }
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -445,9 +445,10 @@
 
         productsGrid.innerHTML = rows.map(product => {
         const selected = selectedProduct && Number(selectedProduct.id) === Number(product.id);
+        const imageUrl = product.imageUrl || '/img/products/producto-sin-imagen.svg';
         return `
         <button class="quick-product ${selected ? 'quick-product--selected' : ''}" type="button" data-product-id="${product.id}">
-        <span class="quick-product__icon"><i class="fas fa-cake-candles"></i></span>
+        <span class="quick-product__image"><img src="${clean(imageUrl)}" alt="${clean(product.name)}" onerror="this.src='/img/products/producto-sin-imagen.svg';" /></span>
         <span class="quick-product__body">
         <strong>${clean(product.name)}</strong>
         <small>${clean(product.code || 'Producto disponible')}</small>

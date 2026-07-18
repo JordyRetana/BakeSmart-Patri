@@ -5,7 +5,7 @@
 
 <div class="page-shell pos-cart-page">
     <div class="page-header pos-cart-hero">
-        <img class="pos-cart-hero__image" src="/img/products/cupcakes-decorados.jpg" alt="Cupcakes BakeSmart Patri" />
+        <img class="pos-cart-hero__image" id="checkoutHeroImage" src="/img/products/producto-sin-imagen.svg" alt="Producto del pedido" />
         <div>
             <div class="eyebrow"><i class="fas fa-cash-register"></i> Punto de venta</div>
             <h1>Finalizar venta</h1>
@@ -53,7 +53,7 @@
                 </div>
                 <div class="pos-form-block">
                     <label>Metodo de pago</label>
-                    <div class="pos-input-shell"><i class="fas fa-money-bill-wave"></i><select class="form-control" name="paymentMethod" id="checkoutPaymentMethod"></select></div>
+                    <select class="form-control pos-payment-select" name="paymentMethod" id="checkoutPaymentMethod"></select>
                 </div>
                 <div class="pos-form-block">
                     <label>Descuento adicional</label>
@@ -136,6 +136,7 @@
             const gatewayReferenceLabel = document.getElementById('posGatewayReferenceLabel');
             const gatewayReference = document.getElementById('posGatewayReference');
             const paymentConfirmBtn = document.getElementById('posPaymentConfirmBtn');
+            const checkoutHeroImage = document.getElementById('checkoutHeroImage');
             let pendingOrder = null;
             let pendingTotals = null;
 
@@ -202,13 +203,19 @@
                 countEl.textContent = `${cart.length} producto${cart.length === 1 ? '' : 's'}`;
 
                 if (!cart.length) {
+                    if (checkoutHeroImage) checkoutHeroImage.src = '/img/products/producto-sin-imagen.svg';
                     itemsEl.innerHTML = `<div class="pos-cart-mini-empty"><i class="fas fa-basket-shopping"></i><strong>Carrito vacio</strong><span>Vuelva al POS para agregar productos.</span></div>`;
                     totalsEl.innerHTML = '';
                     return;
                 }
 
+                const firstProduct = store.inventory.list().find(row => Number(row.id) === Number(cart[0]?.productId) || String(row.code || '').toLowerCase() === String(cart[0]?.code || '').toLowerCase());
+                const firstImage = cart[0]?.imageUrl || firstProduct?.imageUrl || '/img/products/producto-sin-imagen.svg';
+                if (checkoutHeroImage) checkoutHeroImage.src = firstImage;
+
                 itemsEl.innerHTML = cart.map(item => {
-                    const imageUrl = item.imageUrl || item.image || item.photo || '/img/products/cupcakes-decorados.jpg';
+                    const inventoryProduct = store.inventory.list().find(row => Number(row.id) === Number(item.productId) || String(row.code || '').toLowerCase() === String(item.code || '').toLowerCase());
+                    const imageUrl = item.imageUrl || item.image || item.photo || inventoryProduct?.imageUrl || inventoryProduct?.image || '/img/products/producto-sin-imagen.svg';
                     return `
                             <div class="pos-cart-item">
                                 <img class="pos-cart-item-image" src="${imageUrl}" alt="${item.name}" />
@@ -428,5 +435,5 @@
 }
 
 @section Styles {
-    <link rel="stylesheet" href="/css/pages/pos-index.css?v=checkout-redesign-20260717" />
+    <link rel="stylesheet" href="/css/pages/pos-index.css?v=checkout-redesign-20260718b" />
 }
