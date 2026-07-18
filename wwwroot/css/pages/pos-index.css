@@ -138,6 +138,66 @@ body.dark .pos-payment-modal__header h2,body.dark .pos-payment-modal__amount str
 @media(max-width:1050px){.pos-cart-checkout-layout{grid-template-columns:1fr}.pos-cart-checkout-card .pos-checkout-form{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:650px){.pos-page,.pos-cart-page{width:calc(100% - 1rem)!important;padding:.75rem 0 2rem!important}.pos-header{min-height:auto!important}.pos-summary-grid{grid-template-columns:1fr!important}.payment-methods-panel,.pos-products-grid{grid-template-columns:1fr!important}.pos-product-card{min-height:210px}.pos-cart-summary-actions,.pos-checkout-form,.pos-cart-checkout-card .pos-checkout-form{grid-template-columns:1fr}.pos-cart-summary-panel{inset:auto .5rem 5rem .5rem!important;width:auto!important}.pos-history-card{overflow:hidden}.pos-history-card .table-container{overflow:auto}}
 
+/* Cashier-first POS layout: keep selling controls in front of admin blocks. */
+body[data-page="/pos"] .pos-layout {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 330px) !important;
+    align-items: start !important;
+    gap: 1rem !important;
+}
+
+body[data-page="/pos"] .pos-main-card {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    min-height: auto !important;
+}
+
+body[data-page="/pos"] .pos-side-card {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    position: sticky !important;
+    top: 1rem !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: .75rem !important;
+    max-height: calc(100vh - 2rem) !important;
+    overflow: auto !important;
+}
+
+body[data-page="/pos"] .pos-products-table-wrapper {
+    display: none !important;
+}
+
+body[data-page="/pos"] .pos-products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+}
+
+body[data-page="/pos"] .pos-admin-block--payments,
+body[data-page="/pos"] .pos-admin-block--credit {
+    display: none !important;
+}
+
+body[data-page="/pos"] .pos-summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+body[data-page="/pos"] .pos-summary-card {
+    min-height: 78px !important;
+}
+
+@media (max-width: 1050px) {
+    body[data-page="/pos"] .pos-layout {
+        grid-template-columns: 1fr !important;
+    }
+
+    body[data-page="/pos"] .pos-main-card,
+    body[data-page="/pos"] .pos-side-card {
+        grid-column: 1 !important;
+        position: static !important;
+        max-height: none !important;
+    }
+}
+
 /* Checkout redesign inspired by the POS payment reference. */
 body[data-page="/pos/cart"] .pos-cart-page {
     width: min(1180px, calc(100% - 2rem)) !important;
