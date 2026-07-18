@@ -2697,6 +2697,7 @@ public sealed class SqlStore
             LEFT JOIN dbo.Usuarios u ON u.UserId = cs.OpenedByUserId
             LEFT JOIN dbo.PagosSesionCaja csp ON csp.CashSessionId = cs.CashSessionId
             WHERE @IncludeAll = 1
+               OR cs.Status = N'Abierta'
                OR @UserEmail IS NULL
                OR LOWER(u.Email) = LOWER(@UserEmail)
             GROUP BY cs.CashSessionId, cs.OpenedAt, cs.ClosedAt, cs.OpeningAmount, cs.ClosingAmount, cs.Status, u.FirstName, u.LastName, u.Email

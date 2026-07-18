@@ -100,27 +100,44 @@
         return cache.has(key) ? cache.get(key) : fallback;
     }
 
+    function isOpenSession(session) {
+        const status = normalizeStatus(session?.status);
+        return status.startsWith("abiert") || status === "open" || status === "activo" || status === "activa";
+    }
+
+    function setPosSessions(data) {
+        posSessionsCache = Array.isArray(data) ? data : [];
+        activeSessionCache =
+            posSessionsCache.find(s => isOpenSession(s) && !s.closedAt) ||
+            posSessionsCache.find(isOpenSession) ||
+            null;
+        return posSessionsCache;
+    }
+
     async function loadPosSessions(options = {}) {
         const force = Boolean(options.force);
         const cachedSessions = readPersistent("posSessions");
         if (!force && cachedSessions) {
-            posSessionsCache = cachedSessions;
-            activeSessionCache = posSessionsCache.find(s => normalizeStatus(s.status).startsWith("abiert")) || null;
+            setPosSessions(cachedSessions);
             request("/api/pos/sessions")
                 .then(data => {
-                    posSessionsCache = publish("posSessions", data);
-                    activeSessionCache = posSessionsCache.find(s => normalizeStatus(s.status).startsWith("abiert")) || null;
+                    publish("posSessions", data);
+                    setPosSessions(data);
                 })
                 .catch(() => { });
             return posSessionsCache;
         }
 
         try {
-            posSessionsCache = publish("posSessions", await request("/api/pos/sessions"));
-            activeSessionCache = posSessionsCache.find(s => normalizeStatus(s.status).startsWith("abiert")) || null;
+            const sessions = await request("/api/pos/sessions");
+            publish("posSessions", sessions);
+            setPosSessions(sessions);
         } catch {
-            posSessionsCache = [];
-            activeSessionCache = null;
+            if (cachedSessions) {
+                setPosSessions(cachedSessions);
+            } else {
+                setPosSessions([]);
+            }
         }
         return posSessionsCache;
     }
