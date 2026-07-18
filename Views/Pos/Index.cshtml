@@ -27,6 +27,7 @@
     var canViewCashSessions = User.IsInRole("Admin") || User.IsInRole("Staff") || User.IsInRole("Supervisor");
     var canManageCreditNotes = User.IsInRole("Admin") || User.IsInRole("Staff");
     var isCashierView = User.IsInRole("Cajero") && !canManagePayments && !canViewCashSessions;
+    var currentUserEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
 }
 
 <div class="page-shell pos-page @(isCashierView ? "pos-page--cashier" : "")">
@@ -294,6 +295,7 @@
             const getActiveSession = () => store.pos.activeSession();
             const getProducts = () => store.pos.searchProducts(searchInput.value);
             const money = value => app.utils.formatCurrency(Number(value || 0));
+            const currentUserEmail = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(currentUserEmail));
             const normalizeStatus = value => String(value || '')
                 .normalize('NFD')
                 .replace(/[\u0300-\u036f]/g, '')
@@ -303,7 +305,12 @@
                 const status = normalizeStatus(session?.status);
                 return status.startsWith('abiert') || status === 'open' || status === 'activo' || status === 'activa';
             };
-            const resolveActiveSession = () => getActiveSession() || (store.pos.cachedSessions ? store.pos.cachedSessions().find(isSessionOpen) : null);
+            const belongsToCurrentUser = session => !currentUserEmail || String(session?.userEmail || '').toLowerCase() === String(currentUserEmail).toLowerCase();
+            const resolveActiveSession = () => {
+                const active = getActiveSession();
+                if (active && isSessionOpen(active) && belongsToCurrentUser(active)) return active;
+                return store.pos.cachedSessions ? store.pos.cachedSessions().find(session => isSessionOpen(session) && belongsToCurrentUser(session)) : null;
+            };
 
             ['posCartToggle', 'posCartBackdrop', 'posCartSheet', 'posCartPanel'].forEach(id => {
                 const element = document.getElementById(id);

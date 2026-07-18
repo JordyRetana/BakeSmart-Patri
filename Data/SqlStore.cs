@@ -2637,10 +2637,23 @@ public sealed class SqlStore
     public async Task<int> OpenCashSessionAsync(decimal openingAmount, string? userEmail = null)
     {
         // Verificar que no haya sesiÃ³n activa
-        const string checkSql = "SELECT COUNT(1) FROM dbo.SesionesCaja WHERE Status = N'Abierta'";
-        var activeSessions = Convert.ToInt32(await ScalarAsync(checkSql));
+        const string checkSql = """
+            DECLARE @UserId int;
+            IF @UserEmail IS NOT NULL
+                SELECT @UserId = UserId FROM dbo.Usuarios WHERE LOWER(Email) = LOWER(@UserEmail);
+
+            SELECT COUNT(1)
+            FROM dbo.SesionesCaja
+            WHERE Status = N'Abierta'
+              AND (
+                    (@UserEmail IS NULL AND OpenedByUserId IS NULL)
+                    OR OpenedByUserId = @UserId
+                  );
+            """;
+        var activeSessions = Convert.ToInt32(await ScalarAsync(checkSql,
+            new SqlParameter("@UserEmail", (object?)userEmail ?? DBNull.Value)));
         if (activeSessions > 0)
-            throw new InvalidOperationException("Ya existe una caja abierta. Debe cerrarla antes de abrir una nueva.");
+            throw new InvalidOperationException("Ya tiene una caja abierta. Debe cerrarla antes de abrir otra.");
 
         const string sql = """
             DECLARE @UserId int;
@@ -2665,18 +2678,28 @@ public sealed class SqlStore
     {
         const string sql = """
             DECLARE @Updated int = 0;
+            DECLARE @UserId int;
+
+            IF @UserEmail IS NOT NULL
+                SELECT @UserId = UserId FROM dbo.Usuarios WHERE LOWER(Email) = LOWER(@UserEmail);
 
             UPDATE dbo.SesionesCaja
             SET ClosingAmount = @ClosingAmount,
                 Status = N'Cerrada',
                 ClosedAt = SYSUTCDATETIME()
-            WHERE CashSessionId = @SessionId AND Status = N'Abierta';
+            WHERE CashSessionId = @SessionId
+              AND Status = N'Abierta'
+              AND (
+                    (@UserEmail IS NULL AND OpenedByUserId IS NULL)
+                    OR OpenedByUserId = @UserId
+                  );
 
             SET @Updated = @@ROWCOUNT;
             SELECT @Updated;
             """;
 
         var updated = Convert.ToInt32(await ScalarAsync(sql,
+            new SqlParameter("@UserEmail", (object?)userEmail ?? DBNull.Value),
             new SqlParameter("@SessionId", sessionId),
             new SqlParameter("@ClosingAmount", closingAmount)));
 
@@ -2697,7 +2720,6 @@ public sealed class SqlStore
             LEFT JOIN dbo.Usuarios u ON u.UserId = cs.OpenedByUserId
             LEFT JOIN dbo.PagosSesionCaja csp ON csp.CashSessionId = cs.CashSessionId
             WHERE @IncludeAll = 1
-               OR cs.Status = N'Abierta'
                OR @UserEmail IS NULL
                OR LOWER(u.Email) = LOWER(@UserEmail)
             GROUP BY cs.CashSessionId, cs.OpenedAt, cs.ClosedAt, cs.OpeningAmount, cs.ClosingAmount, cs.Status, u.FirstName, u.LastName, u.Email
@@ -2867,7 +2889,10 @@ public sealed class SqlStore
                 SELECT TOP 1 CashSessionId
                 FROM dbo.SesionesCaja
                 WHERE Status = N'Abierta'
-                  AND (@CurrentUserId IS NULL OR OpenedByUserId = @CurrentUserId)
+                  AND (
+                        (@UserEmail IS NULL AND OpenedByUserId IS NULL)
+                        OR OpenedByUserId = @CurrentUserId
+                      )
                 ORDER BY CashSessionId DESC
             );
             IF @ActiveSessionId IS NULL
