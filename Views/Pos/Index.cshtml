@@ -33,6 +33,7 @@
 <div class="page-shell pos-page @(isCashierView ? "pos-page--cashier" : "")">
     <div class="page-header pos-header">
         <div>
+            <div class="pos-kicker">Consola de mostrador</div>
             <h1 class="pos-title">
                 <i class="fas fa-cash-register"></i>
                 Punto de venta
@@ -84,6 +85,30 @@
                     </div>
 
                     <div class="pos-products-grid" id="posProductsGrid"></div>
+
+                    <section class="pos-products-list-panel">
+                        <div class="pos-products-list-header">
+                            <div>
+                                <span>Lista operativa</span>
+                                <strong>Productos disponibles para venta rápida</strong>
+                            </div>
+                            <i class="fas fa-list-check"></i>
+                        </div>
+                        <div class="table-container pos-products-table-wrapper">
+                            <table class="table pos-products-table">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Producto</th>
+                                        <th>Precio</th>
+                                        <th>Stock</th>
+                                        <th class="text-right">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="posProductsTable"></tbody>
+                            </table>
+                        </div>
+                    </section>
                 </section>
 
                 <button class="pos-cart-fab" type="button" id="posCartToggle" aria-label="Abrir carrito">
@@ -458,9 +483,17 @@
             function renderProducts() {
                 const products = getProducts();
                 const productsGrid = document.getElementById('posProductsGrid');
+                const tableBody = document.getElementById('posProductsTable');
 
                 if (!products.length) {
                     productsGrid.innerHTML = `<div class="card pos-empty-products">No se encontraron productos.</div>`;
+                    if (tableBody) {
+                        tableBody.innerHTML = `
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No se encontraron productos.</td>
+                            </tr>
+                        `;
+                    }
                     return;
                 }
 
@@ -493,6 +526,22 @@
                     </article>
                 `}).join('');
 
+                if (tableBody) {
+                    tableBody.innerHTML = products.map(product => `
+                        <tr>
+                            <td><span class="pos-table-code">${product.code}</span></td>
+                            <td><strong>${product.description}</strong></td>
+                            <td>${fmt(product.price)}</td>
+                            <td>${remainingStock(product.id, product.stock)} / ${product.stock}</td>
+                            <td class="text-right">
+                                <button class="pos-table-add" type="button" onclick="addToCart(${product.id})" ${remainingStock(product.id, product.stock) <= 0 ? 'disabled' : ''}>
+                                    <i class="fas fa-plus"></i>
+                                    Agregar
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
             }
 
             function cartQuantity(productId) {
