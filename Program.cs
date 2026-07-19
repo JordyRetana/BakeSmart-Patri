@@ -47,10 +47,9 @@ var dataProtectionConnectionString = builder.Configuration.GetConnectionString("
 var disableSqlDataProtection = builder.Configuration.GetValue<bool>("Features:DisableSqlDataProtection");
 var explicitSqlDataProtection = builder.Configuration.GetSection("Features:UseSqlDataProtection").Exists();
 var useSqlDataProtection = !builder.Environment.IsDevelopment() &&
-    (explicitSqlDataProtection
-        ? builder.Configuration.GetValue<bool>("Features:UseSqlDataProtection")
-        : (!disableSqlDataProtection &&
-           builder.Configuration.GetValue<bool>("Features:UseSqlDatabase")));
+    !disableSqlDataProtection &&
+    explicitSqlDataProtection &&
+    builder.Configuration.GetValue<bool>("Features:UseSqlDataProtection");
 
 if (useSqlDataProtection &&
     !string.IsNullOrWhiteSpace(dataProtectionConnectionString))
