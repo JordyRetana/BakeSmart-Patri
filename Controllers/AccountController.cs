@@ -44,7 +44,15 @@ namespace BakeSmartPatri.Controllers
                 return View();
             }
 
-            await _sqlStore.AddAuditLogAsync("LOGIN", $"Inicio de sesion: {email} ({user.Role})", email);
+            Response.Cookies.Delete("BakeSmartPatri.Auth");
+            try
+            {
+                await _sqlStore.AddAuditLogAsync("LOGIN", $"Inicio de sesion: {email} ({user.Role})", email);
+            }
+            catch
+            {
+                // El inicio de sesion no debe bloquearse si la bitacora no esta disponible.
+            }
             await SignInUserAsync(user);
 
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -121,9 +129,20 @@ namespace BakeSmartPatri.Controllers
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
             if (!string.IsNullOrWhiteSpace(email))
-                await _sqlStore.AddAuditLogAsync("LOGOUT", $"Cierre de sesion: {email}", email);
+            {
+                try
+                {
+                    await _sqlStore.AddAuditLogAsync("LOGOUT", $"Cierre de sesion: {email}", email);
+                }
+                catch
+                {
+                    // El cierre de sesion debe funcionar aunque la bitacora falle.
+                }
+            }
 
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            Response.Cookies.Delete("BakeSmartPatri.Auth");
+            Response.Cookies.Delete("BakeSmartPatri.Auth.v2");
             return RedirectToAction("Index", "Home");
         }
 

@@ -185,8 +185,14 @@
                 );
             }
 
+            function normalizeDiscountRate(value) {
+                const numeric = Number(value || 0);
+                if (!Number.isFinite(numeric) || numeric <= 0) return 0;
+                return Math.min(numeric > 1 ? numeric / 100 : numeric, 1);
+            }
+
             function currentDiscountBreakdown() {
-                const manual = Math.min(Math.max(Number(form.discountRate?.value || 0), 0), 1);
+                const manual = normalizeDiscountRate(form.discountRate?.value);
                 const customer = selectedCustomer();
                 const frequent = customer?.frequent ? Math.min(Math.max(Number(store.pos.config().frequentCustomerDiscount || 0), 0), 1) : 0;
                 const totalRate = Math.min(manual + frequent, 1);

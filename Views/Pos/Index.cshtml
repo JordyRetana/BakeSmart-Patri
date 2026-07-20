@@ -595,10 +595,10 @@
                 const total = subtotal + tax;
                 const preview = cart.slice(0, 3).map(item => `
                     <div class="pos-cart-mini-line">
-                        <img src="${item.imageUrl || '/img/products/producto-sin-imagen.svg'}" alt="${item.name}" loading="lazy" />
+                        <span class="pos-cart-mini-qty">${item.quantity}</span>
                         <div>
                             <strong>${item.name}</strong>
-                            <span>${item.quantity} x ${fmt(item.unitPrice)}</span>
+                            <span>${item.code} · ${fmt(item.unitPrice)} c/u</span>
                         </div>
                         <b>${fmt(item.quantity * item.unitPrice)}</b>
                     </div>

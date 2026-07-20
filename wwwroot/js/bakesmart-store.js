@@ -546,7 +546,12 @@
                     (input.customerEmail && String(row.email || "").toLowerCase() === String(input.customerEmail).toLowerCase()) ||
                     (input.customerName && String(row.fullName || "").toLowerCase() === String(input.customerName).toLowerCase())
                 );
-                const manualDiscountRate = Math.min(Math.max(Number(input.discountRate || 0), 0), 1);
+                const normalizeDiscountRate = (value) => {
+                    const numeric = Number(value || 0);
+                    if (!Number.isFinite(numeric) || numeric <= 0) return 0;
+                    return Math.min(numeric > 1 ? numeric / 100 : numeric, 1);
+                };
+                const manualDiscountRate = normalizeDiscountRate(input.discountRate);
                 const frequentDiscountRate = customer?.frequent ? Math.min(Math.max(Number(api.pos.config().frequentCustomerDiscount || 0), 0), 1) : 0;
                 const discountRate = Math.min(manualDiscountRate + frequentDiscountRate, 1);
                 const taxRate = Number(api.pos.config().iva || 0);

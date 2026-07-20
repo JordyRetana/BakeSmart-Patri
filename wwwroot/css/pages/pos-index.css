@@ -110,8 +110,8 @@ body.pos-cart-is-open .pos-cart-fab { opacity:0; pointer-events:none; }
 .pos-cart-item-footer { margin-top:.6rem; }
 .pos-cart-actions { display:flex; align-items:center; gap:.35rem; }
 .pos-cart-mini { display:grid; gap:.6rem; }
-.pos-cart-mini-line { display:grid; grid-template-columns:54px minmax(0,1fr) auto; align-items:center; gap:.65rem; padding:.65rem; border:1px solid #e9e2ee; border-radius:8px; }
-.pos-cart-mini-line img { width:54px; height:54px; display:block; object-fit:cover; border-radius:8px; background:#f7f2fb; }
+.pos-cart-mini-line { display:grid; grid-template-columns:38px minmax(0,1fr) auto; align-items:center; gap:.65rem; padding:.7rem; border:1px solid #e9e2ee; border-radius:10px; background:linear-gradient(180deg,#fff,#fffafd); }
+.pos-cart-mini-qty { width:38px; height:38px; display:grid; place-items:center; border-radius:10px; background:#f2ebff; color:#5b2a8d; font-weight:950; }
 .pos-cart-mini-line div { min-width:0; }
 .pos-cart-mini-line strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pos-cart-mini-line span { display:block; color:#7e8491; font-size:.68rem; }

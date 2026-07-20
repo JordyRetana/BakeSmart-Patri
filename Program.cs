@@ -84,7 +84,7 @@ builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
     {
-        o.Cookie.Name = "BakeSmartPatri.Auth";
+        o.Cookie.Name = "BakeSmartPatri.Auth.v2";
         o.LoginPath = "/Account/Login";
         o.AccessDeniedPath = "/Account/Denied";
         o.SlidingExpiration = true;
