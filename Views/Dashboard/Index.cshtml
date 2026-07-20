@@ -25,7 +25,7 @@
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/pages/dashboard-index.css" asp-append-version="true" />
+    <link rel="stylesheet" href="/css/pages/dashboard-index.css?v=dashboard-fast-20260719-1" />
 }
 
 <main class="dashboard-page dashboard-role-@roleKey">
@@ -179,17 +179,16 @@
     async function renderDashboard() {
         paintDashboard();
 
+        const fallbackDashboard = new Promise(resolve => setTimeout(() => resolve({ kpis: [] }), 900));
         const dashboardRequest = fetch('/api/dashboard')
             .then(response => response.ok ? response.json() : { kpis: [] })
             .catch(() => ({ kpis: [] }));
-        await Promise.race([
-            BakeSmartStore.refresh({ keys: ['orders', 'inventory', 'posConfig'] }),
-            new Promise(resolve => setTimeout(resolve, 2500))
-        ]);
-        const dashboard = await Promise.race([
-            dashboardRequest,
-            new Promise(resolve => setTimeout(() => resolve({ kpis: [] }), 2500))
-        ]);
+
+        BakeSmartStore.refresh({ keys: ['orders', 'inventory', 'posConfig'] })
+            .then(() => paintDashboard())
+            .catch(() => { });
+
+        const dashboard = await Promise.race([dashboardRequest, fallbackDashboard]);
         paintDashboard(dashboard);
     }
 

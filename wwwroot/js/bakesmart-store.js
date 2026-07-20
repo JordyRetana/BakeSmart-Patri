@@ -12,7 +12,7 @@
         const method = String(options.method || "GET").toUpperCase();
         const shouldTimeout = method === "GET";
         const controller = shouldTimeout ? new AbortController() : null;
-        const timeout = controller ? window.setTimeout(() => controller.abort(), 4500) : null;
+        const timeout = controller ? window.setTimeout(() => controller.abort(), 2500) : null;
 
         let response;
         try {
@@ -52,7 +52,7 @@
 
     function readPersistent(key) {
         try {
-            const raw = sessionStorage.getItem(persistentKey(key));
+            const raw = localStorage.getItem(persistentKey(key)) || sessionStorage.getItem(persistentKey(key));
             if (!raw) return null;
             const entry = JSON.parse(raw);
             if (!entry || Date.now() - Number(entry.time || 0) > persistentCacheTtlMs) return null;
@@ -64,7 +64,9 @@
 
     function writePersistent(key, data) {
         try {
-            sessionStorage.setItem(persistentKey(key), JSON.stringify({ time: Date.now(), data }));
+            const payload = JSON.stringify({ time: Date.now(), data });
+            localStorage.setItem(persistentKey(key), payload);
+            sessionStorage.setItem(persistentKey(key), payload);
         } catch { }
     }
 

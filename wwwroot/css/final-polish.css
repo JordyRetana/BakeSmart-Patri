@@ -545,6 +545,167 @@ body[data-page="/pos"] .pos-admin-block--credit .pos-payment-config-form .btn {
     }
 }
 
+/* POS cashier final layer: loaded after page CSS to avoid old/global POS rules flattening the redesign. */
+body[data-page="/pos"] .pos-page--cashier .pos-header {
+    min-height: 176px !important;
+    overflow: hidden !important;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 520px) !important;
+    padding: 1.45rem 1.55rem !important;
+    border: 1px solid rgba(222, 214, 235, .72) !important;
+    border-radius: 30px !important;
+    background: linear-gradient(120deg, rgba(24, 35, 64, .98), rgba(91, 43, 130, .95) 50%, rgba(198, 58, 133, .96)) !important;
+    box-shadow: 0 28px 70px rgba(38, 25, 60, .20) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-header::before {
+    opacity: .22 !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-title,
+body[data-page="/pos"] .pos-page--cashier .pos-title span,
+body[data-page="/pos"] .pos-page--cashier .pos-title i,
+body[data-page="/pos"] .pos-page--cashier .pos-subtitle,
+body[data-page="/pos"] .pos-page--cashier .pos-kicker {
+    color: #fff !important;
+    text-shadow: 0 12px 30px rgba(0, 0, 0, .28) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-title {
+    gap: .9rem !important;
+    font-size: clamp(2.55rem, 4vw, 4.35rem) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-title i {
+    width: 76px !important;
+    height: 76px !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 22px !important;
+    background: rgba(255, 255, 255, .16) !important;
+    border: 1px solid rgba(255, 255, 255, .24) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-search-box input {
+    min-height: 66px !important;
+    color: #1f2637 !important;
+    background: rgba(255, 255, 255, .98) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-layout {
+    display: grid !important;
+    grid-template-columns: minmax(320px, 360px) minmax(0, 1fr) !important;
+    gap: 1.15rem !important;
+    align-items: start !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card {
+    position: sticky !important;
+    top: 1rem !important;
+    order: 1 !important;
+    display: block !important;
+    grid-template-columns: 1fr !important;
+    padding: 1rem !important;
+    border: 0 !important;
+    border-radius: 26px !important;
+    background: linear-gradient(180deg, #202842, #1a2138) !important;
+    box-shadow: 0 30px 70px rgba(23, 31, 53, .22) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-main-card {
+    order: 2 !important;
+    padding: 1.25rem !important;
+    border-radius: 26px !important;
+    background: linear-gradient(180deg, #ffffff, #fbf8ff) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-admin-block--cash {
+    padding: 1.2rem !important;
+    border: 1px solid rgba(226, 214, 235, .85) !important;
+    border-radius: 22px !important;
+    background: linear-gradient(180deg, #ffffff, #fffafd) !important;
+    box-shadow: 0 22px 56px rgba(16, 24, 40, .14) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-admin-block--credit,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-admin-block--payments,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-admin-block--sessions {
+    display: none !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-panel-title,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .session-status-value {
+    color: #1f2637 !important;
+    text-shadow: none !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-panel-eyebrow,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .session-status-title,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .session-status-card .text-muted {
+    color: #7a8090 !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .session-status-card {
+    border: 1px solid #eee4f1 !important;
+    background: linear-gradient(135deg, #fff, #fff7fb) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-products-grid {
+    grid-template-columns: repeat(auto-fit, minmax(285px, 1fr)) !important;
+    gap: 1rem !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-product-card {
+    min-height: 260px !important;
+    border-radius: 20px !important;
+    box-shadow: 0 18px 46px rgba(36, 24, 55, .09) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-product-price-tag {
+    border-radius: 18px !important;
+    background: linear-gradient(135deg, #f4edff, #fff3fa) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-product-cart-btn {
+    border-radius: 18px !important;
+    box-shadow: 0 14px 28px rgba(124, 58, 237, .22) !important;
+}
+
+body[data-page^="/pos"] #chat-toggle-btn {
+    right: auto !important;
+    left: 1.15rem !important;
+    bottom: 1rem !important;
+}
+
+body[data-page^="/pos"] #chat-widget {
+    right: auto !important;
+    left: 1rem !important;
+    bottom: 5rem !important;
+}
+
+body[data-page^="/pos"] .pos-cart-fab {
+    right: 1.35rem !important;
+    left: auto !important;
+    bottom: 1.25rem !important;
+}
+
+body[data-page^="/pos"] .pos-cart-summary-panel {
+    right: 1.35rem !important;
+    left: auto !important;
+    bottom: 6.25rem !important;
+    width: min(460px, calc(100vw - 2rem)) !important;
+    border-radius: 24px !important;
+}
+
+@media (max-width: 1180px) {
+    body[data-page="/pos"] .pos-page--cashier .pos-layout {
+        grid-template-columns: 1fr !important;
+    }
+
+    body[data-page="/pos"] .pos-page--cashier .pos-side-card {
+        position: static !important;
+    }
+}
+
 body[data-page="/accounting"] #accReconStatus {
     flex: 1 1 100% !important;
     margin: -.15rem 0 0 calc(48px + .9rem) !important;
