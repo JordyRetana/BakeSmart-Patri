@@ -85,7 +85,7 @@ builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
     {
-        o.Cookie.Name = "BakeSmartPatri.Auth.v2";
+        o.Cookie.Name = "BakeSmartPatri.Auth.v3";
         o.LoginPath = "/Account/Login";
         o.AccessDeniedPath = "/Account/Denied";
         o.SlidingExpiration = true;
@@ -114,6 +114,7 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddAntiforgery(o =>
 {
     o.HeaderName = "X-CSRF-TOKEN";
+    o.Cookie.Name = "BakeSmartPatri.Antiforgery.v2";
 });
 
 var app = builder.Build();
