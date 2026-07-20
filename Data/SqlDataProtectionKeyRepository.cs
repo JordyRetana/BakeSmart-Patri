@@ -7,8 +7,8 @@ namespace BakeSmartPatri.Data;
 public sealed class SqlDataProtectionKeyRepository : IXmlRepository
 {
     private const string KeyPrefix = "dataProtectionKey:";
-    private const int CommandTimeoutSeconds = 10;
-    private const int MaxAttempts = 3;
+    private const int CommandTimeoutSeconds = 3;
+    private const int MaxAttempts = 2;
     private readonly string _connectionString;
 
     public SqlDataProtectionKeyRepository(string connectionString)
@@ -26,8 +26,6 @@ public sealed class SqlDataProtectionKeyRepository : IXmlRepository
 
         return WithRetry(() =>
         {
-            EnsureTable();
-
             var elements = new List<XElement>();
             using var connection = CreateConnection();
             connection.Open();
@@ -62,8 +60,6 @@ public sealed class SqlDataProtectionKeyRepository : IXmlRepository
 
         WithRetry(() =>
         {
-            EnsureTable();
-
             using var connection = CreateConnection();
             connection.Open();
             using var command = new SqlCommand(sql, connection)
@@ -82,33 +78,11 @@ public sealed class SqlDataProtectionKeyRepository : IXmlRepository
         var settings = new SqlConnectionStringBuilder(_connectionString)
         {
             ConnectTimeout = 8,
-            ConnectRetryCount = 3,
-            ConnectRetryInterval = 2
+            ConnectRetryCount = 1,
+            ConnectRetryInterval = 1
         };
 
         return new SqlConnection(settings.ConnectionString);
-    }
-
-    private void EnsureTable()
-    {
-        const string sql = """
-            IF OBJECT_ID(N'dbo.ConfiguracionesAplicacion', N'U') IS NULL
-            BEGIN
-                CREATE TABLE dbo.ConfiguracionesAplicacion
-                (
-                    SettingKey nvarchar(120) NOT NULL CONSTRAINT PK_AppSettings PRIMARY KEY,
-                    SettingValue nvarchar(max) NOT NULL
-                );
-            END;
-            """;
-
-        using var connection = CreateConnection();
-        connection.Open();
-        using var command = new SqlCommand(sql, connection)
-        {
-            CommandTimeout = CommandTimeoutSeconds
-        };
-        command.ExecuteNonQuery();
     }
 
     private static T WithRetry<T>(Func<T> operation)
