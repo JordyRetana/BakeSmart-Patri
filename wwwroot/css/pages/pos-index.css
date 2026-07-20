@@ -816,14 +816,20 @@ body[data-page="/pos/cart"] .pos-payment-modal__note {
 }
 
 body[data-page^="/pos"] .pos-cart-summary-panel {
-    right: 6.5rem !important;
-    bottom: 1.25rem !important;
-    border-radius: 14px !important;
-    box-shadow: 0 24px 70px rgba(31, 22, 44, .24) !important;
+    right: 1.35rem !important;
+    left: auto !important;
+    bottom: 6.25rem !important;
+    width: min(460px, calc(100vw - 2rem)) !important;
+    padding: 1.15rem !important;
+    border: 1px solid #ddd0ea !important;
+    border-radius: 24px !important;
+    background: linear-gradient(180deg, #ffffff, #fff8fc) !important;
+    box-shadow: 0 30px 86px rgba(31, 22, 44, .26) !important;
 }
 
 body[data-page^="/pos"] #chat-toggle-btn {
-    right: 1rem !important;
+    right: auto !important;
+    left: 1.15rem !important;
     bottom: 1rem !important;
     width: 58px !important;
     min-width: 58px !important;
@@ -837,6 +843,255 @@ body[data-page^="/pos"] #chat-toggle-btn span {
 }
 
 body[data-page^="/pos"] #chat-widget {
-    right: 1rem !important;
+    right: auto !important;
+    left: 1rem !important;
     bottom: 5rem !important;
+}
+
+body[data-page^="/pos"] .pos-cart-fab {
+    right: 1.35rem !important;
+    left: auto !important;
+    bottom: 1.25rem !important;
+    z-index: 9001 !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-header {
+    overflow: hidden !important;
+    background:
+        linear-gradient(120deg, rgba(24, 35, 64, .97), rgba(87, 42, 124, .94) 48%, rgba(198, 58, 133, .95)) !important;
+    box-shadow: 0 28px 70px rgba(38, 25, 60, .20) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-header::before {
+    opacity: .28 !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-title,
+body[data-page="/pos"] .pos-page--cashier .pos-title span,
+body[data-page="/pos"] .pos-page--cashier .pos-title i {
+    color: #ffffff !important;
+    text-shadow: 0 12px 32px rgba(0, 0, 0, .28) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-subtitle {
+    color: rgba(255, 255, 255, .92) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-kicker {
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, .34) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-search-box input {
+    color: #1f2637 !important;
+    background: rgba(255, 255, 255, .98) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card {
+    padding: 1rem !important;
+    border: 0 !important;
+    border-radius: 26px !important;
+    background: linear-gradient(180deg, #202842, #1a2138) !important;
+    box-shadow: 0 30px 70px rgba(23, 31, 53, .22) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-admin-block--cash {
+    padding: 1.2rem !important;
+    border: 1px solid rgba(226, 214, 235, .85) !important;
+    border-radius: 22px !important;
+    background: linear-gradient(180deg, #ffffff, #fffafd) !important;
+    box-shadow: 0 22px 56px rgba(16, 24, 40, .14) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-panel-header {
+    border-bottom-color: #eee6f3 !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-panel-title,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .session-status-value {
+    color: #1f2637 !important;
+    text-shadow: none !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-panel-eyebrow,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .session-status-title,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .session-status-card .text-muted {
+    color: #7a8090 !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-box-chip {
+    color: #5b319b !important;
+    border-color: #e0d4ef !important;
+    background: #f5efff !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .session-status-card {
+    border: 1px solid #eee4f1 !important;
+    background: linear-gradient(135deg, #fff, #fff7fb) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .session-inline-actions .form-control {
+    color: #1f2637 !important;
+    border-color: #ded2ea !important;
+    background: #fff !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-main-card {
+    border-radius: 26px !important;
+    background: linear-gradient(180deg, #ffffff, #fbf8ff) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-products-grid {
+    grid-template-columns: repeat(auto-fit, minmax(285px, 1fr)) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-product-card {
+    min-height: 260px !important;
+    border-radius: 20px !important;
+    box-shadow: 0 18px 46px rgba(36, 24, 55, .09) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-product-price-tag {
+    border-radius: 18px !important;
+    background: linear-gradient(135deg, #f4edff, #fff3fa) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-product-cart-btn {
+    border-radius: 18px !important;
+    box-shadow: 0 14px 28px rgba(124, 58, 237, .22) !important;
+}
+
+body[data-page="/pos"] .pos-cart-summary-panel .pos-panel-title {
+    color: #17375d !important;
+    font-size: 1.35rem !important;
+}
+
+body[data-page="/pos"] .pos-cart-mini-line {
+    display: grid !important;
+    grid-template-columns: 48px minmax(0, 1fr) auto !important;
+    gap: .8rem !important;
+    align-items: center !important;
+    padding: .85rem !important;
+    border: 1px solid #e9e0ef !important;
+    border-radius: 18px !important;
+    background: #fff !important;
+}
+
+body[data-page="/pos"] .pos-cart-mini-qty {
+    width: 48px !important;
+    height: 48px !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 16px !important;
+    background: linear-gradient(135deg, #f2ecff, #fff0f7) !important;
+    color: #4e2b89 !important;
+    font-weight: 950 !important;
+}
+
+body[data-page="/pos"] .pos-cart-mini-info {
+    min-width: 0 !important;
+}
+
+body[data-page="/pos"] .pos-cart-mini-info strong {
+    display: block !important;
+    overflow: hidden !important;
+    color: #1f2637 !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+body[data-page="/pos"] .pos-cart-mini-price {
+    color: #17375d !important;
+    font-size: 1.18rem !important;
+    font-weight: 950 !important;
+    white-space: nowrap !important;
+}
+
+body[data-page="/pos"] .pos-cart-mini-total {
+    align-items: center !important;
+    padding: 1rem !important;
+    border-radius: 18px !important;
+    background: linear-gradient(135deg, #efe8ff, #fff0f7) !important;
+}
+
+body[data-page="/pos"] .pos-cart-summary-actions .btn {
+    min-height: 54px !important;
+    border-radius: 16px !important;
+}
+
+body[data-page="/pos/cart"] .pos-cart-page {
+    width: min(1360px, calc(100% - 2rem)) !important;
+}
+
+body[data-page="/pos/cart"] .pos-cart-checkout-layout {
+    grid-template-columns: minmax(520px, .95fr) minmax(600px, 1.05fr) !important;
+    gap: 1.25rem !important;
+}
+
+body[data-page="/pos/cart"] .pos-cart-checkout-card--payment {
+    padding: 1.55rem 1.75rem !important;
+}
+
+body[data-page="/pos/cart"] .pos-cart-checkout-card--payment .pos-checkout-form {
+    grid-template-columns: minmax(0, .88fr) minmax(360px, 1.12fr) !important;
+    column-gap: 1.25rem !important;
+    row-gap: .9rem !important;
+}
+
+body[data-page="/pos/cart"] .pos-cart-checkout-card--payment .pos-cart-totals {
+    grid-column: 2 !important;
+    grid-row: 1 / span 5 !important;
+    min-width: 0 !important;
+    align-self: stretch !important;
+}
+
+body[data-page="/pos/cart"] .pos-cart-checkout-card--payment .pos-submit-btn {
+    grid-column: 1 / -1 !important;
+}
+
+body[data-page="/pos/cart"] .pos-cart-totals {
+    padding: 1.15rem !important;
+}
+
+body[data-page="/pos/cart"] .pos-cart-totals .pos-total-row {
+    gap: 1rem !important;
+}
+
+body[data-page="/pos/cart"] .pos-cart-totals .pos-total-row span {
+    max-width: 250px !important;
+}
+
+body[data-page="/pos/cart"] .pos-cart-totals .total-final strong {
+    font-size: clamp(2rem, 3vw, 3rem) !important;
+    white-space: nowrap !important;
+}
+
+@media (max-width: 1180px) {
+    body[data-page="/pos/cart"] .pos-cart-checkout-layout,
+    body[data-page="/pos/cart"] .pos-cart-checkout-card--payment .pos-checkout-form {
+        grid-template-columns: 1fr !important;
+    }
+
+    body[data-page="/pos/cart"] .pos-cart-checkout-card--payment .pos-cart-totals {
+        grid-column: 1 !important;
+        grid-row: auto !important;
+    }
+}
+
+@media (max-width: 760px) {
+    body[data-page^="/pos"] #chat-toggle-btn {
+        left: .75rem !important;
+        bottom: .75rem !important;
+    }
+
+    body[data-page^="/pos"] #chat-widget {
+        left: .75rem !important;
+        bottom: 4.8rem !important;
+    }
+
+    body[data-page^="/pos"] .pos-cart-summary-panel {
+        right: .75rem !important;
+        bottom: 5.5rem !important;
+        width: calc(100vw - 1.5rem) !important;
+    }
 }
