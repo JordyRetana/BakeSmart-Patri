@@ -706,6 +706,319 @@ body[data-page^="/pos"] .pos-cart-summary-panel {
     }
 }
 
+/* Global theme repair layer. Keeps dark/light mode consistent across modules with older fixed colors. */
+html.dark-start,
+body.dark {
+    color-scheme: dark;
+}
+
+body.dark.app-body {
+    color: var(--text) !important;
+    background:
+        radial-gradient(circle at 12% 8%, rgba(139, 92, 246, .16), transparent 30%),
+        radial-gradient(circle at 86% 10%, rgba(236, 72, 153, .12), transparent 28%),
+        linear-gradient(180deg, #0f172a, #111827 48%, #0f172a) !important;
+}
+
+body.dark .app-background,
+body.dark .bg-grid,
+body.dark .cursor-glow {
+    opacity: .36 !important;
+}
+
+body.dark .navbar,
+body.dark .storefront-header,
+body.dark .storefront-main,
+body.dark .storefront-nav,
+body.dark .footer,
+body.dark .global-categories-sidebar,
+body.dark .user-dropdown,
+body.dark .dropdown-menu {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .24) !important;
+    background: linear-gradient(180deg, rgba(17, 24, 39, .98), rgba(15, 23, 42, .98)) !important;
+}
+
+body.dark .storefront-promo,
+body.dark .footer {
+    background: linear-gradient(135deg, #25164a, #3a1735) !important;
+}
+
+body.dark .navbar a,
+body.dark .navbar .dropdown-toggle,
+body.dark .storefront-nav a,
+body.dark .storefront-tools a,
+body.dark .storefront-brand,
+body.dark .storefront-brand span,
+body.dark .user-name,
+body.dark .user-role,
+body.dark .footer a,
+body.dark .footer li,
+body.dark .footer p {
+    color: #e5e7eb !important;
+}
+
+body.dark .page-shell,
+body.dark .dashboard-page,
+body.dark .client-dashboard,
+body.dark .storefront-page,
+body.dark .catalog-page,
+body.dark .login-page-shell,
+body.dark .register-page-shell {
+    color: #f8fafc !important;
+}
+
+body.dark .card,
+body.dark .page-header,
+body.dark .dashboard-panel,
+body.dark .dashboard-kpi,
+body.dark .dashboard-chart-card,
+body.dark .dashboard-alert,
+body.dark .dashboard-shortcuts a,
+body.dark .quick-order-card,
+body.dark .client-card,
+body.dark .catalog-card,
+body.dark .storefront-product-card,
+body.dark .product-tile,
+body.dark .product-tile__body,
+body.dark .inventory-panel,
+body.dark .inventory-card,
+body.dark .marketing-panel,
+body.dark .accounting-panel,
+body.dark .roles-panel,
+body.dark .users-panel,
+body.dark .orders-panel,
+body.dark .production-panel,
+body.dark .reports-panel,
+body.dark .settings-panel,
+body.dark .table-container,
+body.dark .smart-table-toolbar,
+body.dark .smart-table-dock,
+body.dark .payment-modal__dialog,
+body.dark .pos-payment-modal__dialog,
+body.dark .modal-content,
+body.dark .app-modal-card,
+body.dark .bs-select__menu,
+body.dark #chat-widget {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .28) !important;
+    background: linear-gradient(180deg, #1f2937, #111827) !important;
+    box-shadow: 0 22px 62px rgba(0, 0, 0, .26) !important;
+}
+
+body.dark .page-header,
+body.dark .dashboard-hero,
+body.dark .pos-header,
+body.dark .client-hero,
+body.dark .catalog-hero,
+body.dark .marketing-hero,
+body.dark .accounting-hero {
+    background:
+        linear-gradient(135deg, rgba(49, 46, 129, .58), rgba(112, 26, 117, .42)),
+        linear-gradient(180deg, #1f2937, #111827) !important;
+    border-color: rgba(167, 139, 250, .34) !important;
+}
+
+body.dark h1,
+body.dark h2,
+body.dark h3,
+body.dark h4,
+body.dark h5,
+body.dark h6,
+body.dark strong,
+body.dark label,
+body.dark .page-title,
+body.dark .section-title,
+body.dark .panel-title,
+body.dark .pos-panel-title,
+body.dark .pos-panel-title-sm,
+body.dark .dashboard-section-head h2,
+body.dark .dashboard-kpi strong,
+body.dark .product-tile__body h3,
+body.dark .storefront-product-card h3,
+body.dark .payment-modal__header h2,
+body.dark .pos-payment-modal__header h2 {
+    color: #f8fafc !important;
+    text-shadow: none !important;
+}
+
+body.dark p,
+body.dark small,
+body.dark span,
+body.dark .text-muted,
+body.dark .muted,
+body.dark .page-subtitle,
+body.dark .panel-eyebrow,
+body.dark .pos-panel-eyebrow,
+body.dark .dashboard-section-head span,
+body.dark .product-tile__body p,
+body.dark .storefront-product-card p,
+body.dark .pos-product-price-tag small {
+    color: #cbd5e1 !important;
+}
+
+body.dark .form-control,
+body.dark .input,
+body.dark input:not([type="checkbox"]):not([type="radio"]),
+body.dark textarea,
+body.dark select,
+body.dark .bs-select__button,
+body.dark .smart-table-search,
+body.dark .smart-table-page-size select {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .38) !important;
+    background: #0f172a !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .16) !important;
+}
+
+body.dark input::placeholder,
+body.dark textarea::placeholder,
+body.dark .form-control::placeholder {
+    color: #94a3b8 !important;
+}
+
+body.dark .bs-select__button i,
+body.dark .global-categories-close,
+body.dark .theme-toggle,
+body.dark .mobile-nav-toggle {
+    color: #ddd6fe !important;
+    border-color: rgba(167, 139, 250, .28) !important;
+    background: rgba(124, 58, 237, .16) !important;
+}
+
+body.dark .bs-select__option {
+    color: #f8fafc !important;
+    background: transparent !important;
+}
+
+body.dark .bs-select__option:hover,
+body.dark .bs-select__option[aria-selected="true"] {
+    color: #fff !important;
+    background: rgba(124, 58, 237, .24) !important;
+}
+
+body.dark .table,
+body.dark table {
+    color: #f8fafc !important;
+    background: transparent !important;
+}
+
+body.dark .table thead th,
+body.dark table thead th,
+body.dark .smart-table table thead th {
+    color: #e5e7eb !important;
+    border-color: rgba(148, 163, 184, .25) !important;
+    background: #0f172a !important;
+}
+
+body.dark .table tbody td,
+body.dark table tbody td,
+body.dark .smart-table table tbody td {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .18) !important;
+    background: rgba(15, 23, 42, .28) !important;
+}
+
+body.dark .table tbody tr:hover td,
+body.dark table tbody tr:hover td {
+    background: rgba(124, 58, 237, .14) !important;
+}
+
+body.dark .badge,
+body.dark .status-chip,
+body.dark .role-count,
+body.dark .smart-table-match,
+body.dark .smart-table-page {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .3) !important;
+    background: rgba(51, 65, 85, .86) !important;
+}
+
+body.dark .badge-primary,
+body.dark .smart-table-page.is-current {
+    color: #fff !important;
+    border-color: rgba(167, 139, 250, .45) !important;
+    background: linear-gradient(135deg, #7c3aed, #c83c86) !important;
+}
+
+body.dark .badge-success {
+    color: #a7f3d0 !important;
+    background: rgba(16, 185, 129, .2) !important;
+}
+
+body.dark .badge-warning {
+    color: #fde68a !important;
+    background: rgba(245, 158, 11, .2) !important;
+}
+
+body.dark .badge-danger {
+    color: #fecaca !important;
+    background: rgba(239, 68, 68, .2) !important;
+}
+
+body.dark .btn-outline,
+body.dark .btn-ghost {
+    color: #ddd6fe !important;
+    border-color: rgba(167, 139, 250, .42) !important;
+    background: rgba(124, 58, 237, .08) !important;
+}
+
+body.dark .btn-outline:hover,
+body.dark .btn-ghost:hover {
+    color: #fff !important;
+    background: rgba(124, 58, 237, .28) !important;
+}
+
+body.dark .pos-cart-summary-panel,
+body.dark .pos-cart-mini-line,
+body.dark .pos-cart-mini-total,
+body.dark .pos-cart-item,
+body.dark .pos-cart-totals,
+body.dark .payment-modal__amount,
+body.dark .pos-payment-modal__amount,
+body.dark .payment-modal__note,
+body.dark .pos-payment-modal__note {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .28) !important;
+    background: linear-gradient(180deg, #1f2937, #111827) !important;
+}
+
+body.dark .pos-product-card,
+body.dark .pos-products-list-panel,
+body.dark .pos-cart-checkout-card,
+body.dark .pos-cart-checkout-card--payment,
+body.dark .pos-page--cashier .pos-side-card .pos-admin-block--cash,
+body.dark .pos-page--cashier .session-status-card,
+body.dark .pos-page--cashier .pos-main-card {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .28) !important;
+    background: linear-gradient(180deg, #1f2937, #111827) !important;
+}
+
+body.dark .pos-product-price-tag,
+body.dark .pos-product-code,
+body.dark .pos-product-stock-chip,
+body.dark .pos-table-code,
+body.dark .global-category-option,
+body.dark .global-category-option span {
+    color: #ddd6fe !important;
+    border-color: rgba(167, 139, 250, .24) !important;
+    background: rgba(124, 58, 237, .16) !important;
+}
+
+body.dark .login-form-panel,
+body.dark .register-form-panel,
+body.dark .login-security-note,
+body.dark .register-security-note {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .28) !important;
+    background: linear-gradient(180deg, #1f2937, #111827) !important;
+}
+
+body:not(.dark).app-body {
+    color-scheme: light;
+}
+
 body[data-page="/accounting"] #accReconStatus {
     flex: 1 1 100% !important;
     margin: -.15rem 0 0 calc(48px + .9rem) !important;

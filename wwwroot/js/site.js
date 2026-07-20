@@ -160,10 +160,9 @@
         },
 
         updateIcon(mode) {
-            const themeBtn = $('.btn-ghost i.fa-moon, .btn-ghost i.fa-sun, .storefront-theme i.fa-moon, .storefront-theme i.fa-sun');
-            if (themeBtn) {
+            $$('.theme-toggle i, .storefront-theme i').forEach(themeBtn => {
                 themeBtn.className = mode === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-            }
+            });
         },
 
         setupSystemListener() {
