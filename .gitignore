@@ -17,6 +17,7 @@
 bin/
 obj/
 .data-protection/
+.bakesmart-data-protection/
 
 # Mono auto generated files
 mono_crash.*
