@@ -56,13 +56,13 @@ var dataProtection = builder.Services
     .SetApplicationName("BakeSmartPatri");
 
 var dataProtectionConnectionString = builder.Configuration.GetConnectionString("BakeSmartDb");
-var disableSqlDataProtection = builder.Configuration.GetValue<bool>("Features:DisableSqlDataProtection");
+var disableSqlDataProtection = ReadBool(builder.Configuration, "Features:DisableSqlDataProtection");
 var explicitSqlDataProtection = builder.Configuration.GetSection("Features:UseSqlDataProtection").Exists();
 var useSqlDataProtection = !builder.Environment.IsDevelopment() &&
     !disableSqlDataProtection &&
     (explicitSqlDataProtection
-        ? builder.Configuration.GetValue<bool>("Features:UseSqlDataProtection")
-        : builder.Configuration.GetValue<bool>("Features:UseSqlDatabase"));
+        ? ReadBool(builder.Configuration, "Features:UseSqlDataProtection")
+        : ReadBool(builder.Configuration, "Features:UseSqlDatabase"));
 
 if (useSqlDataProtection &&
     !string.IsNullOrWhiteSpace(dataProtectionConnectionString))
@@ -179,3 +179,12 @@ app.MapControllerRoute(
 app.MapGet("/ping", () => Results.Text("ok", "text/plain"));
 
 app.Run();
+
+static bool ReadBool(IConfiguration configuration, string key, bool fallback = false)
+{
+    var value = configuration[key];
+    if (string.IsNullOrWhiteSpace(value))
+        return fallback;
+
+    return bool.TryParse(value.Trim().Trim('\uFEFF'), out var parsed) ? parsed : fallback;
+}

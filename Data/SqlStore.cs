@@ -23,7 +23,7 @@ public sealed class SqlStore
         _configuration = configuration;
     }
 
-    public bool IsEnabled => _configuration.GetValue<bool>("Features:UseSqlDatabase");
+    public bool IsEnabled => ReadBool(_configuration, "Features:UseSqlDatabase");
     private bool UseMySql =>
         string.Equals(_configuration["Database:Provider"], "MySql", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(_configuration["DatabaseProvider"], "MySql", StringComparison.OrdinalIgnoreCase);
@@ -2433,6 +2433,15 @@ public sealed class SqlStore
 
         return sqlException.Errors.Cast<SqlError>().Any(error => error.Number is
             -2 or 20 or 64 or 233 or 10053 or 10054 or 10060 or 10928 or 10929 or 40143 or 40197 or 40501 or 4060 or 40613 or 49918 or 49919 or 49920);
+    }
+
+    private static bool ReadBool(IConfiguration configuration, string key, bool fallback = false)
+    {
+        var value = configuration[key];
+        if (string.IsNullOrWhiteSpace(value))
+            return fallback;
+
+        return bool.TryParse(value.Trim().Trim('\uFEFF'), out var parsed) ? parsed : fallback;
     }
 
     public async Task<ProfileData?> GetProfileAsync(string email)
