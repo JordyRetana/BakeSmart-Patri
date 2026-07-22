@@ -24,9 +24,27 @@ public sealed class SqlStore
     }
 
     public bool IsEnabled => ReadBool(_configuration, "Features:UseSqlDatabase");
-    private bool UseMySql =>
-        string.Equals(_configuration["Database:Provider"], "MySql", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(_configuration["DatabaseProvider"], "MySql", StringComparison.OrdinalIgnoreCase);
+    private bool UseMySql
+    {
+        get
+        {
+            var provider =
+                (_configuration["Database:Provider"] ?? _configuration["DatabaseProvider"] ?? string.Empty)
+                .Trim()
+                .Trim('\uFEFF');
+
+            if (string.Equals(provider, "MySql", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            var connectionString = (_configuration.GetConnectionString("BakeSmartDb") ?? string.Empty)
+                .Trim()
+                .Trim('\uFEFF');
+
+            return connectionString.Contains("Port=", StringComparison.OrdinalIgnoreCase)
+                || connectionString.Contains("SslMode=", StringComparison.OrdinalIgnoreCase)
+                || connectionString.Contains("Allow User Variables=", StringComparison.OrdinalIgnoreCase);
+        }
+    }
 
     private DbConnection CreateConnection()
     {
