@@ -17,6 +17,18 @@ if (args.Contains("--migrate-database", StringComparer.OrdinalIgnoreCase))
     return;
 }
 
+if (args.Contains("--migrate-to-mysql", StringComparer.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = await MySqlMigrationRunner.MigrateAsync();
+    return;
+}
+
+if (args.Contains("--mysql-smoke", StringComparer.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = await MySqlSmokeRunner.RunAsync();
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration
     .AddJsonFile("appsettings.Azure.json", optional: true, reloadOnChange: true)

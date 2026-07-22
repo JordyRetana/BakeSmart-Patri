@@ -1,4 +1,6 @@
 using Microsoft.Data.SqlClient;
+using MySqlConnector;
+using System.Text.RegularExpressions;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
@@ -22,20 +24,35 @@ public sealed class SqlStore
     }
 
     public bool IsEnabled => _configuration.GetValue<bool>("Features:UseSqlDatabase");
+    private bool UseMySql =>
+        string.Equals(_configuration["Database:Provider"], "MySql", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(_configuration["DatabaseProvider"], "MySql", StringComparison.OrdinalIgnoreCase);
 
-    private SqlConnection CreateConnection()
+    private DbConnection CreateConnection()
     {
         var connectionString = _configuration.GetConnectionString("BakeSmartDb");
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("ConnectionStrings:BakeSmartDb no esta configurado.");
 
-        var settings = new SqlConnectionStringBuilder(connectionString);
-        settings.ConnectTimeout = Math.Min(
-            settings.ConnectTimeout > 0 ? settings.ConnectTimeout : ConnectTimeoutSeconds,
+        if (UseMySql)
+        {
+            var mySqlSettings = new MySqlConnectionStringBuilder(connectionString)
+            {
+                ConnectionTimeout = Math.Min(Math.Max(new MySqlConnectionStringBuilder(connectionString).ConnectionTimeout, 5u), (uint)ConnectTimeoutSeconds),
+                DefaultCommandTimeout = CommandTimeoutSeconds,
+                AllowUserVariables = true,
+                SslMode = MySqlSslMode.Required
+            };
+            return new MySqlConnection(mySqlSettings.ConnectionString);
+        }
+
+        var sqlSettings = new SqlConnectionStringBuilder(connectionString);
+        sqlSettings.ConnectTimeout = Math.Min(
+            sqlSettings.ConnectTimeout > 0 ? sqlSettings.ConnectTimeout : ConnectTimeoutSeconds,
             ConnectTimeoutSeconds);
-        settings.ConnectRetryCount = Math.Max(3, settings.ConnectRetryCount);
-        settings.ConnectRetryInterval = 2;
-        return new SqlConnection(settings.ConnectionString);
+        sqlSettings.ConnectRetryCount = Math.Max(3, sqlSettings.ConnectRetryCount);
+        sqlSettings.ConnectRetryInterval = 2;
+        return new SqlConnection(sqlSettings.ConnectionString);
     }
 
     public async Task<object> HealthAsync()
@@ -53,7 +70,7 @@ public sealed class SqlStore
         await using var connection = CreateConnection();
         await connection.OpenAsync();
 
-        await using var command = new SqlCommand("SELECT DB_NAME()", connection);
+        await using var command = CreateCommand(connection, UseMySql ? "SELECT DATABASE()" : "SELECT DB_NAME()");
         var database = Convert.ToString(await command.ExecuteScalarAsync());
 
         return new
@@ -115,7 +132,11 @@ public sealed class SqlStore
             ORDER BY o.CreatedAt DESC;
             """;
 
-        return await QueryAsync(sql, reader =>
+        var query = UseMySql
+            ? sql.Replace("STRING_AGG(CONCAT(oi.Quantity, ' x ', p.Name), ', ')", "GROUP_CONCAT(CONCAT(oi.Quantity, ' x ', p.Name) SEPARATOR ', ')", StringComparison.OrdinalIgnoreCase)
+            : sql;
+
+        return await QueryAsync(query, reader =>
         {
             var orderStatus = reader.GetString("OrderStatus");
             var storedStep = reader.GetInt32("TrackingStep");
@@ -389,7 +410,43 @@ public sealed class SqlStore
 
     public async Task<IReadOnlyList<CatalogProductViewModel>> CatalogProductsAsync()
     {
-        const string sql = """
+        var sql = UseMySql
+            ? """
+            SELECT
+                p.ProductId,
+                p.Code,
+                p.Name,
+                p.Description,
+                COALESCE(parent.Name, pc.Name) AS Category,
+                pc.Name AS Subcategory,
+                p.UnitPrice,
+                COALESCE(SUM(ib.Quantity), 0) AS Stock,
+                um.Code AS UnitCode,
+                COALESCE(img.ImageUrl, '/img/products/producto-sin-imagen.svg') AS ImageUrl,
+                COALESCE(img.AltText, p.Name) AS AltText,
+                p.IsActive
+            FROM Productos p
+            INNER JOIN TiposProducto pt ON pt.ProductTypeId = p.ProductTypeId
+            INNER JOIN UnidadesMedida um ON um.UnitMeasureId = p.UnitMeasureId
+            INNER JOIN CategoriasProducto pc ON pc.ProductCategoryId = p.ProductCategoryId
+            LEFT JOIN CategoriasProducto parent ON parent.ProductCategoryId = pc.ParentCategoryId
+            LEFT JOIN ExistenciasInventario ib ON ib.ProductId = p.ProductId
+            LEFT JOIN (
+                SELECT pi.ProductId, pi.ImageUrl, pi.AltText
+                FROM ImagenesProducto pi
+                INNER JOIN (
+                    SELECT ProductId, MIN(ProductImageId) AS ProductImageId
+                    FROM ImagenesProducto
+                    GROUP BY ProductId
+                ) pick ON pick.ProductId = pi.ProductId AND pick.ProductImageId = pi.ProductImageId
+            ) img ON img.ProductId = p.ProductId
+            WHERE p.IsActive = 1
+              AND pt.Name = 'Producto terminado'
+            GROUP BY p.ProductId, p.Code, p.Name, p.Description, parent.Name, pc.Name,
+                     p.UnitPrice, um.Code, img.ImageUrl, img.AltText, p.IsActive
+            ORDER BY COALESCE(parent.Name, pc.Name), p.Name;
+            """
+            : """
             SELECT
                 p.ProductId,
                 p.Code,
@@ -478,7 +535,30 @@ public sealed class SqlStore
 
     public async Task<object> DashboardAsync()
     {
-        const string sql = """
+        var sql = UseMySql
+            ? """
+            SELECT
+                (SELECT COUNT(*) FROM Pedidos WHERE DATE(CreatedAt) = DATE(UTC_TIMESTAMP())) AS OrdersToday,
+                (
+                    SELECT COUNT(*)
+                    FROM Pedidos o
+                    INNER JOIN EstadosPedido os ON os.OrderStatusId = o.OrderStatusId
+                    WHERE os.Name IN ('Confirmado', 'En produccion', 'Listo')
+                ) AS InProduction,
+                (SELECT COALESCE(SUM(Total), 0) FROM Ventas WHERE DATE(CreatedAt) = DATE(UTC_TIMESTAMP())) AS SalesToday,
+                (
+                    SELECT COUNT(*)
+                    FROM Productos p
+                    LEFT JOIN (
+                        SELECT ProductId, COALESCE(SUM(Quantity), 0) AS Stock
+                        FROM ExistenciasInventario
+                        GROUP BY ProductId
+                    ) b ON b.ProductId = p.ProductId
+                    WHERE COALESCE(b.Stock, 0) <= p.MinStock
+                      AND p.IsActive = 1
+                ) AS LowStock;
+            """
+            : """
             SELECT
                 (SELECT COUNT(*) FROM dbo.Pedidos WHERE CAST(CreatedAt AS date) = CAST(GETDATE() AS date)) AS OrdersToday,
                 (
@@ -523,7 +603,29 @@ public sealed class SqlStore
 
     public async Task<IReadOnlyList<object>> CustomersAsync()
     {
-        const string sql = """
+        var sql = UseMySql
+            ? """
+            SELECT
+                c.CustomerId,
+                c.FullName,
+                c.Email,
+                c.Phone,
+                c.IsFrequent,
+                c.TotalSpent,
+                COALESCE(ca.AddressLine, '') AS AddressLine
+            FROM Clientes c
+            LEFT JOIN (
+                SELECT d.CustomerId, d.AddressLine
+                FROM DireccionesCliente d
+                INNER JOIN (
+                    SELECT CustomerId, MAX(CustomerAddressId) AS CustomerAddressId
+                    FROM DireccionesCliente
+                    GROUP BY CustomerId
+                ) pick ON pick.CustomerId = d.CustomerId AND pick.CustomerAddressId = d.CustomerAddressId
+            ) ca ON ca.CustomerId = c.CustomerId
+            ORDER BY c.FullName;
+            """
+            : """
             SELECT
                 c.CustomerId,
                 c.FullName,
@@ -713,7 +815,16 @@ public sealed class SqlStore
 
     public async Task<AuthUser?> AuthenticateAsync(string email, string password)
     {
-        const string sql = """
+        var sql = UseMySql
+            ? """
+            SELECT u.Email, u.FirstName, u.LastName, u.PasswordHash, r.RoleName
+            FROM Usuarios u
+            INNER JOIN Roles r ON r.RoleId = u.RoleId
+            WHERE LOWER(u.Email) = LOWER(@Email)
+              AND u.IsActive = 1
+            LIMIT 1;
+            """
+            : """
             SELECT TOP 1 u.Email, u.FirstName, u.LastName, u.PasswordHash, r.RoleName
             FROM dbo.Usuarios u
             INNER JOIN dbo.Roles r ON r.RoleId = u.RoleId
@@ -1091,6 +1202,25 @@ public sealed class SqlStore
 
     public async Task AddAuditLogAsync(string logType, string detail, string? userEmail = null)
     {
+        if (UseMySql)
+        {
+            const string mySql = """
+                INSERT INTO BitacoraAuditoria (UserId, LogType, Detail, CreatedAt)
+                VALUES (
+                    (SELECT UserId FROM Usuarios WHERE LOWER(Email) = LOWER(@UserEmail) LIMIT 1),
+                    @LogType,
+                    @Detail,
+                    UTC_TIMESTAMP()
+                );
+                """;
+
+            await ExecuteAsync(mySql,
+                new SqlParameter("@UserEmail", (object?)userEmail ?? DBNull.Value),
+                new SqlParameter("@LogType", logType),
+                new SqlParameter("@Detail", detail));
+            return;
+        }
+
         const string sql = """
             DECLARE @UserId int;
             IF @UserEmail IS NOT NULL
@@ -1911,7 +2041,7 @@ public sealed class SqlStore
         return new { rows = orders, totalOrders = orders.Count };
     }
 
-    private static CatalogProductViewModel MapCatalogProduct(SqlDataReader reader) =>
+    private static CatalogProductViewModel MapCatalogProduct(DbDataReader reader) =>
         new(
             reader.GetInt32("ProductId"),
             reader.GetString("Code"),
@@ -2040,7 +2170,7 @@ public sealed class SqlStore
         return Convert.ToInt32(await ScalarAsync(sql));
     }
 
-    private static async Task SetInventoryBalanceAsync(SqlConnection connection, DbTransaction transaction, int productId, int locationId, decimal quantity)
+    private static async Task SetInventoryBalanceAsync(DbConnection connection, DbTransaction transaction, int productId, int locationId, decimal quantity)
     {
         const string sql = """
             MERGE dbo.ExistenciasInventario AS target
@@ -2059,7 +2189,7 @@ public sealed class SqlStore
             new SqlParameter("@Quantity", quantity));
     }
 
-    private static async Task AddInventoryMovementAsync(SqlConnection connection, DbTransaction transaction, int productId, int locationId, string type, decimal quantity, string? note)
+    private static async Task AddInventoryMovementAsync(DbConnection connection, DbTransaction transaction, int productId, int locationId, string type, decimal quantity, string? note)
     {
         const string sql = """
             INSERT INTO dbo.MovimientosInventario
@@ -2155,11 +2285,7 @@ public sealed class SqlStore
             await using var connection = CreateConnection();
             await connection.OpenAsync();
 
-            await using var command = new SqlCommand(sql, connection)
-            {
-                CommandTimeout = CommandTimeoutSeconds
-            };
-            command.Parameters.AddRange(parameters);
+            await using var command = CreateCommand(connection, sql, parameters);
             await command.ExecuteNonQueryAsync();
         });
     }
@@ -2171,31 +2297,22 @@ public sealed class SqlStore
             await using var connection = CreateConnection();
             await connection.OpenAsync();
 
-            await using var command = new SqlCommand(sql, connection)
-            {
-                CommandTimeout = CommandTimeoutSeconds
-            };
-            if (parameters.Length > 0)
-                command.Parameters.AddRange(parameters);
+            await using var command = CreateCommand(connection, sql, parameters);
 
             return await command.ExecuteScalarAsync();
         });
     }
 
-    private static async Task ExecuteInTransactionAsync(SqlConnection connection, DbTransaction transaction, string sql, params SqlParameter[] parameters)
+    private static async Task ExecuteInTransactionAsync(DbConnection connection, DbTransaction transaction, string sql, params SqlParameter[] parameters)
     {
-        await using var command = new SqlCommand(sql, connection, (SqlTransaction)transaction);
-        if (parameters.Length > 0)
-            command.Parameters.AddRange(parameters);
+        await using var command = CreateCommand(connection, sql, parameters, transaction);
 
         await command.ExecuteNonQueryAsync();
     }
 
-    private static async Task<object?> ScalarInTransactionAsync(SqlConnection connection, DbTransaction transaction, string sql, params SqlParameter[] parameters)
+    private static async Task<object?> ScalarInTransactionAsync(DbConnection connection, DbTransaction transaction, string sql, params SqlParameter[] parameters)
     {
-        await using var command = new SqlCommand(sql, connection, (SqlTransaction)transaction);
-        if (parameters.Length > 0)
-            command.Parameters.AddRange(parameters);
+        await using var command = CreateCommand(connection, sql, parameters, transaction);
 
         return await command.ExecuteScalarAsync();
     }
@@ -2206,19 +2323,14 @@ public sealed class SqlStore
         new SqlParameter("@End", (object?)end?.Date ?? DBNull.Value)
     ];
 
-    private async Task<IReadOnlyList<T>> QueryAsync<T>(string sql, Func<SqlDataReader, T> map, params SqlParameter[] parameters)
+    private async Task<IReadOnlyList<T>> QueryAsync<T>(string sql, Func<DbDataReader, T> map, params SqlParameter[] parameters)
     {
         return await WithTransientRetryAsync<IReadOnlyList<T>>(async () =>
         {
             await using var connection = CreateConnection();
             await connection.OpenAsync();
 
-            await using var command = new SqlCommand(sql, connection)
-            {
-                CommandTimeout = CommandTimeoutSeconds
-            };
-            if (parameters.Length > 0)
-                command.Parameters.AddRange(parameters);
+            await using var command = CreateCommand(connection, sql, parameters);
 
             await using var reader = await command.ExecuteReaderAsync(CommandBehavior.CloseConnection);
 
@@ -2230,6 +2342,61 @@ public sealed class SqlStore
 
             return rows;
         });
+    }
+
+    private static DbCommand CreateCommand(DbConnection connection, string sql, SqlParameter[]? parameters = null, DbTransaction? transaction = null)
+    {
+        var command = connection.CreateCommand();
+        command.CommandText = connection is MySqlConnection ? ToMySqlSql(sql) : sql;
+        command.CommandTimeout = CommandTimeoutSeconds;
+        if (transaction is not null)
+            command.Transaction = transaction;
+
+        if (parameters is { Length: > 0 })
+        {
+            foreach (var parameter in parameters)
+            {
+                var dbParameter = command.CreateParameter();
+                dbParameter.ParameterName = parameter.ParameterName;
+                dbParameter.Value = parameter.Value ?? DBNull.Value;
+                command.Parameters.Add(dbParameter);
+            }
+        }
+
+        return command;
+    }
+
+    private static string ToMySqlSql(string sql) =>
+        NormalizeTopForMySql(sql)
+            .Replace("dbo.", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("SYSUTCDATETIME()", "UTC_TIMESTAMP()", StringComparison.OrdinalIgnoreCase)
+            .Replace("GETDATE()", "UTC_TIMESTAMP()", StringComparison.OrdinalIgnoreCase)
+            .Replace("N'", "'", StringComparison.OrdinalIgnoreCase)
+            .Replace("CAST(0 AS bit)", "0", StringComparison.OrdinalIgnoreCase)
+            .Replace("CAST(1 AS bit)", "1", StringComparison.OrdinalIgnoreCase)
+            .Replace("CONVERT(int, SCOPE_IDENTITY())", "LAST_INSERT_ID()", StringComparison.OrdinalIgnoreCase)
+            .Replace("SCOPE_IDENTITY()", "LAST_INSERT_ID()", StringComparison.OrdinalIgnoreCase)
+            .Replace("COUNT_BIG(*)", "COUNT(*)", StringComparison.OrdinalIgnoreCase)
+            .Replace("CAST(CreatedAt AS date)", "DATE(CreatedAt)", StringComparison.OrdinalIgnoreCase)
+            .Replace("CAST(UTC_TIMESTAMP() AS date)", "DATE(UTC_TIMESTAMP())", StringComparison.OrdinalIgnoreCase)
+            .Replace("CAST(SYSUTCDATETIME() AS date)", "DATE(UTC_TIMESTAMP())", StringComparison.OrdinalIgnoreCase);
+
+    private static string NormalizeTopForMySql(string sql)
+    {
+        var normalized = Regex.Replace(
+            sql,
+            @"SELECT\s+TOP\s+(?<count>\d+)\s+(?<body>.*?)(?<end>;\s*)",
+            match =>
+            {
+                var body = match.Groups["body"].Value.TrimEnd();
+                if (Regex.IsMatch(body, @"\bLIMIT\s+\d+\s*$", RegexOptions.IgnoreCase))
+                    return $"SELECT {body}{match.Groups["end"].Value}";
+
+                return $"SELECT {body} LIMIT {match.Groups["count"].Value}{match.Groups["end"].Value}";
+            },
+            RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+        return normalized;
     }
 
     private static async Task WithTransientRetryAsync(Func<Task> operation)
@@ -2270,7 +2437,37 @@ public sealed class SqlStore
 
     public async Task<ProfileData?> GetProfileAsync(string email)
     {
-        const string sql = """
+        var sql = UseMySql
+            ? """
+            SELECT
+                u.FirstName,
+                u.LastName,
+                u.Email,
+                u.Phone,
+                u.AddressLine,
+                r.RoleName,
+                ca.CustomerAddressId,
+                ca.Label AS AddressLabel,
+                COALESCE(ca.AddressLine, u.AddressLine) AS DefaultAddressLine,
+                ca.Latitude,
+                ca.Longitude,
+                COALESCE(c.IsFrequent, 0) AS IsFrequent
+            FROM Usuarios u
+            INNER JOIN Roles r ON r.RoleId = u.RoleId
+            LEFT JOIN Clientes c ON c.UserId = u.UserId
+            LEFT JOIN (
+                SELECT d.CustomerId, d.CustomerAddressId, d.Label, d.AddressLine, d.Latitude, d.Longitude
+                FROM DireccionesCliente d
+                INNER JOIN (
+                    SELECT CustomerId, MAX(CustomerAddressId) AS CustomerAddressId
+                    FROM DireccionesCliente
+                    WHERE IsDefault = 1
+                    GROUP BY CustomerId
+                ) pick ON pick.CustomerId = d.CustomerId AND pick.CustomerAddressId = d.CustomerAddressId
+            ) ca ON ca.CustomerId = c.CustomerId
+            WHERE LOWER(u.Email) = LOWER(@Email);
+            """
+            : """
             SELECT
                 u.FirstName,
                 u.LastName,
@@ -2453,7 +2650,7 @@ public sealed class SqlStore
         return await QueryAsync(sql, MapCustomerAddress, new SqlParameter("@Email", email));
     }
 
-    private static CustomerAddressData MapCustomerAddress(SqlDataReader reader) => new(
+    private static CustomerAddressData MapCustomerAddress(DbDataReader reader) => new(
         reader.GetInt32("CustomerAddressId"),
         reader.GetString("Label"),
         reader.GetString("AddressLine"),
@@ -2483,6 +2680,9 @@ public sealed class SqlStore
 
     public async Task<int> CreateOrderAsync(CreateOrderInput input, string? userEmail = null)
     {
+        if (UseMySql)
+            return await CreateOrderMySqlAsync(input, userEmail);
+
         const string sql = """
             SET XACT_ABORT ON;
             BEGIN TRAN;
@@ -2636,6 +2836,36 @@ public sealed class SqlStore
 
     public async Task<int> OpenCashSessionAsync(decimal openingAmount, string? userEmail = null)
     {
+        if (UseMySql)
+        {
+            const string userSql = "SELECT UserId FROM Usuarios WHERE LOWER(Email) = LOWER(@UserEmail) LIMIT 1;";
+            var userId = Convert.ToInt32(await ScalarAsync(userSql, new SqlParameter("@UserEmail", (object?)userEmail ?? DBNull.Value)) ?? 0);
+            if (userId <= 0)
+                throw new InvalidOperationException("No se encontro el usuario para abrir caja.");
+
+            const string activeSql = """
+                SELECT COUNT(1)
+                FROM SesionesCaja
+                WHERE Status = 'Abierta' AND OpenedByUserId = @UserId;
+                """;
+            var activeSessionsForUser = Convert.ToInt32(await ScalarAsync(activeSql, new SqlParameter("@UserId", userId)));
+            if (activeSessionsForUser > 0)
+                throw new InvalidOperationException("Ya tiene una caja abierta. Debe cerrarla antes de abrir otra.");
+
+            const string insertSql = """
+                INSERT INTO SesionesCaja (OpenedByUserId, OpeningAmount, Status, OpenedAt)
+                VALUES (@UserId, @Amount, 'Abierta', UTC_TIMESTAMP());
+                SELECT LAST_INSERT_ID();
+                """;
+
+            var newSessionId = Convert.ToInt32(await ScalarAsync(insertSql,
+                new SqlParameter("@UserId", userId),
+                new SqlParameter("@Amount", openingAmount)));
+
+            await AddAuditLogAsync("APERTURA_CAJA", $"Sesion de caja #{newSessionId} abierta con {openingAmount:N0}", userEmail);
+            return newSessionId;
+        }
+
         // Verificar que no haya sesiÃ³n activa
         const string checkSql = """
             DECLARE @UserId int;
@@ -2676,6 +2906,32 @@ public sealed class SqlStore
 
     public async Task CloseCashSessionAsync(int sessionId, decimal closingAmount, string? userEmail = null)
     {
+        if (UseMySql)
+        {
+            const string closeSql = """
+                UPDATE SesionesCaja cs
+                INNER JOIN Usuarios u ON u.UserId = cs.OpenedByUserId
+                SET cs.ClosingAmount = @ClosingAmount,
+                    cs.Status = 'Cerrada',
+                    cs.ClosedAt = UTC_TIMESTAMP()
+                WHERE cs.CashSessionId = @SessionId
+                  AND cs.Status = 'Abierta'
+                  AND LOWER(u.Email) = LOWER(@UserEmail);
+                SELECT ROW_COUNT();
+                """;
+
+            var updatedRows = Convert.ToInt32(await ScalarAsync(closeSql,
+                new SqlParameter("@UserEmail", (object?)userEmail ?? DBNull.Value),
+                new SqlParameter("@SessionId", sessionId),
+                new SqlParameter("@ClosingAmount", closingAmount)));
+
+            if (updatedRows == 0)
+                throw new InvalidOperationException("No se encontro una caja abierta para cerrar.");
+
+            await AddAuditLogAsync("CIERRE_CAJA", $"Sesion de caja #{sessionId} cerrada con {closingAmount:N0}", userEmail);
+            return;
+        }
+
         const string sql = """
             DECLARE @Updated int = 0;
             DECLARE @UserId int;
@@ -2744,7 +3000,46 @@ public sealed class SqlStore
 
     public async Task<IReadOnlyList<object>> RecentPosSalesAsync()
     {
-        const string sql = """
+        if (UseMySql)
+        {
+            await ExecuteAsync("""
+                CREATE TABLE IF NOT EXISTS NotasCreditoPOS
+                (
+                    CreditNoteId int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    SaleId int NOT NULL,
+                    Reason varchar(300) NOT NULL,
+                    Amount decimal(18,2) NOT NULL,
+                    CreatedAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                """);
+        }
+
+        var sql = UseMySql
+            ? """
+            SELECT
+                v.SaleId,
+                v.OrderId,
+                v.CreatedAt,
+                v.Total,
+                pm.Name AS PaymentMethod,
+                c.FullName AS CustomerName,
+                COALESCE(cs.CashSessionId, 0) AS CashSessionId,
+                CASE WHEN cn.CreditNoteId IS NULL THEN 0 ELSE 1 END AS HasCreditNote
+            FROM Ventas v
+            INNER JOIN Pedidos o ON o.OrderId = v.OrderId
+            INNER JOIN Clientes c ON c.CustomerId = o.CustomerId
+            INNER JOIN MetodosPago pm ON pm.PaymentMethodId = v.PaymentMethodId
+            LEFT JOIN PagosSesionCaja csp ON csp.SaleId = v.SaleId
+            LEFT JOIN SesionesCaja cs ON cs.CashSessionId = csp.CashSessionId
+            LEFT JOIN (
+                SELECT SaleId, MAX(CreditNoteId) AS CreditNoteId
+                FROM NotasCreditoPOS
+                GROUP BY SaleId
+            ) cn ON cn.SaleId = v.SaleId
+            ORDER BY v.CreatedAt DESC, v.SaleId DESC
+            LIMIT 25;
+            """
+            : """
             IF OBJECT_ID(N'dbo.NotasCreditoPOS', N'U') IS NULL
             BEGIN
                 CREATE TABLE dbo.NotasCreditoPOS
@@ -2796,6 +3091,9 @@ public sealed class SqlStore
 
     public async Task<int> RegisterSaleAsync(SaleInput input, string? userEmail = null)
     {
+        if (UseMySql)
+            return await RegisterSaleMySqlAsync(input, userEmail);
+
         // Serializar items a JSON para pasarlos como parÃ¡metro
         var itemsJson = System.Text.Json.JsonSerializer.Serialize(input.Items.Select(i => new
         {
@@ -3016,6 +3314,361 @@ public sealed class SqlStore
         return orderId;
     }
 
+    private async Task<int> CreateOrderMySqlAsync(CreateOrderInput input, string? userEmail)
+    {
+        await using var connection = CreateConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        try
+        {
+            var customerId = await EnsureCustomerForOrderMySqlAsync(connection, transaction, input.CustomerName, input.Email, input.Phone);
+            var config = await LoadOperationalConfigMySqlAsync(connection, transaction);
+            var deliveryMethod = string.IsNullOrWhiteSpace(input.DeliveryMethod) ? "domicilio" : input.DeliveryMethod.Trim().ToLowerInvariant();
+            var destinationLat = input.DestinationLatitude;
+            var destinationLng = input.DestinationLongitude;
+            var destinationLabel = string.IsNullOrWhiteSpace(input.Address) ? "Sin direccion" : input.Address.Trim();
+            var addressId = input.CustomerAddressId;
+
+            if (addressId is > 0)
+            {
+                const string addressSql = """
+                    SELECT CustomerAddressId, AddressLine, Latitude, Longitude
+                    FROM DireccionesCliente
+                    WHERE CustomerAddressId = @AddressId AND CustomerId = @CustomerId
+                    LIMIT 1;
+                    """;
+                await using var addressCommand = CreateCommand(connection, addressSql,
+                    new[] { new SqlParameter("@AddressId", addressId.Value), new SqlParameter("@CustomerId", customerId) }, transaction);
+                await using var addressReader = await addressCommand.ExecuteReaderAsync();
+                if (await addressReader.ReadAsync())
+                {
+                    destinationLat ??= addressReader.GetNullableDecimal("Latitude");
+                    destinationLng ??= addressReader.GetNullableDecimal("Longitude");
+                    destinationLabel = addressReader.GetNullableString("AddressLine") ?? destinationLabel;
+                }
+            }
+
+            if (deliveryMethod != "retiro" && !HasValidCoordinates(destinationLat, destinationLng))
+                throw new InvalidOperationException("Debe indicar una ubicacion de entrega valida en el mapa.");
+
+            if (deliveryMethod == "retiro")
+            {
+                destinationLat = config.OriginLatitude;
+                destinationLng = config.OriginLongitude;
+                destinationLabel = config.OriginName;
+            }
+
+            var stock = await ResolveProductStockMySqlAsync(connection, transaction, input.ProductId, input.Quantity);
+            var paymentMethodId = await ResolvePaymentMethodMySqlAsync(connection, transaction, input.PaymentMethod);
+            var channelId = await ResolveLookupIdMySqlAsync(connection, transaction, "CanalesPedido", "OrderChannelId", "Name", "Web");
+            var statusId = await ResolveLookupIdMySqlAsync(connection, transaction, "EstadosPedido", "OrderStatusId", "Name", "Pendiente pago");
+            var paymentStatusId = await ResolveLookupIdMySqlAsync(connection, transaction, "EstadosPago", "PaymentStatusId", "Name", "Pendiente");
+            var isFrequent = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
+                "SELECT IsFrequent FROM Clientes WHERE CustomerId = @CustomerId;",
+                new SqlParameter("@CustomerId", customerId)) ?? 0) == 1;
+            var discount = isFrequent ? Math.Round(input.Subtotal * config.FrequentDiscountRate, 2) : 0m;
+            var tax = Math.Round((input.Subtotal - discount) * config.IvaRate, 2);
+            var total = input.Subtotal - discount + tax;
+
+            const string orderSql = """
+                INSERT INTO Pedidos
+                    (CustomerId, CustomerAddressId, OrderChannelId, OrderStatusId, PaymentStatusId, PaymentMethodId,
+                     Notes, Subtotal, Discount, Tax, Total, DeliveryDate,
+                     CurrentLatitude, CurrentLongitude, DestinationLatitude, DestinationLongitude, DestinationLabel,
+                     DestinationCountry, RouteMode, TrackingStep, OriginLabel, DeliveryReference, CreatedAt)
+                VALUES
+                    (@CustomerId, @CustomerAddressId, @ChannelId, @StatusId, @PaymentStatusId, @PaymentMethodId,
+                     @Notes, @Subtotal, @Discount, @Tax, @Total, @DeliveryDate,
+                     @OriginLat, @OriginLng, @DestLat, @DestLng, @DestLabel,
+                     'Costa Rica', @RouteMode, 0, @OriginName, @DeliveryReference, UTC_TIMESTAMP());
+                SELECT LAST_INSERT_ID();
+                """;
+
+            var orderId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, orderSql,
+                new SqlParameter("@CustomerId", customerId),
+                new SqlParameter("@CustomerAddressId", (object?)addressId ?? DBNull.Value),
+                new SqlParameter("@ChannelId", channelId),
+                new SqlParameter("@StatusId", statusId),
+                new SqlParameter("@PaymentStatusId", paymentStatusId),
+                new SqlParameter("@PaymentMethodId", paymentMethodId),
+                new SqlParameter("@Notes", (object?)BuildOrderNotes(input.Notes, input.DeliveryReference) ?? DBNull.Value),
+                new SqlParameter("@Subtotal", input.Subtotal),
+                new SqlParameter("@Discount", discount),
+                new SqlParameter("@Tax", tax),
+                new SqlParameter("@Total", total),
+                new SqlParameter("@DeliveryDate", input.DeliveryDate.Date),
+                new SqlParameter("@OriginLat", config.OriginLatitude),
+                new SqlParameter("@OriginLng", config.OriginLongitude),
+                new SqlParameter("@DestLat", destinationLat!.Value),
+                new SqlParameter("@DestLng", destinationLng!.Value),
+                new SqlParameter("@DestLabel", destinationLabel),
+                new SqlParameter("@RouteMode", deliveryMethod == "retiro" ? "pickup" : "ground"),
+                new SqlParameter("@OriginName", config.OriginName),
+                new SqlParameter("@DeliveryReference", (object?)input.DeliveryReference?.Trim() ?? DBNull.Value)));
+
+            await ExecuteInTransactionAsync(connection, transaction,
+                "INSERT INTO DetallePedido (OrderId, ProductId, Quantity, UnitPrice) VALUES (@OrderId, @ProductId, @Quantity, @UnitPrice);",
+                new SqlParameter("@OrderId", orderId),
+                new SqlParameter("@ProductId", input.ProductId),
+                new SqlParameter("@Quantity", input.Quantity),
+                new SqlParameter("@UnitPrice", input.UnitPrice));
+            await DeductStockMySqlAsync(connection, transaction, input.ProductId, stock.InventoryLocationId, input.Quantity, $"Pedido web #{orderId}");
+            await ExecuteInTransactionAsync(connection, transaction,
+                "INSERT INTO EventosSeguimientoPedido (OrderId, OrderStatusId, Detail, CreatedAt) VALUES (@OrderId, @StatusId, 'Pedido creado desde formulario web', UTC_TIMESTAMP());",
+                new SqlParameter("@OrderId", orderId),
+                new SqlParameter("@StatusId", statusId));
+
+            await transaction.CommitAsync();
+            await AddAuditLogAsync("CREAR_PEDIDO", $"Pedido #{orderId} creado para {input.CustomerName}", userEmail);
+            return orderId;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    private async Task<int> RegisterSaleMySqlAsync(SaleInput input, string? userEmail)
+    {
+        if (input.Items.Count == 0)
+            throw new InvalidOperationException("El carrito esta vacio.");
+
+        await using var connection = CreateConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        try
+        {
+            var email = string.IsNullOrWhiteSpace(input.CustomerEmail)
+                ? $"mostrador-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}@local"
+                : input.CustomerEmail.Trim().ToLowerInvariant();
+            var customerId = await EnsureCustomerForOrderMySqlAsync(connection, transaction,
+                string.IsNullOrWhiteSpace(input.CustomerName) ? "Cliente mostrador" : input.CustomerName!,
+                email,
+                input.CustomerPhone);
+            var config = await LoadOperationalConfigMySqlAsync(connection, transaction);
+            var isFrequent = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
+                "SELECT IsFrequent FROM Clientes WHERE CustomerId = @CustomerId;",
+                new SqlParameter("@CustomerId", customerId)) ?? 0) == 1;
+            var frequentDiscount = isFrequent ? Math.Round(input.Subtotal * config.FrequentDiscountRate, 2) : 0m;
+            var manualDiscount = Math.Clamp(input.Discount, 0m, input.Subtotal);
+            var effectiveDiscount = Math.Max(frequentDiscount, manualDiscount);
+            var taxable = Math.Max(0m, input.Subtotal - effectiveDiscount);
+            var tax = Math.Round(taxable * config.IvaRate, 2);
+            var total = taxable + tax;
+            var paymentMethodId = await ResolvePaymentMethodMySqlAsync(connection, transaction, input.PaymentMethod);
+            var channelId = await ResolveLookupIdMySqlAsync(connection, transaction, "CanalesPedido", "OrderChannelId", "Name", "POS");
+            var statusId = await ResolveLookupIdMySqlAsync(connection, transaction, "EstadosPedido", "OrderStatusId", "Name", "Entregado");
+            var paymentStatusId = await ResolveLookupIdMySqlAsync(connection, transaction, "EstadosPago", "PaymentStatusId", "Name", "Pagado");
+            var cashSessionId = await ResolveOpenCashSessionMySqlAsync(connection, transaction, userEmail);
+
+            const string orderSql = """
+                INSERT INTO Pedidos
+                    (CustomerId, OrderChannelId, OrderStatusId, PaymentStatusId, PaymentMethodId,
+                     Subtotal, Discount, Tax, Total, Notes, DeliveryDate,
+                     CurrentLatitude, CurrentLongitude, DestinationLatitude, DestinationLongitude, DestinationLabel,
+                     DestinationCountry, RouteMode, OriginLabel, TrackingStep, CreatedAt)
+                VALUES
+                    (@CustomerId, @ChannelId, @StatusId, @PaymentStatusId, @PaymentMethodId,
+                     @Subtotal, @Discount, @Tax, @Total, @Notes, DATE(UTC_TIMESTAMP()),
+                     @OriginLat, @OriginLng, @OriginLat, @OriginLng, 'Tienda BakeSmart',
+                     'Costa Rica', 'pickup', @OriginName, 5, UTC_TIMESTAMP());
+                SELECT LAST_INSERT_ID();
+                """;
+
+            var orderId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, orderSql,
+                new SqlParameter("@CustomerId", customerId),
+                new SqlParameter("@ChannelId", channelId),
+                new SqlParameter("@StatusId", statusId),
+                new SqlParameter("@PaymentStatusId", paymentStatusId),
+                new SqlParameter("@PaymentMethodId", paymentMethodId),
+                new SqlParameter("@Subtotal", input.Subtotal),
+                new SqlParameter("@Discount", effectiveDiscount),
+                new SqlParameter("@Tax", tax),
+                new SqlParameter("@Total", total),
+                new SqlParameter("@Notes", (object?)input.Notes?.Trim() ?? DBNull.Value),
+                new SqlParameter("@OriginLat", config.OriginLatitude),
+                new SqlParameter("@OriginLng", config.OriginLongitude),
+                new SqlParameter("@OriginName", config.OriginName)));
+
+            foreach (var item in input.Items)
+            {
+                var stock = await ResolveProductStockMySqlAsync(connection, transaction, item.ProductId, item.Quantity);
+                await ExecuteInTransactionAsync(connection, transaction,
+                    "INSERT INTO DetallePedido (OrderId, ProductId, Quantity, UnitPrice) VALUES (@OrderId, @ProductId, @Quantity, @UnitPrice);",
+                    new SqlParameter("@OrderId", orderId),
+                    new SqlParameter("@ProductId", item.ProductId),
+                    new SqlParameter("@Quantity", item.Quantity),
+                    new SqlParameter("@UnitPrice", item.UnitPrice));
+                await DeductStockMySqlAsync(connection, transaction, item.ProductId, stock.InventoryLocationId, item.Quantity, $"Venta POS #{orderId}");
+            }
+
+            const string saleSql = """
+                INSERT INTO Ventas (OrderId, PaymentMethodId, Subtotal, Tax, Total, CreatedAt)
+                VALUES (@OrderId, @PaymentMethodId, @Subtotal, @Tax, @Total, UTC_TIMESTAMP());
+                SELECT LAST_INSERT_ID();
+                """;
+            var saleId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, saleSql,
+                new SqlParameter("@OrderId", orderId),
+                new SqlParameter("@PaymentMethodId", paymentMethodId),
+                new SqlParameter("@Subtotal", input.Subtotal),
+                new SqlParameter("@Tax", tax),
+                new SqlParameter("@Total", total)));
+            await ExecuteInTransactionAsync(connection, transaction,
+                "INSERT INTO PagosSesionCaja (CashSessionId, SaleId, Amount) VALUES (@CashSessionId, @SaleId, @Amount);",
+                new SqlParameter("@CashSessionId", cashSessionId),
+                new SqlParameter("@SaleId", saleId),
+                new SqlParameter("@Amount", total));
+            await ExecuteInTransactionAsync(connection, transaction,
+                "UPDATE Clientes SET TotalSpent = TotalSpent + @Total WHERE CustomerId = @CustomerId;",
+                new SqlParameter("@Total", total),
+                new SqlParameter("@CustomerId", customerId));
+
+            await transaction.CommitAsync();
+            await AddAuditLogAsync("VENTA_POS", $"Venta POS #{orderId} por {total:N0}", userEmail);
+            return orderId;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    private static string? BuildOrderNotes(string? notes, string? deliveryReference)
+    {
+        var clean = notes?.Trim();
+        if (string.IsNullOrWhiteSpace(deliveryReference))
+            return string.IsNullOrWhiteSpace(clean) ? null : clean;
+
+        var reference = $"Referencia de entrega: {deliveryReference.Trim()}";
+        return string.IsNullOrWhiteSpace(clean) ? reference : $"{clean}\n{reference}";
+    }
+
+    private async Task<int> EnsureCustomerForOrderMySqlAsync(DbConnection connection, DbTransaction transaction, string name, string email, string? phone)
+    {
+        var customerId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
+            "SELECT CustomerId FROM Clientes WHERE LOWER(Email) = LOWER(@Email) LIMIT 1;",
+            new SqlParameter("@Email", email)) ?? 0);
+        if (customerId > 0)
+            return customerId;
+
+        const string insertSql = """
+            INSERT INTO Clientes (FullName, Email, Phone, IsFrequent, TotalSpent, CreatedAt)
+            VALUES (@Name, @Email, @Phone, 0, 0, UTC_TIMESTAMP());
+            SELECT LAST_INSERT_ID();
+            """;
+        return Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, insertSql,
+            new SqlParameter("@Name", name.Trim()),
+            new SqlParameter("@Email", email.Trim().ToLowerInvariant()),
+            new SqlParameter("@Phone", (object?)phone?.Trim() ?? DBNull.Value)));
+    }
+
+    private async Task<int> ResolvePaymentMethodMySqlAsync(DbConnection connection, DbTransaction transaction, string? method)
+    {
+        var requested = string.IsNullOrWhiteSpace(method) ? "Efectivo" : method.Trim();
+        var id = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
+            "SELECT PaymentMethodId FROM MetodosPago WHERE Name = @Name AND IsActive = 1 LIMIT 1;",
+            new SqlParameter("@Name", requested)) ?? 0);
+        if (id > 0)
+            return id;
+
+        return Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
+            "SELECT PaymentMethodId FROM MetodosPago WHERE Name = 'Efectivo' LIMIT 1;") ?? 0);
+    }
+
+    private static async Task<int> ResolveLookupIdMySqlAsync(DbConnection connection, DbTransaction transaction, string table, string idColumn, string nameColumn, string name)
+    {
+        var sql = $"SELECT {idColumn} FROM {table} WHERE {nameColumn} = @Name LIMIT 1;";
+        return Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, sql, new SqlParameter("@Name", name)) ?? 0);
+    }
+
+    private async Task<int> ResolveOpenCashSessionMySqlAsync(DbConnection connection, DbTransaction transaction, string? userEmail)
+    {
+        const string sql = """
+            SELECT cs.CashSessionId
+            FROM SesionesCaja cs
+            INNER JOIN Usuarios u ON u.UserId = cs.OpenedByUserId
+            WHERE cs.Status = 'Abierta' AND LOWER(u.Email) = LOWER(@UserEmail)
+            ORDER BY cs.OpenedAt DESC
+            LIMIT 1;
+            """;
+        var id = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, sql,
+            new SqlParameter("@UserEmail", (object?)userEmail ?? DBNull.Value)) ?? 0);
+        if (id <= 0)
+            throw new InvalidOperationException("Debe abrir caja antes de confirmar la venta.");
+        return id;
+    }
+
+    private static async Task<(int InventoryLocationId, decimal Quantity)> ResolveProductStockMySqlAsync(DbConnection connection, DbTransaction transaction, int productId, decimal quantity)
+    {
+        const string sql = """
+            SELECT ib.InventoryLocationId, ib.Quantity
+            FROM Productos p
+            INNER JOIN TiposProducto pt ON pt.ProductTypeId = p.ProductTypeId
+            INNER JOIN ExistenciasInventario ib ON ib.ProductId = p.ProductId
+            WHERE p.ProductId = @ProductId
+              AND p.IsActive = 1
+              AND pt.Name = 'Producto terminado'
+            ORDER BY ib.Quantity DESC
+            LIMIT 1;
+            """;
+        await using var command = CreateCommand(connection, sql, new[] { new SqlParameter("@ProductId", productId) }, transaction);
+        await using var reader = await command.ExecuteReaderAsync();
+        if (!await reader.ReadAsync())
+            throw new InvalidOperationException("El producto seleccionado no esta disponible para venta.");
+
+        var locationId = reader.GetInt32("InventoryLocationId");
+        var available = reader.GetDecimal("Quantity");
+        if (available < quantity)
+            throw new InvalidOperationException("No hay stock suficiente para completar la venta.");
+
+        return (locationId, available);
+    }
+
+    private static async Task DeductStockMySqlAsync(DbConnection connection, DbTransaction transaction, int productId, int locationId, decimal quantity, string note)
+    {
+        await ExecuteInTransactionAsync(connection, transaction,
+            "UPDATE ExistenciasInventario SET Quantity = Quantity - @Quantity, UpdatedAt = UTC_TIMESTAMP() WHERE ProductId = @ProductId AND InventoryLocationId = @LocationId;",
+            new SqlParameter("@ProductId", productId),
+            new SqlParameter("@LocationId", locationId),
+            new SqlParameter("@Quantity", quantity));
+        await ExecuteInTransactionAsync(connection, transaction,
+            "INSERT INTO MovimientosInventario (ProductId, InventoryLocationId, MovementType, Quantity, Note, CreatedAt) VALUES (@ProductId, @LocationId, 'SALIDA', @Quantity, @Note, UTC_TIMESTAMP());",
+            new SqlParameter("@ProductId", productId),
+            new SqlParameter("@LocationId", locationId),
+            new SqlParameter("@Quantity", quantity),
+            new SqlParameter("@Note", note));
+    }
+
+    private static async Task<(decimal IvaRate, decimal FrequentDiscountRate, decimal OriginLatitude, decimal OriginLongitude, string OriginName)> LoadOperationalConfigMySqlAsync(DbConnection connection, DbTransaction transaction)
+    {
+        const string sql = """
+            SELECT SettingKey, SettingValue
+            FROM ConfiguracionesAplicacion
+            WHERE SettingKey IN ('iva', 'frequentCustomerDiscount', 'originLatitude', 'originLongitude', 'originName');
+            """;
+        var settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        await using var command = CreateCommand(connection, sql, null, transaction);
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+            settings[reader.GetString("SettingKey")] = reader.GetString("SettingValue");
+
+        decimal setting(string key, decimal fallback) =>
+            settings.TryGetValue(key, out var value) && decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed)
+                ? parsed
+                : fallback;
+
+        return (
+            setting("iva", 0.13m),
+            setting("frequentCustomerDiscount", 0.05m),
+            setting("originLatitude", 9.9142m),
+            setting("originLongitude", -84.0734m),
+            settings.TryGetValue("originName", out var name) ? name : "BakeSmart Patri");
+    }
+
     public async Task<object> GetSettingsAsync()
     {
         const string sql = "SELECT SettingKey, SettingValue FROM dbo.ConfiguracionesAplicacion";
@@ -3104,25 +3757,25 @@ public sealed class SqlStore
 
 internal static class SqlReaderExtensions
 {
-    public static int GetInt32(this SqlDataReader reader, string name) => reader.GetInt32(reader.GetOrdinal(name));
-    public static string GetString(this SqlDataReader reader, string name) => reader.GetString(reader.GetOrdinal(name));
-    public static bool GetBoolean(this SqlDataReader reader, string name) => reader.GetBoolean(reader.GetOrdinal(name));
-    public static decimal GetDecimal(this SqlDataReader reader, string name) => reader.GetDecimal(reader.GetOrdinal(name));
-    public static DateTime GetDateTime(this SqlDataReader reader, string name) => reader.GetDateTime(reader.GetOrdinal(name));
+    public static int GetInt32(this DbDataReader reader, string name) => reader.GetInt32(reader.GetOrdinal(name));
+    public static string GetString(this DbDataReader reader, string name) => reader.GetString(reader.GetOrdinal(name));
+    public static bool GetBoolean(this DbDataReader reader, string name) => reader.GetBoolean(reader.GetOrdinal(name));
+    public static decimal GetDecimal(this DbDataReader reader, string name) => reader.GetDecimal(reader.GetOrdinal(name));
+    public static DateTime GetDateTime(this DbDataReader reader, string name) => reader.GetDateTime(reader.GetOrdinal(name));
 
-    public static string? GetNullableString(this SqlDataReader reader, string name)
+    public static string? GetNullableString(this DbDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
     }
 
-    public static DateTime? GetNullableDateTime(this SqlDataReader reader, string name)
+    public static DateTime? GetNullableDateTime(this DbDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? null : reader.GetDateTime(ordinal);
     }
 
-    public static decimal? GetNullableDecimal(this SqlDataReader reader, string name)
+    public static decimal? GetNullableDecimal(this DbDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? null : reader.GetDecimal(ordinal);
