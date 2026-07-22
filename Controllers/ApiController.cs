@@ -30,14 +30,16 @@ public class ApiController : Controller
     {
         try
         {
-            return Json(await _sqlStore.HealthAsync());
+            var health = await _sqlStore.HealthAsync();
+            return Ok(health);
         }
         catch (Exception ex)
         {
-            return Ok(new
+            return StatusCode(StatusCodes.Status500InternalServerError, new
             {
                 enabled = true,
                 status = "error",
+                database = "offline",
                 message = ex.Message
             });
         }

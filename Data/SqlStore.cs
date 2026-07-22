@@ -95,7 +95,8 @@ public sealed class SqlStore
         return new
         {
             enabled = true,
-            status = "connected",
+            status = "ok",
+            databaseStatus = "online",
             database,
             server = connection.DataSource
         };
