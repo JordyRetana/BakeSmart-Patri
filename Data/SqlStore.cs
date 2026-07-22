@@ -261,7 +261,22 @@ public sealed class SqlStore
             int productId;
             if (input.Id is > 0)
             {
-                const string updateProduct = """
+                var updateProduct = UseMySql
+                    ? """
+                      UPDATE Productos
+                      SET ProductTypeId = @ProductTypeId,
+                          ProductCategoryId = @ProductCategoryId,
+                          UnitMeasureId = @UnitMeasureId,
+                          Code = @Code,
+                          Name = @Name,
+                          Description = @Description,
+                          UnitPrice = @UnitPrice,
+                          UnitCost = @UnitCost,
+                          MinStock = @MinStock,
+                          IsActive = 1
+                      WHERE ProductId = @ProductId;
+                      """
+                    : """
                     UPDATE dbo.Productos
                     SET ProductTypeId = @ProductTypeId,
                         ProductCategoryId = @ProductCategoryId,
@@ -292,7 +307,16 @@ public sealed class SqlStore
             }
             else
             {
-                const string insertProduct = """
+                var insertProduct = UseMySql
+                    ? """
+                      INSERT INTO Productos
+                          (ProductTypeId, ProductCategoryId, UnitMeasureId, Code, Name, Description, UnitPrice, UnitCost, MinStock, IsActive)
+                      VALUES
+                          (@ProductTypeId, @ProductCategoryId, @UnitMeasureId, @Code, @Name, @Description, @UnitPrice, @UnitCost, @MinStock, 1);
+
+                      SELECT LAST_INSERT_ID();
+                      """
+                    : """
                     INSERT INTO dbo.Productos
                         (ProductTypeId, ProductCategoryId, UnitMeasureId, Code, Name, Description, UnitPrice, UnitCost, MinStock, IsActive)
                     OUTPUT INSERTED.ProductId
@@ -2103,6 +2127,19 @@ public sealed class SqlStore
     private async Task<int> EnsureProductTypeAsync(string name)
     {
         var clean = string.IsNullOrWhiteSpace(name) ? "Producto terminado" : name.Trim();
+        if (UseMySql)
+        {
+            const string mysql = """
+                INSERT INTO TiposProducto (Name)
+                SELECT @Name
+                WHERE NOT EXISTS (SELECT 1 FROM TiposProducto WHERE Name = @Name);
+
+                SELECT ProductTypeId FROM TiposProducto WHERE Name = @Name;
+                """;
+
+            return Convert.ToInt32(await ScalarAsync(mysql, new SqlParameter("@Name", clean)));
+        }
+
         const string sql = """
             IF NOT EXISTS (SELECT 1 FROM dbo.TiposProducto WHERE Name = @Name)
                 INSERT INTO dbo.TiposProducto (Name) VALUES (@Name);
@@ -2116,6 +2153,19 @@ public sealed class SqlStore
     private async Task<int> EnsureUnitMeasureAsync(string code)
     {
         var clean = string.IsNullOrWhiteSpace(code) ? "unidad" : code.Trim();
+        if (UseMySql)
+        {
+            const string mysql = """
+                INSERT INTO UnidadesMedida (Code, Name, AllowsDecimal)
+                SELECT @Code, @Code, 1
+                WHERE NOT EXISTS (SELECT 1 FROM UnidadesMedida WHERE Code = @Code);
+
+                SELECT UnitMeasureId FROM UnidadesMedida WHERE Code = @Code;
+                """;
+
+            return Convert.ToInt32(await ScalarAsync(mysql, new SqlParameter("@Code", clean)));
+        }
+
         const string sql = """
             IF NOT EXISTS (SELECT 1 FROM dbo.UnidadesMedida WHERE Code = @Code)
                 INSERT INTO dbo.UnidadesMedida (Code, Name, AllowsDecimal) VALUES (@Code, @Code, 1);
@@ -2130,6 +2180,43 @@ public sealed class SqlStore
     {
         var parentName = string.IsNullOrWhiteSpace(category) ? "General" : category.Trim();
         var childName = string.IsNullOrWhiteSpace(subcategory) ? parentName : subcategory.Trim();
+
+        if (UseMySql)
+        {
+            const string parentSql = """
+                INSERT INTO CategoriasProducto (ParentCategoryId, Name)
+                SELECT NULL, @ParentName
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM CategoriasProducto
+                    WHERE ParentCategoryId IS NULL AND Name = @ParentName
+                );
+
+                SELECT ProductCategoryId
+                FROM CategoriasProducto
+                WHERE ParentCategoryId IS NULL AND Name = @ParentName;
+                """;
+
+            var parentId = Convert.ToInt32(await ScalarAsync(parentSql, new SqlParameter("@ParentName", parentName)));
+            if (string.Equals(childName, parentName, StringComparison.OrdinalIgnoreCase))
+                return parentId;
+
+            const string childSql = """
+                INSERT INTO CategoriasProducto (ParentCategoryId, Name)
+                SELECT @ParentId, @ChildName
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM CategoriasProducto
+                    WHERE ParentCategoryId = @ParentId AND Name = @ChildName
+                );
+
+                SELECT ProductCategoryId
+                FROM CategoriasProducto
+                WHERE ParentCategoryId = @ParentId AND Name = @ChildName;
+                """;
+
+            return Convert.ToInt32(await ScalarAsync(childSql,
+                new SqlParameter("@ParentId", parentId),
+                new SqlParameter("@ChildName", childName)));
+        }
 
         const string sql = """
             DECLARE @ParentId int;
@@ -2177,6 +2264,21 @@ public sealed class SqlStore
 
     private async Task<int> EnsureInventoryLocationAsync()
     {
+        if (UseMySql)
+        {
+            const string mysql = """
+                INSERT INTO UbicacionesInventario (Name, Description)
+                SELECT 'Bodega principal', 'Ubicacion principal de BakeSmart Patri'
+                WHERE NOT EXISTS (SELECT 1 FROM UbicacionesInventario WHERE Name = 'Bodega principal');
+
+                SELECT InventoryLocationId
+                FROM UbicacionesInventario
+                WHERE Name = 'Bodega principal';
+                """;
+
+            return Convert.ToInt32(await ScalarAsync(mysql));
+        }
+
         const string sql = """
             IF NOT EXISTS (SELECT 1 FROM dbo.UbicacionesInventario WHERE Name = N'Bodega principal')
                 INSERT INTO dbo.UbicacionesInventario (Name, Description)
@@ -2192,6 +2294,23 @@ public sealed class SqlStore
 
     private static async Task SetInventoryBalanceAsync(DbConnection connection, DbTransaction transaction, int productId, int locationId, decimal quantity)
     {
+        if (connection is MySqlConnection)
+        {
+            const string mysql = """
+                INSERT INTO ExistenciasInventario (ProductId, InventoryLocationId, Quantity, UpdatedAt)
+                VALUES (@ProductId, @LocationId, @Quantity, UTC_TIMESTAMP())
+                ON DUPLICATE KEY UPDATE
+                    Quantity = VALUES(Quantity),
+                    UpdatedAt = UTC_TIMESTAMP();
+                """;
+
+            await ExecuteInTransactionAsync(connection, transaction, mysql,
+                new SqlParameter("@ProductId", productId),
+                new SqlParameter("@LocationId", locationId),
+                new SqlParameter("@Quantity", quantity));
+            return;
+        }
+
         const string sql = """
             MERGE dbo.ExistenciasInventario AS target
             USING (SELECT @ProductId AS ProductId, @LocationId AS InventoryLocationId) AS source
@@ -2211,7 +2330,14 @@ public sealed class SqlStore
 
     private static async Task AddInventoryMovementAsync(DbConnection connection, DbTransaction transaction, int productId, int locationId, string type, decimal quantity, string? note)
     {
-        const string sql = """
+        var sql = connection is MySqlConnection
+            ? """
+              INSERT INTO MovimientosInventario
+                  (ProductId, InventoryLocationId, MovementType, Quantity, ResponsibleUserId, Note)
+              VALUES
+                  (@ProductId, @LocationId, @Type, @Quantity, NULL, @Note);
+              """
+            : """
             INSERT INTO dbo.MovimientosInventario
                 (ProductId, InventoryLocationId, MovementType, Quantity, ResponsibleUserId, Note)
             VALUES
