@@ -33,6 +33,7 @@ public sealed class SqlStore
         var connectionString = _configuration.GetConnectionString("BakeSmartDb");
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("ConnectionStrings:BakeSmartDb no esta configurado.");
+        connectionString = connectionString.Trim().Trim('\uFEFF');
 
         if (UseMySql)
         {
