@@ -57,12 +57,11 @@ var dataProtection = builder.Services
 
 var dataProtectionConnectionString = builder.Configuration.GetConnectionString("BakeSmartDb");
 var disableSqlDataProtection = ReadBool(builder.Configuration, "Features:DisableSqlDataProtection");
-var explicitSqlDataProtection = builder.Configuration.GetSection("Features:UseSqlDataProtection").Exists();
+var forceSqlDataProtection = ReadBool(builder.Configuration, "Features:ForceSqlDataProtection");
 var useSqlDataProtection = !builder.Environment.IsDevelopment() &&
     !disableSqlDataProtection &&
-    (explicitSqlDataProtection
-        ? ReadBool(builder.Configuration, "Features:UseSqlDataProtection")
-        : ReadBool(builder.Configuration, "Features:UseSqlDatabase"));
+    forceSqlDataProtection &&
+    ReadBool(builder.Configuration, "Features:UseSqlDataProtection");
 
 if (useSqlDataProtection &&
     !string.IsNullOrWhiteSpace(dataProtectionConnectionString))
