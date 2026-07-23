@@ -36,7 +36,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@title - BakeSmart Patri | Repostería Inteligente</title>
-    <meta name="description" content="BakeSmart Patri - Sistema de gestion para reposterias. Pedidos, produccion, inventario y mas." />
+    <meta name="description" content="BakeSmart Patri - Sistema de gestión para reposterías. Pedidos, producción, inventario y más." />
     <link rel="icon" type="image/png" href="~/img/logo.png" asp-append-version="true" />
     <link rel="apple-touch-icon" href="~/img/logo.png" asp-append-version="true" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -494,7 +494,7 @@
                     const response = await fetch('/api/catalog/options');
                     if (!response.ok) throw new Error('No se pudieron cargar las categorías.');
                     const contentType = response.headers.get('content-type') || '';
-                    if (!contentType.includes('application/json')) throw new Error('El catalogo devolvio una respuesta invalida.');
+                    if (!contentType.includes('application/json')) throw new Error('El catálogo devolvió una respuesta inválida.');
                     const data = await response.json();
                     const categories = data.categories || [];
                     const products = data.products || [];

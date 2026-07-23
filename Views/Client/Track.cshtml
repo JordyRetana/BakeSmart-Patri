@@ -144,7 +144,7 @@
         const status = normalizeStatus(order.status);
         if (status.includes('produccion')) {
             return {
-                title: 'Pedido en produccion',
+                title: 'Pedido en producción',
                 text: 'La ruta se activara cuando el equipo marque el pedido como En camino.'
             };
         }
@@ -157,7 +157,7 @@
         if (status.includes('confirmado')) {
             return {
                 title: 'Pedido confirmado',
-                text: 'Todavia no hay ruta activa. Primero debe pasar a produccion y luego a envio.'
+                text: 'Todavía no hay ruta activa. Primero debe pasar a producción y luego a envío.'
             };
         }
         if (status.includes('pendiente')) {
@@ -376,7 +376,7 @@
         const currentStep = order.tracking?.currentStep || 0;
         const isInternational = destination.country !== 'Costa Rica';
         const extraLabel = isInternational ? 'Salida aerea internacional' : 'Ruta terrestre metropolitana';
-        const steps = [...(order.tracking?.steps || ['Pedido recibido', 'Confirmado', 'En produccion', 'Listo', 'Entregado'])];
+        const steps = [...(order.tracking?.steps || ['Pedido recibido', 'Confirmado', 'En producción', 'Listo', 'Entregado'])];
 
         if (hasLiveRoute && !steps.includes(extraLabel)) {
             steps.splice(4, 0, extraLabel);
@@ -602,7 +602,7 @@
             document.getElementById('trackStatus').textContent = 'Sin actividad';
             document.getElementById('trackRouteType').textContent = '-';
             document.getElementById('trackDestinationCountry').textContent = '-';
-            document.getElementById('trackMeta').textContent = 'Todavia no hay pedidos para mostrar.';
+            document.getElementById('trackMeta').textContent = 'Todavía no hay pedidos para mostrar.';
             document.getElementById('deliveryMap').innerHTML = `
                 <div class="track-empty-state">
                     <i class="fas fa-box-open"></i>

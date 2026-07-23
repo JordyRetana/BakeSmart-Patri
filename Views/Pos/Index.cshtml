@@ -406,7 +406,7 @@
                 container.innerHTML = `
                     <div class="pos-panel-header pos-panel-header--compact">
                         <div>
-                            <div class="pos-panel-eyebrow">Notas de credito</div>
+                            <div class="pos-panel-eyebrow">Notas de crédito</div>
                             <h4 class="pos-panel-title-sm">Ventas recientes</h4>
                         </div>
                     </div>
@@ -419,7 +419,7 @@
                                 </span>
                                 <b>${money(sale.total)}</b>
                             </button>
-                        `).join('') || '<div class="text-muted pos-small-empty">Aun no hay ventas POS.</div>'}
+                        `).join('') || '<div class="text-muted pos-small-empty">Aún no hay ventas POS.</div>'}
                     </div>
                 `;
             }
@@ -584,7 +584,7 @@
                     return `
                         <div class="pos-cart-mini-empty">
                             <i class="fas fa-basket-shopping"></i>
-                            <strong>Carrito vacio</strong>
+                            <strong>Carrito vacío</strong>
                             <span>Agregue productos para continuar.</span>
                         </div>
                     `;
@@ -607,7 +607,7 @@
                 return `
                     <div class="pos-cart-mini">
                         ${preview}
-                        ${cart.length > 3 ? `<div class="text-muted" style="font-weight:700;">+${cart.length - 3} producto${cart.length - 3 === 1 ? '' : 's'} mas</div>` : ''}
+                        ${cart.length > 3 ? `<div class="text-muted" style="font-weight:700;">+${cart.length - 3} producto${cart.length - 3 === 1 ? '' : 's'} más</div>` : ''}
                         <div class="pos-cart-mini-total">
                             <span>Total con IVA</span>
                             <strong>${fmt(total)}</strong>
@@ -677,10 +677,14 @@
                     return;
                 }
 
-                const product = store.inventory.list().find(x => x.id === productId);
-                if (!product) return;
+                const product = getProducts().find(x => Number(x.id) === Number(productId))
+                    || store.inventory.list().find(x => Number(x.id) === Number(productId));
+                if (!product) {
+                    app.toast.error('No se pudo encontrar el producto seleccionado.');
+                    return;
+                }
 
-                const existingItem = cart.find(x => x.productId === productId);
+                const existingItem = cart.find(x => Number(x.productId) === Number(productId));
                 const availableStock = remainingStock(product.id, product.stock);
                 if (availableStock <= 0) {
                     app.toast.warning('No hay más stock disponible.');
@@ -705,8 +709,9 @@
             };
 
             window.changeQty = (productId, delta) => {
-                const item = cart.find(x => x.productId === productId);
-                const product = store.inventory.list().find(x => x.id === productId);
+                const item = cart.find(x => Number(x.productId) === Number(productId));
+                const product = getProducts().find(x => Number(x.id) === Number(productId))
+                    || store.inventory.list().find(x => Number(x.id) === Number(productId));
 
                 if (!item || !product) return;
 
@@ -727,7 +732,7 @@
             };
 
             window.removeCartItem = (productId) => {
-                const index = cart.findIndex(x => x.productId === productId);
+                const index = cart.findIndex(x => Number(x.productId) === Number(productId));
                 if (index >= 0) {
                     cart.splice(index, 1);
                     renderCart();
@@ -799,7 +804,7 @@
                     await store.pos.creditNote(Object.fromEntries(new FormData(event.target).entries()));
                     recentSales = await store.pos.recentSales();
                     event.target.reset();
-                    app.toast.success('Nota de credito registrada.');
+                    app.toast.success('Nota de crédito registrada.');
                     await renderAll();
                 } catch (error) {
                     app.toast.error(error.message);

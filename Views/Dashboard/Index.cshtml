@@ -18,7 +18,7 @@
     var roleKey = isAdmin ? "admin" : isCashier ? "cashier" : isBaker ? "baker" : isSupervisor ? "supervisor" : "staff";
     var roleLabel = isAdmin ? "Administrador" : isCashier ? "Cajero" : isBaker ? "Repostero" : isSupervisor ? "Supervisor" : "Staff";
     var roleTitle = isAdmin ? "Centro de administración" : isCashier ? "Caja y ventas" : isBaker ? "Producción de repostería" : isSupervisor ? "Supervisión general" : "Operación diaria";
-    var roleSubtitle = isAdmin ? "Una lectura completa de ventas, pedidos, inventario y operacion." : isCashier ? "Controla caja, pedidos y cobros desde un espacio enfocado." : isBaker ? "Organiza la produccion y anticipa necesidades de inventario." : isSupervisor ? "Supervisa el rendimiento de cada area y toma decisiones con datos." : "Coordina pedidos y el trabajo diario desde un solo lugar.";
+    var roleSubtitle = isAdmin ? "Una lectura completa de ventas, pedidos, inventario y operación." : isCashier ? "Controla caja, pedidos y cobros desde un espacio enfocado." : isBaker ? "Organiza la producción y anticipa necesidades de inventario." : isSupervisor ? "Supervisa el rendimiento de cada área y toma decisiones con datos." : "Coordina pedidos y el trabajo diario desde un solo lugar.";
     var roleIcon = isAdmin ? "fa-crown" : isCashier ? "fa-cash-register" : isBaker ? "fa-cake-candles" : isSupervisor ? "fa-chart-line" : "fa-store";
     var displayName = User?.FindFirst("FullName")?.Value ?? User?.Identity?.Name ?? roleLabel;
     var todayLabel = DateTime.Now.ToString("dddd, dd 'de' MMMM", new System.Globalization.CultureInfo("es-CR"));
@@ -155,7 +155,7 @@
         document.getElementById('dbOrdersHint').textContent = `${pendingPayments.length} con pago pendiente`;
         document.getElementById('dbSales').textContent = format(getKpi('Ventas (CRC)', 0));
         document.getElementById('dbSalesHint').textContent = 'ventas registradas hoy';
-        document.getElementById('dbProduction').textContent = getKpi('En produccion', production.length);
+        document.getElementById('dbProduction').textContent = getKpi('En producción', production.length);
         document.getElementById('dbProductionHint').textContent = `${production.length} pedidos en flujo`;
         document.getElementById('dbLowStock').textContent = lowStock;
         document.getElementById('dbLowStockHint').textContent = lowStock ? 'requiere revision' : 'inventario estable';
@@ -169,7 +169,7 @@
         if (!alerts.length) alerts.push({ icon:'fa-circle-check', title:'Operacion estable', text:'No hay alertas criticas en este momento.' });
         document.getElementById('dbAlerts').innerHTML = alerts.map(item => `<div class="dashboard-alert"><i class="fas ${item.icon}"></i><div><strong>${item.title}</strong><span>${item.text}</span></div></div>`).join('');
 
-        if (canProduction) document.getElementById('dbProductionQueue').innerHTML = orders.filter(order => statusOf(order) !== 'Entregado').slice(0, 4).map(order => `<article><span class="production-order">#${order.id}</span><strong>${order.cliente || order.customerName || 'Cliente'}</strong><small>${order.producto || 'Pedido personalizado'}</small><span class="badge">${statusOf(order)}</span></article>`).join('') || '<div class="dashboard-chart-empty">No hay pedidos activos en produccion.</div>';
+        if (canProduction) document.getElementById('dbProductionQueue').innerHTML = orders.filter(order => statusOf(order) !== 'Entregado').slice(0, 4).map(order => `<article><span class="production-order">#${order.id}</span><strong>${order.cliente || order.customerName || 'Cliente'}</strong><small>${order.producto || 'Pedido personalizado'}</small><span class="badge">${statusOf(order) === 'En produccion' ? 'En producción' : statusOf(order)}</span></article>`).join('') || '<div class="dashboard-chart-empty">No hay pedidos activos en producción.</div>';
 
         renderBars(orders);
         renderStatusChart(orders);

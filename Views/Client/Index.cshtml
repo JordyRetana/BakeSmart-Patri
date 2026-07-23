@@ -836,7 +836,7 @@
         await BakeSmartStore.orders.markPaid(pendingPayment.orderId, data.method);
         await BakeSmartStore.refresh({ force: true });
         renderSummary();
-        app.toast.success(`Pago aprobado. Pedido #${pendingPayment.orderId} confirmado para produccion.`);
+        app.toast.success(`Pago aprobado. Pedido #${pendingPayment.orderId} confirmado para producción.`);
         closePaymentGateway();
         } catch (error) {
         app.toast.error(error.message);
@@ -930,7 +930,7 @@
         if (shouldOpenGateway(data.paymentMethod) && createdOrders.length === 1) {
         openPaymentGateway(result.id, total, data.paymentMethod);
         } else {
-        app.toast.warning(createdOrders.length > 1 ? 'Pedidos registrados desde el carrito. Puedes pagar cada abono desde Mis pedidos.' : 'Pedido registrado. Para iniciar produccion se requiere un abono anticipado o pago en tienda.');
+        app.toast.warning(createdOrders.length > 1 ? 'Pedidos registrados desde el carrito. Puedes pagar cada abono desde Mis pedidos.' : 'Pedido registrado. Para iniciar producción se requiere un abono anticipado o pago en tienda.');
         }
         form.quantity.value = 1;
         form.notes.value = '';

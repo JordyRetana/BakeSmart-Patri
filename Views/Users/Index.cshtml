@@ -72,7 +72,7 @@
         <div><label>Apellidos</label><input class="form-control" name="lastName" required /></div>
         <div><label>Correo</label><input class="form-control" name="email" type="email" required /></div>
         <div><label>Telefono</label><input class="form-control" name="phone" required /></div>
-        <div><label>Contrasena</label><input class="form-control" name="password" type="text" placeholder="Minimo 8 caracteres" /></div>
+        <div><label>Contraseña</label><input class="form-control" name="password" type="text" placeholder="Mínimo 8 caracteres" /></div>
         <div><label>Rol</label><select class="form-control" name="role" id="userRole" required></select></div>
         <div class="users-form-full"><label>Direccion</label><input class="form-control" name="address" /></div>
         <div class="users-form-actions users-form-full">
@@ -108,11 +108,11 @@
             return false;
         }
         if (!data.id && String(data.password || '').trim().length < 8) {
-            app.toast.warning('La contrasena debe tener al menos 8 caracteres.');
+            app.toast.warning('La contraseña debe tener al menos 8 caracteres.');
             return false;
         }
         if (data.id && data.password && String(data.password).trim().length < 8) {
-            app.toast.warning('La nueva contrasena debe tener al menos 8 caracteres.');
+            app.toast.warning('La nueva contraseña debe tener al menos 8 caracteres.');
             return false;
         }
         return true;

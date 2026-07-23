@@ -108,7 +108,7 @@
                                      onerror="this.src='/img/products/producto-sin-imagen.svg';" />
                             </span>
                             <strong>@item.Category.Name</strong>
-                            <small>Ver mas</small>
+                            <small>Ver más</small>
                         </a>
                     }
                 </div>
@@ -138,7 +138,7 @@
                                     <p>@block.Text</p>
                                     @if (!string.IsNullOrWhiteSpace(block.LinkUrl))
                                     {
-                                        <a href="@block.LinkUrl">@(string.IsNullOrWhiteSpace(block.LinkText) ? "Ver mas" : block.LinkText) <i class="fas fa-arrow-right"></i></a>
+                                        <a href="@block.LinkUrl">@(string.IsNullOrWhiteSpace(block.LinkText) ? "Ver más" : block.LinkText) <i class="fas fa-arrow-right"></i></a>
                                     }
                                 </div>
                             </article>
@@ -234,8 +234,8 @@
             <div class="container storefront-newsletter-grid">
                 <div><i class="fas fa-cake-candles"></i><span><strong>Recibe nuestras novedades</strong>Promociones, productos y fechas especiales.</span></div>
                 <form action="/Home/Contact" method="get">
-                    <label class="sr-only" for="newsletterEmail">Correo electronico</label>
-                    <input id="newsletterEmail" type="email" name="email" placeholder="Tu correo electronico" required />
+                    <label class="sr-only" for="newsletterEmail">Correo electrónico</label>
+                    <input id="newsletterEmail" type="email" name="email" placeholder="Tu correo electrónico" required />
                     <button type="submit">Suscribirme</button>
                 </form>
             </div>
@@ -248,8 +248,8 @@ else if (isClient)
         <div class="container">
             <span>Hola, @(User?.Identity?.Name ?? "Cliente")</span>
             <h1>Encuentra algo especial para tu proximo momento.</h1>
-            <p>Explora el catalogo, revisa tus pedidos y administra tu perfil desde un solo lugar.</p>
-            <div><a class="btn btn-primary" href="/Catalog">Explorar catalogo</a><a class="btn btn-outline" href="/Client">Mi espacio</a></div>
+            <p>Explora el catálogo, revisa tus pedidos y administra tu perfil desde un solo lugar.</p>
+            <div><a class="btn btn-primary" href="/Catalog">Explorar catálogo</a><a class="btn btn-outline" href="/Client">Mi espacio</a></div>
         </div>
     </section>
 }
@@ -292,7 +292,7 @@ else
             };
             const requireLogin = () => {
                 if (email()) return true;
-                app.toast.warning('Inicia sesion para guardar favoritos.');
+                app.toast.warning('Inicia sesión para guardar favoritos.');
                 window.setTimeout(() => {
                     window.location.href = `/Account/Login?ReturnUrl=${encodeURIComponent(window.location.pathname)}`;
                 }, 650);

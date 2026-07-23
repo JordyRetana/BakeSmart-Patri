@@ -25,7 +25,7 @@
                 <option value="Todos">Todos los estados</option>
                 <option>Pendiente pago</option>
                 <option>Confirmado</option>
-                <option>En produccion</option>
+                <option value="En produccion">En producción</option>
                 <option>Listo</option>
                 <option>En camino</option>
                 <option>Entregado</option>
@@ -43,7 +43,7 @@
             <h2 id="ordersPending">0</h2>
         </div>
         <div class="card orders-kpi-card">
-            <span>En produccion</span>
+            <span>En producción</span>
             <h2 id="ordersProduction">0</h2>
         </div>
         <div class="card orders-kpi-card">
@@ -173,7 +173,7 @@
     function nextActionLabel(order) {
         if (order.paymentStatus !== 'Pagado') return 'Cobrar pedido';
         if (order.status === 'Pendiente pago') return 'Confirmar pedido';
-        if (order.status === 'Confirmado') return 'Enviar a produccion';
+        if (order.status === 'Confirmado') return 'Enviar a producción';
         if (order.status === 'En produccion') return 'Marcar listo';
         if (order.status === 'Listo') return 'Enviar pedido';
         if (order.status === 'En camino') return 'Marcar entregado';

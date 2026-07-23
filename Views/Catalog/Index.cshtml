@@ -403,7 +403,7 @@
             return;
         }
 
-        if (!requireLogin('Inicia sesion para finalizar el pedido.', '/Client?cart=checkout')) return;
+        if (!requireLogin('Inicia sesión para finalizar el pedido.', '/Client?cart=checkout')) return;
         window.location.href = '/Client?cart=checkout';
     });
 
@@ -454,7 +454,7 @@
         updateCartDisplay();
         document.querySelectorAll('.catalog-checkout-link').forEach(link => {
             link.addEventListener('click', event => {
-                if (!requireLogin('Inicia sesion para finalizar el pedido.', '/Client?cart=checkout')) {
+                if (!requireLogin('Inicia sesión para finalizar el pedido.', '/Client?cart=checkout')) {
                     event.preventDefault();
                 }
                 if (!cart.length) {
