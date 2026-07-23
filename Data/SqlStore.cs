@@ -2409,9 +2409,9 @@ public sealed class SqlStore
                     v.SaleId,
                     v.Total,
                     e.AccountingEntryId,
-                    COALESCE(lines.LineCount, 0) AS LineCount,
-                    COALESCE(lines.DebitTotal, 0) AS DebitTotal,
-                    COALESCE(lines.CreditTotal, 0) AS CreditTotal
+                    COALESCE(entryLines.LineCount, 0) AS LineCount,
+                    COALESCE(entryLines.DebitTotal, 0) AS DebitTotal,
+                    COALESCE(entryLines.CreditTotal, 0) AS CreditTotal
                 FROM Ventas v
                 LEFT JOIN (
                     SELECT ReferenceId, MIN(AccountingEntryId) AS AccountingEntryId
@@ -2423,13 +2423,13 @@ public sealed class SqlStore
                     SELECT AccountingEntryId, COUNT(1) AS LineCount, SUM(Debit) AS DebitTotal, SUM(Credit) AS CreditTotal
                     FROM LineasAsientoContable
                     GROUP BY AccountingEntryId
-                ) lines ON lines.AccountingEntryId = e.AccountingEntryId
+                ) entryLines ON entryLines.AccountingEntryId = e.AccountingEntryId
                 WHERE v.Total > 0
                   AND (
                     e.AccountingEntryId IS NULL
-                    OR COALESCE(lines.LineCount, 0) < 2
-                    OR ABS(COALESCE(lines.DebitTotal, 0) - v.Total) > 0.01
-                    OR ABS(COALESCE(lines.CreditTotal, 0) - v.Total) > 0.01
+                    OR COALESCE(entryLines.LineCount, 0) < 2
+                    OR ABS(COALESCE(entryLines.DebitTotal, 0) - v.Total) > 0.01
+                    OR ABS(COALESCE(entryLines.CreditTotal, 0) - v.Total) > 0.01
                   );
                 """, reader => new
                 {
