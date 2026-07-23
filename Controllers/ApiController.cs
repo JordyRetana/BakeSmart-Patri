@@ -87,8 +87,11 @@ public class ApiController : Controller
     public async Task<IActionResult> Inventory() => Json(await _sqlStore.InventoryAsync());
 
     [HttpPost("inventory")]
-    public async Task<IActionResult> SaveInventoryProduct([FromBody] SqlStore.InventoryProductInput request)
+    public async Task<IActionResult> SaveInventoryProduct([FromBody] SqlStore.InventoryProductInput? request)
     {
+        if (request is null)
+            return BadRequest(new { message = "No se recibio la informacion del producto." });
+
         if (string.IsNullOrWhiteSpace(request.Code) || string.IsNullOrWhiteSpace(request.Description))
             return BadRequest(new { message = "Debe indicar codigo y descripcion." });
 
