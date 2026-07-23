@@ -12,7 +12,7 @@
         const method = String(options.method || "GET").toUpperCase();
         const shouldTimeout = method === "GET";
         const controller = shouldTimeout ? new AbortController() : null;
-        const timeout = controller ? window.setTimeout(() => controller.abort(), 2500) : null;
+        const timeout = controller ? window.setTimeout(() => controller.abort(), 10000) : null;
 
         let response;
         try {
@@ -251,7 +251,7 @@
             ]);
         },
         async refreshPos() {
-            await loadPosSessions();
+            await loadPosSessions({ force: true });
             window.dispatchEvent(new CustomEvent("bakesmart:data-ready", { detail: { key: "posSessions" } }));
         },
 
