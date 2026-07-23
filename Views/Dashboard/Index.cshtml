@@ -44,7 +44,7 @@
 
     <section class="dashboard-kpis" aria-label="Indicadores principales">
         <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--orders"><i class="fas fa-clipboard-list"></i></span><div><small>Pedidos hoy</small><strong id="dbOrders">0</strong><p id="dbOrdersHint">Cargando...</p></div></article>
-        <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--sales"><i class="fas fa-coins"></i></span><div><small>Ventas del dia</small><strong id="dbSales">0</strong><p id="dbSalesHint">Cargando...</p></div></article>
+        <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--sales"><i class="fas fa-coins"></i></span><div><small>Ventas del día</small><strong id="dbSales">0</strong><p id="dbSalesHint">Cargando...</p></div></article>
         <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--prod"><i class="fas fa-fire-burner"></i></span><div><small>Producción activa</small><strong id="dbProduction">0</strong><p id="dbProductionHint">Cargando...</p></div></article>
         <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--stock"><i class="fas fa-boxes-stacked"></i></span><div><small>Stock bajo</small><strong id="dbLowStock">0</strong><p id="dbLowStockHint">Cargando...</p></div></article>
     </section>
@@ -55,7 +55,7 @@
             <div id="dashboardTrendBars" class="dashboard-bars"></div>
         </article>
         <article class="dashboard-chart-card">
-            <div class="dashboard-section-head"><div><span>Distribucion</span><h2>Estados de pedidos</h2></div><i class="fas fa-chart-pie"></i></div>
+            <div class="dashboard-section-head"><div><span>Distribución</span><h2>Estados de pedidos</h2></div><i class="fas fa-chart-pie"></i></div>
             <div class="dashboard-donut-layout"><div id="dashboardDonut" class="dashboard-donut"><strong id="dashboardDonutTotal">0</strong><span>pedidos</span></div><div id="dashboardStatusLegend" class="dashboard-legend"></div></div>
         </article>
         <article class="dashboard-chart-card">
@@ -68,13 +68,13 @@
         @if (canOrders)
         {
             <article class="dashboard-panel dashboard-orders-card">
-                <div class="dashboard-section-head"><div><span>Operacion</span><h2>Pedidos recientes</h2></div><a class="btn btn-outline btn-sm" href="/Orders">Ver pedidos</a></div>
+                <div class="dashboard-section-head"><div><span>Operación</span><h2>Pedidos recientes</h2></div><a class="btn btn-outline btn-sm" href="/Orders">Ver pedidos</a></div>
                 <div class="dashboard-table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Estado</th><th>Pago</th><th>Total</th></tr></thead><tbody id="dbOrdersTable"></tbody></table></div>
             </article>
         }
         <aside class="dashboard-side-stack">
             <article class="dashboard-panel">
-                <div class="dashboard-section-head"><div><span>Navegacion</span><h2>Acciones rapidas</h2></div><i class="fas fa-bolt"></i></div>
+                <div class="dashboard-section-head"><div><span>Navegación</span><h2>Acciones rápidas</h2></div><i class="fas fa-bolt"></i></div>
                 <div class="dashboard-shortcuts">
                     @if (canOrders) { <a href="/Orders"><i class="fas fa-clipboard-list"></i><span>Pedidos</span></a> }
                     @if (canProduction) { <a href="/Production"><i class="fas fa-utensils"></i><span>Producción</span></a> }
@@ -105,6 +105,7 @@
 (() => {
     const format = value => app.utils.formatCurrency(Number(value || 0));
     const statusOf = order => order.estado || order.status || 'Sin estado';
+    const displayStatus = status => status === 'En produccion' ? 'En producción' : status;
     const statusColors = ['#7c3aed','#c83c86','#e96868','#df9b2f','#2f8eaa','#42a674'];
     const canProduction = @(canProduction ? "true" : "false");
 
@@ -124,7 +125,7 @@
         const segments = entries.map(([name, count], index) => { const start = cursor; cursor += count / Math.max(orders.length, 1) * 100; return `${statusColors[index % statusColors.length]} ${start}% ${cursor}%`; });
         document.getElementById('dashboardDonut').style.background = entries.length ? `conic-gradient(${segments.join(',')})` : '#eee8f1';
         document.getElementById('dashboardDonutTotal').textContent = orders.length;
-        document.getElementById('dashboardStatusLegend').innerHTML = entries.map(([name, count], index) => `<div><i style="background:${statusColors[index % statusColors.length]}"></i><span>${name}</span><strong>${count}</strong></div>`).join('') || '<span class="text-muted">Sin pedidos registrados.</span>';
+        document.getElementById('dashboardStatusLegend').innerHTML = entries.map(([name, count], index) => `<div><i style="background:${statusColors[index % statusColors.length]}"></i><span>${displayStatus(name)}</span><strong>${count}</strong></div>`).join('') || '<span class="text-muted">Sin pedidos registrados.</span>';
     }
 
     function renderPayments(orders) {
@@ -161,15 +162,15 @@
         document.getElementById('dbLowStockHint').textContent = lowStock ? 'requiere revision' : 'inventario estable';
 
         const table = document.getElementById('dbOrdersTable');
-        if (table) table.innerHTML = orders.slice(0, 6).map(order => `<tr><td><strong>#${order.id}</strong></td><td>${order.cliente || order.customerName || '-'}</td><td><span class="badge">${statusOf(order)}</span></td><td><span class="badge ${(order.paymentStatus || '') === 'Pagado' ? 'badge-success' : 'badge-warning'}">${order.paymentStatus || '-'}</span></td><td><strong>${format(order.total)}</strong></td></tr>`).join('') || '<tr><td colspan="5" class="text-center text-muted">No hay pedidos recientes.</td></tr>';
+        if (table) table.innerHTML = orders.slice(0, 6).map(order => `<tr><td><strong>#${order.id}</strong></td><td>${order.cliente || order.customerName || '-'}</td><td><span class="badge">${displayStatus(statusOf(order))}</span></td><td><span class="badge ${(order.paymentStatus || '') === 'Pagado' ? 'badge-success' : 'badge-warning'}">${order.paymentStatus || '-'}</span></td><td><strong>${format(order.total)}</strong></td></tr>`).join('') || '<tr><td colspan="5" class="text-center text-muted">No hay pedidos recientes.</td></tr>';
 
         const alerts = [];
         if (lowStock > 0) alerts.push({ icon:'fa-box-open', title:'Stock por revisar', text:`${lowStock} productos alcanzaron su minimo.` });
         if (pendingPayments.length) alerts.push({ icon:'fa-money-bill-wave', title:'Cobros pendientes', text:`${pendingPayments.length} pedidos necesitan seguimiento.` });
-        if (!alerts.length) alerts.push({ icon:'fa-circle-check', title:'Operacion estable', text:'No hay alertas criticas en este momento.' });
+        if (!alerts.length) alerts.push({ icon:'fa-circle-check', title:'Operación estable', text:'No hay alertas críticas en este momento.' });
         document.getElementById('dbAlerts').innerHTML = alerts.map(item => `<div class="dashboard-alert"><i class="fas ${item.icon}"></i><div><strong>${item.title}</strong><span>${item.text}</span></div></div>`).join('');
 
-        if (canProduction) document.getElementById('dbProductionQueue').innerHTML = orders.filter(order => statusOf(order) !== 'Entregado').slice(0, 4).map(order => `<article><span class="production-order">#${order.id}</span><strong>${order.cliente || order.customerName || 'Cliente'}</strong><small>${order.producto || 'Pedido personalizado'}</small><span class="badge">${statusOf(order) === 'En produccion' ? 'En producción' : statusOf(order)}</span></article>`).join('') || '<div class="dashboard-chart-empty">No hay pedidos activos en producción.</div>';
+        if (canProduction) document.getElementById('dbProductionQueue').innerHTML = orders.filter(order => statusOf(order) !== 'Entregado').slice(0, 4).map(order => `<article><span class="production-order">#${order.id}</span><strong>${order.cliente || order.customerName || 'Cliente'}</strong><small>${order.producto || 'Pedido personalizado'}</small><span class="badge">${displayStatus(statusOf(order))}</span></article>`).join('') || '<div class="dashboard-chart-empty">No hay pedidos activos en producción.</div>';
 
         renderBars(orders);
         renderStatusChart(orders);
