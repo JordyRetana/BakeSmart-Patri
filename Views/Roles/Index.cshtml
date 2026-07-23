@@ -56,12 +56,12 @@
 
     function fallbackPermissions(name) {
         const normalized = String(name || '').toLowerCase();
-        if (normalized.includes('admin')) return ['Dashboard','Pedidos','Produccion','Inventario','Punto de venta','Reportes','Bitacora','Configuracion','Usuarios','Roles','Contabilidad','Marketing','Catalogo','Perfil'];
-        if (normalized.includes('super')) return ['Dashboard','Pedidos','Produccion','Inventario','Punto de venta','Reportes','Bitacora','Contabilidad','Marketing','Perfil'];
-        if (normalized.includes('caj')) return ['Dashboard','Pedidos','Punto de venta','Catalogo','Perfil'];
-        if (normalized.includes('repost')) return ['Dashboard','Produccion','Inventario','Pedidos','Perfil'];
-        if (normalized.includes('cliente')) return ['Catalogo','Pedido rapido','Mis pedidos','Seguimiento','Perfil'];
-        if (normalized.includes('staff')) return ['Dashboard','Pedidos','Produccion','Inventario','Punto de venta','Bitacora','Configuracion','Catalogo','Perfil'];
+        if (normalized.includes('admin')) return ['Dashboard','Pedidos','Producción','Inventario','Punto de venta','Reportes','Bitácora','Configuración','Usuarios','Roles','Contabilidad','Marketing','Catálogo','Perfil'];
+        if (normalized.includes('super')) return ['Dashboard','Pedidos','Producción','Inventario','Punto de venta','Reportes','Bitácora','Contabilidad','Marketing','Perfil'];
+        if (normalized.includes('caj')) return ['Dashboard','Pedidos','Punto de venta','Catálogo','Perfil'];
+        if (normalized.includes('repost')) return ['Dashboard','Producción','Inventario','Pedidos','Perfil'];
+        if (normalized.includes('cliente')) return ['Catálogo','Pedido rápido','Mis pedidos','Seguimiento','Perfil'];
+        if (normalized.includes('staff')) return ['Dashboard','Pedidos','Producción','Inventario','Punto de venta','Bitácora','Configuración','Catálogo','Perfil'];
         return ['Perfil'];
     }
 

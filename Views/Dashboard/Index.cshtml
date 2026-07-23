@@ -17,7 +17,7 @@
 
     var roleKey = isAdmin ? "admin" : isCashier ? "cashier" : isBaker ? "baker" : isSupervisor ? "supervisor" : "staff";
     var roleLabel = isAdmin ? "Administrador" : isCashier ? "Cajero" : isBaker ? "Repostero" : isSupervisor ? "Supervisor" : "Staff";
-    var roleTitle = isAdmin ? "Centro de administracion" : isCashier ? "Caja y ventas" : isBaker ? "Produccion de reposteria" : isSupervisor ? "Supervision general" : "Operacion diaria";
+    var roleTitle = isAdmin ? "Centro de administración" : isCashier ? "Caja y ventas" : isBaker ? "Producción de repostería" : isSupervisor ? "Supervisión general" : "Operación diaria";
     var roleSubtitle = isAdmin ? "Una lectura completa de ventas, pedidos, inventario y operacion." : isCashier ? "Controla caja, pedidos y cobros desde un espacio enfocado." : isBaker ? "Organiza la produccion y anticipa necesidades de inventario." : isSupervisor ? "Supervisa el rendimiento de cada area y toma decisiones con datos." : "Coordina pedidos y el trabajo diario desde un solo lugar.";
     var roleIcon = isAdmin ? "fa-crown" : isCashier ? "fa-cash-register" : isBaker ? "fa-cake-candles" : isSupervisor ? "fa-chart-line" : "fa-store";
     var displayName = User?.FindFirst("FullName")?.Value ?? User?.Identity?.Name ?? roleLabel;
@@ -38,14 +38,14 @@
         <div class="dashboard-hero-actions">
             @if (canPos) { <a class="btn btn-primary" href="/Pos"><i class="fas fa-cash-register"></i> Abrir POS</a> }
             @if (canReports) { <a class="btn btn-outline" href="/Reports"><i class="fas fa-chart-column"></i> Reportes</a> }
-            @if (canAudit) { <a class="btn btn-outline" href="/Audit"><i class="fas fa-clock-rotate-left"></i> Bitacora</a> }
+            @if (canAudit) { <a class="btn btn-outline" href="/Audit"><i class="fas fa-clock-rotate-left"></i> Bitácora</a> }
         </div>
     </header>
 
     <section class="dashboard-kpis" aria-label="Indicadores principales">
         <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--orders"><i class="fas fa-clipboard-list"></i></span><div><small>Pedidos hoy</small><strong id="dbOrders">0</strong><p id="dbOrdersHint">Cargando...</p></div></article>
         <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--sales"><i class="fas fa-coins"></i></span><div><small>Ventas del dia</small><strong id="dbSales">0</strong><p id="dbSalesHint">Cargando...</p></div></article>
-        <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--prod"><i class="fas fa-fire-burner"></i></span><div><small>Produccion activa</small><strong id="dbProduction">0</strong><p id="dbProductionHint">Cargando...</p></div></article>
+        <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--prod"><i class="fas fa-fire-burner"></i></span><div><small>Producción activa</small><strong id="dbProduction">0</strong><p id="dbProductionHint">Cargando...</p></div></article>
         <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--stock"><i class="fas fa-boxes-stacked"></i></span><div><small>Stock bajo</small><strong id="dbLowStock">0</strong><p id="dbLowStockHint">Cargando...</p></div></article>
     </section>
 
@@ -77,7 +77,7 @@
                 <div class="dashboard-section-head"><div><span>Navegacion</span><h2>Acciones rapidas</h2></div><i class="fas fa-bolt"></i></div>
                 <div class="dashboard-shortcuts">
                     @if (canOrders) { <a href="/Orders"><i class="fas fa-clipboard-list"></i><span>Pedidos</span></a> }
-                    @if (canProduction) { <a href="/Production"><i class="fas fa-utensils"></i><span>Produccion</span></a> }
+                    @if (canProduction) { <a href="/Production"><i class="fas fa-utensils"></i><span>Producción</span></a> }
                     @if (canInventory) { <a href="/Inventory"><i class="fas fa-boxes-stacked"></i><span>Inventario</span></a> }
                     @if (canPos) { <a href="/Pos"><i class="fas fa-cash-register"></i><span>Punto de venta</span></a> }
                     @if (canReports) { <a href="/Reports"><i class="fas fa-chart-bar"></i><span>Reportes</span></a> }
@@ -94,7 +94,7 @@
     @if (canProduction)
     {
         <section class="dashboard-panel dashboard-production-panel">
-            <div class="dashboard-section-head"><div><span>Flujo de trabajo</span><h2>Cola de produccion</h2></div><a class="btn btn-outline btn-sm" href="/Production">Gestionar</a></div>
+            <div class="dashboard-section-head"><div><span>Flujo de trabajo</span><h2>Cola de producción</h2></div><a class="btn btn-outline btn-sm" href="/Production">Gestionar</a></div>
             <div id="dbProductionQueue" class="dashboard-production-grid"></div>
         </section>
     }

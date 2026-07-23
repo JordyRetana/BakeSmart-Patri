@@ -36,7 +36,7 @@
                 <span class="client-action__icon"><i class="fas fa-user-pen"></i></span>
                 <span>
                     <strong>Perfil</strong>
-                    <small>Datos y direccion</small>
+                    <small>Datos y dirección</small>
                 </span>
             </a>
         </div>
@@ -74,7 +74,7 @@
                 </div>
                 <a class="client-panel__link" href="/Catalog">
                     <i class="fas fa-store"></i>
-                    Catalogo
+                    Catálogo
                 </a>
             </div>
 
@@ -156,8 +156,8 @@
                         <div class="profile-source">
                             <span class="profile-source__icon"><i class="fas fa-map-location-dot"></i></span>
                             <span>
-                                <strong id="quickProfileAddress">Sin direccion configurada</strong>
-                                <small>La direccion se administra desde Perfil</small>
+                                <strong id="quickProfileAddress">Sin dirección configurada</strong>
+                                <small>La dirección se administra desde Perfil</small>
                             </span>
                             <a href="/Client/Profile">Configurar</a>
                         </div>
@@ -196,7 +196,7 @@
             <div class="client-panel__header">
                 <div>
                     <span class="client-panel__eyebrow">Actividad</span>
-                    <h2>Ultimos pedidos</h2>
+                    <h2>Últimos pedidos</h2>
                 </div>
                 <a class="client-panel__link" href="/Client/Orders">
                     <i class="fas fa-arrow-right"></i>
@@ -218,13 +218,13 @@
             <span class="payment-modal__icon"><i class="fas fa-map-location-dot"></i></span>
             <div>
                 <span class="client-panel__eyebrow">Entrega a domicilio</span>
-                <h2 id="quickAddressModalTitle">Elige la direccion de entrega</h2>
+                <h2 id="quickAddressModalTitle">Elige la dirección de entrega</h2>
             </div>
         </div>
         <div class="quick-address-choice" id="quickSavedAddressChoice" hidden>
             <div>
                 <span>Direccion guardada</span>
-                <strong id="quickSavedAddressText">Sin direccion</strong>
+                <strong id="quickSavedAddressText">Sin dirección</strong>
             </div>
             <button class="btn btn-outline" type="button" id="useSavedAddressBtn">
                 <i class="fas fa-check"></i>
@@ -242,7 +242,7 @@
             <button class="btn btn-outline" type="button" data-address-close>Cancelar</button>
             <button class="btn btn-primary" type="button" id="useNewAddressBtn">
                 <i class="fas fa-location-dot"></i>
-                Usar direccion nueva
+                Usar dirección nueva
             </button>
         </div>
     </section>
@@ -505,7 +505,7 @@
         document.getElementById('quickProfileName').textContent = fullName || 'Cliente';
         document.getElementById('quickProfileMeta').textContent = phone ? `${email} - ${phone}` : email;
 
-        document.getElementById('quickProfileAddress').textContent = currentProfile?.address || 'Sin direccion configurada';
+        document.getElementById('quickProfileAddress').textContent = currentProfile?.address || 'Sin dirección configurada';
         document.getElementById('quickAddress').value = currentProfile?.address || '';
         document.getElementById('quickLat').value = currentProfile?.latitude ?? '';
         document.getElementById('quickLng').value = currentProfile?.longitude ?? '';
@@ -536,7 +536,7 @@
         <div class="client-empty-state quick-map-fallback">
         <i class="fas fa-map-location-dot"></i>
         <strong>Mapa no disponible</strong>
-        <span>Escriba la direccion y vuelva a intentarlo en unos segundos.</span>
+        <span>Escriba la dirección y vuelva a intentarlo en unos segundos.</span>
         </div>
         `;
         return null;
@@ -556,7 +556,7 @@
         async function openAddressModal(continueAfterSelection = false) {
         submitAfterAddress = continueAfterSelection;
         savedAddressChoice.hidden = !hasSavedAddress();
-        savedAddressText.textContent = currentProfile?.address || 'Sin direccion guardada';
+        savedAddressText.textContent = currentProfile?.address || 'Sin dirección guardada';
         manualAddressInput.value = currentProfile?.address || '';
         addressModal.hidden = false;
         await ensureAddressPicker();
@@ -789,7 +789,7 @@
 
         useSavedAddressBtn.addEventListener('click', () => {
         if (applySavedAddress()) {
-        app.toast.success('Usaremos tu direccion guardada para este pedido.');
+        app.toast.success('Usaremos tu dirección guardada para este pedido.');
         continuePendingSubmit();
         }
         });

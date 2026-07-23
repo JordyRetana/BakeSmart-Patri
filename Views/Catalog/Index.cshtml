@@ -1,7 +1,7 @@
 @model BakeSmartPatri.Models.CatalogIndexViewModel
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Catalogo de Productos";
+    ViewData["Title"] = "Catálogo de productos";
     var culture = new System.Globalization.CultureInfo("es-CR");
 }
 
@@ -12,10 +12,10 @@
             <div>
                 <h1 style="margin: 0; font-size: 2.5rem; display: flex; align-items: center; gap: 0.75rem;">
                     <i class="fas fa-book-open" style="color: var(--primary);"></i>
-                    Nuestro Catalogo
+                    Nuestro catálogo
                 </h1>
                 <p class="text-muted" style="margin-top: 0.5rem; font-size: 1rem; max-width: 600px;">
-                    Descubre nuestra seleccion de productos artesanales, preparados con los mejores ingredientes y mucho amor
+                    Descubre nuestra selección de productos artesanales, preparados con los mejores ingredientes y mucho amor
                 </p>
             </div>
         </div>
@@ -40,12 +40,12 @@
             </button>
             <button class="btn btn-outline catalog-categories-trigger" type="button" id="openCategoriesSidebar">
                 <i class="fas fa-layer-group"></i>
-                Categorias
+                Categorías
             </button>
         </div>
         <div class="catalog-active-filter" id="catalogActiveFilter">
             <i class="fas fa-filter"></i>
-            <span>Todas las categorias</span>
+            <span>Todas las categorías</span>
         </div>
     </div>
 
@@ -110,8 +110,8 @@
 <aside class="catalog-categories-sidebar" id="catalogCategoriesSidebar" aria-hidden="true" aria-labelledby="catalogCategoriesTitle">
     <div class="catalog-categories-sidebar__header">
         <div>
-            <span>Catalogo</span>
-            <h2 id="catalogCategoriesTitle">Categorias</h2>
+            <span>Catálogo</span>
+            <h2 id="catalogCategoriesTitle">Categorías</h2>
         </div>
         <button class="catalog-sidebar-close" type="button" id="closeCategoriesSidebar" aria-label="Cerrar categorias">
             <i class="fas fa-xmark"></i>
@@ -121,7 +121,7 @@
     <div class="catalog-categories-sidebar__body">
         <button class="catalog-category-option category-btn active" data-category="all" type="button">
             <span><i class="fas fa-th-large"></i></span>
-            <strong>Todas las categorias</strong>
+            <strong>Todas las categorías</strong>
             <small>@Model.Products.Count productos</small>
         </button>
         @foreach (var category in Model.Categories)
@@ -192,6 +192,7 @@
     let currentCategory = 'all';
     let cart = [];
     let shouldAutoOpenCart = false;
+    const app = window.app || { toast: { show() { }, success() { }, warning() { } }, utils: { debounce: (fn) => fn } };
     const cartStorageKey = () => `bakesmart:catalog-cart:${currentUserEmail() || 'guest'}`;
 
     const currentUserEmail = () => (document.body.dataset.userEmail || '').trim().toLowerCase();
@@ -199,7 +200,7 @@
 
     function requireLogin(message, returnUrl) {
         if (currentUserEmail()) return true;
-        app.toast.warning(message || 'Inicia sesion para continuar.');
+        app.toast.warning(message || 'Inicia sesión para continuar.');
         const target = returnUrl || `${window.location.pathname}${window.location.search}`;
         window.setTimeout(() => {
             window.location.href = `/Account/Login?ReturnUrl=${encodeURIComponent(target)}`;
@@ -260,7 +261,7 @@
             btn.classList.toggle('btn-outline', !active);
             btn.classList.toggle('active', active);
         });
-        const activeLabel = category === 'all' ? 'Todas las categorias' : category;
+        const activeLabel = category === 'all' ? 'Todas las categorías' : category;
         document.querySelector('#catalogActiveFilter span').textContent = activeLabel;
         filterProducts();
     }
@@ -308,7 +309,7 @@
     });
 
     function toggleFavorite(btn) {
-        if (!requireLogin('Inicia sesion para guardar favoritos.')) return;
+        if (!requireLogin('Inicia sesión para guardar favoritos.')) return;
         const card = btn.closest('.product-card');
         const productId = Number(card?.dataset.id || 0);
         const ids = readFavorites();
@@ -328,7 +329,7 @@
     }
 
     function addProductButton(button) {
-        if (!requireLogin('Inicia sesion para ordenar productos.')) return;
+        if (!requireLogin('Inicia sesión para ordenar productos.')) return;
         addToCart(Number(button.dataset.id), button.dataset.name, Number(button.dataset.price));
     }
 

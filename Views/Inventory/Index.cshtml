@@ -20,7 +20,7 @@
         </div>
 
         <div class="page-actions inventory-actions">
-            <input id="inventorySearch" class="form-control" placeholder="Buscar por cÃ³digo o descripciÃ³n" />
+            <input id="inventorySearch" class="form-control" placeholder="Buscar por código o descripción" />
             <select id="inventoryTypeFilter" class="form-control inventory-type-filter">
                 <option value="todos">Todo el inventario</option>
                 <option value="operativo">Materia prima / empaque</option>
@@ -32,7 +32,7 @@
             <select id="inventoryStockFilter" class="form-control inventory-stock-filter">
                 <option value="todas">Todo el stock</option>
                 <option value="bajo">Stock bajo (&lt;= minimo)</option>
-                <option value="critico">Stock crÃ­tico (= 0)</option>
+                <option value="critico">Stock crítico (= 0)</option>
                 <option value="disponible">Con stock (&gt; 0)</option>
             </select>
             <a class="btn btn-outline" href="/Inventory/Products">
@@ -102,7 +102,7 @@
                 <input type="hidden" name="id" />
 
                 <div>
-                    <label>Codigo</label>
+                    <label>Código</label>
                     <input class="form-control" name="code" required />
                 </div>
 
@@ -140,12 +140,12 @@
                 </div>
 
                 <div>
-                    <label>Categoria</label>
+                    <label>Categoría</label>
                     <input class="form-control" name="category" required />
                 </div>
 
                 <div>
-                    <label>Subcategoria</label>
+                    <label>Subcategoría</label>
                     <input class="form-control" name="subcategory" />
                 </div>
 
@@ -172,7 +172,7 @@
     <template id="inventoryMovementTemplate">
         <div class="inventory-modal-shell">
             <div class="inventory-modal-head">
-                <h3 class="inventory-modal-title">Movimiento rÃ¡pido</h3>
+                <h3 class="inventory-modal-title">Movimiento rápido</h3>
             </div>
 
             <form id="movementForm" class="inventory-modal-form">
@@ -221,10 +221,10 @@
             <table class="table inventory-table inventory-products-table">
                 <thead>
                     <tr>
-                        <th>Codigo</th>
+                        <th>Código</th>
                         <th>Descripcion</th>
                         <th>Tipo</th>
-                        <th>Categoria</th>
+                        <th>Categoría</th>
                         <th>Costo / precio</th>
                         <th>Cantidad</th>
                         <th>Minimo</th>
@@ -275,7 +275,7 @@
                 });
 
                 if (!response.ok) {
-                    let message = 'No se pudo guardar la informaciÃ³n.';
+                    let message = 'No se pudo guardar la información.';
                     try {
                         const error = await response.json();
                         message = error.message || message;
@@ -413,7 +413,7 @@
                         <td><strong style="color:var(--primary);font-size:.85rem;">${p.code}</strong></td>
                         <td>
                             <strong style="font-size:.92rem;">${p.description}</strong>
-                            <div class="text-muted" style="font-size:.75rem;">${p.subcategory || 'Sin subcategorÃ­a'} Â· ${p.unit || 'unidad'}</div>
+                            <div class="text-muted" style="font-size:.75rem;">${p.subcategory || 'Sin subcategoría'} · ${p.unit || 'unidad'}</div>
                         </td>
                         <td><span class="inventory-type-chip">${p.type}</span></td>
                         <td><span style="font-size:.85rem;">${p.category}</span></td>

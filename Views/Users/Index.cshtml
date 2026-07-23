@@ -11,11 +11,11 @@
     <header class="users-hero">
         <div>
             <span class="users-eyebrow">Administracion</span>
-            <h1><i class="fas fa-users"></i> Gestion de usuarios</h1>
+            <h1><i class="fas fa-users"></i> Gestión de usuarios</h1>
             <p>Controle altas, roles y estados sin formularios ocupando toda la pantalla.</p>
         </div>
         <div class="users-hero-actions">
-            <input id="userSearch" class="form-control" placeholder="Buscar nombre, correo o telefono" />
+            <input id="userSearch" class="form-control" placeholder="Buscar nombre, correo o teléfono" />
             <button type="button" id="openUserQuickActions" class="btn btn-primary"><i class="fas fa-user-plus"></i> Nuevo usuario</button>
             <a class="btn btn-outline" href="/Roles"><i class="fas fa-shield-halved"></i> Roles</a>
         </div>
@@ -173,7 +173,7 @@
 
         body.innerHTML = users.map(u => `
             <tr>
-                <td><strong>${clean(u.firstName)} ${clean(u.lastName)}</strong><small>${clean(u.address || 'Sin direccion')}</small></td>
+                <td><strong>${clean(u.firstName)} ${clean(u.lastName)}</strong><small>${clean(u.address || 'Sin dirección')}</small></td>
                 <td><span>${clean(u.email)}</span><small>${clean(u.phone)}</small></td>
                 <td><span class="badge badge-primary">${clean(u.role)}</span></td>
                 <td><span class="badge ${u.active ? 'badge-success' : 'badge-warning'}">${u.active ? 'Activo' : 'Inactivo'}</span></td>
