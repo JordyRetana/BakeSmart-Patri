@@ -287,10 +287,12 @@ namespace BakeSmartPatri.Controllers
         {
             Response.Cookies.Delete("BakeSmartPatri.Auth");
             Response.Cookies.Delete("BakeSmartPatri.Auth.v2");
+            Response.Cookies.Delete("BakeSmartPatri.Auth.v3");
             if (includeCurrent)
-                Response.Cookies.Delete("BakeSmartPatri.Auth.v3");
+                Response.Cookies.Delete("BakeSmartPatri.Auth.v4");
             Response.Cookies.Delete(".AspNetCore.Antiforgery.gl4x9LQyqcE");
             Response.Cookies.Delete("BakeSmartPatri.Antiforgery.v2");
+            Response.Cookies.Delete("BakeSmartPatri.Antiforgery.v3");
         }
     }
 }

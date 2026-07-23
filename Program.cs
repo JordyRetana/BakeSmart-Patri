@@ -58,10 +58,11 @@ var dataProtection = builder.Services
 var dataProtectionConnectionString = builder.Configuration.GetConnectionString("BakeSmartDb");
 var disableSqlDataProtection = ReadBool(builder.Configuration, "Features:DisableSqlDataProtection");
 var forceSqlDataProtection = ReadBool(builder.Configuration, "Features:ForceSqlDataProtection");
+var hasMySqlConnectionString = IsMySqlConnectionString(dataProtectionConnectionString);
 var useSqlDataProtection = !builder.Environment.IsDevelopment() &&
     !disableSqlDataProtection &&
-    forceSqlDataProtection &&
-    ReadBool(builder.Configuration, "Features:UseSqlDataProtection");
+    (forceSqlDataProtection || hasMySqlConnectionString) &&
+    ReadBool(builder.Configuration, "Features:UseSqlDataProtection", hasMySqlConnectionString);
 
 if (useSqlDataProtection &&
     !string.IsNullOrWhiteSpace(dataProtectionConnectionString))
@@ -96,7 +97,7 @@ builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
     {
-        o.Cookie.Name = "BakeSmartPatri.Auth.v3";
+        o.Cookie.Name = "BakeSmartPatri.Auth.v4";
         o.LoginPath = "/Account/Login";
         o.AccessDeniedPath = "/Account/Denied";
         o.SlidingExpiration = true;
@@ -125,7 +126,7 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddAntiforgery(o =>
 {
     o.HeaderName = "X-CSRF-TOKEN";
-    o.Cookie.Name = "BakeSmartPatri.Antiforgery.v2";
+    o.Cookie.Name = "BakeSmartPatri.Antiforgery.v3";
 });
 
 var app = builder.Build();
@@ -186,4 +187,16 @@ static bool ReadBool(IConfiguration configuration, string key, bool fallback = f
         return fallback;
 
     return bool.TryParse(value.Trim().Trim('\uFEFF'), out var parsed) ? parsed : fallback;
+}
+
+static bool IsMySqlConnectionString(string? connectionString)
+{
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return false;
+
+    connectionString = connectionString.Trim().Trim('\uFEFF');
+    return connectionString.Contains("Port=", StringComparison.OrdinalIgnoreCase) ||
+           connectionString.Contains("SslMode=", StringComparison.OrdinalIgnoreCase) ||
+           connectionString.Contains("Allow User Variables=", StringComparison.OrdinalIgnoreCase) ||
+           connectionString.Contains("DefaultCommandTimeout=", StringComparison.OrdinalIgnoreCase);
 }
