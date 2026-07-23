@@ -411,3 +411,4 @@ Database/Migrate-To-Azure.local.ps1
 Database/exports/
 .migration-temp/
 Publish-Main.local.ps1
+.env*
