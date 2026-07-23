@@ -18,6 +18,17 @@ namespace BakeSmartPatri.Controllers
         [HttpGet]
         public IActionResult Login(string? returnUrl = null)
         {
+            if (User?.Identity?.IsAuthenticated ?? false)
+            {
+                if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    return Redirect(returnUrl);
+
+                if (User.IsInRole("Cliente"))
+                    return RedirectToAction("Index", "Client");
+
+                return RedirectToAction("Index", "Dashboard");
+            }
+
             DeleteLegacyAuthCookies();
             ViewData["ReturnUrl"] = returnUrl ?? "";
             return View();
@@ -45,7 +56,7 @@ namespace BakeSmartPatri.Controllers
                 return View();
             }
 
-            DeleteLegacyAuthCookies();
+            DeleteLegacyAuthCookies(includeCurrent: false);
             try
             {
                 await _sqlStore.AddAuditLogAsync("LOGIN", $"Inicio de sesion: {email} ({user.Role})", email);
@@ -272,11 +283,12 @@ namespace BakeSmartPatri.Controllers
                 });
         }
 
-        private void DeleteLegacyAuthCookies()
+        private void DeleteLegacyAuthCookies(bool includeCurrent = true)
         {
             Response.Cookies.Delete("BakeSmartPatri.Auth");
             Response.Cookies.Delete("BakeSmartPatri.Auth.v2");
-            Response.Cookies.Delete("BakeSmartPatri.Auth.v3");
+            if (includeCurrent)
+                Response.Cookies.Delete("BakeSmartPatri.Auth.v3");
             Response.Cookies.Delete(".AspNetCore.Antiforgery.gl4x9LQyqcE");
             Response.Cookies.Delete("BakeSmartPatri.Antiforgery.v2");
         }
