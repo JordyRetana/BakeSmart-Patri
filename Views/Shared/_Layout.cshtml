@@ -35,7 +35,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@title - BakeSmart Patri | Reposteria Inteligente</title>
+    <title>@title - BakeSmart Patri | Repostería Inteligente</title>
     <meta name="description" content="BakeSmart Patri - Sistema de gestion para reposterias. Pedidos, produccion, inventario y mas." />
     <link rel="icon" type="image/png" href="~/img/logo.png" asp-append-version="true" />
     <link rel="apple-touch-icon" href="~/img/logo.png" asp-append-version="true" />
@@ -204,7 +204,7 @@
             </div>
             <nav class="storefront-nav" aria-label="Navegación principal">
                 <div class="container storefront-nav-inner">
-                    <a class="storefront-category-link" href="/Catalog?categories=open" data-open-global-categories><i class="fas fa-bars"></i> Todas las categorias</a>
+                    <a class="storefront-category-link" href="/Catalog?categories=open" data-open-global-categories><i class="fas fa-bars"></i> Todas las categorías</a>
                     <div class="storefront-nav-links">
                         <a href="/">Inicio</a><a href="/Catalog">Productos</a><a href="/Catalog/Offers">Ofertas</a><a href="/Catalog/New">Novedades</a><a href="/Catalog/Combos">Combos</a><a href="/Home/About">Nosotros</a><a href="/Home/Contact">Contacto</a>
                         @if (isClient) { <a href="/Client">Mi panel</a> }
@@ -458,14 +458,14 @@
         <div class="global-categories-sidebar__header">
             <div>
                 <span>Catálogo</span>
-                <h2 id="globalCategoriesTitle">Todas las categorias</h2>
+                <h2 id="globalCategoriesTitle">Todas las categorías</h2>
             </div>
-            <button class="global-categories-close" type="button" id="globalCategoriesClose" aria-label="Cerrar categorias">
+            <button class="global-categories-close" type="button" id="globalCategoriesClose" aria-label="Cerrar categorías">
                 <i class="fas fa-xmark"></i>
             </button>
         </div>
         <div class="global-categories-sidebar__body" id="globalCategoriesList">
-            <div class="global-categories-loading">Cargando categorias...</div>
+            <div class="global-categories-loading">Cargando categorías...</div>
         </div>
     </aside>
 
@@ -492,7 +492,7 @@
                 if (loaded) return;
                 try {
                     const response = await fetch('/api/catalog/options');
-                    if (!response.ok) throw new Error('No se pudieron cargar las categorias.');
+                    if (!response.ok) throw new Error('No se pudieron cargar las categorías.');
                     const contentType = response.headers.get('content-type') || '';
                     if (!contentType.includes('application/json')) throw new Error('El catalogo devolvio una respuesta invalida.');
                     const data = await response.json();
@@ -501,7 +501,7 @@
                     list.innerHTML = `
                         <a class="global-category-option global-category-option--active" href="/Catalog">
                             <span><i class="fas fa-th-large"></i></span>
-                            <strong>Todas las categorias</strong>
+                            <strong>Todas las categorías</strong>
                             <small>${products.length} productos</small>
                         </a>
                         ${categories.map(category => {

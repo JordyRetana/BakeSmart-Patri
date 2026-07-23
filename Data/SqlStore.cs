@@ -239,13 +239,13 @@ public sealed class SqlStore
 
     public async Task<int> SaveInventoryProductAsync(InventoryProductInput input, string? userEmail = null)
     {
-        // Validar duplicado de cÃ³digo
+        // Validar duplicado de código
         var existingCode = input.Id is null
             ? await CodeExistsAsync(input.Code.Trim())
             : await CodeExistsExcludingAsync(input.Code.Trim(), input.Id.Value);
 
         if (existingCode)
-            throw new InvalidOperationException($"Ya existe un producto con el cÃ³digo '{input.Code.Trim()}'.");
+            throw new InvalidOperationException($"Ya existe un producto con el código '{input.Code.Trim()}'.");
 
         var typeId = await EnsureProductTypeAsync(input.Type);
         var unitId = await EnsureUnitMeasureAsync(input.Unit);
@@ -1191,10 +1191,10 @@ public sealed class SqlStore
         {
             await ExecuteAsync("""
                 INSERT INTO Roles (RoleName, Description, IsSystemRole)
-                SELECT 'Cajero', 'Gestion de caja, ventas y pedidos de mostrador', 1
+                SELECT 'Cajero', 'Gestión de caja, ventas y pedidos de mostrador', 1
                 WHERE NOT EXISTS (SELECT 1 FROM Roles WHERE RoleName = 'Cajero');
                 INSERT INTO Roles (RoleName, Description, IsSystemRole)
-                SELECT 'Repostero', 'Produccion, recetas e inventario operativo', 1
+                SELECT 'Repostero', 'Producción, recetas e inventario operativo', 1
                 WHERE NOT EXISTS (SELECT 1 FROM Roles WHERE RoleName = 'Repostero');
                 INSERT INTO Roles (RoleName, Description, IsSystemRole)
                 SELECT 'Supervisor', 'Seguimiento operativo, reportes y control de tienda', 1
@@ -1214,7 +1214,7 @@ public sealed class SqlStore
                 {
                     id = reader.GetInt32("RoleId"),
                     name = roleName,
-                    description = reader.GetString("Description"),
+                    description = NormalizeUiCopy(reader.GetString("Description")),
                     system = reader.GetBoolean("IsSystemRole"),
                     permissions = PermissionsForRole(roleName)
                 };
@@ -1224,11 +1224,11 @@ public sealed class SqlStore
         const string sql = """
             IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'Cajero')
                 INSERT INTO dbo.Roles (RoleName, Description, IsSystemRole)
-                VALUES (N'Cajero', N'Gestion de caja, ventas y pedidos de mostrador', 1);
+                VALUES (N'Cajero', N'Gestión de caja, ventas y pedidos de mostrador', 1);
 
             IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'Repostero')
                 INSERT INTO dbo.Roles (RoleName, Description, IsSystemRole)
-                VALUES (N'Repostero', N'Produccion, recetas e inventario operativo', 1);
+                VALUES (N'Repostero', N'Producción, recetas e inventario operativo', 1);
 
             IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'Supervisor')
                 INSERT INTO dbo.Roles (RoleName, Description, IsSystemRole)
@@ -1246,7 +1246,7 @@ public sealed class SqlStore
             {
                 id = reader.GetInt32("RoleId"),
                 name = roleName,
-                description = reader.GetString("Description"),
+                description = NormalizeUiCopy(reader.GetString("Description")),
                 system = reader.GetBoolean("IsSystemRole"),
                 permissions = PermissionsForRole(roleName)
             };
@@ -1264,67 +1264,75 @@ public sealed class SqlStore
         if (normalized.Contains("admin"))
             return new[]
             {
-                "Dashboard", "Pedidos", "Produccion", "Inventario", "Punto de venta",
-                "Reportes", "Bitacora", "Configuracion", "Usuarios", "Roles",
-                "Contabilidad", "Marketing", "Catalogo", "Perfil"
+                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
+                "Reportes", "Bitácora", "Configuración", "Usuarios", "Roles",
+                "Contabilidad", "Marketing", "Catálogo", "Perfil"
             };
 
         if (normalized.Contains("staff"))
             return new[]
             {
-                "Dashboard", "Pedidos", "Produccion", "Inventario", "Punto de venta",
-                "Bitacora", "Configuracion", "Catalogo", "Perfil"
+                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
+                "Bitácora", "Configuración", "Catálogo", "Perfil"
             };
 
         if (normalized.Contains("super"))
             return new[]
             {
-                "Dashboard", "Pedidos", "Produccion", "Inventario", "Punto de venta",
-                "Reportes", "Bitacora", "Contabilidad", "Marketing", "Perfil"
+                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
+                "Reportes", "Bitácora", "Contabilidad", "Marketing", "Perfil"
             };
 
         if (normalized.Contains("caj"))
-            return new[] { "Dashboard", "Pedidos", "Punto de venta", "Catalogo", "Perfil" };
+            return new[] { "Dashboard", "Pedidos", "Punto de venta", "Catálogo", "Perfil" };
 
         if (normalized.Contains("repost"))
-            return new[] { "Dashboard", "Produccion", "Inventario", "Pedidos", "Perfil" };
+            return new[] { "Dashboard", "Producción", "Inventario", "Pedidos", "Perfil" };
 
         if (normalized.Contains("cliente"))
-            return new[] { "Catalogo", "Pedido rapido", "Mis pedidos", "Seguimiento", "Perfil" };
+            return new[] { "Catálogo", "Pedido rápido", "Mis pedidos", "Seguimiento", "Perfil" };
 
         return roleName switch
         {
             "Admin" => new[]
             {
-                "Dashboard", "Pedidos", "Produccion", "Inventario", "Punto de venta",
-                "Reportes", "Bitacora", "Configuracion", "Usuarios", "Roles",
-                "Contabilidad", "Marketing", "Catalogo", "Perfil"
+                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
+                "Reportes", "Bitácora", "Configuración", "Usuarios", "Roles",
+                "Contabilidad", "Marketing", "Catálogo", "Perfil"
             },
             "Staff" => new[]
             {
-                "Dashboard", "Pedidos", "Produccion", "Inventario", "Punto de venta",
-                "Bitacora", "Configuracion", "Catalogo", "Perfil"
+                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
+                "Bitácora", "Configuración", "Catálogo", "Perfil"
             },
             "Supervisor" => new[]
             {
-                "Dashboard", "Pedidos", "Produccion", "Inventario", "Punto de venta",
-                "Reportes", "Bitacora", "Contabilidad", "Marketing", "Perfil"
+                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
+                "Reportes", "Bitácora", "Contabilidad", "Marketing", "Perfil"
             },
             "Cajero" => new[]
             {
-                "Dashboard", "Pedidos", "Punto de venta", "Catalogo", "Perfil"
+                "Dashboard", "Pedidos", "Punto de venta", "Catálogo", "Perfil"
             },
             "Repostero" => new[]
             {
-                "Dashboard", "Produccion", "Inventario", "Pedidos", "Perfil"
+                "Dashboard", "Producción", "Inventario", "Pedidos", "Perfil"
             },
             "Cliente" => new[]
             {
-                "Catalogo", "Pedido rapido", "Mis pedidos", "Seguimiento", "Perfil"
+                "Catálogo", "Pedido rápido", "Mis pedidos", "Seguimiento", "Perfil"
             },
             _ => new[] { "Perfil" }
         };
     }
+
+    private static string NormalizeUiCopy(string value) => (value ?? "")
+        .Replace("Gestion de", "Gestión de", StringComparison.Ordinal)
+        .Replace("Produccion", "Producción", StringComparison.Ordinal)
+        .Replace("Catalogo", "Catálogo", StringComparison.Ordinal)
+        .Replace("Configuracion", "Configuración", StringComparison.Ordinal)
+        .Replace("Bitacora", "Bitácora", StringComparison.Ordinal)
+        .Replace("Pedido rapido", "Pedido rápido", StringComparison.Ordinal);
 
     public async Task<IReadOnlyList<object>> PaymentMethodsAsync()
     {
@@ -3615,8 +3623,8 @@ public sealed class SqlStore
         if (exists == 0)
             return false;
 
-        // En un entorno real, aquÃ­ se enviarÃ­a un email con un token.
-        // Por ahora, generamos una contraseÃ±a temporal y la registramos en bitÃ¡cora.
+        // En un entorno real, aquí se enviaría un email con un token.
+        // Por ahora, generamos una contraseña temporal y la registramos en bitácora.
         var tempPassword = $"Temp{Guid.NewGuid().ToString("N")[..8]}!";
         var hash = HashPassword(tempPassword);
 
@@ -4057,7 +4065,7 @@ public sealed class SqlStore
             return newSessionId;
         }
 
-        // Verificar que no haya sesiÃ³n activa
+        // Verificar que no haya sesión activa
         const string checkSql = """
             DECLARE @UserId int;
             IF @UserEmail IS NOT NULL
@@ -4091,7 +4099,7 @@ public sealed class SqlStore
             new SqlParameter("@UserEmail", (object?)userEmail ?? DBNull.Value),
             new SqlParameter("@Amount", openingAmount)));
 
-        await AddAuditLogAsync("APERTURA_CAJA", $"Sesion de caja #{sessionId} abierta con â‚¡{openingAmount:N0}", userEmail);
+        await AddAuditLogAsync("APERTURA_CAJA", $"Sesión de caja #{sessionId} abierta con ₡{openingAmount:N0}", userEmail);
         return sessionId;
     }
 
@@ -4153,7 +4161,7 @@ public sealed class SqlStore
         if (updated == 0)
             throw new InvalidOperationException("No se encontro una caja abierta para cerrar.");
 
-        await AddAuditLogAsync("CIERRE_CAJA", $"Sesion de caja #{sessionId} cerrada con â‚¡{closingAmount:N0}", userEmail);
+        await AddAuditLogAsync("CIERRE_CAJA", $"Sesión de caja #{sessionId} cerrada con ₡{closingAmount:N0}", userEmail);
     }
 
     public async Task<IReadOnlyList<object>> CashSessionsAsync(string? userEmail = null, bool includeAll = false)
@@ -4285,7 +4293,7 @@ public sealed class SqlStore
         if (UseMySql)
             return await RegisterSaleMySqlAsync(input, userEmail);
 
-        // Serializar items a JSON para pasarlos como parÃ¡metro
+        // Serializar items a JSON para pasarlos como parámetro
         var itemsJson = System.Text.Json.JsonSerializer.Serialize(input.Items.Select(i => new
         {
             productId = i.ProductId,
@@ -4451,7 +4459,7 @@ public sealed class SqlStore
 
             DECLARE @SaleId int = SCOPE_IDENTITY();
 
-            -- Asociar a sesiÃ³n de caja activa
+            -- Asociar a sesión de caja activa
             INSERT INTO dbo.PagosSesionCaja (CashSessionId, SaleId, Amount)
             VALUES (@ActiveSessionId, @SaleId, @EffectiveTotal);
 
@@ -4501,7 +4509,7 @@ public sealed class SqlStore
             new SqlParameter("@UserEmail", (object?)userEmail ?? DBNull.Value),
             new SqlParameter("@ItemsJson", itemsJson)));
 
-        await AddAuditLogAsync("VENTA_POS", $"Venta POS #{orderId} por â‚¡{input.Total:N0}", userEmail);
+        await AddAuditLogAsync("VENTA_POS", $"Venta POS #{orderId} por ₡{input.Total:N0}", userEmail);
         return orderId;
     }
 
