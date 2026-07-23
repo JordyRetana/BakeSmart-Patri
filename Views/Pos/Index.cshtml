@@ -519,7 +519,7 @@
                             </div>
                             <span class="stock-label">${availableStock} disp. de ${product.stock}</span>
                         </div>
-                        <button class="pos-product-cart-btn" type="button" onclick="addToCart(${product.id})" ${disabled}>
+                        <button class="pos-product-cart-btn" type="button" data-pos-add-product="${product.id}" ${disabled}>
                             <i class="fas fa-cart-plus"></i>
                             ${availableStock > 0 ? 'Agregar al carrito' : 'Sin stock'}
                         </button>
@@ -534,7 +534,7 @@
                             <td>${fmt(product.price)}</td>
                             <td>${remainingStock(product.id, product.stock)} / ${product.stock}</td>
                             <td class="text-right">
-                                <button class="pos-table-add" type="button" onclick="addToCart(${product.id})" ${remainingStock(product.id, product.stock) <= 0 ? 'disabled' : ''}>
+                                <button class="pos-table-add" type="button" data-pos-add-product="${product.id}" ${remainingStock(product.id, product.stock) <= 0 ? 'disabled' : ''}>
                                     <i class="fas fa-plus"></i>
                                     Agregar
                                 </button>
@@ -671,7 +671,7 @@
                 `;
             }
 
-            window.addToCart = (productId) => {
+            function addToCart(productId) {
                 if (!resolveActiveSession()) {
                     app.toast.warning('Debe abrir caja antes de agregar productos al carrito.');
                     const amountInput = document.getElementById('openingAmount');
@@ -708,7 +708,9 @@
 
                 renderCart();
                 openCartPanel();
-            };
+            }
+
+            window.addToCart = addToCart;
 
             window.changeQty = (productId, delta) => {
                 const item = cart.find(x => Number(x.productId) === Number(productId));
@@ -895,6 +897,13 @@
             document.getElementById('posCartSheetClose').addEventListener('click', closeCartPanel);
             document.getElementById('posCartBackdrop').addEventListener('click', closeCartPanel);
             document.addEventListener('click', (event) => {
+                const addButton = event.target.closest('[data-pos-add-product]');
+                if (addButton) {
+                    event.preventDefault();
+                    addToCart(addButton.dataset.posAddProduct);
+                    return;
+                }
+
                 const panel = document.getElementById('posCartPanel');
                 const toggle = document.getElementById('posCartToggle');
                 if (!panel?.classList.contains('pos-cart-open')) return;

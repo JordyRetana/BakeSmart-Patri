@@ -159,13 +159,13 @@
         document.getElementById('dbProduction').textContent = getKpi('En producción', production.length);
         document.getElementById('dbProductionHint').textContent = `${production.length} pedidos en flujo`;
         document.getElementById('dbLowStock').textContent = lowStock;
-        document.getElementById('dbLowStockHint').textContent = lowStock ? 'requiere revision' : 'inventario estable';
+        document.getElementById('dbLowStockHint').textContent = lowStock ? 'requiere revisión' : 'inventario estable';
 
         const table = document.getElementById('dbOrdersTable');
         if (table) table.innerHTML = orders.slice(0, 6).map(order => `<tr><td><strong>#${order.id}</strong></td><td>${order.cliente || order.customerName || '-'}</td><td><span class="badge">${displayStatus(statusOf(order))}</span></td><td><span class="badge ${(order.paymentStatus || '') === 'Pagado' ? 'badge-success' : 'badge-warning'}">${order.paymentStatus || '-'}</span></td><td><strong>${format(order.total)}</strong></td></tr>`).join('') || '<tr><td colspan="5" class="text-center text-muted">No hay pedidos recientes.</td></tr>';
 
         const alerts = [];
-        if (lowStock > 0) alerts.push({ icon:'fa-box-open', title:'Stock por revisar', text:`${lowStock} productos alcanzaron su minimo.` });
+        if (lowStock > 0) alerts.push({ icon:'fa-box-open', title:'Stock por revisar', text:`${lowStock} productos alcanzaron su mínimo.` });
         if (pendingPayments.length) alerts.push({ icon:'fa-money-bill-wave', title:'Cobros pendientes', text:`${pendingPayments.length} pedidos necesitan seguimiento.` });
         if (!alerts.length) alerts.push({ icon:'fa-circle-check', title:'Operación estable', text:'No hay alertas críticas en este momento.' });
         document.getElementById('dbAlerts').innerHTML = alerts.map(item => `<div class="dashboard-alert"><i class="fas ${item.icon}"></i><div><strong>${item.title}</strong><span>${item.text}</span></div></div>`).join('');

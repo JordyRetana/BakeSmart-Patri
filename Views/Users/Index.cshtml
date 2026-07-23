@@ -92,6 +92,14 @@
 
     const clean = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 
+    function displayDescription(value) {
+        return String(value || 'Acceso del sistema')
+            .replace(/Operacion/g, 'Operación')
+            .replace(/operacion/g, 'operación')
+            .replace(/Produccion/g, 'Producción')
+            .replace(/produccion/g, 'producción');
+    }
+
     function roleOptions() {
         return store.roles.list().map(r => `<option value="${clean(r.name)}">${clean(r.name)}</option>`).join('');
     }
@@ -149,7 +157,7 @@
             <article class="users-role-chip">
                 <div>
                     <strong>${clean(r.name)}</strong>
-                    <span>${clean(r.description || 'Acceso del sistema')}</span>
+                    <span>${clean(displayDescription(r.description))}</span>
                 </div>
                 <b>${(r.permissions || []).length}</b>
             </article>

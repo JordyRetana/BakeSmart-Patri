@@ -119,6 +119,11 @@
         return Math.max(0, statuses.indexOf(normalizeStatus(value)));
     }
 
+    function displayStatus(value) {
+        const normalized = normalizeStatus(value);
+        return normalized === 'En produccion' ? 'En producción' : normalized;
+    }
+
     function getStatusClass(value) {
         switch (normalizeStatus(value)) {
             case 'Pendiente pago': return 'status-pending';
@@ -187,7 +192,7 @@
                 ${statuses.map((step, index) => `
                     <span class="${index < current ? 'is-done' : index === current ? 'is-current' : ''}" title="${clean(step)}">
                         <i class="fas ${index < current ? 'fa-check' : index === current ? 'fa-circle' : 'fa-minus'}"></i>
-                        <em>${clean(step)}</em>
+                        <em>${clean(displayStatus(step))}</em>
                     </span>
                 `).join('')}
             </div>
@@ -211,7 +216,7 @@
                         <small>${clean(o.paymentStatus)}</small>
                     </span>
                 </span>
-                <span class="orders-status-badge ${getStatusClass(o.status)}">${clean(o.status)}</span>
+                <span class="orders-status-badge ${getStatusClass(o.status)}">${clean(displayStatus(o.status))}</span>
             </button>
         `).join('') || `
             <div class="orders-empty-list">
@@ -248,7 +253,7 @@
                     <h3>${clean(order.customerName)}</h3>
                     <p>${clean(order.customerEmail || 'Sin correo registrado')}</p>
                 </div>
-                <span class="orders-status-badge ${getStatusClass(order.status)}">${clean(order.status)}</span>
+                <span class="orders-status-badge ${getStatusClass(order.status)}">${clean(displayStatus(order.status))}</span>
             </div>
 
             ${renderProgress(order)}
@@ -266,7 +271,7 @@
             </div>
 
             <div class="orders-detail-block">
-                <span>Direccion de entrega</span>
+                <span>Dirección de entrega</span>
                 <strong>${clean(order.address || 'Sin dirección registrada')}</strong>
             </div>
 
@@ -274,7 +279,7 @@
                 <label>
                     <span>Actualizar estado</span>
                     <select onchange="changeStatus(${order.id}, this.value)" class="form-control">
-                        ${statuses.map(s => `<option ${s === order.status ? 'selected' : ''}>${s}</option>`).join('')}
+                        ${statuses.map(s => `<option value="${clean(s)}" ${s === order.status ? 'selected' : ''}>${clean(displayStatus(s))}</option>`).join('')}
                     </select>
                 </label>
                 <button class="btn btn-primary" onclick="advanceOrder(${order.id})" ${order.status === 'Entregado' ? 'disabled' : ''}>
@@ -323,7 +328,7 @@
         } else if (normalized === 'Entregado') {
             app.toast.success('Pedido entregado y seguimiento cerrado.');
         } else {
-            app.toast.success(`Pedido #${id} actualizado a ${normalized}.`);
+            app.toast.success(`Pedido #${id} actualizado a ${displayStatus(normalized)}.`);
         }
     }
 

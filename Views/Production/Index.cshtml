@@ -113,6 +113,7 @@
 
     const fmtDate = value => new Date(value).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit' });
     const statusOf = order => order.estado || order.status || '';
+    const displayStatus = value => value === 'En produccion' ? 'En producción' : value;
     const customerOf = order => order.cliente || order.customerName || '-';
     const deliveryOf = order => order.entrega || order.deliveryDate || new Date().toISOString();
     const itemOf = order => order.producto || order.products || 'Pedido personalizado';
@@ -130,7 +131,7 @@
             <div class="card production-ticket" style="border-left:4px solid ${meta.border};">
                 <div style="display:flex;justify-content:space-between;gap:.75rem;margin-bottom:.5rem;align-items:start;">
                     <strong>#${order.id} - ${customerOf(order)}</strong>
-                    <span class="badge ${meta.badge}">${status}</span>
+                    <span class="badge ${meta.badge}">${displayStatus(status)}</span>
                 </div>
                 <div>${itemOf(order)}</div>
                 ${mode !== 'pending' ? `<div class="progress" style="margin:.65rem 0;"><div class="progress-bar" style="width:${meta.progress}%;"></div></div>` : ''}

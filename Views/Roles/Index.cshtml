@@ -12,7 +12,7 @@
         <div>
             <span class="roles-eyebrow">Seguridad</span>
             <h1><i class="fas fa-shield-halved"></i> Roles y permisos</h1>
-            <p>Resumen claro de accesos por perfil, sin listas infinitas ni tarjetas vacias.</p>
+            <p>Resumen claro de accesos por perfil, sin listas infinitas ni tarjetas vacías.</p>
         </div>
         <a class="btn btn-outline" href="/Users"><i class="fas fa-arrow-left"></i> Usuarios</a>
     </header>
@@ -54,6 +54,14 @@
     let roles = [];
     let selectedRole = null;
 
+    function displayDescription(value) {
+        return String(value || 'Acceso del sistema')
+            .replace(/Operacion/g, 'Operación')
+            .replace(/operacion/g, 'operación')
+            .replace(/Produccion/g, 'Producción')
+            .replace(/produccion/g, 'producción');
+    }
+
     function fallbackPermissions(name) {
         const normalized = String(name || '').toLowerCase();
         if (normalized.includes('admin')) return ['Dashboard','Pedidos','Producción','Inventario','Punto de venta','Reportes','Bitácora','Configuración','Usuarios','Roles','Contabilidad','Marketing','Catálogo','Perfil'];
@@ -84,7 +92,7 @@
                 <span><i class="fas fa-user-shield"></i></span>
                 <div>
                     <strong>${clean(r.name)}</strong>
-                    <small>${clean(r.description || 'Acceso del sistema')}</small>
+                    <small>${clean(displayDescription(r.description))}</small>
                 </div>
                 <b>${r.permissions.length}</b>
             </button>
