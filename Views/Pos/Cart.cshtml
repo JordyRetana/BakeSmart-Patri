@@ -124,7 +124,15 @@
         (() => {
             const store = BakeSmartStore;
             const fmt = app.utils.formatCurrency;
-            let cart = JSON.parse(sessionStorage.getItem('bakesmart.pos.cart') || '[]');
+            function readCartSnapshot() {
+                try {
+                    return JSON.parse(sessionStorage.getItem('bakesmart.pos.cart') || localStorage.getItem('bakesmart.pos.cart') || '[]');
+                } catch {
+                    return [];
+                }
+            }
+
+            let cart = readCartSnapshot();
 
             const itemsEl = document.getElementById('checkoutCartItems');
             const countEl = document.getElementById('checkoutCartCount');
@@ -141,7 +149,9 @@
             let pendingTotals = null;
 
             function saveCart() {
-                sessionStorage.setItem('bakesmart.pos.cart', JSON.stringify(cart));
+                const payload = JSON.stringify(cart);
+                try { sessionStorage.setItem('bakesmart.pos.cart', payload); } catch { }
+                try { localStorage.setItem('bakesmart.pos.cart', payload); } catch { }
             }
 
             function renderCustomers() {

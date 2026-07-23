@@ -571,7 +571,9 @@
             }
 
             function saveCartSnapshot() {
-                sessionStorage.setItem('bakesmart.pos.cart', JSON.stringify(cart));
+                const payload = JSON.stringify(cart);
+                try { sessionStorage.setItem('bakesmart.pos.cart', payload); } catch { }
+                try { localStorage.setItem('bakesmart.pos.cart', payload); } catch { }
             }
 
             window.continueToCart = () => {
