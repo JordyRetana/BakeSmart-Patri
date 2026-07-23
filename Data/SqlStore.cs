@@ -3224,15 +3224,15 @@ public sealed class SqlStore
         var sql = connection is MySqlConnection
             ? """
               INSERT INTO MovimientosInventario
-                  (ProductId, InventoryLocationId, MovementType, Quantity, ResponsibleUserId, Note)
+                  (ProductId, InventoryLocationId, MovementType, Quantity, ResponsibleUserId, Note, CreatedAt)
               VALUES
-                  (@ProductId, @LocationId, @Type, @Quantity, NULL, @Note);
+                  (@ProductId, @LocationId, @Type, @Quantity, NULL, @Note, UTC_TIMESTAMP());
               """
             : """
             INSERT INTO dbo.MovimientosInventario
-                (ProductId, InventoryLocationId, MovementType, Quantity, ResponsibleUserId, Note)
+                (ProductId, InventoryLocationId, MovementType, Quantity, ResponsibleUserId, Note, CreatedAt)
             VALUES
-                (@ProductId, @LocationId, @Type, @Quantity, NULL, @Note);
+                (@ProductId, @LocationId, @Type, @Quantity, NULL, @Note, SYSUTCDATETIME());
             """;
 
         await ExecuteInTransactionAsync(connection, transaction, sql,
