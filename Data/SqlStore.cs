@@ -4567,12 +4567,12 @@ public sealed class SqlStore
                     (CustomerId, CustomerAddressId, OrderChannelId, OrderStatusId, PaymentStatusId, PaymentMethodId,
                      Notes, Subtotal, Discount, Tax, Total, DeliveryDate,
                      CurrentLatitude, CurrentLongitude, DestinationLatitude, DestinationLongitude, DestinationLabel,
-                     DestinationCountry, RouteMode, TrackingStep, OriginLabel, DeliveryReference, CreatedAt)
+                     DestinationCountry, RouteMode, TrackingStep, OriginLabel, CreatedAt)
                 VALUES
                     (@CustomerId, @CustomerAddressId, @ChannelId, @StatusId, @PaymentStatusId, @PaymentMethodId,
                      @Notes, @Subtotal, @Discount, @Tax, @Total, @DeliveryDate,
                      @OriginLat, @OriginLng, @DestLat, @DestLng, @DestLabel,
-                     'Costa Rica', @RouteMode, 0, @OriginName, @DeliveryReference, UTC_TIMESTAMP());
+                     'Costa Rica', @RouteMode, 0, @OriginName, UTC_TIMESTAMP());
                 SELECT LAST_INSERT_ID();
                 """;
 
@@ -4595,8 +4595,7 @@ public sealed class SqlStore
                 new SqlParameter("@DestLng", destinationLng!.Value),
                 new SqlParameter("@DestLabel", destinationLabel),
                 new SqlParameter("@RouteMode", deliveryMethod == "retiro" ? "pickup" : "ground"),
-                new SqlParameter("@OriginName", config.OriginName),
-                new SqlParameter("@DeliveryReference", (object?)input.DeliveryReference?.Trim() ?? DBNull.Value)));
+                new SqlParameter("@OriginName", config.OriginName)));
 
             await ExecuteInTransactionAsync(connection, transaction,
                 "INSERT INTO DetallePedido (OrderId, ProductId, Quantity, UnitPrice) VALUES (@OrderId, @ProductId, @Quantity, @UnitPrice);",
