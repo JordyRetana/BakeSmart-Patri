@@ -92,14 +92,37 @@ public sealed class SqlStore
         await using var command = CreateCommand(connection, UseMySql ? "SELECT DATABASE()" : "SELECT DB_NAME()");
         var database = Convert.ToString(await command.ExecuteScalarAsync());
 
+        var productCount = await CountRowsAsync(connection, UseMySql ? "Productos" : "dbo.Productos");
+        var orderCount = await CountRowsAsync(connection, UseMySql ? "Pedidos" : "dbo.Pedidos");
+        var userCount = await CountRowsAsync(connection, UseMySql ? "Usuarios" : "dbo.Usuarios");
+
         return new
         {
             enabled = true,
             status = "ok",
             databaseStatus = "online",
             database,
-            server = connection.DataSource
+            server = connection.DataSource,
+            checkedAtUtc = DateTime.UtcNow,
+            keepAlive = new
+            {
+                query = "SELECT COUNT(*)",
+                tables = new
+                {
+                    products = productCount,
+                    orders = orderCount,
+                    users = userCount
+                }
+            }
         };
+    }
+
+    private async Task<long> CountRowsAsync(DbConnection connection, string tableName)
+    {
+        await using var command = CreateCommand(connection, $"SELECT COUNT(*) FROM {tableName}");
+        command.CommandTimeout = CommandTimeoutSeconds;
+        var value = await command.ExecuteScalarAsync();
+        return Convert.ToInt64(value ?? 0, CultureInfo.InvariantCulture);
     }
 
     public async Task<IReadOnlyList<object>> OrdersAsync(string? customerEmail = null)
