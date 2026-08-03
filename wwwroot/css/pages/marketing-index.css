@@ -1,0 +1,349 @@
+.marketing-page {
+        display: flex;
+        flex-direction: column;
+        gap: 1.15rem;
+    }
+
+        .marketing-page,
+        .marketing-page * {
+            min-width: 0;
+        }
+
+    .marketing-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 1.25rem;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .marketing-header::after {
+        content: "";
+        position: absolute;
+        inset: auto 1.5rem -48px auto;
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        background: color-mix(in srgb, var(--primary) 10%, transparent);
+        pointer-events: none;
+    }
+
+    .marketing-title {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+    }
+
+        .marketing-title i {
+            color: var(--primary);
+        }
+
+    .marketing-subtitle {
+        margin: .35rem 0 0;
+    }
+
+    .marketing-search-box {
+        width: 100%;
+        max-width: 380px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .marketing-kpi-grid {
+        gap: 1rem;
+    }
+
+    .marketing-kpi-card {
+        display: flex;
+        align-items: center;
+        gap: .9rem;
+        min-height: 118px;
+        padding: 1.15rem !important;
+        border-left: 4px solid var(--primary);
+    }
+
+    .marketing-kpi-card h2 {
+        margin: .35rem 0 0;
+        line-height: 1;
+    }
+
+    .marketing-kpi-icon {
+        display: grid;
+        place-items: center;
+        width: 48px;
+        height: 48px;
+        flex: 0 0 48px;
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--primary) 14%, white);
+        border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
+        color: var(--primary);
+        font-size: 1.1rem;
+    }
+
+    .marketing-kpi-icon--promo {
+        background: color-mix(in srgb, #0ea5e9 14%, white);
+        border-color: color-mix(in srgb, #0ea5e9 24%, var(--border));
+        color: #0369a1;
+    }
+
+    .marketing-kpi-icon--discount {
+        background: color-mix(in srgb, #16a34a 14%, white);
+        border-color: color-mix(in srgb, #16a34a 24%, var(--border));
+        color: #15803d;
+    }
+
+    .marketing-page .marketing-main-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 1.1rem !important;
+        align-items: start !important;
+    }
+
+    .marketing-page .marketing-side-stack {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(280px, 1fr)) !important;
+        gap: 1.1rem !important;
+    }
+
+    .marketing-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+        padding-bottom: .8rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .marketing-panel-header-compact {
+        margin-bottom: .85rem;
+    }
+
+    .marketing-panel-title {
+        margin: 0;
+        font-size: 1.15rem;
+    }
+
+    .marketing-eyebrow {
+        display: block;
+        margin-bottom: .2rem;
+        color: var(--primary);
+        font-size: .68rem;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+
+    .marketing-table-wrap {
+        max-width: 100%;
+        overflow: auto;
+        border-radius: 14px;
+    }
+
+    .marketing-table {
+        width: 100%;
+        min-width: 1040px !important;
+        margin: 0;
+    }
+
+    .marketing-page .table-container .marketing-customers-table {
+        min-width: 1040px !important;
+    }
+
+    .marketing-customers-table {
+        table-layout: fixed;
+    }
+
+        .marketing-customers-table th:nth-child(1),
+        .marketing-customers-table td:nth-child(1) {
+            width: 78px;
+            text-align: center;
+        }
+
+        .marketing-customers-table th:nth-child(2),
+        .marketing-customers-table td:nth-child(2) {
+            width: 27%;
+        }
+
+        .marketing-customers-table th:nth-child(3),
+        .marketing-customers-table td:nth-child(3) {
+            width: 25%;
+            white-space: nowrap;
+        }
+
+        .marketing-customers-table th:nth-child(4),
+        .marketing-customers-table td:nth-child(4) {
+            width: 15%;
+            white-space: nowrap;
+        }
+
+        .marketing-customers-table th:nth-child(5),
+        .marketing-customers-table td:nth-child(5) {
+            width: 110px;
+            white-space: nowrap;
+        }
+
+        .marketing-customers-table th:nth-child(6),
+        .marketing-customers-table td:nth-child(6) {
+            width: 165px;
+            white-space: nowrap;
+            text-align: right;
+        }
+
+        .marketing-customers-table td:nth-child(2) {
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .marketing-customers-table .btn-sm {
+            min-width: 132px;
+        }
+
+    .marketing-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--bg-card);
+    }
+
+    .marketing-form {
+        display: grid;
+        gap: .95rem;
+    }
+
+    .marketing-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .marketing-form-block {
+        display: grid;
+        gap: .35rem;
+    }
+
+        .marketing-form-block label {
+            margin: 0;
+            font-size: .82rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+    .marketing-form-full {
+        width: 100%;
+    }
+
+    .marketing-submit-btn {
+        width: 100%;
+    }
+
+    .marketing-promotions-list {
+        display: grid;
+        gap: .75rem;
+        max-height: 280px;
+        overflow: auto;
+        padding-right: .2rem;
+    }
+
+    .marketing-promo-card {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: .9rem 1rem;
+        background: color-mix(in srgb, var(--bg-card) 94%, var(--primary-light) 6%);
+    }
+
+    .marketing-promo-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .marketing-promo-name {
+        font-weight: 700;
+        margin-bottom: .2rem;
+    }
+
+    .marketing-promo-dates {
+        color: var(--text-light);
+        font-size: .9rem;
+    }
+
+    .marketing-customers-card,
+    .marketing-promotions-card {
+        align-self: start;
+        padding: 1.1rem !important;
+    }
+
+    .marketing-customers-card {
+        min-height: 470px;
+    }
+
+    .marketing-page .card:hover {
+        transform: none;
+        box-shadow: var(--shadow-sm);
+        border-color: var(--border);
+    }
+
+        .marketing-page .card:hover::after {
+            opacity: 0;
+        }
+
+    .marketing-page .table tbody tr:hover {
+        transform: none;
+        box-shadow: none;
+        background: var(--bg-alt);
+    }
+
+    .marketing-page .btn:hover,
+    .marketing-page .btn-primary:hover,
+    .marketing-page .btn-outline:hover,
+    .marketing-page .btn-secondary:hover,
+    .marketing-page .btn-ghost:hover {
+        transform: none;
+    }
+
+    .marketing-page .form-control:focus,
+    .marketing-page input:focus,
+    .marketing-page select:focus,
+    .marketing-page textarea:focus {
+        transform: none;
+    }
+
+    @media (max-width: 1200px) {
+        .marketing-page .marketing-side-stack {
+            grid-template-columns: 1fr !important;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .marketing-search-box {
+            max-width: 100%;
+        }
+
+        .marketing-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .marketing-customers-table {
+            table-layout: auto;
+            min-width: 920px !important;
+        }
+    }
+
+@media (max-width: 520px) {
+    .marketing-header,
+    .marketing-panel-header,
+    .marketing-promo-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .marketing-submit-btn,
+    .marketing-customers-table .btn-sm {
+        width: 100%;
+    }
+}

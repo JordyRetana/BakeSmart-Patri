@@ -1,0 +1,126 @@
+.map-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.map-picker__search-row {
+    display: flex;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+
+.map-picker__search {
+    flex: 1 1 220px;
+    position: relative;
+}
+
+.map-picker__search input {
+    width: 100%;
+}
+
+.map-picker__results {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    right: 0;
+    z-index: 1200;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, rgba(124, 58, 237, 0.18));
+    border-radius: 14px;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+    max-height: 220px;
+    overflow: auto;
+    display: none;
+}
+
+.map-picker__results.is-open {
+    display: block;
+}
+
+.map-picker__result {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.75rem 0.9rem;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+}
+
+.map-picker__result:hover,
+.map-picker__result:focus-visible {
+    background: rgba(124, 58, 237, 0.08);
+    outline: none;
+}
+
+.map-picker__canvas {
+    height: 320px;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid var(--border, rgba(124, 58, 237, 0.18));
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.map-picker__coords {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+}
+
+.map-picker__coords label,
+.map-picker__field label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+    color: var(--text-muted, #64748b);
+}
+
+.map-picker__coords input[readonly],
+.map-picker__field input[readonly] {
+    background: rgba(124, 58, 237, 0.05);
+    cursor: default;
+}
+
+.map-picker__hint {
+    font-size: 0.82rem;
+    color: var(--text-muted, #64748b);
+}
+
+.map-picker__error {
+    color: #ef4444;
+    font-size: 0.85rem;
+    display: none;
+}
+
+.map-picker__error.is-visible {
+    display: block;
+}
+
+.map-picker-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    background: linear-gradient(135deg, #8b5cf6, #db2777);
+    box-shadow: 0 8px 18px rgba(124, 58, 237, 0.35);
+    border: 2px solid #fff;
+}
+
+.map-picker-marker i {
+    transform: rotate(45deg);
+    color: #fff;
+    font-size: 0.85rem;
+}
+
+@media (max-width: 640px) {
+    .map-picker__canvas {
+        height: 260px;
+    }
+}

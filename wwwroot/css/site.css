@@ -1,0 +1,663 @@
+@import url("./global/variables.css");
+@import url("./global/base.css");
+@import url("./global/layout.css?v=20260607-premium-nav-polish");
+@import url("./global/components.css?v=20260709-user-menu-polish");
+@import url("./global/utilities.css");
+@import url("./global/dark.css");
+@import url("./global/responsive.css?v=20260607-premium-mobile-nav-4");
+@import url("./global/map-picker.css?v=20260625-v1");
+@import url("./pages/home-storefront.css?v=20260626-storefront-v2");
+@import url("./global/commerce-system.css?v=20260709-client-pos-polish-2");
+/* Global storefront categories drawer */
+.global-categories-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9100;
+    background: rgba(17, 24, 39, .42);
+    backdrop-filter: blur(4px);
+}
+
+.global-categories-backdrop[hidden] {
+    display: none;
+}
+
+.global-categories-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 9110;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    width: min(420px, 100vw);
+    height: 100dvh;
+    color: var(--text);
+    border-left: 1px solid var(--border);
+    background: var(--bg-card);
+    box-shadow: -22px 0 70px rgba(31, 20, 45, .22);
+    transform: translateX(105%);
+    transition: transform .22s ease;
+}
+
+.global-categories-sidebar.is-open {
+    transform: translateX(0);
+}
+
+.global-categories-sidebar__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.global-categories-sidebar__header span {
+    display: block;
+    color: var(--text-light);
+    font-size: .72rem;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.global-categories-sidebar__header h2 {
+    margin: .18rem 0 0;
+    color: var(--text);
+    font-size: 1.35rem;
+}
+
+.global-categories-close {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    cursor: pointer;
+}
+
+.global-categories-sidebar__body {
+    display: grid;
+    align-content: start;
+    gap: .65rem;
+    overflow: auto;
+    padding: 1rem;
+}
+
+.global-category-option {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: .75rem;
+    align-items: center;
+    width: 100%;
+    min-height: 74px;
+    padding: .8rem;
+    text-align: left;
+    color: var(--text);
+    text-decoration: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+}
+
+.global-category-option:hover,
+.global-category-option--active {
+    color: var(--text);
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+    background: color-mix(in srgb, var(--primary-light) 32%, var(--bg));
+}
+
+.global-category-option span {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    color: var(--primary-dark);
+    border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--primary-light) 60%, var(--bg-card));
+}
+
+.global-category-option strong,
+.global-category-option small {
+    display: block;
+}
+
+.global-category-option small,
+.global-categories-loading {
+    margin-top: .15rem;
+    color: var(--text-light);
+    font-size: .78rem;
+}
+
+.global-categories-loading {
+    padding: 1rem;
+    text-align: center;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+}
+
+body.global-categories-open {
+    overflow: hidden;
+}
+
+@media (max-width: 520px) {
+    .global-categories-sidebar {
+        width: 100vw;
+    }
+}
+
+/* Critical admin page layout fallback. Keeps Users/Roles styled if page CSS is cached or overridden. */
+body[data-page="/users"] .users-page,
+body[data-page="/roles"] .roles-page {
+    display: grid !important;
+    gap: 1rem !important;
+    width: min(1480px, calc(100% - 2rem)) !important;
+    margin: 0 auto !important;
+    padding: 1.25rem 0 2rem !important;
+}
+
+body[data-page="/users"] .users-hero,
+body[data-page="/roles"] .roles-hero {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 1rem !important;
+    padding: 1.15rem !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    background: var(--bg-card) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+body[data-page="/users"] .users-hero {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(420px, .7fr) !important;
+}
+
+body[data-page="/users"] .users-hero h1,
+body[data-page="/roles"] .roles-hero h1 {
+    display: flex !important;
+    align-items: center !important;
+    gap: .65rem !important;
+    margin: .18rem 0 0 !important;
+    color: var(--text) !important;
+    font-size: clamp(1.7rem, 3vw, 2.35rem) !important;
+    line-height: 1.08 !important;
+}
+
+body[data-page="/users"] .users-eyebrow,
+body[data-page="/roles"] .roles-eyebrow {
+    display: block !important;
+    color: var(--text-light) !important;
+    font-size: .72rem !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+}
+
+body[data-page="/users"] .users-kpis,
+body[data-page="/users"] .users-layout,
+body[data-page="/roles"] .roles-layout {
+    display: grid !important;
+    gap: .85rem !important;
+}
+
+body[data-page="/users"] .users-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+body[data-page="/users"] .users-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 360px) !important;
+    align-items: start !important;
+}
+
+body[data-page="/roles"] .roles-layout {
+    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr) !important;
+    align-items: start !important;
+}
+
+body[data-page="/roles"] .roles-list {
+    display: grid !important;
+    gap: .65rem !important;
+    max-height: min(60vh, 620px) !important;
+    overflow: auto !important;
+}
+
+body[data-page="/roles"] .role-card {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    gap: .8rem !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-height: 74px !important;
+    padding: .85rem !important;
+    text-align: left !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    background: var(--bg-card) !important;
+    cursor: pointer !important;
+}
+
+body[data-page="/roles"] .role-card > span {
+    display: grid !important;
+    place-items: center !important;
+    width: 40px !important;
+    height: 40px !important;
+    color: var(--primary-dark) !important;
+    border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border)) !important;
+    border-radius: 8px !important;
+    background: color-mix(in srgb, var(--primary-light) 60%, var(--bg)) !important;
+}
+
+body[data-page="/roles"] .role-card strong,
+body[data-page="/roles"] .role-card small {
+    display: block !important;
+}
+
+body[data-page="/roles"] .role-card small {
+    margin-top: .15rem !important;
+    color: var(--text-light) !important;
+    font-size: .78rem !important;
+}
+
+body[data-page="/roles"] .role-permissions-large {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+    gap: .6rem !important;
+}
+
+body[data-page="/roles"] .role-permissions-large span {
+    display: flex !important;
+    align-items: center !important;
+    gap: .5rem !important;
+    padding: .7rem !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    background: var(--bg) !important;
+    font-weight: 800 !important;
+}
+
+body[data-page^="/pos"] .pos-layout {
+    display: grid !important;
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) !important;
+    gap: 1rem !important;
+    align-items: start !important;
+    width: 100% !important;
+}
+
+body[data-page^="/pos"] .pos-side-card,
+body[data-page^="/pos"] .pos-main-card,
+body[data-page^="/pos"] .pos-history-card {
+    min-width: 0 !important;
+    padding: 1rem !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    background: var(--bg-card) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+body[data-page^="/pos"] .pos-sessions-list,
+body[data-page^="/pos"] .pos-sales-list {
+    display: grid !important;
+    gap: .55rem !important;
+}
+
+body[data-page^="/pos"] .pos-session-row,
+body[data-page^="/pos"] .pos-sale-row {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: .55rem !important;
+    align-items: center !important;
+    padding: .7rem !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    background: var(--bg-card) !important;
+}
+
+body[data-page^="/pos"] .pos-session-row strong,
+body[data-page^="/pos"] .pos-sale-row strong {
+    display: block !important;
+    color: var(--text) !important;
+    font-size: .8rem !important;
+    line-height: 1.25 !important;
+}
+
+body[data-page^="/pos"] .pos-session-row span,
+body[data-page^="/pos"] .pos-sale-row small {
+    display: block !important;
+    margin-top: .12rem !important;
+    color: var(--text-light) !important;
+    font-size: .7rem !important;
+    line-height: 1.35 !important;
+}
+
+body[data-page^="/pos"] .pos-session-row b,
+body[data-page^="/pos"] .pos-sale-row b {
+    color: var(--secondary) !important;
+    font-size: .82rem !important;
+    white-space: nowrap !important;
+}
+
+body[data-page^="/pos"] .smart-table,
+body[data-page^="/accounting"] .smart-table,
+body[data-page^="/marketing"] .smart-table {
+    min-width: 760px !important;
+}
+
+body[data-page^="/pos"] .table-container,
+body[data-page^="/accounting"] .table-container,
+body[data-page^="/marketing"] .table-container {
+    overflow-x: auto !important;
+}
+
+body[data-page="/inventory/products"] .products-page {
+    display: grid !important;
+    gap: 1rem !important;
+    width: min(1400px, calc(100% - 2rem)) !important;
+    margin: 0 auto !important;
+    padding: 1.25rem 0 2.5rem !important;
+}
+
+body[data-page="/inventory/products"] .products-board {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+    gap: 1rem !important;
+    align-items: stretch !important;
+}
+
+body[data-page="/inventory/products"] .product-tile {
+    display: grid !important;
+    grid-template-columns: 48px minmax(0, 1fr) auto !important;
+    grid-template-areas:
+        "icon body meta"
+        "actions actions actions" !important;
+    gap: .85rem !important;
+    align-items: start !important;
+    min-height: 178px !important;
+    padding: 1rem !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    background: var(--bg-card) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+body[data-page="/inventory/products"] .product-tile--inactive {
+    opacity: .62 !important;
+}
+
+body[data-page="/inventory/products"] .product-tile__icon {
+    grid-area: icon !important;
+    display: grid !important;
+    place-items: center !important;
+    width: 48px !important;
+    height: 48px !important;
+    color: var(--primary-dark) !important;
+    border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border)) !important;
+    border-radius: 8px !important;
+    background: color-mix(in srgb, var(--primary-light) 60%, var(--bg-card)) !important;
+}
+
+body[data-page="/inventory/products"] .product-tile__body {
+    grid-area: body !important;
+    min-width: 0 !important;
+}
+
+body[data-page="/inventory/products"] .product-tile__body span,
+body[data-page="/inventory/products"] .product-tile__body p {
+    display: block !important;
+    color: var(--text-light) !important;
+    font-size: .78rem !important;
+    font-weight: 800 !important;
+}
+
+body[data-page="/inventory/products"] .product-tile__body h3 {
+    margin: .2rem 0 .35rem !important;
+    color: var(--text) !important;
+    font-size: 1.05rem !important;
+    line-height: 1.25 !important;
+}
+
+body[data-page="/inventory/products"] .product-tile__body p {
+    margin: 0 !important;
+    font-weight: 700 !important;
+}
+
+body[data-page="/inventory/products"] .product-tile__meta {
+    grid-area: meta !important;
+    display: grid !important;
+    justify-items: end !important;
+    gap: .35rem !important;
+    white-space: nowrap !important;
+}
+
+body[data-page="/inventory/products"] .product-tile__meta strong {
+    color: var(--primary-dark) !important;
+    font-size: 1.02rem !important;
+}
+
+body[data-page="/inventory/products"] .product-tile__actions {
+    grid-area: actions !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: .55rem !important;
+    padding-top: .75rem !important;
+    border-top: 1px solid var(--border) !important;
+}
+
+body[data-page="/pos/cart"] .pos-payment-modal[hidden] {
+    display: none !important;
+}
+
+body[data-page="/pos/cart"] .pos-payment-modal {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 9200 !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: 1rem !important;
+}
+
+body[data-page="/pos/cart"] .pos-payment-modal__backdrop {
+    position: absolute !important;
+    inset: 0 !important;
+    background: rgba(17, 24, 39, .48) !important;
+    backdrop-filter: blur(6px) !important;
+}
+
+body[data-page="/pos/cart"] .pos-payment-modal__dialog {
+    position: relative !important;
+    z-index: 1 !important;
+    display: grid !important;
+    gap: 1rem !important;
+    width: min(460px, 100%) !important;
+    max-height: min(86vh, 720px) !important;
+    overflow: auto !important;
+    padding: 1rem !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    background: var(--bg-card) !important;
+    box-shadow: 0 24px 70px rgba(39, 23, 51, .25) !important;
+}
+
+body[data-page="/pos/cart"] .pos-payment-modal__close {
+    position: absolute !important;
+    top: .75rem !important;
+    right: .75rem !important;
+    display: grid !important;
+    place-items: center !important;
+    width: 36px !important;
+    height: 36px !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    background: var(--bg-card) !important;
+    cursor: pointer !important;
+}
+
+body[data-page="/pos/cart"] .pos-payment-modal__header {
+    display: flex !important;
+    gap: .8rem !important;
+    align-items: center !important;
+    padding-right: 2.5rem !important;
+}
+
+body[data-page="/pos/cart"] .pos-payment-modal__header > span {
+    display: grid !important;
+    place-items: center !important;
+    width: 42px !important;
+    height: 42px !important;
+    color: var(--primary-dark) !important;
+    border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border)) !important;
+    border-radius: 8px !important;
+    background: color-mix(in srgb, var(--primary-light) 60%, var(--bg-card)) !important;
+}
+
+body[data-page="/pos/cart"] .pos-payment-modal__header h2 {
+    margin: .1rem 0 0 !important;
+    color: var(--secondary) !important;
+    font-size: 1.25rem !important;
+}
+
+body[data-page="/pos/cart"] .pos-payment-modal__amount {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 1rem !important;
+    padding: .85rem !important;
+    border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border)) !important;
+    border-radius: 8px !important;
+    background: color-mix(in srgb, var(--primary-light) 34%, var(--bg-card)) !important;
+}
+
+body[data-page="/pos/cart"] .pos-payment-modal__amount span,
+body[data-page="/pos/cart"] .pos-payment-modal__note,
+body[data-page="/pos/cart"] .pos-payment-form label span {
+    color: var(--text-light) !important;
+    font-size: .78rem !important;
+    font-weight: 850 !important;
+}
+
+body[data-page="/pos/cart"] .pos-payment-modal__amount strong {
+    color: var(--secondary) !important;
+    font-size: 1.45rem !important;
+}
+
+body[data-page="/pos/cart"] .pos-payment-form {
+    display: grid !important;
+    gap: .75rem !important;
+}
+
+body[data-page="/pos/cart"] .pos-payment-form label {
+    display: grid !important;
+    gap: .28rem !important;
+}
+
+body[data-page="/pos/cart"] .pos-payment-form__grid {
+    display: grid !important;
+    grid-template-columns: 1fr 120px !important;
+    gap: .7rem !important;
+}
+
+body[data-page="/pos/cart"] .pos-payment-modal__note {
+    margin: 0 !important;
+    line-height: 1.45 !important;
+}
+
+body select,
+body .form-control:is(select),
+body select.form-control,
+body .input:is(select) {
+    min-height: 46px !important;
+    padding: .72rem 2.75rem .72rem .95rem !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    background-color: var(--bg-card) !important;
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--primary-dark) 50%),
+        linear-gradient(135deg, var(--primary-dark) 50%, transparent 50%),
+        linear-gradient(to right, color-mix(in srgb, var(--primary-light) 45%, transparent), color-mix(in srgb, var(--primary-light) 45%, transparent)) !important;
+    background-position:
+        calc(100% - 19px) 50%,
+        calc(100% - 13px) 50%,
+        calc(100% - 42px) 50% !important;
+    background-size: 6px 6px, 6px 6px, 1px 60% !important;
+    background-repeat: no-repeat !important;
+    box-shadow: 0 8px 22px rgba(45, 33, 58, .05) !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+}
+
+body select:hover,
+body .form-control:is(select):hover,
+body select.form-control:hover {
+    border-color: color-mix(in srgb, var(--primary) 38%, var(--border)) !important;
+}
+
+body select:focus,
+body .form-control:is(select):focus,
+body select.form-control:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 16%, transparent) !important;
+    outline: none !important;
+}
+
+body select option {
+    color: #25293b;
+    background: #fff;
+}
+
+body.dark select,
+body.dark .form-control:is(select),
+body.dark select.form-control,
+body.dark .input:is(select) {
+    background-color: var(--bg-card) !important;
+}
+
+body[data-page="/orders"] td select,
+body[data-page="/orders"] .table select,
+body[data-page="/pos"] td select,
+body[data-page="/pos"] .table select {
+    min-width: 190px !important;
+}
+
+@media (max-width: 1080px) {
+    body[data-page="/users"] .users-hero,
+    body[data-page="/users"] .users-layout,
+    body[data-page="/roles"] .roles-layout,
+    body[data-page^="/pos"] .pos-layout {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 720px) {
+    body[data-page="/inventory/products"] .products-board,
+    body[data-page="/inventory/products"] .product-tile {
+        grid-template-columns: 1fr !important;
+    }
+
+    body[data-page="/inventory/products"] .product-tile {
+        grid-template-areas:
+            "icon"
+            "body"
+            "meta"
+            "actions" !important;
+    }
+
+    body[data-page="/inventory/products"] .product-tile__meta {
+        justify-items: start !important;
+    }
+
+    body[data-page="/inventory/products"] .product-tile__actions,
+    body[data-page="/pos/cart"] .pos-payment-form__grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    body[data-page="/inventory/products"] .product-tile__actions {
+        display: grid !important;
+        justify-content: stretch !important;
+    }
+}

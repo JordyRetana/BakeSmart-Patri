@@ -1,0 +1,1030 @@
+/* Final cascade layer: keeps late global styles from flattening key UI. */
+
+body.app-body select,
+body.app-body select.form-control,
+body.app-body select.input,
+body.app-body .form-control:is(select),
+body.app-body .input:is(select) {
+    width: 100% !important;
+    min-height: 46px !important;
+    padding: .72rem 2.85rem .72rem .95rem !important;
+    color: var(--text, #25293b) !important;
+    border: 1px solid var(--border, #e4d9ea) !important;
+    border-radius: 9px !important;
+    background-color: var(--bg-card, #fff) !important;
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--primary-dark, #6a31a2) 50%),
+        linear-gradient(135deg, var(--primary-dark, #6a31a2) 50%, transparent 50%),
+        linear-gradient(to right, color-mix(in srgb, var(--primary-light, #f1e8ff) 58%, transparent), color-mix(in srgb, var(--primary-light, #f1e8ff) 58%, transparent)) !important;
+    background-position:
+        calc(100% - 20px) 50%,
+        calc(100% - 14px) 50%,
+        calc(100% - 44px) 50% !important;
+    background-size: 6px 6px, 6px 6px, 1px 62% !important;
+    background-repeat: no-repeat !important;
+    box-shadow: 0 8px 20px rgba(45, 33, 58, .06) !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+}
+
+body.app-body select:focus,
+body.app-body select.form-control:focus,
+body.app-body select.input:focus {
+    border-color: var(--primary, #7c3aed) !important;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary, #7c3aed) 17%, transparent) !important;
+    outline: none !important;
+}
+
+body.app-body select option {
+    color: #25293b !important;
+    background: #fff !important;
+    font-size: .95rem !important;
+}
+
+.bs-select {
+    position: relative !important;
+    min-width: 0 !important;
+    width: 100% !important;
+}
+
+.bs-select__native {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.bs-select__button {
+    width: 100% !important;
+    min-height: 46px !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 34px !important;
+    align-items: center !important;
+    gap: .65rem !important;
+    padding: .72rem .55rem .72rem .95rem !important;
+    color: var(--text, #25293b) !important;
+    text-align: left !important;
+    border: 1px solid var(--border, #e4d9ea) !important;
+    border-radius: 9px !important;
+    background: linear-gradient(180deg, #fff, #fffafd) !important;
+    box-shadow: 0 8px 20px rgba(45, 33, 58, .06) !important;
+    cursor: pointer !important;
+}
+
+.bs-select__label {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-weight: 800 !important;
+}
+
+.bs-select__button i {
+    width: 34px !important;
+    height: 34px !important;
+    display: grid !important;
+    place-items: center !important;
+    color: #6c2da0 !important;
+    border-left: 1px solid #eadff1 !important;
+}
+
+.bs-select__menu {
+    position: fixed !important;
+    z-index: 40000 !important;
+    top: calc(100% + .35rem) !important;
+    left: 0 !important;
+    right: 0 !important;
+    max-height: 260px !important;
+    overflow: auto !important;
+    padding: .35rem !important;
+    border: 1px solid #ddcfeb !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+    box-shadow: 0 22px 55px rgba(39, 23, 51, .18) !important;
+}
+
+.bs-select.is-open {
+    z-index: 40000 !important;
+}
+
+.payment-modal,
+.pos-payment-modal {
+    z-index: 50000 !important;
+}
+
+.payment-modal__dialog,
+.pos-payment-modal__dialog {
+    z-index: 50001 !important;
+}
+
+.payment-modal__dialog {
+    width: min(500px, calc(100vw - 2rem)) !important;
+    max-height: min(88vh, 760px) !important;
+    overflow: auto !important;
+    padding: 1.15rem !important;
+    border: 1px solid #e3d8ea !important;
+    border-radius: 14px !important;
+    background: #fff !important;
+    box-shadow: 0 28px 90px rgba(28, 20, 45, .32) !important;
+}
+
+.payment-modal__dialog::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 0 auto !important;
+    height: 5px !important;
+    border-radius: 14px 14px 0 0 !important;
+    background: linear-gradient(90deg, #7c3aed, #ec297b) !important;
+}
+
+.payment-modal__icon {
+    width: 46px !important;
+    height: 46px !important;
+    border-radius: 10px !important;
+    background: #f0e9ff !important;
+    color: #7c3aed !important;
+}
+
+.payment-modal__header h2 {
+    color: #17375d !important;
+    font-size: 1.25rem !important;
+}
+
+.payment-modal__amount {
+    border: 1px solid #e7deef !important;
+    border-radius: 10px !important;
+    background: linear-gradient(120deg, #f7f2ff, #fff8fc) !important;
+}
+
+.payment-modal__amount strong {
+    color: #17375d !important;
+}
+
+.payment-form .form-control,
+.payment-form .input {
+    min-height: 46px !important;
+    border-radius: 8px !important;
+    border-color: #dcd3e8 !important;
+}
+
+.payment-modal__note {
+    padding: .8rem !important;
+    border-radius: 10px !important;
+    background: #f8f4ff !important;
+}
+
+.bs-select__menu[hidden] {
+    display: none !important;
+}
+
+.bs-select__option {
+    width: 100% !important;
+    min-height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: .55rem .7rem !important;
+    color: #25293b !important;
+    text-align: left !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    font-weight: 800 !important;
+    cursor: pointer !important;
+}
+
+.bs-select__option:hover,
+.bs-select__option[aria-selected="true"] {
+    color: #5d2390 !important;
+    background: #f3edff !important;
+}
+
+body.app-body input:not([type="checkbox"]):not([type="radio"]),
+body.app-body textarea,
+body.app-body .form-control,
+body.app-body .input {
+    border-color: #d8cde4 !important;
+    background: #fff !important;
+}
+
+body.app-body input::placeholder,
+body.app-body textarea::placeholder {
+    color: #77717e !important;
+    opacity: 1 !important;
+}
+
+.navbar .user-profile,
+.storefront-account .user-profile {
+    width: auto !important;
+    min-width: 238px !important;
+    min-height: 56px !important;
+    display: grid !important;
+    grid-template-columns: 42px minmax(0, 1fr) 30px !important;
+    align-items: center !important;
+    gap: .7rem !important;
+    padding: .35rem .45rem .35rem .38rem !important;
+    border: 1px solid #e2d7eb !important;
+    border-radius: 999px !important;
+    background: linear-gradient(180deg, #fff, #fffafd) !important;
+    box-shadow: 0 12px 30px rgba(42, 28, 56, .07) !important;
+}
+
+.navbar .user-avatar,
+.storefront-account .user-avatar {
+    width: 42px !important;
+    height: 42px !important;
+    display: grid !important;
+    place-items: center !important;
+    color: #fff !important;
+    border-radius: 50% !important;
+    background: linear-gradient(135deg, #7c3aed, #c83c86) !important;
+    font-weight: 950 !important;
+}
+
+.navbar .user-name,
+.storefront-account .user-name {
+    color: #25293b !important;
+    font-size: .86rem !important;
+    font-weight: 900 !important;
+}
+
+.navbar .user-role,
+.storefront-account .user-role {
+    color: #7d8390 !important;
+    font-size: .72rem !important;
+    font-weight: 700 !important;
+}
+
+.navbar .user-chevron,
+.storefront-account .user-chevron {
+    width: 30px !important;
+    height: 30px !important;
+    display: grid !important;
+    place-items: center !important;
+    color: #6c2da0 !important;
+    border-radius: 50% !important;
+    background: #f3edff !important;
+}
+
+body[data-page="/"] .storefront-product-card {
+    position: relative !important;
+}
+
+body[data-page="/account/register"] .auth-hero .auth-title,
+body[data-page="/account/register"] .auth-hero .auth-subtitle,
+body[data-page="/account/register"] .auth-hero .auth-benefits strong,
+body[data-page="/account/register"] .auth-hero .auth-benefits small {
+    color: #fff !important;
+}
+
+body[data-page="/"] .storefront-favorite-btn {
+    position: absolute !important;
+    top: .75rem !important;
+    right: .75rem !important;
+    z-index: 5 !important;
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    max-width: 42px !important;
+    padding: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    color: #bd3d83 !important;
+    border: 1px solid rgba(255, 255, 255, .88) !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, .94) !important;
+    box-shadow: 0 10px 24px rgba(43, 24, 58, .18) !important;
+    cursor: pointer !important;
+}
+
+body[data-page="/"] .storefront-favorite-btn i {
+    font-size: 1.05rem !important;
+    line-height: 1 !important;
+}
+
+body[data-page="/"] .storefront-favorite-btn.is-active {
+    color: #ec4899 !important;
+    background: #fff4fa !important;
+}
+
+body[data-page="/dashboard"] .dashboard-hero {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 1.25rem !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-card {
+    display: grid !important;
+    gap: .85rem !important;
+    min-width: 0 !important;
+    padding: 1rem !important;
+    border: 1px solid rgba(124, 58, 237, .18) !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, .82) !important;
+    box-shadow: 0 16px 42px rgba(67, 39, 88, .1) !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-user {
+    display: grid !important;
+    grid-template-columns: 46px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: .75rem !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-user > span {
+    width: 46px !important;
+    height: 46px !important;
+    display: grid !important;
+    place-items: center !important;
+    color: #fff !important;
+    border-radius: 11px !important;
+    background: linear-gradient(135deg, #7c3aed, #c83c86) !important;
+    font-size: 1rem !important;
+    font-weight: 950 !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-user small,
+body[data-page="/dashboard"] .dashboard-welcome-user strong {
+    display: block !important;
+    margin: 0 !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-user small {
+    color: #777d8a !important;
+    font-size: .67rem !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-user strong {
+    color: #17375d !important;
+    font-size: .95rem !important;
+    line-height: 1.25 !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-meta,
+body[data-page="/dashboard"] .dashboard-welcome-actions {
+    display: grid !important;
+    gap: .45rem !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-meta div,
+body[data-page="/dashboard"] .dashboard-welcome-actions a {
+    display: grid !important;
+    grid-template-columns: 30px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: .5rem !important;
+    color: #626b7a !important;
+    text-decoration: none !important;
+    font-size: .78rem !important;
+    font-weight: 850 !important;
+}
+
+body[data-page="/dashboard"] .dashboard-welcome-meta i,
+body[data-page="/dashboard"] .dashboard-welcome-actions i {
+    width: 30px !important;
+    height: 30px !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 8px !important;
+    background: #f1eaff !important;
+    color: #6c2da0 !important;
+    font-size: .85rem !important;
+}
+
+body[data-page="/pos"] .pos-layout {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+}
+
+body[data-page="/pos"] .pos-side-card {
+    position: static !important;
+    display: grid !important;
+    grid-template-columns: minmax(250px, .75fr) minmax(340px, 1.05fr) minmax(360px, 1.15fr) !important;
+    gap: 1rem !important;
+    align-items: start !important;
+    width: 100% !important;
+}
+
+body[data-page="/pos"] .pos-admin-block {
+    min-width: 0 !important;
+    height: auto !important;
+    padding: .9rem !important;
+    border: 1px solid #e9e2ee !important;
+    border-radius: 10px !important;
+    background: linear-gradient(180deg, #fff, #fffafd) !important;
+}
+
+body[data-page="/pos"] .pos-admin-block--credit {
+    grid-column: 1 / -1 !important;
+    display: grid !important;
+    grid-template-columns: minmax(320px, .55fr) minmax(0, 1fr) !important;
+    gap: 1rem !important;
+}
+
+body[data-page="/pos"] .pos-sessions-list,
+body[data-page="/pos"] .payment-methods-panel,
+body[data-page="/pos"] .pos-sales-list {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+    gap: .6rem !important;
+    max-height: 310px !important;
+    overflow: auto !important;
+    padding-right: .2rem !important;
+}
+
+body[data-page="/pos"] .pos-payment-config-form {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto !important;
+    gap: .6rem !important;
+}
+
+body[data-page="/pos"] .pos-admin-block--credit .pos-payment-config-form {
+    grid-template-columns: minmax(170px, .8fr) minmax(220px, 1fr) !important;
+}
+
+body[data-page="/pos"] .pos-admin-block--credit .pos-payment-config-form .btn {
+    grid-column: 1 / -1 !important;
+}
+
+#chat-toggle-btn {
+    width: auto !important;
+    min-width: 72px !important;
+    height: 62px !important;
+    gap: .45rem !important;
+    padding: .35rem .72rem .35rem .38rem !important;
+    border: 1px solid rgba(255, 255, 255, .7) !important;
+    border-radius: 999px !important;
+    background: linear-gradient(135deg, #ff8fb3, #8b5cf6) !important;
+    box-shadow: 0 18px 42px rgba(188, 61, 131, .34) !important;
+}
+
+#chat-toggle-btn img {
+    width: 48px !important;
+    height: 48px !important;
+    object-fit: cover !important;
+    border: 2px solid rgba(255, 255, 255, .75) !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+}
+
+#chat-toggle-btn span {
+    color: #fff !important;
+    font-size: .72rem !important;
+    font-weight: 950 !important;
+}
+
+#chat-widget {
+    overflow: hidden !important;
+    border: 1px solid #efd7e6 !important;
+    border-radius: 18px !important;
+    background: linear-gradient(180deg, #fff8fb, #fff) !important;
+    box-shadow: 0 28px 75px rgba(62, 35, 70, .28) !important;
+}
+
+#chat-header {
+    min-height: 78px !important;
+    background: linear-gradient(135deg, #ff8fb3, #8b5cf6) !important;
+}
+
+#chat-header .avatar {
+    width: 52px !important;
+    height: 52px !important;
+    overflow: hidden !important;
+    border: 2px solid rgba(255, 255, 255, .78) !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+}
+
+#chat-header .avatar img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+}
+
+#chat-header strong,
+#chat-header small {
+    color: #fff !important;
+}
+
+#chat-box {
+    background:
+        radial-gradient(circle at 18% 0%, rgba(255, 214, 231, .55), transparent 34%),
+        #fffafc !important;
+}
+
+#chat-input-row {
+    gap: .55rem !important;
+    padding: .85rem !important;
+    border-top: 1px solid #f0deea !important;
+    background: #fff !important;
+}
+
+#chat-input {
+    min-height: 44px !important;
+    border: 1px solid #e2d2e5 !important;
+    border-radius: 999px !important;
+    background: #fff8fb !important;
+}
+
+#chat-send {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 50% !important;
+    background: linear-gradient(135deg, #8b5cf6, #c83c86) !important;
+}
+
+@media (max-width: 1180px) {
+    body[data-page="/dashboard"] .dashboard-hero,
+    body[data-page="/pos"] .pos-side-card,
+    body[data-page="/pos"] .pos-admin-block--credit {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* POS cashier final layer: loaded after page CSS to avoid old/global POS rules flattening the redesign. */
+body[data-page="/pos"] .pos-page--cashier .pos-header {
+    min-height: 176px !important;
+    overflow: hidden !important;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 520px) !important;
+    padding: 1.45rem 1.55rem !important;
+    border: 1px solid rgba(222, 214, 235, .72) !important;
+    border-radius: 30px !important;
+    background: linear-gradient(120deg, rgba(24, 35, 64, .98), rgba(91, 43, 130, .95) 50%, rgba(198, 58, 133, .96)) !important;
+    box-shadow: 0 28px 70px rgba(38, 25, 60, .20) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-header::before {
+    opacity: .22 !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-title,
+body[data-page="/pos"] .pos-page--cashier .pos-title span,
+body[data-page="/pos"] .pos-page--cashier .pos-title i,
+body[data-page="/pos"] .pos-page--cashier .pos-subtitle,
+body[data-page="/pos"] .pos-page--cashier .pos-kicker {
+    color: #fff !important;
+    text-shadow: 0 12px 30px rgba(0, 0, 0, .28) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-title {
+    gap: .9rem !important;
+    font-size: clamp(2.55rem, 4vw, 4.35rem) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-title i {
+    width: 76px !important;
+    height: 76px !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 22px !important;
+    background: rgba(255, 255, 255, .16) !important;
+    border: 1px solid rgba(255, 255, 255, .24) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-search-box input {
+    min-height: 66px !important;
+    color: #1f2637 !important;
+    background: rgba(255, 255, 255, .98) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-layout {
+    display: grid !important;
+    grid-template-columns: minmax(320px, 360px) minmax(0, 1fr) !important;
+    gap: 1.15rem !important;
+    align-items: start !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card {
+    position: sticky !important;
+    top: 1rem !important;
+    order: 1 !important;
+    display: block !important;
+    grid-template-columns: 1fr !important;
+    padding: 1rem !important;
+    border: 0 !important;
+    border-radius: 26px !important;
+    background: linear-gradient(180deg, #202842, #1a2138) !important;
+    box-shadow: 0 30px 70px rgba(23, 31, 53, .22) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-main-card {
+    order: 2 !important;
+    padding: 1.25rem !important;
+    border-radius: 26px !important;
+    background: linear-gradient(180deg, #ffffff, #fbf8ff) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-admin-block--cash {
+    padding: 1.2rem !important;
+    border: 1px solid rgba(226, 214, 235, .85) !important;
+    border-radius: 22px !important;
+    background: linear-gradient(180deg, #ffffff, #fffafd) !important;
+    box-shadow: 0 22px 56px rgba(16, 24, 40, .14) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-admin-block--credit,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-admin-block--payments,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-admin-block--sessions {
+    display: none !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-panel-title,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .session-status-value {
+    color: #1f2637 !important;
+    text-shadow: none !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-panel-eyebrow,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .session-status-title,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .session-status-card .text-muted {
+    color: #7a8090 !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .session-status-card {
+    border: 1px solid #eee4f1 !important;
+    background: linear-gradient(135deg, #fff, #fff7fb) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-products-grid {
+    grid-template-columns: repeat(auto-fit, minmax(285px, 1fr)) !important;
+    gap: 1rem !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-product-card {
+    min-height: 260px !important;
+    border-radius: 20px !important;
+    box-shadow: 0 18px 46px rgba(36, 24, 55, .09) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-product-price-tag {
+    border-radius: 18px !important;
+    background: linear-gradient(135deg, #f4edff, #fff3fa) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-product-cart-btn {
+    border-radius: 18px !important;
+    box-shadow: 0 14px 28px rgba(124, 58, 237, .22) !important;
+}
+
+body[data-page^="/pos"] #chat-toggle-btn {
+    right: auto !important;
+    left: 1.15rem !important;
+    bottom: 1rem !important;
+}
+
+body[data-page^="/pos"] #chat-widget {
+    right: auto !important;
+    left: 1rem !important;
+    bottom: 5rem !important;
+}
+
+body[data-page^="/pos"] .pos-cart-fab {
+    right: 1.35rem !important;
+    left: auto !important;
+    bottom: 1.25rem !important;
+}
+
+body[data-page^="/pos"] .pos-cart-summary-panel {
+    right: 1.35rem !important;
+    left: auto !important;
+    bottom: 6.25rem !important;
+    width: min(460px, calc(100vw - 2rem)) !important;
+    border-radius: 24px !important;
+}
+
+@media (max-width: 1180px) {
+    body[data-page="/pos"] .pos-page--cashier .pos-layout {
+        grid-template-columns: 1fr !important;
+    }
+
+    body[data-page="/pos"] .pos-page--cashier .pos-side-card {
+        position: static !important;
+    }
+}
+
+/* Global theme repair layer. Keeps dark/light mode consistent across modules with older fixed colors. */
+html.dark-start,
+body.dark {
+    color-scheme: dark;
+}
+
+body.dark.app-body {
+    color: var(--text) !important;
+    background:
+        radial-gradient(circle at 12% 8%, rgba(139, 92, 246, .16), transparent 30%),
+        radial-gradient(circle at 86% 10%, rgba(236, 72, 153, .12), transparent 28%),
+        linear-gradient(180deg, #0f172a, #111827 48%, #0f172a) !important;
+}
+
+body.dark .app-background,
+body.dark .bg-grid,
+body.dark .cursor-glow {
+    opacity: .36 !important;
+}
+
+body.dark .navbar,
+body.dark .storefront-header,
+body.dark .storefront-main,
+body.dark .storefront-nav,
+body.dark .footer,
+body.dark .global-categories-sidebar,
+body.dark .user-dropdown,
+body.dark .dropdown-menu {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .24) !important;
+    background: linear-gradient(180deg, rgba(17, 24, 39, .98), rgba(15, 23, 42, .98)) !important;
+}
+
+body.dark .storefront-promo,
+body.dark .footer {
+    background: linear-gradient(135deg, #25164a, #3a1735) !important;
+}
+
+body.dark .navbar a,
+body.dark .navbar .dropdown-toggle,
+body.dark .storefront-nav a,
+body.dark .storefront-tools a,
+body.dark .storefront-brand,
+body.dark .storefront-brand span,
+body.dark .user-name,
+body.dark .user-role,
+body.dark .footer a,
+body.dark .footer li,
+body.dark .footer p {
+    color: #e5e7eb !important;
+}
+
+body.dark .page-shell,
+body.dark .dashboard-page,
+body.dark .client-dashboard,
+body.dark .storefront-page,
+body.dark .catalog-page,
+body.dark .login-page-shell,
+body.dark .register-page-shell {
+    color: #f8fafc !important;
+}
+
+body.dark .card,
+body.dark .page-header,
+body.dark .dashboard-panel,
+body.dark .dashboard-kpi,
+body.dark .dashboard-chart-card,
+body.dark .dashboard-alert,
+body.dark .dashboard-shortcuts a,
+body.dark .quick-order-card,
+body.dark .client-card,
+body.dark .catalog-card,
+body.dark .storefront-product-card,
+body.dark .product-tile,
+body.dark .product-tile__body,
+body.dark .inventory-panel,
+body.dark .inventory-card,
+body.dark .marketing-panel,
+body.dark .accounting-panel,
+body.dark .roles-panel,
+body.dark .users-panel,
+body.dark .orders-panel,
+body.dark .production-panel,
+body.dark .reports-panel,
+body.dark .settings-panel,
+body.dark .table-container,
+body.dark .smart-table-toolbar,
+body.dark .smart-table-dock,
+body.dark .payment-modal__dialog,
+body.dark .pos-payment-modal__dialog,
+body.dark .modal-content,
+body.dark .app-modal-card,
+body.dark .bs-select__menu,
+body.dark #chat-widget {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .28) !important;
+    background: linear-gradient(180deg, #1f2937, #111827) !important;
+    box-shadow: 0 22px 62px rgba(0, 0, 0, .26) !important;
+}
+
+body.dark .page-header,
+body.dark .dashboard-hero,
+body.dark .pos-header,
+body.dark .client-hero,
+body.dark .catalog-hero,
+body.dark .marketing-hero,
+body.dark .accounting-hero {
+    background:
+        linear-gradient(135deg, rgba(49, 46, 129, .58), rgba(112, 26, 117, .42)),
+        linear-gradient(180deg, #1f2937, #111827) !important;
+    border-color: rgba(167, 139, 250, .34) !important;
+}
+
+body.dark h1,
+body.dark h2,
+body.dark h3,
+body.dark h4,
+body.dark h5,
+body.dark h6,
+body.dark strong,
+body.dark label,
+body.dark .page-title,
+body.dark .section-title,
+body.dark .panel-title,
+body.dark .pos-panel-title,
+body.dark .pos-panel-title-sm,
+body.dark .dashboard-section-head h2,
+body.dark .dashboard-kpi strong,
+body.dark .product-tile__body h3,
+body.dark .storefront-product-card h3,
+body.dark .payment-modal__header h2,
+body.dark .pos-payment-modal__header h2 {
+    color: #f8fafc !important;
+    text-shadow: none !important;
+}
+
+body.dark p,
+body.dark small,
+body.dark span,
+body.dark .text-muted,
+body.dark .muted,
+body.dark .page-subtitle,
+body.dark .panel-eyebrow,
+body.dark .pos-panel-eyebrow,
+body.dark .dashboard-section-head span,
+body.dark .product-tile__body p,
+body.dark .storefront-product-card p,
+body.dark .pos-product-price-tag small {
+    color: #cbd5e1 !important;
+}
+
+body.dark .form-control,
+body.dark .input,
+body.dark input:not([type="checkbox"]):not([type="radio"]),
+body.dark textarea,
+body.dark select,
+body.dark .bs-select__button,
+body.dark .smart-table-search,
+body.dark .smart-table-page-size select {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .38) !important;
+    background: #0f172a !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .16) !important;
+}
+
+body.dark input::placeholder,
+body.dark textarea::placeholder,
+body.dark .form-control::placeholder {
+    color: #94a3b8 !important;
+}
+
+body.dark .bs-select__button i,
+body.dark .global-categories-close,
+body.dark .theme-toggle,
+body.dark .mobile-nav-toggle {
+    color: #ddd6fe !important;
+    border-color: rgba(167, 139, 250, .28) !important;
+    background: rgba(124, 58, 237, .16) !important;
+}
+
+body.dark .bs-select__option {
+    color: #f8fafc !important;
+    background: transparent !important;
+}
+
+body.dark .bs-select__option:hover,
+body.dark .bs-select__option[aria-selected="true"] {
+    color: #fff !important;
+    background: rgba(124, 58, 237, .24) !important;
+}
+
+body.dark .table,
+body.dark table {
+    color: #f8fafc !important;
+    background: transparent !important;
+}
+
+body.dark .table thead th,
+body.dark table thead th,
+body.dark .smart-table table thead th {
+    color: #e5e7eb !important;
+    border-color: rgba(148, 163, 184, .25) !important;
+    background: #0f172a !important;
+}
+
+body.dark .table tbody td,
+body.dark table tbody td,
+body.dark .smart-table table tbody td {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .18) !important;
+    background: rgba(15, 23, 42, .28) !important;
+}
+
+body.dark .table tbody tr:hover td,
+body.dark table tbody tr:hover td {
+    background: rgba(124, 58, 237, .14) !important;
+}
+
+body.dark .badge,
+body.dark .status-chip,
+body.dark .role-count,
+body.dark .smart-table-match,
+body.dark .smart-table-page {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .3) !important;
+    background: rgba(51, 65, 85, .86) !important;
+}
+
+body.dark .badge-primary,
+body.dark .smart-table-page.is-current {
+    color: #fff !important;
+    border-color: rgba(167, 139, 250, .45) !important;
+    background: linear-gradient(135deg, #7c3aed, #c83c86) !important;
+}
+
+body.dark .badge-success {
+    color: #a7f3d0 !important;
+    background: rgba(16, 185, 129, .2) !important;
+}
+
+body.dark .badge-warning {
+    color: #fde68a !important;
+    background: rgba(245, 158, 11, .2) !important;
+}
+
+body.dark .badge-danger {
+    color: #fecaca !important;
+    background: rgba(239, 68, 68, .2) !important;
+}
+
+body.dark .btn-outline,
+body.dark .btn-ghost {
+    color: #ddd6fe !important;
+    border-color: rgba(167, 139, 250, .42) !important;
+    background: rgba(124, 58, 237, .08) !important;
+}
+
+body.dark .btn-outline:hover,
+body.dark .btn-ghost:hover {
+    color: #fff !important;
+    background: rgba(124, 58, 237, .28) !important;
+}
+
+body.dark .pos-cart-summary-panel,
+body.dark .pos-cart-mini-line,
+body.dark .pos-cart-mini-total,
+body.dark .pos-cart-item,
+body.dark .pos-cart-totals,
+body.dark .payment-modal__amount,
+body.dark .pos-payment-modal__amount,
+body.dark .payment-modal__note,
+body.dark .pos-payment-modal__note {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .28) !important;
+    background: linear-gradient(180deg, #1f2937, #111827) !important;
+}
+
+body.dark .pos-product-card,
+body.dark .pos-products-list-panel,
+body.dark .pos-cart-checkout-card,
+body.dark .pos-cart-checkout-card--payment,
+body.dark .pos-page--cashier .pos-side-card .pos-admin-block--cash,
+body.dark .pos-page--cashier .session-status-card,
+body.dark .pos-page--cashier .pos-main-card {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .28) !important;
+    background: linear-gradient(180deg, #1f2937, #111827) !important;
+}
+
+body.dark .pos-product-price-tag,
+body.dark .pos-product-code,
+body.dark .pos-product-stock-chip,
+body.dark .pos-table-code,
+body.dark .global-category-option,
+body.dark .global-category-option span {
+    color: #ddd6fe !important;
+    border-color: rgba(167, 139, 250, .24) !important;
+    background: rgba(124, 58, 237, .16) !important;
+}
+
+body.dark .login-form-panel,
+body.dark .register-form-panel,
+body.dark .login-security-note,
+body.dark .register-security-note {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .28) !important;
+    background: linear-gradient(180deg, #1f2937, #111827) !important;
+}
+
+body:not(.dark).app-body {
+    color-scheme: light;
+}
+
+body[data-page="/accounting"] #accReconStatus {
+    flex: 1 1 100% !important;
+    margin: -.15rem 0 0 calc(48px + .9rem) !important;
+    font-size: clamp(1.15rem, 1.35vw, 1.45rem) !important;
+    line-height: 1.08 !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    white-space: nowrap !important;
+}

@@ -1,0 +1,379 @@
+.client-orders-page {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .client-orders-page,
+    .client-orders-page * {
+        min-width: 0;
+    }
+
+    .client-orders-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .client-orders-title {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+    }
+
+    .client-orders-title i {
+        color: var(--primary);
+    }
+
+    .client-orders-subtitle {
+        margin: .35rem 0 0;
+    }
+
+    .client-orders-actions {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) minmax(180px, .75fr) auto;
+        gap: .75rem;
+        align-items: center;
+        min-width: min(100%, 680px);
+    }
+
+    .client-orders-kpis {
+        gap: 1rem;
+        margin: 0;
+    }
+
+    .client-orders-list {
+        display: grid;
+        gap: .9rem;
+    }
+
+    .client-notifications-card {
+        display: grid;
+        gap: .85rem;
+        padding: 1rem;
+    }
+
+    .client-notifications-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .client-notifications-head h2 {
+        margin: .1rem 0 0;
+        color: var(--text);
+        font-size: 1.15rem;
+    }
+
+    .client-notifications-eyebrow {
+        color: var(--text-muted);
+        font-size: .72rem;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+
+    .client-notifications-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: .75rem;
+    }
+
+    .client-notification {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: .75rem;
+        padding: .8rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg-alt);
+    }
+
+    .client-notification__icon {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        color: var(--primary);
+        border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--primary-light) 70%, white 30%);
+    }
+
+    .client-notification strong,
+    .client-notification small {
+        display: block;
+    }
+
+    .client-notification small {
+        margin-top: .15rem;
+        color: var(--text-muted);
+        font-size: .82rem;
+    }
+
+    .client-order-card {
+        padding: 1.1rem;
+    }
+
+    .client-order-card:hover {
+        transform: none;
+        box-shadow: var(--shadow-sm);
+        border-color: var(--border);
+    }
+
+    .client-order-card:hover::after {
+        opacity: 0;
+    }
+
+    .client-order-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .client-order-id {
+        display: flex;
+        align-items: center;
+        gap: .65rem;
+        margin: 0;
+        font-size: 1.05rem;
+    }
+
+    .client-order-id i {
+        color: var(--primary);
+    }
+
+    .client-order-statuses {
+        display: flex;
+        gap: .5rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .client-order-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) repeat(3, minmax(150px, .6fr));
+        gap: .75rem;
+        align-items: stretch;
+    }
+
+    .client-order-field {
+        padding: .85rem;
+        border-radius: 14px;
+        background: var(--bg-alt);
+        border: 1px solid var(--border);
+    }
+
+    .client-order-field span {
+        display: block;
+        margin-bottom: .25rem;
+        color: var(--text-muted);
+        font-size: .76rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+    }
+
+    .client-order-field strong {
+        color: var(--text);
+    }
+
+    .client-order-bottom {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+
+    .client-order-buttons {
+        display: flex;
+        gap: .55rem;
+        flex-wrap: wrap;
+    }
+
+    .client-empty-state {
+        padding: 2rem;
+        text-align: center;
+    }
+
+    body.dark .client-order-field {
+        background: #111827;
+        border-color: #334155;
+    }
+
+    .payment-modal[hidden] {
+        display: none;
+    }
+
+    .payment-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 9000;
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+    }
+
+    .payment-modal__backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(17, 24, 39, .48);
+        backdrop-filter: blur(6px);
+    }
+
+    .payment-modal__dialog {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        gap: 1rem;
+        width: min(460px, 100%);
+        padding: 1rem;
+        border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
+        border-radius: 8px;
+        background: var(--bg-card);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .payment-modal__close {
+        position: absolute;
+        top: .75rem;
+        right: .75rem;
+        display: inline-grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        cursor: pointer;
+    }
+
+    .payment-modal__header {
+        display: flex;
+        align-items: center;
+        gap: .8rem;
+        padding-right: 2.5rem;
+    }
+
+    .payment-modal__icon {
+        display: inline-grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        color: var(--primary-dark);
+        background: color-mix(in srgb, var(--primary-light) 78%, white 22%);
+        border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border));
+        border-radius: 8px;
+    }
+
+    .payment-modal__header h2 {
+        margin: .15rem 0 0;
+        color: var(--text);
+        font-size: 1.3rem;
+    }
+
+    .payment-modal__eyebrow,
+    .payment-modal__amount span,
+    .payment-modal__note,
+    .payment-form label span {
+        color: var(--text-light);
+        font-size: .8rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0;
+    }
+
+    .payment-modal__amount {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+        padding: .85rem;
+        border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--primary-light) 24%, var(--bg));
+    }
+
+    .payment-modal__amount strong {
+        color: var(--text);
+        font-size: 1.45rem;
+    }
+
+    .payment-form {
+        display: grid;
+        gap: .75rem;
+    }
+
+    .payment-form label {
+        display: grid;
+        gap: .28rem;
+    }
+
+    .payment-form__grid {
+        display: grid;
+        grid-template-columns: 1fr 120px;
+        gap: .7rem;
+    }
+
+    .payment-modal__note {
+        margin: 0;
+        line-height: 1.45;
+        text-transform: none;
+    }
+
+    @media (max-width: 1100px) {
+        .client-order-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        .client-orders-actions {
+            grid-template-columns: 1fr;
+            width: 100%;
+        }
+
+        .client-orders-actions .btn {
+            width: 100%;
+        }
+
+        .client-order-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .client-order-statuses,
+        .client-order-buttons {
+            justify-content: flex-start;
+            width: 100%;
+        }
+
+        .payment-form__grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+@media (max-width: 520px) {
+    .client-order-top,
+    .client-order-bottom {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .client-order-card {
+        padding: .9rem !important;
+    }
+
+    .client-order-buttons .btn {
+        width: 100%;
+    }
+}
