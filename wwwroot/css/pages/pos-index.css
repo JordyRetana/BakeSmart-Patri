@@ -145,11 +145,25 @@ body.pos-cart-is-open .pos-cart-fab { opacity:0; pointer-events:none; }
 .pos-payment-form label{display:grid;gap:.28rem}
 .pos-payment-form__grid{display:grid;grid-template-columns:1fr 120px;gap:.7rem}
 .pos-payment-modal__note{margin:0;line-height:1.45}
+.pos-payment-status{display:flex;align-items:center;gap:.75rem;padding:.85rem;border:1px solid #e7deef;border-radius:10px;background:linear-gradient(120deg,#fff,#fbf7ff);transition:border-color .2s ease,background .2s ease,transform .2s ease}
+.pos-payment-status__icon{flex:0 0 40px;width:40px;height:40px;display:grid;place-items:center;border-radius:10px;background:#f1eaff;color:#6f3ddd}
+.pos-payment-status strong,.pos-payment-status small{display:block}
+.pos-payment-status strong{color:#17375d;font-size:.86rem}
+.pos-payment-status small{margin-top:.12rem;color:#7e8491;font-size:.72rem;line-height:1.35}
+.pos-payment-modal[data-state="processing"] .pos-payment-status{border-color:#c4b5fd;background:linear-gradient(120deg,#f4efff,#fff7fb);animation:paymentPulse 1.05s ease-in-out infinite}
+.pos-payment-modal[data-state="success"] .pos-payment-status{border-color:#b7e3c8;background:linear-gradient(120deg,#ecfdf3,#fff)}
+.pos-payment-modal[data-state="success"] .pos-payment-status__icon{background:#dcfce7;color:#15803d;animation:paymentPop .42s cubic-bezier(.2,.9,.3,1.35)}
+.pos-payment-modal[data-state="error"] .pos-payment-status{border-color:#fecaca;background:#fff5f5}
+.pos-payment-modal[data-state="error"] .pos-payment-status__icon{background:#fee2e2;color:#dc2626}
+@keyframes paymentPulse{0%,100%{transform:translateY(0);box-shadow:0 0 0 rgba(124,58,237,0)}50%{transform:translateY(-1px);box-shadow:0 12px 26px rgba(124,58,237,.12)}}
+@keyframes paymentPop{0%{transform:scale(.72);opacity:.4}100%{transform:scale(1);opacity:1}}
 
 body.dark .pos-summary-card,body.dark .pos-side-card,body.dark .pos-admin-block,body.dark .pos-main-card,body.dark .pos-history-card,body.dark .payment-method-card,body.dark .session-status-card,body.dark .pos-product-card,body.dark .pos-cart-summary-panel,body.dark .pos-cart-item,body.dark .pos-session-row,body.dark .pos-sale-row { background:#211e2b !important; border-color:#3b3547 !important; }
 body.dark .pos-title,body.dark .pos-panel-title,body.dark .pos-panel-title-sm,body.dark .pos-product-card h4,body.dark .pos-summary-card h2,body.dark .payment-method-name,body.dark .session-status-value,body.dark .pos-session-row strong,body.dark .pos-sale-row strong { color:#fff; }
 body.dark .pos-payment-modal__dialog,body.dark .pos-payment-modal__close{background:#211e2b;border-color:#3b3547}
 body.dark .pos-payment-modal__header h2,body.dark .pos-payment-modal__amount strong{color:#fff}
+body.dark .pos-payment-status{border-color:#3b3547;background:#292431}
+body.dark .pos-payment-status strong{color:#fff}
 
 @media(max-width:900px){.pos-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.pos-layout{grid-template-columns:1fr!important}.pos-side-card{grid-template-columns:1fr;position:static!important;max-height:none!important}.pos-admin-block--credit{grid-column:auto;grid-template-columns:1fr}.payment-methods-panel{grid-template-columns:repeat(2,minmax(0,1fr))}.pos-payment-config-form,.pos-admin-block--credit .pos-payment-config-form{grid-template-columns:1fr}.pos-products-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:1050px){.pos-cart-checkout-layout{grid-template-columns:1fr}.pos-cart-checkout-card .pos-checkout-form{grid-template-columns:repeat(2,minmax(0,1fr));}}
