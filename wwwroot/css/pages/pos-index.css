@@ -144,6 +144,7 @@ body.pos-cart-is-open .pos-cart-fab { opacity:0; pointer-events:none; }
 .pos-payment-form{display:grid;gap:.75rem}
 .pos-payment-form label{display:grid;gap:.28rem}
 .pos-payment-form__grid{display:grid;grid-template-columns:1fr 120px;gap:.7rem}
+.pos-card-field[hidden],.pos-card-field.is-hidden{display:none!important}
 .pos-payment-modal__note{margin:0;line-height:1.45}
 .pos-payment-status{display:flex;align-items:center;gap:.75rem;padding:.85rem;border:1px solid #e7deef;border-radius:10px;background:linear-gradient(120deg,#fff,#fbf7ff);transition:border-color .2s ease,background .2s ease,transform .2s ease}
 .pos-payment-status__icon{flex:0 0 40px;width:40px;height:40px;display:grid;place-items:center;border-radius:10px;background:#f1eaff;color:#6f3ddd}

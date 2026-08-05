@@ -178,9 +178,18 @@
                 const fallbackMethods = ['Efectivo', 'SINPE', 'Transferencia', 'Tarjeta'];
                 const methods = activeMethods.length ? activeMethods : fallbackMethods;
                 const options = methods.map(name => `<option value="${name}">${name}</option>`).join('');
-                document.getElementById('checkoutPaymentMethod').innerHTML = options;
+                const checkoutPaymentMethod = document.getElementById('checkoutPaymentMethod');
+                const previousCheckoutMethod = checkoutPaymentMethod.value;
+                const previousGatewayMethod = gatewayMethod.value;
+                checkoutPaymentMethod.innerHTML = options;
                 gatewayMethod.innerHTML = options;
+                checkoutPaymentMethod.value = methods.includes(previousCheckoutMethod) ? previousCheckoutMethod : methods[0];
+                gatewayMethod.value = methods.includes(previousGatewayMethod) ? previousGatewayMethod : checkoutPaymentMethod.value;
                 app.selects?.enhanceAll?.();
+                app.selects?.refresh?.(checkoutPaymentMethod);
+                app.selects?.refresh?.(gatewayMethod);
+                checkoutPaymentMethod.dispatchEvent(new Event('change', { bubbles: true }));
+                gatewayMethod.dispatchEvent(new Event('change', { bubbles: true }));
             }
 
             function readPendingOrder() {
@@ -301,7 +310,8 @@
                 const show = shouldShowCardFields(gatewayMethod.value);
                 document.querySelectorAll('.pos-card-field').forEach(field => {
                     field.hidden = !show;
-                    field.style.display = show ? '' : 'none';
+                    field.classList.toggle('is-hidden', !show);
+                    field.style.setProperty('display', show ? '' : 'none', 'important');
                     field.querySelectorAll('input').forEach(input => {
                         input.disabled = !show;
                         input.required = show;
@@ -344,14 +354,19 @@
                 if (paymentModal.parentElement !== document.body) {
                     document.body.appendChild(paymentModal);
                 }
-                const method = form.paymentMethod.value || 'Tarjeta';
-                gatewayMethod.value = String(method).toLowerCase().includes('sinpe') ? 'SINPE'
-                    : String(method).toLowerCase().includes('efectivo') ? 'Efectivo'
-                        : String(method).toLowerCase().includes('transfer') ? 'Transferencia'
-                            : 'Tarjeta';
+                const selectedMethod = form.paymentMethod.value || gatewayMethod.options[0]?.value || 'Efectivo';
+                const method = String(selectedMethod).toLowerCase();
+                const normalizedMethod = method.includes('sinpe') ? 'SINPE'
+                    : method.includes('efectivo') ? 'Efectivo'
+                    : method.includes('transfer') ? 'Transferencia'
+                    : 'Tarjeta';
+                gatewayMethod.value = [...gatewayMethod.options].some(option => option.value === normalizedMethod)
+                    ? normalizedMethod
+                    : selectedMethod;
                 document.getElementById('posPaymentTotal').textContent = fmt(pendingTotals?.total || 0);
                 paymentForm.holder.value = form.customerName.value || '';
                 gatewayMethod.dispatchEvent(new Event('change', { bubbles: true }));
+                app.selects?.refresh?.(gatewayMethod);
                 syncGatewayFields();
                 setPaymentStatus('ready', 'Pasarela lista', 'Seleccione el metodo y confirme el cobro.', 'fa-lock');
                 paymentModal.hidden = false;

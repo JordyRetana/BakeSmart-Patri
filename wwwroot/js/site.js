@@ -1197,8 +1197,17 @@
             $$('select:not([multiple]):not([size])').forEach(select => this.enhance(select));
         },
 
+        refresh(select) {
+            const wrapper = select?.closest?.('.bs-select');
+            if (wrapper?._bsSelectRender) wrapper._bsSelectRender();
+        },
+
         enhance(select) {
-            if (!select || select.dataset.bsSelectReady === 'true' || select.closest('.bs-select')) return;
+            if (!select) return;
+            if (select.dataset.bsSelectReady === 'true' || select.closest('.bs-select')) {
+                this.refresh(select);
+                return;
+            }
             select.dataset.bsSelectReady = 'true';
 
             const wrapper = document.createElement('div');
