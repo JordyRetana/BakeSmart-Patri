@@ -11,10 +11,10 @@
         <div>
             <h1 class="accounting-title">
                 <i class="fas fa-calculator"></i>
-                Contabilidad básica
+                Contabilidad basica
             </h1>
             <p class="text-muted accounting-subtitle">
-                Registra gastos, pagos a proveedores, conciliación y cierre diario con trazabilidad.
+                Registra gastos, pagos a proveedores, conciliacion y cierre diario con trazabilidad.
             </p>
         </div>
     </div>
@@ -45,9 +45,11 @@
         </div>
 
         <div class="card accounting-kpi-card">
-            <div class="text-muted">Conciliación</div>
             <span class="accounting-kpi-icon accounting-kpi-icon--reconcile"><i class="fas fa-scale-balanced"></i></span>
-            <h2 id="accReconStatus"></h2>
+            <div>
+                <div class="text-muted">Conciliacion</div>
+                <h2 id="accReconStatus"></h2>
+            </div>
         </div>
     </div>
 
@@ -63,7 +65,7 @@
 
                 <form id="expenseForm" class="accounting-form">
                     <div class="accounting-form-block">
-                        <label>Descripción</label>
+                        <label>Descripcion</label>
                         <input class="form-control" name="description" placeholder="Ej. Compra de empaques" required />
                     </div>
 
@@ -77,14 +79,22 @@
                         <input class="form-control" name="account" placeholder="Ej. Gastos operativos" required />
                     </div>
 
+                    <div class="accounting-form-block">
+                        <label>Metodo de pago</label>
+                        <select class="form-control" name="method">
+                            <option>Transferencia</option>
+                            <option>SINPE</option>
+                            <option>Tarjeta</option>
+                            <option>Efectivo</option>
+                        </select>
+                    </div>
+
                     <button class="btn btn-primary accounting-submit-btn" type="submit">
                         <i class="fas fa-plus"></i>
                         Registrar gasto
                     </button>
                 </form>
             </div>
-
-            <div class="hr"></div>
 
             <div class="accounting-block">
                 <div class="accounting-section-header">
@@ -111,11 +121,12 @@
                     </div>
 
                     <div class="accounting-form-block">
-                        <label>Método de pago</label>
+                        <label>Metodo de pago</label>
                         <select class="form-control" name="method">
                             <option>Transferencia</option>
                             <option>SINPE</option>
                             <option>Tarjeta</option>
+                            <option>Efectivo</option>
                         </select>
                     </div>
 
@@ -126,28 +137,29 @@
                 </form>
             </div>
 
-            <div class="hr"></div>
-
-            <div class="accounting-section-header">
-                <div>
-                    <span class="accounting-eyebrow">Cierre</span>
-                    <h3 class="accounting-section-title">Control diario</h3>
+            <div class="accounting-close-panel">
+                <div class="accounting-section-header">
+                    <div>
+                        <span class="accounting-eyebrow">Cierre</span>
+                        <h3 class="accounting-section-title">Control diario</h3>
+                    </div>
                 </div>
-            </div>
-            <div class="accounting-action-buttons">
-                <button class="btn btn-primary" id="accReconcileBtn" type="button">
-                    <i class="fas fa-scale-balanced"></i>
-                    Conciliar operaciones
-                </button>
-                <select class="form-control" id="accCloseType" aria-label="Tipo de cierre">
-                    <option value="DIARIO">Diario</option>
-                    <option value="SEMANAL">Semanal</option>
-                    <option value="MENSUAL">Mensual</option>
-                </select>
-                <button class="btn btn-outline" id="accCloseBtn" type="button">
-                    <i class="fas fa-calendar-check"></i>
-                    Generar cierre
-                </button>
+                <div class="accounting-action-buttons">
+                    <button class="btn btn-primary" id="accReconcileBtn" type="button">
+                        <i class="fas fa-scale-balanced"></i>
+                        Conciliar operaciones
+                    </button>
+                    <select class="form-control" id="accCloseType" aria-label="Tipo de cierre">
+                        <option value="DIARIO">Diario</option>
+                        <option value="SEMANAL">Semanal</option>
+                        <option value="MENSUAL">Mensual</option>
+                    </select>
+                    <button class="btn btn-outline" id="accCloseBtn" type="button">
+                        <i class="fas fa-calendar-check"></i>
+                        Generar cierre
+                    </button>
+                </div>
+                <div class="accounting-close-result" id="accCloseResult" hidden></div>
             </div>
         </aside>
 
@@ -165,6 +177,8 @@
                         <tr>
                             <th>ID</th>
                             <th>Tipo</th>
+                            <th>Detalle</th>
+                            <th>Referencia</th>
                             <th>Cuenta</th>
                             <th>Debe</th>
                             <th>Haber</th>
@@ -185,6 +199,14 @@
             let pageInitialized = false;
             let reconStatus = 'Pendiente';
 
+            const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+
             async function render() {
                 await BakeSmartStore.accounting.refresh();
                 const entries = BakeSmartStore.accounting.entries();
@@ -200,22 +222,34 @@
                     const typeClass =
                         e.type === 'VENTA' ? 'type-sale' :
                         e.type === 'PAGO_PROVEEDOR' ? 'type-supplier' :
+                        e.type === 'GASTO' ? 'type-expense' :
                         '';
 
                     const typeLabel = e.type === 'PAGO_PROVEEDOR'
                         ? 'Pago proveedor'
+                        : e.type === 'GASTO'
+                        ? 'Gasto'
                         : e.type;
+
+                    const detail = escapeHtml(e.detail || 'Sin detalle');
+                    const account = escapeHtml(e.account || 'Sin cuenta');
 
                     return `
                         <tr>
-                            <td>${e.id}</td>
+                            <td>#${e.id}</td>
                             <td>
                                 <span class="accounting-type-badge ${typeClass}">
-                                    ${typeLabel}
+                                    ${escapeHtml(typeLabel)}
                                 </span>
                             </td>
-                            <td class="accounting-account-cell" title="${e.account}">
-                                ${e.account}
+                            <td class="accounting-detail-cell" title="${detail}">
+                                <strong>${detail}</strong>
+                            </td>
+                            <td>
+                                <span class="accounting-reference-chip">${escapeHtml(e.referenceTable || 'Registro')} #${e.referenceId || e.id}</span>
+                            </td>
+                            <td class="accounting-account-cell" title="${account}">
+                                ${account}
                             </td>
                             <td>${app.utils.formatCurrency(e.debit)}</td>
                             <td>${app.utils.formatCurrency(e.credit)}</td>
@@ -229,7 +263,7 @@
                     `;
                 }).join('') || `
                     <tr>
-                        <td colspan="7" class="text-center text-muted">No hay asientos registrados.</td>
+                        <td colspan="9" class="text-center text-muted">No hay asientos registrados.</td>
                     </tr>
                 `;
             }
@@ -262,23 +296,37 @@
 
             document.getElementById('accReconcileBtn').addEventListener('click', async () => {
                 try {
+                    const button = document.getElementById('accReconcileBtn');
+                    button.disabled = true;
                     const result = await BakeSmartStore.accounting.reconcile();
                     reconStatus = result.status;
-                    app.toast.info(`Conciliación completada: ${result.reviewed} revisadas, ${result.issues} diferencias.`);
+                    app.toast.info(`Conciliacion completada: ${result.reviewed} revisadas, ${result.generated || 0} reparadas, ${result.issues} diferencias.`);
                     await render();
                 } catch (error) {
                     app.toast.error(error.message);
+                } finally {
+                    document.getElementById('accReconcileBtn').disabled = false;
                 }
             });
 
             document.getElementById('accCloseBtn').addEventListener('click', async () => {
                 try {
                     const closeType = document.getElementById('accCloseType').value;
+                    const button = document.getElementById('accCloseBtn');
+                    button.disabled = true;
                     const result = await BakeSmartStore.accounting.dailyClose(closeType);
+                    const resultEl = document.getElementById('accCloseResult');
+                    resultEl.hidden = false;
+                    resultEl.innerHTML = `
+                        <strong>Cierre ${escapeHtml(result.type || closeType)} #${result.closeId} creado.</strong>
+                        <span>Operacion registrada en bitacora y lista para reportería.</span>
+                    `;
                     app.toast.success(`Cierre ${result.type || closeType} #${result.closeId} creado.`);
                     await render();
                 } catch (error) {
                     app.toast.error(error.message);
+                } finally {
+                    document.getElementById('accCloseBtn').disabled = false;
                 }
             });
 

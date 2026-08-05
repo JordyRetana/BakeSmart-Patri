@@ -88,6 +88,13 @@
             <span>Total a cobrar</span>
             <strong id="posPaymentTotal">0</strong>
         </div>
+        <div class="pos-payment-status" id="posPaymentStatus" aria-live="polite">
+            <span class="pos-payment-status__icon"><i class="fas fa-lock"></i></span>
+            <div>
+                <strong>Pasarela lista</strong>
+                <small>Seleccione el metodo y confirme el cobro.</small>
+            </div>
+        </div>
         <form id="posPaymentForm" class="pos-payment-form">
             <label>
                 <span>Metodo</span>
@@ -144,6 +151,7 @@
             const gatewayReferenceLabel = document.getElementById('posGatewayReferenceLabel');
             const gatewayReference = document.getElementById('posGatewayReference');
             const paymentConfirmBtn = document.getElementById('posPaymentConfirmBtn');
+            const paymentStatus = document.getElementById('posPaymentStatus');
             const checkoutHeroImage = document.getElementById('checkoutHeroImage');
             let pendingOrder = null;
             let pendingTotals = null;
@@ -163,10 +171,16 @@
             }
 
             function renderPayments() {
-                document.getElementById('checkoutPaymentMethod').innerHTML = store.pos.config().paymentMethods
+                const activeMethods = store.pos.config().paymentMethods
                     .filter(method => method.active)
-                    .map(method => `<option value="${method.name}">${method.name}</option>`)
-                    .join('');
+                    .map(method => method.name);
+
+                const fallbackMethods = ['Efectivo', 'SINPE', 'Transferencia', 'Tarjeta'];
+                const methods = activeMethods.length ? activeMethods : fallbackMethods;
+                const options = methods.map(name => `<option value="${name}">${name}</option>`).join('');
+                document.getElementById('checkoutPaymentMethod').innerHTML = options;
+                gatewayMethod.innerHTML = options;
+                app.selects?.enhanceAll?.();
             }
 
             function readPendingOrder() {
@@ -315,6 +329,17 @@
                 }
             }
 
+            function setPaymentStatus(state, title, message, icon) {
+                paymentModal.dataset.state = state;
+                paymentStatus.innerHTML = `
+                    <span class="pos-payment-status__icon"><i class="fas ${icon}"></i></span>
+                    <div>
+                        <strong>${title}</strong>
+                        <small>${message}</small>
+                    </div>
+                `;
+            }
+
             function openPaymentModal() {
                 if (paymentModal.parentElement !== document.body) {
                     document.body.appendChild(paymentModal);
@@ -328,6 +353,7 @@
                 paymentForm.holder.value = form.customerName.value || '';
                 gatewayMethod.dispatchEvent(new Event('change', { bubbles: true }));
                 syncGatewayFields();
+                setPaymentStatus('ready', 'Pasarela lista', 'Seleccione el metodo y confirme el cobro.', 'fa-lock');
                 paymentModal.hidden = false;
             }
 
@@ -389,8 +415,10 @@
 
                     cart = [];
                     saveCart();
-                    app.toast.success(pendingOrder ? 'Pago del pedido confirmado.' : 'Venta registrada correctamente.');
-                    app.navigation.navigate(pendingOrder ? '/Production' : '/Pos');
+                    return {
+                        message: pendingOrder ? 'Pago del pedido confirmado.' : 'Venta registrada correctamente.',
+                        redirectUrl: pendingOrder ? '/Production' : '/Pos'
+                    };
                 } catch (error) {
                     app.toast.error(error.message);
                     throw error;
@@ -423,12 +451,23 @@
 
                 try {
                     paymentConfirmBtn.disabled = true;
-                    await completeCheckout(data);
-                    closePaymentModal();
+                    paymentConfirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando cobro';
+                    setPaymentStatus('processing', 'Procesando pago', 'Validando datos y registrando el movimiento contable.', 'fa-spinner fa-spin');
+                    await new Promise(resolve => setTimeout(resolve, 650));
+                    const result = await completeCheckout(data);
+                    setPaymentStatus('success', 'Pago aprobado', 'La venta quedo registrada y el inventario fue actualizado.', 'fa-circle-check');
+                    app.toast.success(result.message);
+                    window.setTimeout(() => {
+                        window.location.assign(result.redirectUrl);
+                    }, 900);
                 } catch {
                     // completeCheckout already reports the error.
+                    setPaymentStatus('error', 'No se pudo aprobar', 'Revise los datos del pago e intente nuevamente.', 'fa-triangle-exclamation');
                 } finally {
-                    paymentConfirmBtn.disabled = false;
+                    if (paymentModal.dataset.state !== 'success') {
+                        paymentConfirmBtn.disabled = false;
+                        paymentConfirmBtn.innerHTML = '<i class="fas fa-lock"></i> Aprobar cobro';
+                    }
                 }
             });
 

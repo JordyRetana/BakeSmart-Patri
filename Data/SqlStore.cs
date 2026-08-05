@@ -2261,18 +2261,76 @@ public sealed class SqlStore
 
     public async Task<object> AccountingOverviewAsync()
     {
-        const string sql = """
+        var sql = UseMySql
+            ? """
+            SELECT
+                e.AccountingEntryId,
+                e.EntryType,
+                e.ReferenceTable,
+                e.ReferenceId,
+                COALESCE(
+                    g.Description,
+                    pp.Concept,
+                    CONCAT('Venta POS pedido #', v.OrderId),
+                    e.Note,
+                    CONCAT(e.ReferenceTable, ' #', e.ReferenceId)
+                ) AS EntryDetail,
+                COALESCE(CONCAT(a.AccountCode, ' - ', a.AccountName), 'Sin cuenta') AS AccountName,
+                COALESCE(SUM(l.Debit), 0) AS Debit,
+                COALESCE(SUM(l.Credit), 0) AS Credit,
+                COALESCE(entryTotals.DebitTotal, 0) AS EntryDebitTotal,
+                COALESCE(entryTotals.CreditTotal, 0) AS EntryCreditTotal,
+                e.CreatedAt
+            FROM AsientosContables e
+            LEFT JOIN LineasAsientoContable l ON l.AccountingEntryId = e.AccountingEntryId
+            LEFT JOIN CatalogoCuentas a ON a.AccountId = l.AccountId
+            LEFT JOIN Gastos g ON e.ReferenceTable = 'Gastos' AND g.ExpenseId = e.ReferenceId
+            LEFT JOIN PagosProveedor pp ON e.ReferenceTable = 'PagosProveedor' AND pp.SupplierPaymentId = e.ReferenceId
+            LEFT JOIN Ventas v ON e.ReferenceTable = 'Ventas' AND v.SaleId = e.ReferenceId
+            LEFT JOIN (
+                SELECT AccountingEntryId, SUM(Debit) AS DebitTotal, SUM(Credit) AS CreditTotal
+                FROM LineasAsientoContable
+                GROUP BY AccountingEntryId
+            ) entryTotals ON entryTotals.AccountingEntryId = e.AccountingEntryId
+            GROUP BY e.AccountingEntryId, e.EntryType, e.ReferenceTable, e.ReferenceId, e.Note,
+                     g.Description, pp.Concept, v.OrderId, a.AccountCode, a.AccountName,
+                     entryTotals.DebitTotal, entryTotals.CreditTotal, e.CreatedAt
+            ORDER BY e.CreatedAt DESC, e.AccountingEntryId DESC
+            LIMIT 150;
+            """
+            : """
             SELECT TOP 150
                 e.AccountingEntryId,
                 e.EntryType,
+                e.ReferenceTable,
+                e.ReferenceId,
+                COALESCE(
+                    g.Description,
+                    pp.Concept,
+                    CONCAT(N'Venta POS pedido #', v.OrderId),
+                    e.Note,
+                    CONCAT(e.ReferenceTable, N' #', e.ReferenceId)
+                ) AS EntryDetail,
                 COALESCE(a.AccountCode + N' - ' + a.AccountName, N'Sin cuenta') AS AccountName,
                 COALESCE(SUM(l.Debit), 0) AS Debit,
                 COALESCE(SUM(l.Credit), 0) AS Credit,
+                COALESCE(entryTotals.DebitTotal, 0) AS EntryDebitTotal,
+                COALESCE(entryTotals.CreditTotal, 0) AS EntryCreditTotal,
                 e.CreatedAt
             FROM dbo.AsientosContables e
             LEFT JOIN dbo.LineasAsientoContable l ON l.AccountingEntryId = e.AccountingEntryId
             LEFT JOIN dbo.CatalogoCuentas a ON a.AccountId = l.AccountId
-            GROUP BY e.AccountingEntryId, e.EntryType, a.AccountCode, a.AccountName, e.CreatedAt
+            LEFT JOIN dbo.Gastos g ON e.ReferenceTable = N'Gastos' AND g.ExpenseId = e.ReferenceId
+            LEFT JOIN dbo.PagosProveedor pp ON e.ReferenceTable = N'PagosProveedor' AND pp.SupplierPaymentId = e.ReferenceId
+            LEFT JOIN dbo.Ventas v ON e.ReferenceTable = N'Ventas' AND v.SaleId = e.ReferenceId
+            LEFT JOIN (
+                SELECT AccountingEntryId, SUM(Debit) AS DebitTotal, SUM(Credit) AS CreditTotal
+                FROM dbo.LineasAsientoContable
+                GROUP BY AccountingEntryId
+            ) entryTotals ON entryTotals.AccountingEntryId = e.AccountingEntryId
+            GROUP BY e.AccountingEntryId, e.EntryType, e.ReferenceTable, e.ReferenceId, e.Note,
+                     g.Description, pp.Concept, v.OrderId, a.AccountCode, a.AccountName,
+                     entryTotals.DebitTotal, entryTotals.CreditTotal, e.CreatedAt
             ORDER BY e.CreatedAt DESC, e.AccountingEntryId DESC;
             """;
 
@@ -2280,10 +2338,13 @@ public sealed class SqlStore
         {
             id = reader.GetInt32("AccountingEntryId"),
             type = reader.GetString("EntryType"),
+            referenceTable = reader.GetString("ReferenceTable"),
+            referenceId = reader.GetInt32("ReferenceId"),
+            detail = reader.GetString("EntryDetail"),
             account = reader.GetString("AccountName"),
             debit = reader.GetDecimal("Debit"),
             credit = reader.GetDecimal("Credit"),
-            balanced = reader.GetDecimal("Debit") == reader.GetDecimal("Credit"),
+            balanced = Math.Abs(reader.GetDecimal("EntryDebitTotal") - reader.GetDecimal("EntryCreditTotal")) <= 0.01m,
             createdAt = reader.GetDateTime("CreatedAt").ToString("o")
         });
 
@@ -2302,7 +2363,7 @@ public sealed class SqlStore
 
         var accountId = await EnsureAccountAsync(input.Account, "Gasto operativo", "GASTO");
         var categoryId = await EnsureExpenseCategoryAsync("Operativo");
-        var methodId = await EnsurePaymentMethodAsync("Transferencia");
+        var methodId = await EnsurePaymentMethodAsync(string.IsNullOrWhiteSpace(input.Method) ? "Transferencia" : input.Method.Trim());
 
         if (UseMySql)
         {
@@ -4978,7 +5039,7 @@ public sealed class SqlStore
     public sealed record PaymentMethodInput(int? Id, string Name, decimal CommissionRate, bool IsActive, string? Account);
     public sealed record PromotionInput(int? Id, string Name, DateTime StartDate, DateTime EndDate, decimal Discount, bool IsActive = true);
     public sealed record MarketingCampaignInput(string? Subject, string Message, IReadOnlyList<int> CustomerIds);
-    public sealed record AccountingExpenseInput(string Description, decimal Amount, string? Account);
+    public sealed record AccountingExpenseInput(string Description, decimal Amount, string? Account, string? Method = null);
     public sealed record SupplierPaymentInput(string Supplier, decimal Amount, string? Account, string Method);
     public sealed record CreditNoteInput(int SaleId, string Reason);
     public sealed record CreateOrderInput(string CustomerName, string Email, string? Phone, int ProductId, decimal Quantity, decimal UnitPrice, decimal Subtotal, decimal Tax, decimal Total, DateTime DeliveryDate, string? Address, string? Notes, string? PaymentMethod, decimal? DestinationLatitude = null, decimal? DestinationLongitude = null, string? DeliveryReference = null, int? CustomerAddressId = null, string? DeliveryMethod = "domicilio");

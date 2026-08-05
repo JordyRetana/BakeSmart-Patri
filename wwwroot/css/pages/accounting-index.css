@@ -142,6 +142,10 @@
         grid-column: 1 / -1 !important;
     }
 
+    .accounting-page .accounting-actions-card > .accounting-close-panel {
+        grid-column: 1 / -1 !important;
+    }
+
     .accounting-actions-card,
     .accounting-entries-card {
         align-self: start;
@@ -213,8 +217,27 @@
         background: color-mix(in srgb, var(--bg-card) 94%, var(--primary-light) 6%);
     }
 
-        .accounting-action-buttons .btn {
-            flex: 1 1 220px;
+            .accounting-action-buttons .btn {
+                flex: 1 1 220px;
+            }
+
+    .accounting-close-result {
+        margin-top: .85rem;
+        display: grid;
+        gap: .25rem;
+        padding: .9rem 1rem;
+        border: 1px solid color-mix(in srgb, var(--success) 24%, var(--border));
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--success) 10%, var(--bg-card));
+    }
+
+        .accounting-close-result strong {
+            color: var(--text);
+        }
+
+        .accounting-close-result span {
+            color: var(--text-muted);
+            font-size: .8rem;
         }
 
     .accounting-table-wrap {
@@ -230,12 +253,12 @@
 
     .accounting-table {
         width: max-content;
-        min-width: 1080px !important;
+        min-width: 1280px !important;
         margin: 0;
     }
 
     .accounting-page .table-container .accounting-entries-table {
-        min-width: 1080px !important;
+        min-width: 1280px !important;
     }
 
     .accounting-entries-table {
@@ -261,25 +284,36 @@
 
             .accounting-entries-table th:nth-child(3),
             .accounting-entries-table td:nth-child(3) {
-                width: 280px;
+                width: 300px;
             }
 
             .accounting-entries-table th:nth-child(4),
-            .accounting-entries-table td:nth-child(4),
+            .accounting-entries-table td:nth-child(4) {
+                width: 170px;
+                white-space: nowrap;
+            }
+
             .accounting-entries-table th:nth-child(5),
             .accounting-entries-table td:nth-child(5) {
+                width: 280px;
+            }
+
+            .accounting-entries-table th:nth-child(6),
+            .accounting-entries-table td:nth-child(6),
+            .accounting-entries-table th:nth-child(7),
+            .accounting-entries-table td:nth-child(7) {
                 width: 130px;
                 white-space: nowrap;
             }
 
-            .accounting-entries-table th:nth-child(6),
-            .accounting-entries-table td:nth-child(6) {
+            .accounting-entries-table th:nth-child(8),
+            .accounting-entries-table td:nth-child(8) {
                 width: 120px;
                 white-space: nowrap;
             }
 
-            .accounting-entries-table th:nth-child(7),
-            .accounting-entries-table td:nth-child(7) {
+            .accounting-entries-table th:nth-child(9),
+            .accounting-entries-table td:nth-child(9) {
                 width: 190px;
                 white-space: nowrap;
             }
@@ -289,6 +323,33 @@
         word-break: break-word;
         overflow-wrap: anywhere;
         line-height: 1.35;
+    }
+
+    .accounting-detail-cell {
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        line-height: 1.3;
+    }
+
+        .accounting-detail-cell strong {
+            color: var(--text);
+            font-size: .86rem;
+        }
+
+    .accounting-reference-chip {
+        display: inline-flex;
+        max-width: 100%;
+        padding: .34rem .6rem;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--bg-alt);
+        color: var(--text-muted);
+        font-size: .72rem;
+        font-weight: 800;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .accounting-type-badge {
@@ -314,6 +375,12 @@
             background: #fce7f3;
             border-color: #f9a8d4;
             color: #be185d;
+        }
+
+        .accounting-type-badge.type-expense {
+            background: #fff7ed;
+            border-color: #fed7aa;
+            color: #c2410c;
         }
 
     .accounting-table thead th {

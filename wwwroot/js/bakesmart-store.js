@@ -597,7 +597,8 @@
                     body: JSON.stringify({
                         description: input.description || "",
                         amount: Number(input.amount || 0),
-                        account: input.account || ""
+                        account: input.account || "",
+                        method: input.method || "Transferencia"
                     })
                 });
                 await api.accounting.refresh();
