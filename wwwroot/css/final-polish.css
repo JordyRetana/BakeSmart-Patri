@@ -1028,3 +1028,169 @@ body[data-page="/accounting"] #accReconStatus {
     word-break: normal !important;
     white-space: nowrap !important;
 }
+
+/* Final dark mode normalization for operational modules. */
+body.dark {
+    --ops-dark-card: #161f31;
+    --ops-dark-card-soft: #1f293d;
+    --ops-dark-line: rgba(167, 139, 250, .24);
+    --ops-dark-text: #f8fafc;
+    --ops-dark-muted: #cbd5e1;
+}
+
+body.dark .pos-page,
+body.dark .accounting-page,
+body.dark .marketing-page,
+body.dark .orders-page,
+body.dark .inventory-page,
+body.dark .production-page,
+body.dark .reports-page,
+body.dark .users-workspace,
+body.dark .roles-page {
+    color: var(--ops-dark-text) !important;
+}
+
+body.dark .pos-page .card,
+body.dark .pos-page .table-container,
+body.dark .accounting-page .card,
+body.dark .accounting-page .table-container,
+body.dark .marketing-page .card,
+body.dark .marketing-page .table-container,
+body.dark .orders-page .card,
+body.dark .inventory-page .card,
+body.dark .production-page .card,
+body.dark .users-workspace .card,
+body.dark .roles-page .card {
+    color: var(--ops-dark-text) !important;
+    border-color: var(--ops-dark-line) !important;
+    background: linear-gradient(180deg, var(--ops-dark-card-soft), var(--ops-dark-card)) !important;
+}
+
+body.dark .pos-page .page-header,
+body.dark .pos-page .pos-header,
+body.dark .accounting-page .page-header,
+body.dark .marketing-page .page-header,
+body.dark .orders-page .page-header,
+body.dark .inventory-page .page-header,
+body.dark .production-page .page-header {
+    color: var(--ops-dark-text) !important;
+    border-color: rgba(236, 72, 153, .26) !important;
+    background:
+        radial-gradient(circle at 78% 18%, rgba(236, 72, 153, .22), transparent 32%),
+        linear-gradient(135deg, #172033, #272047 52%, #3a173c) !important;
+}
+
+body.dark .pos-page .page-header *,
+body.dark .pos-page .pos-header *,
+body.dark .accounting-page .page-header *,
+body.dark .marketing-page .page-header *,
+body.dark .orders-page .page-header *,
+body.dark .inventory-page .page-header *,
+body.dark .production-page .page-header * {
+    color: inherit !important;
+}
+
+body.dark .pos-page .text-muted,
+body.dark .accounting-page .text-muted,
+body.dark .marketing-page .text-muted,
+body.dark .orders-page .text-muted,
+body.dark .inventory-page .text-muted,
+body.dark .production-page .text-muted,
+body.dark .users-workspace .text-muted,
+body.dark .roles-page .text-muted,
+body.dark .pos-page small,
+body.dark .accounting-page small,
+body.dark .marketing-page small {
+    color: var(--ops-dark-muted) !important;
+}
+
+body.dark .pos-page--cashier .pos-side-card,
+body.dark .pos-page--cashier .pos-side-card .pos-admin-block--cash,
+body.dark .pos-page--cashier .session-status-card,
+body.dark .pos-page--cashier .pos-main-card,
+body.dark .pos-page--cashier .pos-product-card,
+body.dark .pos-cart-summary-panel,
+body.dark .pos-cart-mini-line,
+body.dark .pos-cart-mini-total,
+body.dark .pos-cart-checkout-card,
+body.dark .pos-cart-totals,
+body.dark .pos-cart-item,
+body.dark .pos-payment-modal__dialog {
+    color: var(--ops-dark-text) !important;
+    border-color: var(--ops-dark-line) !important;
+    background: linear-gradient(180deg, #202b42, #151d2e) !important;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .34) !important;
+}
+
+body.dark .pos-product-price-tag,
+body.dark .pos-product-code,
+body.dark .pos-product-stock-chip,
+body.dark .pos-cart-mini-qty,
+body.dark .pos-payment-status,
+body.dark .accounting-reference-chip,
+body.dark .smart-table-dock {
+    color: #ede9fe !important;
+    border-color: rgba(167, 139, 250, .28) !important;
+    background: rgba(124, 58, 237, .16) !important;
+}
+
+body.dark .pos-page--cashier .pos-product-card h4,
+body.dark .pos-page--cashier .pos-product-price-tag strong,
+body.dark .pos-cart-mini-info strong,
+body.dark .pos-cart-mini-price,
+body.dark .pos-cart-totals strong,
+body.dark .pos-cart-totals .total-final strong,
+body.dark .pos-payment-modal__amount strong,
+body.dark .accounting-detail-cell strong,
+body.dark .accounting-account-cell,
+body.dark .marketing-page table td,
+body.dark .accounting-page table td {
+    color: var(--ops-dark-text) !important;
+}
+
+body.dark .form-control,
+body.dark .input,
+body.dark input:not([type="checkbox"]):not([type="radio"]),
+body.dark textarea,
+body.dark select,
+body.dark .bs-select__button {
+    color: var(--ops-dark-text) !important;
+    border-color: rgba(167, 139, 250, .28) !important;
+    background: #101827 !important;
+}
+
+body.dark .bs-select__menu {
+    color: var(--ops-dark-text) !important;
+    border-color: rgba(167, 139, 250, .28) !important;
+    background: #111827 !important;
+    box-shadow: 0 24px 58px rgba(0, 0, 0, .45) !important;
+}
+
+body.dark .bs-select__option {
+    color: var(--ops-dark-text) !important;
+}
+
+body.dark .bs-select__option:hover,
+body.dark .bs-select__option[aria-selected="true"] {
+    color: #fff !important;
+    background: linear-gradient(135deg, rgba(124, 58, 237, .48), rgba(200, 60, 134, .32)) !important;
+}
+
+body.dark .btn-outline,
+body.dark .btn-ghost,
+body.dark .pos-page .btn-outline,
+body.dark .accounting-page .btn-outline,
+body.dark .marketing-page .btn-outline {
+    color: #ede9fe !important;
+    border-color: rgba(167, 139, 250, .42) !important;
+    background: rgba(124, 58, 237, .12) !important;
+}
+
+body.dark .btn-outline:hover,
+body.dark .btn-ghost:hover,
+body.dark .pos-page .btn-outline:hover,
+body.dark .accounting-page .btn-outline:hover,
+body.dark .marketing-page .btn-outline:hover {
+    color: #fff !important;
+    background: linear-gradient(135deg, #7c3aed, #c83c86) !important;
+}
