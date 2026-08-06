@@ -526,6 +526,132 @@ body[data-page="/pos"] .pos-page--cashier .pos-cart-summary-panel {
     }
 }
 
+/* The POS hero always uses a dark gradient, so its copy must stay light in both themes. */
+body[data-page="/pos"] .pos-header .pos-title,
+body[data-page="/pos"] .pos-header .pos-title i,
+body[data-page="/pos"] .pos-header .pos-subtitle,
+body[data-page="/pos"] .pos-header .pos-kicker {
+    color: #fff !important;
+    opacity: 1 !important;
+}
+
+body[data-page="/pos"] .pos-header .pos-subtitle {
+    color: rgba(255, 255, 255, .9) !important;
+}
+
+/* Final POS polish: keep cashier dark mode readable and keep the cart preview
+   anchored to the bottom action area instead of floating high on the page. */
+body[data-page="/pos"] .pos-page--cashier .pos-cart-summary-panel,
+body[data-page^="/pos"] .pos-cart-summary-panel {
+    top: auto !important;
+    right: 1.15rem !important;
+    bottom: 5.15rem !important;
+    left: auto !important;
+    width: min(430px, calc(100vw - 2rem)) !important;
+    max-height: min(46vh, 430px) !important;
+    overflow: auto !important;
+    border-radius: 18px !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-cart-fab,
+body[data-page^="/pos"] .pos-cart-fab {
+    right: 1.15rem !important;
+    bottom: 1rem !important;
+}
+
+body.dark[data-page="/pos"] .pos-page::before {
+    background:
+        linear-gradient(180deg, #0d1321 0%, #111827 52%, #0f172a 100%),
+        radial-gradient(circle at 84% 16%, rgba(236, 72, 153, .12), transparent 30%),
+        radial-gradient(circle at 12% 74%, rgba(124, 58, 237, .14), transparent 32%) !important;
+}
+
+body.dark[data-page="/pos"] .pos-page--cashier .pos-header {
+    background:
+        linear-gradient(120deg, rgba(12, 18, 32, .98), rgba(40, 28, 73, .96) 48%, rgba(120, 40, 92, .94)) !important;
+    box-shadow: 0 26px 70px rgba(0, 0, 0, .34) !important;
+}
+
+body.dark[data-page="/pos"] .pos-page--cashier .pos-title,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-title span,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-title i,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-subtitle,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-kicker {
+    color: #f8fafc !important;
+    opacity: 1 !important;
+}
+
+body.dark[data-page="/pos"] .pos-page--cashier .pos-search-box input {
+    border-color: rgba(167, 139, 250, .36) !important;
+    background: #0f172a !important;
+    color: #f8fafc !important;
+    box-shadow: 0 18px 46px rgba(0, 0, 0, .26) !important;
+}
+
+body.dark[data-page="/pos"] .pos-page--cashier .pos-search-box input::placeholder {
+    color: #94a3b8 !important;
+}
+
+body.dark[data-page="/pos"] .pos-page--cashier .pos-summary-card,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-main-card,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-side-card,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-admin-block--cash,
+body.dark[data-page="/pos"] .pos-page--cashier .session-status-card,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-product-card,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-products-list-panel,
+body.dark[data-page="/pos"] .pos-cart-summary-panel {
+    border-color: rgba(148, 163, 184, .22) !important;
+    background: linear-gradient(180deg, #182033, #111827) !important;
+    color: #f8fafc !important;
+    box-shadow: 0 22px 58px rgba(0, 0, 0, .24) !important;
+}
+
+body.dark[data-page="/pos"] .pos-page--cashier .pos-summary-card h2,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-panel-title,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-product-card h4,
+body.dark[data-page="/pos"] .pos-page--cashier .session-status-value,
+body.dark[data-page="/pos"] .pos-page--cashier .payment-method-name,
+body.dark[data-page="/pos"] .pos-cart-summary-panel .pos-panel-title,
+body.dark[data-page="/pos"] .pos-cart-mini-info strong,
+body.dark[data-page="/pos"] .pos-cart-mini-price {
+    color: #f8fafc !important;
+    text-shadow: none !important;
+}
+
+body.dark[data-page="/pos"] .pos-page--cashier .pos-summary-card span,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-panel-eyebrow,
+body.dark[data-page="/pos"] .pos-page--cashier .session-status-title,
+body.dark[data-page="/pos"] .pos-page--cashier .session-status-card .text-muted,
+body.dark[data-page="/pos"] .pos-page--cashier .stock-label,
+body.dark[data-page="/pos"] .pos-cart-mini-info span {
+    color: #cbd5e1 !important;
+}
+
+body.dark[data-page="/pos"] .pos-page--cashier .pos-product-price-tag,
+body.dark[data-page="/pos"] .pos-cart-mini-line,
+body.dark[data-page="/pos"] .pos-cart-mini-total {
+    border-color: rgba(167, 139, 250, .24) !important;
+    background: linear-gradient(135deg, #1f2937, #171f31) !important;
+}
+
+body.dark[data-page="/pos"] .pos-page--cashier .pos-product-price-tag small {
+    color: #cbd5e1 !important;
+}
+
+body.dark[data-page="/pos"] .pos-page--cashier .pos-product-price-tag span {
+    color: #c4b5fd !important;
+}
+
+@media (max-width: 760px) {
+    body[data-page="/pos"] .pos-page--cashier .pos-cart-summary-panel,
+    body[data-page^="/pos"] .pos-cart-summary-panel {
+        right: .75rem !important;
+        bottom: 5rem !important;
+        width: calc(100vw - 1.5rem) !important;
+        max-height: 48vh !important;
+    }
+}
+
 /* Checkout redesign inspired by the POS payment reference. */
 body[data-page="/pos/cart"] .pos-cart-page {
     width: min(1180px, calc(100% - 2rem)) !important;
@@ -868,6 +994,78 @@ body[data-page^="/pos"] .pos-cart-fab {
     left: auto !important;
     bottom: 1.25rem !important;
     z-index: 9001 !important;
+}
+
+/* POS payment/select reliability patch. Keep this late in the file so the modal and
+   cashier terminal keep readable contrast in both light and dark modes. */
+body[data-page^="/pos"] .bs-select__menu {
+    z-index: 2147483002 !important;
+}
+
+body[data-page^="/pos"] .pos-payment-modal .bs-select__menu,
+body[data-page^="/pos"] .pos-payment-modal__dialog .bs-select__menu {
+    z-index: 2147483002 !important;
+}
+
+body.dark[data-page="/pos"] .pos-page--cashier .pos-header,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-header *,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-kicker,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-title,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-subtitle {
+    color: #ffffff !important;
+}
+
+body.dark[data-page="/pos"] .pos-page--cashier .pos-summary-card,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-main-card,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-product-card,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-products-list-panel {
+    border-color: rgba(167, 139, 250, .25) !important;
+    background: linear-gradient(180deg, #182033, #131a2a) !important;
+    color: #f8fafc !important;
+}
+
+body.dark[data-page="/pos"] .pos-page--cashier .pos-product-card h4,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-summary-card h2,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-panel-title,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-product-price-tag span,
+body.dark[data-page="/pos/cart"] .pos-cart-checkout-card h3,
+body.dark[data-page="/pos/cart"] .pos-cart-item-header strong,
+body.dark[data-page="/pos/cart"] .pos-cart-totals .pos-total-row strong,
+body.dark[data-page="/pos/cart"] .pos-payment-modal__header h2,
+body.dark[data-page="/pos/cart"] .pos-payment-modal__amount strong {
+    color: #f8fafc !important;
+}
+
+body.dark[data-page="/pos"] .pos-page--cashier .pos-summary-card span,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-panel-eyebrow,
+body.dark[data-page="/pos"] .pos-page--cashier .pos-product-price-tag small,
+body.dark[data-page="/pos/cart"] .pos-cart-totals .pos-total-row span,
+body.dark[data-page="/pos/cart"] .pos-payment-modal__note,
+body.dark[data-page="/pos/cart"] .pos-payment-form label span {
+    color: #cbd5e1 !important;
+}
+
+body.dark[data-page="/pos"] .pos-page--cashier .pos-search-box input,
+body.dark[data-page="/pos"] .pos-page--cashier .session-inline-actions .form-control,
+body.dark[data-page="/pos/cart"] .pos-payment-form .form-control,
+body.dark[data-page="/pos/cart"] .pos-input-shell .form-control {
+    border-color: rgba(167, 139, 250, .28) !important;
+    background: #0f172a !important;
+    color: #f8fafc !important;
+}
+
+body.dark[data-page="/pos"] .pos-page--cashier .pos-product-price-tag,
+body.dark[data-page="/pos/cart"] .pos-cart-totals,
+body.dark[data-page="/pos/cart"] .pos-payment-modal__amount,
+body.dark[data-page="/pos/cart"] .pos-payment-modal__note,
+body.dark[data-page="/pos/cart"] .pos-payment-status {
+    border-color: rgba(167, 139, 250, .22) !important;
+    background: linear-gradient(135deg, #1f2937, #171f31) !important;
+}
+
+body.dark[data-page="/pos/cart"] .pos-payment-modal__dialog {
+    border-color: rgba(167, 139, 250, .28) !important;
+    background: #111827 !important;
 }
 
 body[data-page="/pos"] .pos-page--cashier .pos-header {

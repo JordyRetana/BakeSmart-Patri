@@ -416,7 +416,7 @@
                         name: input.name || "",
                         startDate: input.startDate,
                         endDate: input.endDate,
-                        discount: Number(input.discount || 0),
+                        discount: Number(input.discount || 0) / 100,
                         isActive: input.isActive !== false
                     })
                 });

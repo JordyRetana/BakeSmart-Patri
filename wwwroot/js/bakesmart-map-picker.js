@@ -255,8 +255,14 @@
             const { lat, lng } = this.marker.getLatLng();
             this.values.lat = Number(lat.toFixed(6));
             this.values.lng = Number(lng.toFixed(6));
+            if (!String(this.values.address || '').trim()) {
+                this.values.address = `Ubicacion seleccionada (${this.values.lat.toFixed(6)}, ${this.values.lng.toFixed(6)})`;
+            }
             this.syncInputs();
             this.clearError();
+            // Persist coordinates immediately. Reverse geocoding can take a moment and
+            // must never leave the form with the previous point if the user saves quickly.
+            this.emitChange();
 
             if (updateAddress) {
                 try {

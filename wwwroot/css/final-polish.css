@@ -92,7 +92,7 @@ body.app-body select option {
 
 .bs-select__menu {
     position: fixed !important;
-    z-index: 40000 !important;
+    z-index: 2147483002 !important;
     top: calc(100% + .35rem) !important;
     left: 0 !important;
     right: 0 !important;
@@ -589,6 +589,241 @@ body[data-page="/pos"] .pos-page--cashier .pos-search-box input {
     min-height: 66px !important;
     color: #1f2637 !important;
     background: rgba(255, 255, 255, .98) !important;
+}
+
+/* POS hero contrast is theme-independent and applies to every authorized role. */
+body[data-page="/pos"] .pos-header .pos-title,
+body[data-page="/pos"] .pos-header .pos-title span,
+body[data-page="/pos"] .pos-header .pos-title i,
+body[data-page="/pos"] .pos-header .pos-subtitle,
+body[data-page="/pos"] .pos-header .pos-kicker {
+    color: #fff !important;
+    opacity: 1 !important;
+}
+
+body[data-page="/pos"] .pos-header .pos-subtitle {
+    color: rgba(255, 255, 255, .9) !important;
+}
+
+/* Checkout hero: prevent global page-header columns and dark-mode colors from
+   making the payment introduction overlap or lose contrast. */
+body[data-page="/pos/cart"] .pos-cart-hero {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 1rem !important;
+    background: linear-gradient(120deg, #eef6ff, #fff5fb) !important;
+}
+
+body.dark[data-page="/pos/cart"] .pos-cart-hero {
+    border-color: rgba(167, 139, 250, .28) !important;
+    background: linear-gradient(120deg, #17223a, #2a1d3d) !important;
+}
+
+body.dark[data-page="/pos/cart"] .pos-cart-hero::before {
+    background: linear-gradient(90deg, rgba(17, 24, 39, .96) 0 48%, rgba(17, 24, 39, .62) 66%, rgba(30, 24, 45, .92)) !important;
+}
+
+body.dark[data-page="/pos/cart"] .pos-cart-hero h1,
+body.dark[data-page="/pos/cart"] .pos-cart-hero p {
+    color: #f8fafc !important;
+}
+
+body.dark[data-page="/pos/cart"] .pos-cart-hero .eyebrow {
+    color: #c4b5fd !important;
+}
+
+@media (max-width: 850px) {
+    body[data-page="/pos/cart"] .pos-cart-hero {
+        grid-template-columns: 1fr !important;
+        align-items: start !important;
+    }
+
+body[data-page="/pos/cart"] .pos-cart-hero .btn {
+        width: fit-content !important;
+    }
+}
+
+/* Remove the hard grey rectangle that crossed the POS hero. */
+body[data-page="/pos"] .pos-header::before {
+    background:
+        radial-gradient(circle at 18% 20%, rgba(255, 255, 255, .14), transparent 32%),
+        linear-gradient(90deg, rgba(255, 255, 255, .025), rgba(255, 255, 255, .08)) !important;
+    opacity: 1 !important;
+}
+
+/* Compact bot launcher: icon only, separated from the mobile navigation. */
+#chat-toggle-btn {
+    width: 56px !important;
+    min-width: 56px !important;
+    height: 56px !important;
+    padding: 4px !important;
+    border-radius: 50% !important;
+}
+
+#chat-toggle-btn img {
+    width: 46px !important;
+    height: 46px !important;
+}
+
+.dropdown-toggle {
+    appearance: none;
+    border: 0;
+    font: inherit;
+}
+
+@media (max-width: 860px) {
+    .navbar-container > .mobile-nav-toggle {
+        display: inline-flex !important;
+        grid-column: 2 !important;
+        grid-row: 1 !important;
+        position: relative !important;
+        z-index: 6300 !important;
+    }
+
+    .navbar-container > .mobile-nav-toggle i {
+        color: #fff !important;
+    }
+
+    body.mobile-nav-open .navbar-menu {
+        top: 76px !important;
+        right: .75rem !important;
+        bottom: .75rem !important;
+        left: auto !important;
+        height: calc(100dvh - 88px) !important;
+        max-height: none !important;
+        width: min(360px, calc(100vw - 1.5rem)) !important;
+        border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border)) !important;
+        border-radius: 24px !important;
+        padding: 1rem !important;
+        box-shadow: 0 30px 80px rgba(15, 23, 42, .34) !important;
+        overflow-y: auto !important;
+        align-items: stretch !important;
+        justify-content: flex-start !important;
+    }
+
+    body.mobile-nav-open .navbar-menu .dropdown-toggle {
+        cursor: default !important;
+        pointer-events: none !important;
+    }
+
+    body.mobile-nav-open .navbar-menu .dropdown-toggle .fa-chevron-down {
+        display: none !important;
+    }
+
+    body.mobile-nav-open .navbar-menu .dropdown-menu {
+        position: static !important;
+        display: grid !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+        transform: none !important;
+        width: 100% !important;
+        max-height: none !important;
+        margin-top: .4rem !important;
+        gap: .25rem !important;
+    }
+
+    body.mobile-nav-open #chat-toggle-btn,
+    body.mobile-nav-open #chat-widget {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+
+    #chat-toggle-btn {
+        right: auto !important;
+        left: .8rem !important;
+        bottom: calc(.8rem + env(safe-area-inset-bottom)) !important;
+        z-index: 5800 !important;
+    }
+
+    #chat-widget {
+        right: .65rem !important;
+        left: .65rem !important;
+        bottom: calc(4.9rem + env(safe-area-inset-bottom)) !important;
+        width: auto !important;
+        max-width: none !important;
+        max-height: min(72dvh, 560px) !important;
+        z-index: 5800 !important;
+    }
+}
+
+@media (max-width: 760px) {
+    body[data-page="/marketing"] .marketing-table-wrap,
+    body[data-page="/marketing"] .table-container {
+        overflow: visible !important;
+        border: 0 !important;
+        background: transparent !important;
+    }
+
+    body[data-page="/marketing"] .marketing-page .table-container .marketing-customers-table,
+    body[data-page="/marketing"] .marketing-customers-table,
+    body[data-page="/marketing"] .marketing-customers-table tbody {
+        display: block !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        table-layout: auto !important;
+    }
+
+    body[data-page="/marketing"] .marketing-customers-table thead {
+        display: none !important;
+    }
+
+    body[data-page="/marketing"] .marketing-customers-table tbody {
+        display: grid !important;
+        gap: .8rem !important;
+    }
+
+    body[data-page="/marketing"] .marketing-customers-table tr {
+        position: relative !important;
+        display: block !important;
+        width: 100% !important;
+        padding: 1rem 1rem 1rem 3.35rem !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 18px !important;
+        background: var(--bg-card) !important;
+        box-shadow: var(--shadow-sm) !important;
+    }
+
+    body[data-page="/marketing"] .marketing-customers-table td {
+        display: block !important;
+        width: 100% !important;
+        padding: .2rem 0 !important;
+        border: 0 !important;
+        text-align: left !important;
+    }
+
+    body[data-page="/marketing"] .marketing-customers-table td:first-child {
+        position: absolute !important;
+        top: 1rem !important;
+        left: 1rem !important;
+        width: 22px !important;
+    }
+
+    body[data-page="/marketing"] .marketing-recipient {
+        width: 22px !important;
+        min-width: 22px !important;
+        height: 22px !important;
+        min-height: 22px !important;
+        max-height: 22px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    body[data-page="/marketing"] .marketing-customers-table .btn-sm {
+        width: 100% !important;
+        margin-top: .4rem !important;
+    }
+}
+
+@media (max-width: 600px) {
+    .navbar .navbar-brand-text {
+        display: none !important;
+    }
+
+    .navbar .navbar-container {
+        grid-template-columns: minmax(72px, 1fr) 42px max-content !important;
+    }
 }
 
 body[data-page="/pos"] .pos-page--cashier .pos-layout {
@@ -1193,4 +1428,209 @@ body.dark .accounting-page .btn-outline:hover,
 body.dark .marketing-page .btn-outline:hover {
     color: #fff !important;
     background: linear-gradient(135deg, #7c3aed, #c83c86) !important;
+}
+
+/* Authoritative POS theme layer: applies to every POS role, not only Cajero. */
+body[data-page="/pos"] .pos-header::before,
+body[data-page="/pos"] .pos-header::after {
+    display: none !important;
+    content: none !important;
+}
+
+body.dark[data-page="/pos"] .pos-side-card,
+body.dark[data-page="/pos"] .pos-admin-block,
+body.dark[data-page="/pos"] .pos-admin-block--cash,
+body.dark[data-page="/pos"] .pos-admin-block--sessions,
+body.dark[data-page="/pos"] .pos-admin-block--payments,
+body.dark[data-page="/pos"] .pos-admin-block--credit,
+body.dark[data-page="/pos"] .session-status-card,
+body.dark[data-page="/pos"] .pos-session-row,
+body.dark[data-page="/pos"] .pos-sale-row,
+body.dark[data-page="/pos"] .payment-method-card {
+    color: #f8fafc !important;
+    border-color: rgba(167, 139, 250, .25) !important;
+    background: linear-gradient(180deg, #202b42, #151d2e) !important;
+    box-shadow: 0 18px 46px rgba(0, 0, 0, .22) !important;
+}
+
+body.dark[data-page="/pos"] .pos-panel-title,
+body.dark[data-page="/pos"] .pos-panel-title-sm,
+body.dark[data-page="/pos"] .session-status-value,
+body.dark[data-page="/pos"] .session-status-card strong,
+body.dark[data-page="/pos"] .pos-session-row strong,
+body.dark[data-page="/pos"] .pos-sale-row strong,
+body.dark[data-page="/pos"] .payment-method-name {
+    color: #f8fafc !important;
+}
+
+body.dark[data-page="/pos"] .pos-panel-eyebrow,
+body.dark[data-page="/pos"] .session-status-title,
+body.dark[data-page="/pos"] .session-status-card .text-muted,
+body.dark[data-page="/pos"] .pos-session-row .text-muted,
+body.dark[data-page="/pos"] .pos-sale-row .text-muted {
+    color: #cbd5e1 !important;
+}
+
+body.dark .dropdown-item:hover,
+body.dark .dropdown-item:focus,
+body.dark .dropdown-item.active {
+    color: #fff !important;
+    background: linear-gradient(135deg, rgba(124, 58, 237, .58), rgba(200, 60, 134, .42)) !important;
+}
+
+/* Client portal: eliminate light surfaces and low-contrast labels in night mode. */
+body.dark .tracking-timeline,
+body.dark .tracking-summary,
+body.dark .catalog-toolbar {
+    color: #f8fafc !important;
+    border-color: rgba(167, 139, 250, .25) !important;
+    background: linear-gradient(180deg, #202b42, #151d2e) !important;
+    box-shadow: 0 18px 46px rgba(0, 0, 0, .2) !important;
+}
+
+body.dark .tracking-summary.text-muted,
+body.dark .tracking-summary .text-muted,
+body.dark .tracking-timeline .text-muted {
+    color: #cbd5e1 !important;
+}
+
+body.dark .commerce-kicker {
+    color: #3b2712 !important;
+}
+
+body.dark .leaflet-control-zoom a {
+    color: #111827 !important;
+}
+
+/* Navigation profile: compact desktop control and clean icon-only mobile state. */
+.navbar .user-profile {
+    width: clamp(190px, 20vw, 224px) !important;
+    min-width: 190px !important;
+    min-height: 48px !important;
+    grid-template-columns: 36px minmax(0, 1fr) 24px !important;
+    gap: .55rem !important;
+    padding: .3rem .45rem .3rem .34rem !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 22px rgba(42, 28, 56, .06) !important;
+}
+
+.navbar .user-avatar {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: .9rem !important;
+}
+
+.navbar .user-name {
+    font-size: .82rem !important;
+    line-height: 1.15 !important;
+}
+
+.navbar .user-role {
+    margin-top: .12rem !important;
+    font-size: .68rem !important;
+}
+
+.navbar .user-chevron {
+    width: 24px !important;
+    height: 24px !important;
+    background: transparent !important;
+}
+
+@media (max-width: 860px) {
+    .navbar .navbar-container {
+        grid-template-columns: auto 44px minmax(96px, 1fr) !important;
+        gap: .55rem !important;
+    }
+
+    .navbar .navbar-actions {
+        width: auto !important;
+        min-width: 0 !important;
+        justify-self: end !important;
+        gap: .45rem !important;
+    }
+
+    .navbar .user-profile {
+        width: 44px !important;
+        min-width: 44px !important;
+        max-width: 44px !important;
+        min-height: 44px !important;
+        height: 44px !important;
+        grid-template-columns: 1fr !important;
+        padding: 4px !important;
+        border-radius: 14px !important;
+        overflow: hidden !important;
+    }
+
+    .navbar .user-info,
+    .navbar .user-chevron {
+        display: none !important;
+    }
+
+    .navbar .user-avatar {
+        width: 34px !important;
+        height: 34px !important;
+        margin: auto !important;
+        font-size: .86rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar .navbar-container {
+        width: calc(100% - 1rem) !important;
+        grid-template-columns: 44px 42px minmax(96px, 1fr) !important;
+        gap: .4rem !important;
+    }
+
+    .navbar .navbar-logo {
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 12px !important;
+    }
+
+    .navbar .theme-toggle {
+        width: 40px !important;
+        min-width: 40px !important;
+        height: 40px !important;
+    }
+}
+
+/* Account control: one clear visual language on desktop and mobile. */
+.navbar .user-profile {
+    width: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+    min-height: 48px !important;
+    height: 48px !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    padding: 5px !important;
+    border-radius: 14px !important;
+    background: linear-gradient(145deg, #ffffff, #f4effa) !important;
+    box-shadow: 0 8px 22px rgba(42, 28, 56, .08) !important;
+    overflow: hidden !important;
+}
+
+.navbar .user-profile:hover,
+.navbar .user-menu.user-menu-open .user-profile {
+    border-color: #a855f7 !important;
+    box-shadow: 0 10px 26px rgba(124, 58, 237, .18) !important;
+    transform: translateY(-1px) !important;
+}
+
+.navbar .user-info,
+.navbar .user-chevron {
+    display: none !important;
+}
+
+.navbar .user-avatar {
+    width: 36px !important;
+    height: 36px !important;
+    margin: auto !important;
+    border-radius: 11px !important;
+    font-size: .88rem !important;
+}
+
+body.dark .navbar .user-profile {
+    border-color: rgba(167, 139, 250, .3) !important;
+    background: linear-gradient(145deg, #252d43, #171e30) !important;
 }

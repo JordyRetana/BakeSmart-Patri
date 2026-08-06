@@ -454,3 +454,149 @@
         width: 100%;
     }
 }
+
+/* Accounting final polish: clearer work zones, readable journal, and dark mode parity. */
+.accounting-header {
+    padding: 1.35rem !important;
+    border: 1px solid color-mix(in srgb, var(--info, #0ea5e9) 18%, var(--border)) !important;
+    border-radius: 18px !important;
+    background:
+        linear-gradient(135deg, color-mix(in srgb, #e0f2fe 72%, var(--bg-card)), color-mix(in srgb, #fff1f2 68%, var(--bg-card))) !important;
+}
+
+.accounting-title {
+    color: var(--text) !important;
+    font-size: clamp(2rem, 3.4vw, 3.2rem) !important;
+    letter-spacing: 0 !important;
+}
+
+.accounting-actions-card {
+    border-radius: 18px !important;
+    background: linear-gradient(180deg, var(--bg-card), color-mix(in srgb, var(--bg-card) 92%, var(--primary-light) 8%)) !important;
+}
+
+.accounting-block,
+.accounting-close-panel {
+    border-radius: 16px !important;
+    background: linear-gradient(180deg, var(--bg-card), color-mix(in srgb, var(--bg-card) 94%, var(--primary-light) 6%)) !important;
+}
+
+.accounting-close-panel {
+    padding: 1rem;
+    border: 1px solid var(--border);
+}
+
+.accounting-action-buttons {
+    display: grid !important;
+    grid-template-columns: minmax(260px, 1fr) minmax(200px, .45fr) minmax(260px, 1fr) !important;
+    align-items: stretch !important;
+}
+
+.accounting-action-buttons .btn,
+.accounting-action-buttons .form-control,
+.accounting-action-buttons .bs-select,
+.accounting-action-buttons .bs-select__button {
+    min-height: 52px !important;
+}
+
+.accounting-entries-card {
+    border-radius: 18px !important;
+    overflow: hidden;
+}
+
+.accounting-table-wrap {
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+}
+
+.accounting-entries-table th {
+    color: var(--text) !important;
+    font-size: .72rem !important;
+}
+
+.accounting-entries-table td {
+    font-size: .82rem !important;
+}
+
+.accounting-detail-cell strong {
+    display: block;
+    max-width: 100%;
+}
+
+.accounting-reference-chip {
+    background: color-mix(in srgb, var(--primary-light) 44%, var(--bg-card)) !important;
+    color: var(--primary) !important;
+}
+
+body.dark .accounting-header {
+    border-color: rgba(125, 211, 252, .24) !important;
+    background:
+        linear-gradient(135deg, rgba(14, 30, 54, .96), rgba(44, 24, 56, .92)) !important;
+}
+
+body.dark .accounting-title,
+body.dark .accounting-section-title,
+body.dark .accounting-kpi-card h2,
+body.dark .accounting-detail-cell strong,
+body.dark .accounting-account-cell,
+body.dark .accounting-entries-table td,
+body.dark .accounting-close-result strong {
+    color: #f8fafc !important;
+}
+
+body.dark .accounting-subtitle,
+body.dark .accounting-kpi-card .text-muted,
+body.dark .accounting-close-result span {
+    color: #cbd5e1 !important;
+}
+
+body.dark .accounting-kpi-card,
+body.dark .accounting-actions-card,
+body.dark .accounting-entries-card,
+body.dark .accounting-block,
+body.dark .accounting-close-panel,
+body.dark .accounting-action-buttons,
+body.dark .accounting-table-wrap {
+    border-color: rgba(148, 163, 184, .22) !important;
+    background: linear-gradient(180deg, #182033, #111827) !important;
+}
+
+body.dark .accounting-table thead th {
+    border-color: rgba(148, 163, 184, .18) !important;
+    background: #1f2937 !important;
+    color: #f8fafc !important;
+}
+
+body.dark .accounting-table tbody td {
+    border-color: rgba(148, 163, 184, .16) !important;
+}
+
+body.dark .accounting-reference-chip {
+    border-color: rgba(167, 139, 250, .28) !important;
+    background: rgba(124, 58, 237, .16) !important;
+    color: #ddd6fe !important;
+}
+
+body.dark .accounting-type-badge.type-sale {
+    background: rgba(124, 58, 237, .18) !important;
+    border-color: rgba(196, 181, 253, .35) !important;
+    color: #ddd6fe !important;
+}
+
+body.dark .accounting-type-badge.type-supplier {
+    background: rgba(236, 72, 153, .16) !important;
+    border-color: rgba(249, 168, 212, .32) !important;
+    color: #fbcfe8 !important;
+}
+
+body.dark .accounting-type-badge.type-expense {
+    background: rgba(245, 158, 11, .15) !important;
+    border-color: rgba(251, 191, 36, .32) !important;
+    color: #fde68a !important;
+}
+
+@media (max-width: 980px) {
+    .accounting-action-buttons {
+        grid-template-columns: 1fr !important;
+    }
+}

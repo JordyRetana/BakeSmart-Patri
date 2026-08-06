@@ -28,59 +28,6 @@
             menu.classList.add('mobile-nav-drawer');
             menu.setAttribute('aria-hidden', 'true');
 
-            if (!$('#mobileNavRuntimeFix')) {
-                const style = document.createElement('style');
-                style.id = 'mobileNavRuntimeFix';
-                style.textContent = `
-                    @media (max-width: 860px) {
-                        .navbar-container > .mobile-nav-toggle { display: none !important; }
-                        .mobile-nav-fab {
-                            display: inline-flex !important;
-                            position: fixed !important;
-                            align-items: center !important;
-                            justify-content: center !important;
-                            width: 56px !important;
-                            height: 56px !important;
-                            right: 1rem !important;
-                            bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
-                            z-index: 6200 !important;
-                            color: #fff !important;
-                            border: 0 !important;
-                            border-radius: 18px !important;
-                            background: linear-gradient(135deg, #7c3aed, #db2777) !important;
-                            box-shadow: 0 22px 46px rgba(139, 92, 246, .34) !important;
-                        }
-                        body.mobile-nav-open .mobile-nav-fab {
-                            transform: translateY(-2px) scale(.96) !important;
-                            box-shadow: 0 16px 36px rgba(139, 92, 246, .28) !important;
-                        }
-                        body.mobile-nav-open .mobile-nav-drawer {
-                            left: auto !important;
-                            right: .75rem !important;
-                            top: auto !important;
-                            bottom: calc(4.75rem + env(safe-area-inset-bottom)) !important;
-                            width: min(350px, calc(100vw - 1.5rem)) !important;
-                            max-height: min(62dvh, 420px) !important;
-                            height: auto !important;
-                            border-radius: 20px !important;
-                            padding: .72rem !important;
-                        }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-
-            if (!$('.mobile-nav-fab')) {
-                const fab = document.createElement('button');
-                fab.type = 'button';
-                fab.className = 'mobile-nav-toggle mobile-nav-fab';
-                fab.setAttribute('aria-controls', 'navbarMenu');
-                fab.setAttribute('aria-expanded', 'false');
-                fab.setAttribute('aria-label', 'Abrir navegación');
-                fab.innerHTML = '<i class="fas fa-bars"></i>';
-                document.body.appendChild(fab);
-            }
-
             const toggles = $$('.mobile-nav-toggle');
             if (!toggles.length) return;
 
@@ -107,7 +54,7 @@
                 if (!document.body.classList.contains('mobile-nav-open')) return;
                 const target = event.target;
                 if (target.closest('a') && target.closest('#navbarMenu')) {
-                    setTimeout(() => setOpen(false), 200);
+                    setOpen(false);
                     return;
                 }
                 if (target.closest('#navbarMenu, .mobile-nav-toggle')) return;
@@ -1238,21 +1185,28 @@
             const render = () => {
                 label.textContent = select.options[select.selectedIndex]?.text || select.getAttribute('placeholder') || 'Seleccionar';
                 menu.innerHTML = '';
-                [...select.options].forEach(option => {
+                [...select.options].forEach((option, index) => {
                     const item = document.createElement('button');
                     item.type = 'button';
                     item.className = 'bs-select__option';
                     item.setAttribute('role', 'option');
                     item.setAttribute('aria-selected', option.selected ? 'true' : 'false');
                     item.dataset.value = option.value;
+                    item.dataset.index = String(index);
                     item.textContent = option.text;
                     if (option.disabled) item.disabled = true;
                     item.addEventListener('click', event => {
                         event.preventDefault();
-                        select.value = option.value;
+                        const nextIndex = Number(item.dataset.index);
+                        if (Number.isInteger(nextIndex) && select.options[nextIndex]) {
+                            select.selectedIndex = nextIndex;
+                        } else {
+                            select.value = item.dataset.value || option.value;
+                        }
+                        select.dispatchEvent(new Event('input', { bubbles: true }));
                         select.dispatchEvent(new Event('change', { bubbles: true }));
-                        this.close(wrapper);
                         render();
+                        this.close(wrapper);
                     });
                     menu.appendChild(item);
                 });
@@ -1296,7 +1250,8 @@
                 menu.style.setProperty('right', 'auto', 'important');
                 menu.style.setProperty('bottom', 'auto', 'important');
                 menu.style.setProperty('max-height', `${maxHeight}px`, 'important');
-                menu.style.setProperty('z-index', '40000', 'important');
+                const modalParent = wrapper.closest('.pos-payment-modal, .payment-modal, .modal, [role="dialog"]');
+                menu.style.setProperty('z-index', modalParent ? '2147483002' : '40000', 'important');
 
                 const measuredHeight = Math.min(menu.scrollHeight || maxHeight, maxHeight);
                 const top = openAbove
