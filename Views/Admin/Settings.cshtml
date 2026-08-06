@@ -34,13 +34,13 @@
             <div class="grid grid-2 settings-grid">
                 <div>
                     <label>IVA (%)</label>
-                    <input class="form-control" name="iva" type="number" min="0" max="1" step="0.01" />
-                    <small class="text-muted">Ej: 0.13 para 13%</small>
+                    <input class="form-control" name="iva" type="number" min="0" max="100" step="0.1" />
+                    <small class="text-muted">Escriba 13 para aplicar 13%.</small>
                 </div>
                 <div>
                     <label>Descuento cliente frecuente (%)</label>
-                    <input class="form-control" name="frequentCustomerDiscount" type="number" min="0" max="1" step="0.01" />
-                    <small class="text-muted">Ej: 0.05 para 5%</small>
+                    <input class="form-control" name="frequentCustomerDiscount" type="number" min="0" max="100" step="0.5" />
+                    <small class="text-muted">Escriba 5 para aplicar 5%.</small>
                 </div>
                 <div class="settings-toggle-card">
                     <div>
@@ -53,8 +53,6 @@
                     </label>
                 </div>
             </div>
-        </section>
-
             <div class="settings-subsection">
                 <h3>Ubicación del negocio</h3>
                 <p class="text-muted">Busca o selecciona en el mapa el origen de entregas y pedidos.</p>
@@ -824,7 +822,11 @@
                         input.checked = value === undefined ? true : ['true', '1', 'si', 'yes', 'on'].includes(String(value).toLowerCase());
                         return;
                     }
-                    if (input && value !== undefined) input.value = value;
+                    if (input && value !== undefined) {
+                        input.value = ['iva', 'frequentCustomerDiscount'].includes(key)
+                            ? String(Number(value || 0) * 100)
+                            : value;
+                    }
                 });
 
                 setHeroImage(form.querySelector('[name="siteHeroImageUrl"]').value || '/img/products/cupcakes-decorados.jpg');
@@ -872,7 +874,11 @@
                     if (key === 'originLatitude') value = String(mapValues.lat ?? '');
                     if (key === 'originLongitude') value = String(mapValues.lng ?? '');
                     if (key === 'botUseDatabase') value = form.querySelector('[name="botUseDatabase"]').checked ? 'true' : 'false';
-                    if (value !== null) settings[key] = value;
+                    if (value !== null) {
+                        settings[key] = ['iva', 'frequentCustomerDiscount'].includes(key)
+                            ? String(Math.min(Math.max(Number(value || 0), 0), 100) / 100)
+                            : value;
+                    }
                 });
 
                 settings.siteHomeBlocks = JSON.stringify(content.home.map(normalizeItem));

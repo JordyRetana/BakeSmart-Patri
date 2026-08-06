@@ -1,6 +1,6 @@
 ﻿
 @section Styles {
-    <link rel="stylesheet" href="~/css/pages/client-track.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/client-track.css?v=20260805-live-route" />
 }
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -25,6 +25,19 @@
             <select id="trackPresetSelect" class="form-control track-select-secondary"></select>
         </div>
     </div>
+
+    <section class="track-live-strip" aria-label="Estado actual de la entrega">
+        <div class="track-live-icon"><i id="trackLiveIcon" class="fas fa-clock"></i></div>
+        <div class="track-live-copy">
+            <span id="trackLiveEyebrow">Actualización del pedido</span>
+            <strong id="trackLiveTitle">Preparando seguimiento</strong>
+            <small id="trackLiveDetail">Consultando el estado más reciente...</small>
+        </div>
+        <div class="track-live-progress" aria-label="Progreso del pedido">
+            <div class="track-live-progress__meta"><span>Progreso</span><strong id="trackProgressValue">0%</strong></div>
+            <div class="track-live-progress__rail"><span id="trackProgressBar"></span></div>
+        </div>
+    </section>
 
     <div class="grid grid-4 track-kpis">
         <div class="card metric-card">
@@ -348,7 +361,23 @@
         animationTimer = setInterval(() => {
             index = (index + 1) % points.length;
             activeAnimatedMarker.setLatLng(points[index]);
-        }, 120);
+        }, 180);
+    }
+
+    function renderLiveStatus(order, hasLiveRoute) {
+        const steps = order.tracking?.steps || ['Pendiente pago', 'Confirmado', 'En produccion', 'Listo', 'En camino', 'Entregado'];
+        const currentStep = Math.min(Math.max(Number(order.tracking?.currentStep || 0), 0), Math.max(steps.length - 1, 1));
+        const progress = isDelivered(order) ? 100 : Math.max(8, Math.round((currentStep / Math.max(steps.length - 1, 1)) * 100));
+        const live = hasLiveRoute && !isDelivered(order);
+        document.getElementById('trackLiveIcon').className = `fas ${live ? 'fa-motorcycle' : isDelivered(order) ? 'fa-circle-check' : 'fa-box'}`;
+        document.getElementById('trackLiveEyebrow').textContent = live ? 'Entrega en movimiento' : 'Actualización del pedido';
+        document.getElementById('trackLiveTitle').textContent = live ? 'Tu pedido va en camino' : isDelivered(order) ? 'Pedido entregado' : order.status;
+        document.getElementById('trackLiveDetail').textContent = live
+            ? 'El marcador animado muestra el avance estimado hacia tu dirección.'
+            : isDelivered(order) ? 'La entrega llegó a su destino.' : 'La ruta se activará cuando el pedido salga para entrega.';
+        document.getElementById('trackProgressValue').textContent = `${progress}%`;
+        document.getElementById('trackProgressBar').style.width = `${progress}%`;
+        page.classList.toggle('track-page--live', live);
     }
 
     function activePreset(order) {
@@ -494,6 +523,7 @@
         clearVisuals();
         renderTimeline(order, destination, hasLiveRoute);
         renderTrackingSummary(order, destination, routeType);
+        renderLiveStatus(order, hasLiveRoute);
 
         const mapInstance = ensureMap();
         const startLatLng = [origin.lat, origin.lng];
@@ -539,10 +569,12 @@
             const activePoint = delivered
                 ? destinationLatLng
                 : currentPointForOrder(order, flightPath[Math.floor(flightPath.length * .72)]);
-            const routeMarker = L.marker(activePoint, { icon: icons.plane })
-                .addTo(mapInstance)
-                .bindPopup(delivered ? 'Pedido entregado' : 'Ubicacion actual estimada');
-            markers.push(routeMarker);
+            if (delivered) {
+                const routeMarker = L.marker(activePoint, { icon: icons.plane }).addTo(mapInstance).bindPopup('Pedido entregado');
+                markers.push(routeMarker);
+            } else {
+                animateMarker(flightPath, icons.plane);
+            }
         } else {
             const operationMarker = L.marker(localRoute.operationPoint, {
                 icon: icons.courier
@@ -568,10 +600,12 @@
             const activePoint = delivered
                 ? destinationLatLng
                 : currentPointForOrder(order, localRoute.courierLatLng);
-            const courierMarker = L.marker(activePoint, { icon: icons.courier })
-                .addTo(mapInstance)
-                .bindPopup(delivered ? 'Pedido entregado' : 'Ubicacion actual estimada');
-            markers.push(courierMarker);
+            if (delivered) {
+                const courierMarker = L.marker(activePoint, { icon: icons.courier }).addTo(mapInstance).bindPopup('Pedido entregado');
+                markers.push(courierMarker);
+            } else {
+                animateMarker(localRoute.combined, icons.courier);
+            }
         }
 
         const fitPoints = isInternational

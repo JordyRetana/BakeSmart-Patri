@@ -39,6 +39,16 @@ internal static class MySqlSmokeRunner
             ("catalog-products", async () => _ = await store.CatalogProductsAsync()),
             ("orders", async () => _ = await store.OrdersAsync()),
             ("customers", async () => _ = await store.CustomersAsync()),
+            ("promotions", async () => _ = await store.PromotionsAsync()),
+            ("promotion-discounts", () =>
+            {
+                if (SqlStore.NormalizePromotionDiscount(7.5m) != 0.075m ||
+                    SqlStore.NormalizePromotionDiscount(10m) != 0.10m ||
+                    SqlStore.NormalizePromotionDiscount(100m) != 1m)
+                    throw new InvalidOperationException("La normalización de descuentos no conserva el porcentaje indicado.");
+                return Task.CompletedTask;
+            }),
+            ("accounting", async () => _ = await store.AccountingOverviewAsync()),
             ("profile", async () => _ = await store.GetProfileAsync("cliente@demo.com")),
             ("pos-config", async () => _ = await store.PosConfigAsync()),
             ("cash-sessions", async () => _ = await store.CashSessionsAsync("cajero@demo.com")),

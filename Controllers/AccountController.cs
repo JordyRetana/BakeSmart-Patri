@@ -2,6 +2,7 @@ using BakeSmartPatri.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
 using System.Security.Claims;
 
 namespace BakeSmartPatri.Controllers
@@ -178,9 +179,11 @@ namespace BakeSmartPatri.Controllers
             string? phone, string? address,
             string? newPassword, string? confirmPassword,
             int? customerAddressId, string? addressLabel,
-            decimal? latitude, decimal? longitude)
+            string? latitude, string? longitude)
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+            decimal? latitudeValue = ParseCoordinate(latitude);
+            decimal? longitudeValue = ParseCoordinate(longitude);
 
             firstName = (firstName ?? "").Trim();
             lastName  = (lastName  ?? "").Trim();
@@ -193,7 +196,7 @@ namespace BakeSmartPatri.Controllers
 
             if (User.IsInRole("Cliente") &&
                 !string.IsNullOrWhiteSpace(address) &&
-                !SqlStore.HasValidCoordinates(latitude, longitude))
+                !SqlStore.HasValidCoordinates(latitudeValue, longitudeValue))
             {
                 TempData["ToastError"] = "Debe seleccionar una ubicacion valida en el mapa para guardar la direccion.";
                 return RedirectToAction(nameof(Profile));
@@ -215,7 +218,7 @@ namespace BakeSmartPatri.Controllers
 
             await _sqlStore.UpdateProfileAsync(email, new SqlStore.ProfileInput(
                 firstName, lastName, phone, address, newPassword,
-                customerAddressId, addressLabel, latitude, longitude));
+                customerAddressId, addressLabel, latitudeValue, longitudeValue));
             await _sqlStore.AddAuditLogAsync("ACTUALIZAR_PERFIL", $"Perfil actualizado: {firstName} {lastName}", email);
 
             // Re-sign with updated display name
@@ -225,6 +228,14 @@ namespace BakeSmartPatri.Controllers
 
             TempData["ToastSuccess"] = "Perfil actualizado correctamente.";
             return RedirectToAction(nameof(Profile));
+        }
+
+        private static decimal? ParseCoordinate(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            if (decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var invariant)) return invariant;
+            if (decimal.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out var localized)) return localized;
+            return null;
         }
 
         [HttpGet]

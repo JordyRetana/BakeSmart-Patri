@@ -7,6 +7,14 @@
 }
 
 <div class="page-shell order-form-page">
+    @if (TempData["ToastError"] is string errorMessage && !string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-error" role="alert">@errorMessage</div>
+    }
+    @if (TempData["ToastSuccess"] is string successMessage && !string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="alert alert-success" role="status">@successMessage</div>
+    }
     <div style="margin-bottom:2rem;">
         <h1 style="margin:0;display:flex;align-items:center;gap:.5rem;">
             <i class="fas fa-plus-circle" style="color:var(--primary);"></i>
@@ -50,7 +58,7 @@
                         @foreach (var product in Model.Products)
                         {
                             var isSelected = selectedProduct == product.Id.ToString();
-                            <option value="@product.Id" data-price="@product.UnitPrice" selected="@isSelected">
+                            <option value="@product.Id" data-price="@product.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" selected="@isSelected">
                                 @product.Name - @product.UnitPrice.ToString("C0", culture)
                             </option>
                         }
@@ -140,7 +148,8 @@
             <h3 style="color:white;">Resumen del pedido</h3>
             <div style="display:flex;flex-direction:column;gap:.5rem;">
                 <div style="display:flex;justify-content:space-between;"><span>Subtotal:</span><span id="subtotal">₡0</span></div>
-                <div style="display:flex;justify-content:space-between;"><span>Envío:</span><span id="envio">₡0</span></div>
+                <div style="display:flex;justify-content:space-between;"><span>Descuento cliente frecuente:</span><span id="discount">₡0</span></div>
+                <div style="display:flex;justify-content:space-between;"><span>IVA:</span><span id="tax">₡0</span></div>
                 <div style="display:flex;justify-content:space-between;font-size:1.25rem;font-weight:700;margin-top:.5rem;padding-top:.5rem;border-top:1px solid rgba(255,255,255,.3);">
                     <span>Total:</span>
                     <span id="total">₡0</span>
@@ -158,10 +167,12 @@
 <script src="~/js/bakesmart-map-picker.js" asp-append-version="true"></script>
 <script>
     let orderMapPicker;
+    let orderCustomerProfile = null;
 
     async function initOrderMap() {
         await BakeSmartStore.refresh();
         const config = BakeSmartStore.pos.config();
+        try { orderCustomerProfile = await BakeSmartStore.loadProfile(); } catch (_) { orderCustomerProfile = null; }
 
         orderMapPicker = await BakeSmartMapPicker.create('orderMapPicker', {
             address: '',
@@ -213,14 +224,17 @@
     function updateSummary() {
         const productSelect = document.getElementById('productSelect');
         const selectedOption = productSelect.options[productSelect.selectedIndex];
-        const metodoEntrega = document.querySelector('select[name="metodoEntrega"]').value;
         const subtotal = Number(selectedOption?.dataset.price || 0);
-        const envio = metodoEntrega === 'domicilio' ? 3000 : 0;
-        const total = subtotal + envio;
+        const config = BakeSmartStore.pos.config();
+        const discountRate = orderCustomerProfile?.isFrequent ? Number(config.frequentCustomerDiscount || 0) : 0;
+        const discount = Math.round(subtotal * discountRate * 100) / 100;
+        const tax = Math.round((subtotal - discount) * Number(config.iva || 0) * 100) / 100;
+        const total = subtotal - discount + tax;
 
-        document.getElementById('subtotal').textContent = `₡${subtotal.toLocaleString()}`;
-        document.getElementById('envio').textContent = envio > 0 ? `₡${envio.toLocaleString()}` : 'Gratis';
-        document.getElementById('total').textContent = `₡${total.toLocaleString()}`;
+        document.getElementById('subtotal').textContent = `₡${subtotal.toLocaleString('es-CR')}`;
+        document.getElementById('discount').textContent = discount > 0 ? `-₡${discount.toLocaleString('es-CR')}` : '₡0';
+        document.getElementById('tax').textContent = `₡${tax.toLocaleString('es-CR')}`;
+        document.getElementById('total').textContent = `₡${total.toLocaleString('es-CR')}`;
     }
 
     document.getElementById('productSelect').addEventListener('change', updateSummary);
@@ -257,10 +271,12 @@
         }
     });
 
-    initOrderMap().then(() => {
-        updateSummary();
-        toggleDeliveryMode();
-    }).catch(error => app.toast.error(error.message));
+    window.addEventListener('DOMContentLoaded', () => {
+        initOrderMap().then(() => {
+            updateSummary();
+            toggleDeliveryMode();
+        }).catch(error => app.toast.error(error.message));
+    });
 </script>
 
 @section Styles {

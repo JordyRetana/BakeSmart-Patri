@@ -140,7 +140,10 @@
     .marketing-table-wrap {
         max-width: 100%;
         overflow: auto;
-        border-radius: 14px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--bg-card);
+        box-shadow: 0 14px 34px rgba(33, 24, 46, .06);
     }
 
     .marketing-table {
@@ -155,6 +158,45 @@
 
     .marketing-customers-table {
         table-layout: fixed;
+    }
+
+    .marketing-recipient {
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        position: relative;
+        width: 22px !important;
+        min-width: 22px !important;
+        height: 22px !important;
+        min-height: 22px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: 2px solid #c8b9d8 !important;
+        border-radius: 7px !important;
+        background: #fff !important;
+        box-shadow: none !important;
+        cursor: pointer;
+    }
+
+    .marketing-recipient:checked {
+        border-color: #7c3aed !important;
+        background: linear-gradient(135deg, #7c3aed, #c83c86) !important;
+    }
+
+    .marketing-recipient:checked::after {
+        content: "";
+        position: absolute;
+        left: 6px;
+        top: 2px;
+        width: 5px;
+        height: 10px;
+        border: solid #fff;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+    }
+
+    .marketing-recipient:focus-visible {
+        outline: 3px solid rgba(124, 58, 237, .22) !important;
+        outline-offset: 2px;
     }
 
         .marketing-customers-table th:nth-child(1),
@@ -206,8 +248,56 @@
         position: sticky;
         top: 0;
         z-index: 1;
-        background: var(--bg-card);
+        padding: .9rem 1rem !important;
+        color: #5b5265;
+        border-bottom: 1px solid #e5dceb !important;
+        background: linear-gradient(180deg, #fbf8fd, #f5eff9);
+        font-size: .72rem;
+        font-weight: 900;
+        letter-spacing: .055em;
+        text-transform: uppercase;
     }
+
+    .marketing-table tbody td {
+        padding: .95rem 1rem !important;
+        border-bottom: 1px solid color-mix(in srgb, var(--border) 78%, transparent) !important;
+        vertical-align: middle;
+    }
+
+    .marketing-table tbody tr:last-child td { border-bottom: 0 !important; }
+    .marketing-table tbody tr:nth-child(even) { background: color-mix(in srgb, var(--primary-light) 18%, transparent); }
+
+    .marketing-customer-cell {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr);
+        align-items: center;
+        gap: .7rem;
+    }
+
+    .marketing-customer-avatar {
+        width: 40px;
+        height: 40px;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #7c3aed, #c83c86);
+        box-shadow: 0 8px 18px rgba(124, 58, 237, .2);
+    }
+
+    .marketing-customer-cell strong { display: block; color: var(--text); }
+    .marketing-customer-cell small { display: block; margin-top: .16rem; color: var(--text-muted); font-size: .76rem; line-height: 1.35; }
+    .marketing-contact-cell { display: grid; gap: .3rem; }
+    .marketing-contact-cell span,
+    .marketing-contact-cell small { display: flex; align-items: center; gap: .45rem; color: var(--text); }
+    .marketing-contact-cell small { color: var(--text-muted); }
+    .marketing-contact-cell i { width: 14px; color: var(--primary); font-size: .72rem; text-align: center; }
+
+    body.dark .marketing-table-wrap { border-color: rgba(167, 139, 250, .22); background: #151d2e; }
+    body.dark .marketing-table thead th { color: #d8d1e5; border-color: rgba(167, 139, 250, .2) !important; background: linear-gradient(180deg, #273149, #20283d); }
+    body.dark .marketing-table tbody tr:nth-child(even) { background: rgba(124, 58, 237, .07); }
+    body.dark .marketing-recipient { border-color: #6f6481 !important; background: #111827 !important; }
+    body.dark .marketing-recipient:checked { border-color: #a78bfa !important; background: linear-gradient(135deg, #7c3aed, #c83c86) !important; }
 
     .marketing-form {
         display: grid;
@@ -345,5 +435,77 @@
     .marketing-submit-btn,
     .marketing-customers-table .btn-sm {
         width: 100%;
+    }
+}
+
+@media (max-width: 760px) {
+    .marketing-page .table-container,
+    .marketing-table-wrap {
+        overflow: visible !important;
+        border: 0 !important;
+        background: transparent !important;
+    }
+
+    .marketing-page .marketing-customers-table {
+        min-width: 0 !important;
+        display: block;
+    }
+
+    .marketing-customers-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+    }
+
+    .marketing-customers-table tbody,
+    .marketing-customers-table tr,
+    .marketing-customers-table td {
+        display: block;
+        width: 100% !important;
+    }
+
+    .marketing-customers-table tbody {
+        display: grid;
+        gap: .85rem;
+    }
+
+    .marketing-customers-table tr {
+        position: relative;
+        padding: 1rem 1rem 1rem 3.25rem;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--bg-card);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .marketing-customers-table td {
+        padding: .22rem 0 !important;
+        border: 0 !important;
+        text-align: left !important;
+    }
+
+    .marketing-customers-table td:first-child {
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+        width: 20px !important;
+    }
+
+    .marketing-customers-table td:nth-child(4)::before {
+        content: "Total gastado: ";
+        color: var(--text-muted);
+        font-size: .78rem;
+        font-weight: 700;
+    }
+
+    .marketing-customers-table td:nth-child(5) {
+        margin: .35rem 0;
+    }
+
+    .marketing-customers-table .btn-sm {
+        width: 100%;
+        margin-top: .35rem;
     }
 }

@@ -11,10 +11,10 @@
         <div>
             <h1 class="accounting-title">
                 <i class="fas fa-calculator"></i>
-                Contabilidad basica
+                Contabilidad y libro diario
             </h1>
             <p class="text-muted accounting-subtitle">
-                Registra gastos, pagos a proveedores, conciliacion y cierre diario con trazabilidad.
+                Registra gastos, pagos a proveedores, conciliación y cierre diario con trazabilidad.
             </p>
         </div>
     </div>
@@ -47,7 +47,7 @@
         <div class="card accounting-kpi-card">
             <span class="accounting-kpi-icon accounting-kpi-icon--reconcile"><i class="fas fa-scale-balanced"></i></span>
             <div>
-                <div class="text-muted">Conciliacion</div>
+                <div class="text-muted">Conciliación</div>
                 <h2 id="accReconStatus"></h2>
             </div>
         </div>
@@ -65,7 +65,7 @@
 
                 <form id="expenseForm" class="accounting-form">
                     <div class="accounting-form-block">
-                        <label>Descripcion</label>
+                        <label>Descripción</label>
                         <input class="form-control" name="description" placeholder="Ej. Compra de empaques" required />
                     </div>
 
@@ -75,12 +75,17 @@
                     </div>
 
                     <div class="accounting-form-block">
-                        <label>Cuenta contable</label>
-                        <input class="form-control" name="account" placeholder="Ej. Gastos operativos" required />
+                        <label>Cuenta de gasto (Debe)</label>
+                        <select class="form-control" name="account" required>
+                            <option value="5-01">5-01 · Gastos operativos</option>
+                            <option value="5-02">5-02 · Insumos y materiales</option>
+                            <option value="5-03">5-03 · Servicios y alquileres</option>
+                            <option value="5-04">5-04 · Mercadeo y publicidad</option>
+                        </select>
                     </div>
 
                     <div class="accounting-form-block">
-                        <label>Metodo de pago</label>
+                        <label>Medio de salida (Haber)</label>
                         <select class="form-control" name="method">
                             <option>Transferencia</option>
                             <option>SINPE</option>
@@ -116,12 +121,15 @@
                     </div>
 
                     <div class="accounting-form-block">
-                        <label>Cuenta contable</label>
-                        <input class="form-control" name="account" placeholder="Ej. Cuentas por pagar" required />
+                        <label>Cuenta por pagar (Debe)</label>
+                        <select class="form-control" name="account" required>
+                            <option value="2-01">2-01 · Cuentas por pagar a proveedores</option>
+                            <option value="2-02">2-02 · Obligaciones comerciales</option>
+                        </select>
                     </div>
 
                     <div class="accounting-form-block">
-                        <label>Metodo de pago</label>
+                        <label>Medio de salida (Haber)</label>
                         <select class="form-control" name="method">
                             <option>Transferencia</option>
                             <option>SINPE</option>
@@ -300,7 +308,7 @@
                     button.disabled = true;
                     const result = await BakeSmartStore.accounting.reconcile();
                     reconStatus = result.status;
-                    app.toast.info(`Conciliacion completada: ${result.reviewed} revisadas, ${result.generated || 0} reparadas, ${result.issues} diferencias.`);
+                    app.toast.info(`Conciliación completada: ${result.reviewed} revisadas, ${result.generated || 0} reparadas, ${result.issues} diferencias.`);
                     await render();
                 } catch (error) {
                     app.toast.error(error.message);
@@ -319,7 +327,7 @@
                     resultEl.hidden = false;
                     resultEl.innerHTML = `
                         <strong>Cierre ${escapeHtml(result.type || closeType)} #${result.closeId} creado.</strong>
-                        <span>Operacion registrada en bitacora y lista para reportería.</span>
+                        <span>Operación registrada en bitácora y lista para reportería.</span>
                     `;
                     app.toast.success(`Cierre ${result.type || closeType} #${result.closeId} creado.`);
                     await render();

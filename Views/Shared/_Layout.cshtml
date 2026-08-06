@@ -17,6 +17,7 @@
         : isBaker ? "Repostero"
         : isSupervisor ? "Supervisor"
         : "Cliente";
+    string userProfileIcon = isClient ? "fa-user" : "fa-user-tie";
 
     if (isAuth && User?.Identity?.Name != null)
     {
@@ -56,7 +57,7 @@
     <link rel="stylesheet" href="~/css/global/workspace-layout.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/global/smart-tables.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
-    <link rel="stylesheet" href="~/css/final-polish.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/final-polish.css?v=20260805-profile-icon" />
     <style>
         
         @@keyframes slideIn {
@@ -158,7 +159,7 @@
                     {
                         <div class="user-menu storefront-account" id="userMenu">
                             <button type="button" class="storefront-account__toggle user-profile" id="userMenuToggle" aria-haspopup="true" aria-expanded="false">
-                                <span class="user-avatar">@userInitials</span>
+                                <span class="user-avatar" aria-hidden="true"><i class="fas @userProfileIcon"></i></span>
                                 <span class="user-info">
                                     <span class="user-name">@userName</span>
                                     <span class="user-role">Cliente</span>
@@ -168,7 +169,7 @@
 
                             <div class="user-dropdown storefront-account__menu" id="userDropdown" role="menu" hidden>
                                 <div class="user-dropdown-head">
-                                    <span class="user-avatar user-avatar-sm">@userInitials</span>
+                                    <span class="user-avatar user-avatar-sm" aria-hidden="true"><i class="fas @userProfileIcon"></i></span>
                                     <span>
                                         <strong>@userName</strong>
                                         <small>Perfil de cliente</small>
@@ -262,10 +263,10 @@
                     </a>
 
                     <div class="dropdown">
-                        <span class="dropdown-toggle">
+                        <button class="dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
                             <i class="fas fa-store" style="margin-right: 0.25rem;"></i> Operación
                             <i class="fas fa-chevron-down" style="font-size: 0.75rem; margin-left: 0.25rem;"></i>
-                        </span>
+                        </button>
                         <div class="dropdown-menu">
                             @if (isAdmin || isStaff || isSupervisor || isCashier)
                             {
@@ -322,7 +323,7 @@
                                     <i class="fas fa-calculator" style="width: 20px; margin-right: 0.5rem;"></i> Contabilidad
                                 </a>
                                 <a class="dropdown-item" href="/Marketing">
-                                    <i class="fas fa-megaphone" style="width: 20px; margin-right: 0.5rem;"></i> Marketing
+                                    <i class="fas fa-bullhorn" style="width: 20px; margin-right: 0.5rem;"></i> Marketing
                                 </a>
                             }
                         </div>
@@ -339,7 +340,7 @@
                 {
                     <div class="user-menu" id="userMenu">
                         <button type="button" class="user-profile" id="userMenuToggle" aria-haspopup="true" aria-expanded="false">
-                            <span class="user-avatar">@userInitials</span>
+                            <span class="user-avatar" aria-hidden="true"><i class="fas @userProfileIcon"></i></span>
                             <span class="user-info">
                                 <span class="user-name">@userName</span>
                                 @if (!isClient)
@@ -356,7 +357,7 @@
 
                         <div class="user-dropdown" id="userDropdown" role="menu" hidden>
                             <div class="user-dropdown-head">
-                                <span class="user-avatar user-avatar-sm">@userInitials</span>
+                                <span class="user-avatar user-avatar-sm" aria-hidden="true"><i class="fas @userProfileIcon"></i></span>
                                 <span>
                                     <strong>@userName</strong>
                                     <small>@(isClient ? "Perfil de cliente" : userRoleLabel)</small>
@@ -773,7 +774,7 @@
         }
     </style>
 
-    <button id="chat-toggle-btn" aria-label="Abrir chat"><img src="~/img/richie-bot.png" alt="" /><span>Richie</span></button>
+    <button id="chat-toggle-btn" type="button" aria-label="Abrir asistente Richie" aria-expanded="false" aria-controls="chat-widget"><img src="~/img/richie-bot.png" alt="" /></button>
 
     <div id="chat-widget">
         <div id="chat-header">
@@ -800,6 +801,7 @@
 
         toggleBtn.addEventListener('click', () => {
         widget.classList.toggle('open');
+        toggleBtn.setAttribute('aria-expanded', widget.classList.contains('open') ? 'true' : 'false');
         if (widget.classList.contains('open') && box.children.length === 0) {
         addMsg('bot', 'Hola, soy Richie 🧁 ¿Buscamos algo dulce para hoy?');
         }

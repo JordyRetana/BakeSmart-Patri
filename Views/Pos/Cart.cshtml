@@ -40,16 +40,16 @@
             <form id="checkoutCartForm" class="pos-checkout-form">
                 <div class="pos-form-block">
                     <label>Cliente</label>
-                    <div class="pos-input-shell"><i class="fas fa-user"></i><input class="form-control" name="customerName" id="checkoutCustomerName" list="checkoutCustomerOptions" placeholder="Buscar cliente o escribir manualmente" /></div>
+                    <div class="pos-input-shell"><i class="fas fa-user"></i><input class="form-control" name="customerName" id="checkoutCustomerName" list="checkoutCustomerOptions" placeholder="Buscar cliente o escribir manualmente" required /></div>
                     <datalist id="checkoutCustomerOptions"></datalist>
                 </div>
                 <div class="pos-form-block">
                     <label>Correo</label>
-                    <div class="pos-input-shell"><i class="fas fa-envelope"></i><input class="form-control" name="customerEmail" placeholder="correo@cliente.com" /></div>
+                    <div class="pos-input-shell"><i class="fas fa-envelope"></i><input class="form-control" type="email" name="customerEmail" placeholder="correo@cliente.com" required /></div>
                 </div>
                 <div class="pos-form-block">
                     <label>Telefono</label>
-                    <div class="pos-input-shell"><i class="fas fa-phone"></i><input class="form-control" name="customerPhone" placeholder="Telefono" /></div>
+                    <div class="pos-input-shell"><i class="fas fa-phone"></i><input class="form-control" name="customerPhone" placeholder="Telefono" required /></div>
                 </div>
                 <div class="pos-form-block">
                     <label>Metodo de pago</label>
@@ -323,7 +323,7 @@
                 if (method.includes('efectivo')) {
                     gatewayReferenceLabel.textContent = 'Recibido por';
                     gatewayReference.placeholder = 'Nombre de quien recibe el efectivo';
-                    gatewayReference.required = false;
+                    gatewayReference.required = true;
                 } else if (method.includes('sinpe')) {
                     gatewayReferenceLabel.textContent = 'Referencia SINPE';
                     gatewayReference.placeholder = 'Telefono o comprobante SINPE';
@@ -444,6 +444,10 @@
                 event.preventDefault();
                 try {
                     if (!cart.length) throw new Error('Agregue productos al carrito antes de cobrar.');
+                    if (!form.reportValidity()) {
+                        app.toast.error('Complete los datos del cliente antes de cobrar.');
+                        return;
+                    }
                     openPaymentModal();
                 } catch (error) {
                     app.toast.error(error.message);
@@ -456,6 +460,17 @@
             paymentForm.addEventListener('submit', async event => {
                 event.preventDefault();
                 const data = Object.fromEntries(new FormData(paymentForm).entries());
+                const method = String(data.method || gatewayMethod.value || '').trim();
+                data.method = method;
+                if (!method) {
+                    app.toast.error('Seleccione un metodo de pago.');
+                    return;
+                }
+                if (!String(data.holder || '').trim()) {
+                    app.toast.error('Complete la referencia del pago.');
+                    gatewayReference.focus();
+                    return;
+                }
                 if (shouldShowCardFields(data.method)) {
                     const digits = String(data.card || '').replace(/\D/g, '');
                     if (digits.length < 12 || !data.expiry || !data.cvv) {

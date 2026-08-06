@@ -153,6 +153,10 @@
                 <input type="hidden" name="lastName"  value="@lastName"  />
                 <input type="hidden" name="phone"     value="@phone"     />
                 <input type="hidden" name="address" id="passwordFormAddress" value="@address" />
+                <input type="hidden" name="customerAddressId" value="@(addressId?.ToString() ?? "")" />
+                <input type="hidden" name="addressLabel" value="@addressLabel" />
+                <input type="hidden" name="latitude" value="@latitude" />
+                <input type="hidden" name="longitude" value="@longitude" />
 
                 <div class="profile-field">
                     <label class="profile-label" for="newPassword">Nueva contraseña</label>
@@ -194,7 +198,7 @@
 </div>
 
 @section Scripts {
-<script src="~/js/bakesmart-map-picker.js" asp-append-version="true"></script>
+<script src="~/js/bakesmart-map-picker.js?v=20260805-coordinate-sync"></script>
 <script>
 let profileMapPicker;
 

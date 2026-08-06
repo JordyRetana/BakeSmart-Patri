@@ -2,6 +2,7 @@ using BakeSmartPatri.Data;
 using BakeSmartPatri.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
 
 namespace BakeSmartPatri.Controllers
 {
@@ -17,7 +18,6 @@ namespace BakeSmartPatri.Controllers
 
         public IActionResult Index() => View();
 
-        [Authorize(Policy = "StaffOrAdmin")]
         public async Task<IActionResult> Create()
         {
             var model = new OrderCreateViewModel(
@@ -29,14 +29,31 @@ namespace BakeSmartPatri.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "StaffOrAdmin")]
         public async Task<IActionResult> Create(
             string? cliente, string? telefono, string? email,
             int? productoId, DateTime? entrega, string? metodoPago,
             string? direccion, string? notas, string? metodoEntrega,
-            decimal? latitudEntrega, decimal? longitudEntrega,
+            string? latitudEntrega, string? longitudEntrega,
             string? referenciaEntrega, int? customerAddressId)
         {
+            var parsedLatitude = ParseCoordinate(latitudEntrega);
+            var parsedLongitude = ParseCoordinate(longitudEntrega);
+
+            if (User.IsInRole("Cliente"))
+            {
+                var currentEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? string.Empty;
+                var profile = await _sqlStore.GetProfileAsync(currentEmail);
+                if (profile is null)
+                {
+                    TempData["ToastError"] = "No se encontro el perfil autenticado.";
+                    return RedirectToAction("Login", "Account");
+                }
+
+                cliente = $"{profile.FirstName} {profile.LastName}".Trim();
+                email = profile.Email;
+                telefono = profile.Phone;
+            }
+
             if (string.IsNullOrWhiteSpace(cliente) || string.IsNullOrWhiteSpace(email) || !productoId.HasValue || !entrega.HasValue)
             {
                 TempData["ToastError"] = "Complete los campos obligatorios: cliente, email, producto y fecha de entrega.";
@@ -52,7 +69,7 @@ namespace BakeSmartPatri.Controllers
                     return RedirectToAction(nameof(Create));
                 }
 
-                if (!SqlStore.HasValidCoordinates(latitudEntrega, longitudEntrega))
+                if (!SqlStore.HasValidCoordinates(parsedLatitude, parsedLongitude))
                 {
                     TempData["ToastError"] = "Debe seleccionar una ubicacion valida en el mapa.";
                     return RedirectToAction(nameof(Create));
@@ -89,8 +106,8 @@ namespace BakeSmartPatri.Controllers
                     Address: direccion?.Trim(),
                     Notes: notas?.Trim(),
                     PaymentMethod: metodoPago?.Trim() ?? "Pendiente",
-                    DestinationLatitude: latitudEntrega,
-                    DestinationLongitude: longitudEntrega,
+                    DestinationLatitude: parsedLatitude,
+                    DestinationLongitude: parsedLongitude,
                     DeliveryReference: referenciaEntrega,
                     CustomerAddressId: customerAddressId,
                     DeliveryMethod: deliveryMethod
@@ -105,6 +122,14 @@ namespace BakeSmartPatri.Controllers
                 TempData["ToastError"] = $"Error al crear el pedido: {ex.Message}";
                 return RedirectToAction(nameof(Create));
             }
+        }
+
+        private static decimal? ParseCoordinate(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            if (decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var invariant)) return invariant;
+            if (decimal.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out var localized)) return localized;
+            return null;
         }
 
         public IActionResult Details(int id) => View();

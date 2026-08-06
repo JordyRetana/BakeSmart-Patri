@@ -1609,6 +1609,33 @@ public sealed class SqlStore
 
     public async Task<IReadOnlyList<object>> AuditLogsAsync()
     {
+        if (UseMySql)
+        {
+            const string mySql = """
+                SELECT
+                    a.AuditLogId,
+                    a.LogType,
+                    a.Detail,
+                    a.CreatedAt,
+                    COALESCE(NULLIF(TRIM(CONCAT(COALESCE(u.FirstName, ''), ' ', COALESCE(u.LastName, ''))), ''), 'Sistema') AS UserName,
+                    COALESCE(u.Email, 'sistema@bakesmart.local') AS UserEmail
+                FROM BitacoraAuditoria a
+                LEFT JOIN Usuarios u ON u.UserId = a.UserId
+                ORDER BY a.CreatedAt DESC, a.AuditLogId DESC
+                LIMIT 250;
+                """;
+
+            return await QueryAsync(mySql, reader => new
+            {
+                id = reader.GetInt32("AuditLogId"),
+                type = reader.GetString("LogType"),
+                detail = reader.GetString("Detail"),
+                createdAt = reader.GetDateTime("CreatedAt").ToString("o"),
+                userName = reader.GetString("UserName"),
+                userEmail = reader.GetString("UserEmail")
+            });
+        }
+
         const string sql = """
             SELECT TOP 250
                 a.AuditLogId,
@@ -1677,7 +1704,7 @@ public sealed class SqlStore
         if (input.StartDate.Date > input.EndDate.Date)
             throw new InvalidOperationException("La fecha final debe ser posterior a la fecha inicial.");
 
-        var discount = input.Discount > 1 ? input.Discount / 100m : input.Discount;
+        var discount = NormalizePromotionDiscount(input.Discount);
 
         if (UseMySql)
         {
@@ -1770,8 +1797,50 @@ public sealed class SqlStore
         return id;
     }
 
+    public async Task<bool> OrderBelongsToAsync(int orderId, string? customerEmail)
+    {
+        if (orderId <= 0 || string.IsNullOrWhiteSpace(customerEmail)) return false;
+        var sql = UseMySql
+            ? "SELECT COUNT(1) FROM Pedidos o INNER JOIN Clientes c ON c.CustomerId = o.CustomerId WHERE o.OrderId = @OrderId AND LOWER(c.Email) = LOWER(@Email);"
+            : "SELECT COUNT(1) FROM dbo.Pedidos o INNER JOIN dbo.Clientes c ON c.CustomerId = o.CustomerId WHERE o.OrderId = @OrderId AND LOWER(c.Email) = LOWER(@Email);";
+        return Convert.ToInt32(await ScalarAsync(sql,
+            new SqlParameter("@OrderId", orderId),
+            new SqlParameter("@Email", customerEmail.Trim()))) > 0;
+    }
+
+    internal static decimal NormalizePromotionDiscount(decimal value)
+    {
+        var normalized = value > 1 ? value / 100m : value;
+        if (normalized <= 0)
+            throw new InvalidOperationException("El descuento debe ser mayor a 0%.");
+        if (normalized > 1)
+            throw new InvalidOperationException("El descuento no puede superar el 100%.");
+        return normalized;
+    }
+
     public async Task TogglePromotionAsync(int id, string? userEmail = null)
     {
+        if (id <= 0)
+            throw new InvalidOperationException("La promoción no es válida.");
+
+        if (UseMySql)
+        {
+            var exists = Convert.ToInt32(await ScalarAsync(
+                "SELECT COUNT(1) FROM Promociones WHERE PromotionId = @Id;",
+                new SqlParameter("@Id", id))) > 0;
+            if (!exists)
+                throw new InvalidOperationException("La promoción no existe.");
+
+            await ExecuteAsync("""
+                UPDATE Promociones
+                SET IsActive = CASE WHEN IsActive = 1 THEN 0 ELSE 1 END
+                WHERE PromotionId = @Id;
+                """, new SqlParameter("@Id", id));
+
+            await AddAuditLogAsync("CONFIGURAR_DESCUENTO", $"Promoción ID {id} cambió de estado", userEmail);
+            return;
+        }
+
         const string sql = """
             UPDATE dbo.Promociones
             SET IsActive = CASE WHEN IsActive = 1 THEN 0 ELSE 1 END
@@ -1779,7 +1848,7 @@ public sealed class SqlStore
             """;
 
         await ExecuteAsync(sql, new SqlParameter("@Id", id));
-        await AddAuditLogAsync("CONFIGURAR_DESCUENTO", $"Promocion ID {id} cambio de estado", userEmail);
+        await AddAuditLogAsync("CONFIGURAR_DESCUENTO", $"Promoción ID {id} cambió de estado", userEmail);
     }
 
     public async Task<int> SendMarketingCampaignAsync(MarketingCampaignInput input, string? userEmail = null)
@@ -1787,7 +1856,15 @@ public sealed class SqlStore
         if (input.CustomerIds is null || input.CustomerIds.Count == 0)
             throw new InvalidOperationException("Debe seleccionar al menos un destinatario.");
         if (string.IsNullOrWhiteSpace(input.Message))
-            throw new InvalidOperationException("Debe redactar el mensaje de la comunicacion.");
+            throw new InvalidOperationException("Debe redactar el mensaje de la comunicación.");
+
+        var subject = string.IsNullOrWhiteSpace(input.Subject) ? "Promoción BakeSmart" : input.Subject.Trim();
+        var message = input.Message.Trim();
+        var customerIds = input.CustomerIds.Where(id => id > 0).Distinct().ToArray();
+        if (customerIds.Length == 0)
+            throw new InvalidOperationException("Debe seleccionar al menos un destinatario válido.");
+        if (subject.Length > 160)
+            throw new InvalidOperationException("El asunto no puede superar 160 caracteres.");
 
         if (UseMySql)
         {
@@ -1820,11 +1897,11 @@ public sealed class SqlStore
                     VALUES (@Subject, @Message, @RecipientCount, UTC_TIMESTAMP());
                     SELECT LAST_INSERT_ID();
                     """,
-                    new SqlParameter("@Subject", string.IsNullOrWhiteSpace(input.Subject) ? "Promocion BakeSmart" : input.Subject.Trim()),
-                    new SqlParameter("@Message", input.Message.Trim()),
-                    new SqlParameter("@RecipientCount", input.CustomerIds.Count)));
+                    new SqlParameter("@Subject", subject),
+                    new SqlParameter("@Message", message),
+                    new SqlParameter("@RecipientCount", customerIds.Length)));
 
-                foreach (var customerId in input.CustomerIds.Distinct())
+                foreach (var customerId in customerIds)
                 {
                     await ExecuteInTransactionAsync(connection, transaction, """
                         INSERT INTO ComunicacionesMarketingDestinatarios (CommunicationId, CustomerId, CreatedAt)
@@ -1836,7 +1913,7 @@ public sealed class SqlStore
                 }
 
                 await transaction.CommitAsync();
-                await AddAuditLogAsync("COMUNICACION_MARKETING", $"Campana #{mysqlCampaignId} enviada a {input.CustomerIds.Count} clientes", userEmail);
+                await AddAuditLogAsync("COMUNICACION_MARKETING", $"Campaña #{mysqlCampaignId} registrada para {customerIds.Length} clientes", userEmail);
                 return mysqlCampaignId;
             }
             catch
@@ -1883,12 +1960,12 @@ public sealed class SqlStore
             """;
 
         var id = Convert.ToInt32(await ScalarAsync(sql,
-            new SqlParameter("@Subject", string.IsNullOrWhiteSpace(input.Subject) ? "Promocion BakeSmart" : input.Subject.Trim()),
-            new SqlParameter("@Message", input.Message.Trim()),
-            new SqlParameter("@RecipientCount", input.CustomerIds.Count),
-            new SqlParameter("@RecipientsJson", System.Text.Json.JsonSerializer.Serialize(input.CustomerIds))));
+            new SqlParameter("@Subject", subject),
+            new SqlParameter("@Message", message),
+            new SqlParameter("@RecipientCount", customerIds.Length),
+            new SqlParameter("@RecipientsJson", System.Text.Json.JsonSerializer.Serialize(customerIds))));
 
-        await AddAuditLogAsync("COMUNICACION_MARKETING", $"Campana #{id} enviada a {input.CustomerIds.Count} clientes", userEmail);
+        await AddAuditLogAsync("COMUNICACION_MARKETING", $"Campaña #{id} registrada para {customerIds.Length} clientes", userEmail);
         return id;
     }
 
@@ -2275,7 +2352,7 @@ public sealed class SqlStore
                     e.Note,
                     CONCAT(e.ReferenceTable, ' #', e.ReferenceId)
                 ) AS EntryDetail,
-                COALESCE(CONCAT(a.AccountCode, ' - ', a.AccountName), 'Sin cuenta') AS AccountName,
+                COALESCE(GROUP_CONCAT(CONCAT(a.AccountCode, ' - ', a.AccountName) ORDER BY l.Debit DESC, a.AccountCode SEPARATOR ' | '), 'Sin cuenta') AS AccountName,
                 COALESCE(SUM(l.Debit), 0) AS Debit,
                 COALESCE(SUM(l.Credit), 0) AS Credit,
                 COALESCE(entryTotals.DebitTotal, 0) AS EntryDebitTotal,
@@ -2293,7 +2370,7 @@ public sealed class SqlStore
                 GROUP BY AccountingEntryId
             ) entryTotals ON entryTotals.AccountingEntryId = e.AccountingEntryId
             GROUP BY e.AccountingEntryId, e.EntryType, e.ReferenceTable, e.ReferenceId, e.Note,
-                     g.Description, pp.Concept, v.OrderId, a.AccountCode, a.AccountName,
+                     g.Description, pp.Concept, v.OrderId,
                      entryTotals.DebitTotal, entryTotals.CreditTotal, e.CreatedAt
             ORDER BY e.CreatedAt DESC, e.AccountingEntryId DESC
             LIMIT 150;
@@ -2311,7 +2388,7 @@ public sealed class SqlStore
                     e.Note,
                     CONCAT(e.ReferenceTable, N' #', e.ReferenceId)
                 ) AS EntryDetail,
-                COALESCE(a.AccountCode + N' - ' + a.AccountName, N'Sin cuenta') AS AccountName,
+                COALESCE(STRING_AGG(a.AccountCode + N' - ' + a.AccountName, N' | ') WITHIN GROUP (ORDER BY l.Debit DESC, a.AccountCode), N'Sin cuenta') AS AccountName,
                 COALESCE(SUM(l.Debit), 0) AS Debit,
                 COALESCE(SUM(l.Credit), 0) AS Credit,
                 COALESCE(entryTotals.DebitTotal, 0) AS EntryDebitTotal,
@@ -2329,7 +2406,7 @@ public sealed class SqlStore
                 GROUP BY AccountingEntryId
             ) entryTotals ON entryTotals.AccountingEntryId = e.AccountingEntryId
             GROUP BY e.AccountingEntryId, e.EntryType, e.ReferenceTable, e.ReferenceId, e.Note,
-                     g.Description, pp.Concept, v.OrderId, a.AccountCode, a.AccountName,
+                     g.Description, pp.Concept, v.OrderId,
                      entryTotals.DebitTotal, entryTotals.CreditTotal, e.CreatedAt
             ORDER BY e.CreatedAt DESC, e.AccountingEntryId DESC;
             """;
@@ -2348,8 +2425,12 @@ public sealed class SqlStore
             createdAt = reader.GetDateTime("CreatedAt").ToString("o")
         });
 
-        var expenseCount = Convert.ToInt32(await ScalarAsync("SELECT COUNT(1) FROM dbo.Gastos"));
-        var supplierPaymentCount = Convert.ToInt32(await ScalarAsync("SELECT COUNT(1) FROM dbo.PagosProveedor"));
+        var expenseCount = Convert.ToInt32(await ScalarAsync(UseMySql
+            ? "SELECT COUNT(1) FROM Gastos"
+            : "SELECT COUNT(1) FROM dbo.Gastos"));
+        var supplierPaymentCount = Convert.ToInt32(await ScalarAsync(UseMySql
+            ? "SELECT COUNT(1) FROM PagosProveedor"
+            : "SELECT COUNT(1) FROM dbo.PagosProveedor"));
 
         return new { entries, expensesCount = expenseCount, supplierPaymentsCount = supplierPaymentCount };
     }
@@ -2357,11 +2438,12 @@ public sealed class SqlStore
     public async Task<int> RegisterExpenseAsync(AccountingExpenseInput input, string? userEmail = null)
     {
         if (string.IsNullOrWhiteSpace(input.Description))
-            throw new InvalidOperationException("Debe indicar la descripcion del gasto.");
+            throw new InvalidOperationException("Debe indicar la descripción del gasto.");
         if (input.Amount <= 0)
             throw new InvalidOperationException("El monto del gasto debe ser mayor a 0.");
 
-        var accountId = await EnsureAccountAsync(input.Account, "Gasto operativo", "GASTO");
+        var accountId = await EnsureAccountAsync(input.Account, "Gastos operativos", "GASTO");
+        var cashAccountId = await PaymentAssetAccountAsync(input.Method);
         var categoryId = await EnsureExpenseCategoryAsync("Operativo");
         var methodId = await EnsurePaymentMethodAsync(string.IsNullOrWhiteSpace(input.Method) ? "Transferencia" : input.Method.Trim());
 
@@ -2377,7 +2459,7 @@ public sealed class SqlStore
                 SET @EntryId = LAST_INSERT_ID();
 
                 INSERT INTO LineasAsientoContable (AccountingEntryId, AccountId, Debit, Credit)
-                VALUES (@EntryId, @AccountId, @Amount, 0), (@EntryId, @AccountId, 0, @Amount);
+                VALUES (@EntryId, @AccountId, @Amount, 0), (@EntryId, @CashAccountId, 0, @Amount);
 
                 SELECT @ExpenseId;
                 """,
@@ -2385,7 +2467,8 @@ public sealed class SqlStore
                 new SqlParameter("@PaymentMethodId", methodId),
                 new SqlParameter("@Description", input.Description.Trim()),
                 new SqlParameter("@Amount", input.Amount),
-                new SqlParameter("@AccountId", accountId)));
+                new SqlParameter("@AccountId", accountId),
+                new SqlParameter("@CashAccountId", cashAccountId)));
 
             await AddAuditLogAsync("CONTABILIDAD_GASTO", $"Gasto #{mysqlExpenseId} registrado por {input.Amount:N2}", userEmail);
             return mysqlExpenseId;
@@ -2404,7 +2487,7 @@ public sealed class SqlStore
             DECLARE @EntryId int = SCOPE_IDENTITY();
 
             INSERT INTO dbo.LineasAsientoContable (AccountingEntryId, AccountId, Debit, Credit)
-            VALUES (@EntryId, @AccountId, @Amount, 0), (@EntryId, @AccountId, 0, @Amount);
+            VALUES (@EntryId, @AccountId, @Amount, 0), (@EntryId, @CashAccountId, 0, @Amount);
 
             COMMIT TRAN;
             SELECT @ExpenseId;
@@ -2415,7 +2498,8 @@ public sealed class SqlStore
             new SqlParameter("@PaymentMethodId", methodId),
             new SqlParameter("@Description", input.Description.Trim()),
             new SqlParameter("@Amount", input.Amount),
-            new SqlParameter("@AccountId", accountId)));
+            new SqlParameter("@AccountId", accountId),
+            new SqlParameter("@CashAccountId", cashAccountId)));
 
         await AddAuditLogAsync("CONTABILIDAD_GASTO", $"Gasto #{id} registrado por {input.Amount:N2}", userEmail);
         return id;
@@ -2428,9 +2512,10 @@ public sealed class SqlStore
         if (input.Amount <= 0)
             throw new InvalidOperationException("El monto del pago debe ser mayor a 0.");
         if (string.IsNullOrWhiteSpace(input.Method))
-            throw new InvalidOperationException("Metodo de pago no valido.");
+            throw new InvalidOperationException("Método de pago no válido.");
 
-        var accountId = await EnsureAccountAsync(input.Account, "Pago a proveedor", "PASIVO");
+        var accountId = await EnsureAccountAsync(input.Account, "Cuentas por pagar", "PASIVO");
+        var cashAccountId = await PaymentAssetAccountAsync(input.Method);
         var supplierId = await EnsureSupplierAsync(input.Supplier);
         var methodId = await EnsurePaymentMethodAsync(input.Method);
 
@@ -2446,7 +2531,7 @@ public sealed class SqlStore
                 SET @EntryId = LAST_INSERT_ID();
 
                 INSERT INTO LineasAsientoContable (AccountingEntryId, AccountId, Debit, Credit)
-                VALUES (@EntryId, @AccountId, @Amount, 0), (@EntryId, @AccountId, 0, @Amount);
+                VALUES (@EntryId, @AccountId, @Amount, 0), (@EntryId, @CashAccountId, 0, @Amount);
 
                 SELECT @PaymentId;
                 """,
@@ -2454,7 +2539,8 @@ public sealed class SqlStore
                 new SqlParameter("@PaymentMethodId", methodId),
                 new SqlParameter("@Concept", $"Pago a {input.Supplier.Trim()}"),
                 new SqlParameter("@Amount", input.Amount),
-                new SqlParameter("@AccountId", accountId)));
+                new SqlParameter("@AccountId", accountId),
+                new SqlParameter("@CashAccountId", cashAccountId)));
 
             await AddAuditLogAsync("CONTABILIDAD_PAGO_PROVEEDOR", $"Pago proveedor #{mysqlSupplierPaymentId} registrado por {input.Amount:N2}", userEmail);
             return mysqlSupplierPaymentId;
@@ -2473,7 +2559,7 @@ public sealed class SqlStore
             DECLARE @EntryId int = SCOPE_IDENTITY();
 
             INSERT INTO dbo.LineasAsientoContable (AccountingEntryId, AccountId, Debit, Credit)
-            VALUES (@EntryId, @AccountId, @Amount, 0), (@EntryId, @AccountId, 0, @Amount);
+            VALUES (@EntryId, @AccountId, @Amount, 0), (@EntryId, @CashAccountId, 0, @Amount);
 
             COMMIT TRAN;
             SELECT @PaymentId;
@@ -2484,7 +2570,8 @@ public sealed class SqlStore
             new SqlParameter("@PaymentMethodId", methodId),
             new SqlParameter("@Concept", $"Pago a {input.Supplier.Trim()}"),
             new SqlParameter("@Amount", input.Amount),
-            new SqlParameter("@AccountId", accountId)));
+            new SqlParameter("@AccountId", accountId),
+            new SqlParameter("@CashAccountId", cashAccountId)));
 
         await AddAuditLogAsync("CONTABILIDAD_PAGO_PROVEEDOR", $"Pago proveedor #{id} registrado por {input.Amount:N2}", userEmail);
         return id;
@@ -2539,7 +2626,7 @@ public sealed class SqlStore
                 {
                     var entryId = pendingRow.entryId ?? Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
                         INSERT INTO AsientosContables (EntryType, ReferenceTable, ReferenceId, Note, CreatedAt)
-                        VALUES ('VENTA', 'Ventas', @SaleId, CONCAT('Asiento generado por conciliacion POS venta #', @SaleId), UTC_TIMESTAMP());
+                        VALUES ('VENTA', 'Ventas', @SaleId, CONCAT('Asiento generado por conciliación POS venta #', @SaleId), UTC_TIMESTAMP());
                         SELECT LAST_INSERT_ID();
                         """, new SqlParameter("@SaleId", pendingRow.saleId)));
 
@@ -2566,7 +2653,7 @@ public sealed class SqlStore
 
             var reviewed = Convert.ToInt32(await ScalarAsync("SELECT COUNT(1) FROM Ventas;"));
             var issues = Convert.ToInt32(await ScalarAsync("SELECT COUNT(1) FROM Ventas WHERE Total < 0;"));
-            await AddAuditLogAsync("CONCILIACION_POS", $"Conciliacion POS: {reviewed} ventas revisadas, {rows.Count} asientos reparados, {issues} diferencias", userEmail);
+            await AddAuditLogAsync("CONCILIACION_POS", $"Conciliación POS: {reviewed} ventas revisadas, {rows.Count} asientos reparados, {issues} diferencias", userEmail);
             return new { status = issues == 0 ? "Correcto" : "Con diferencias", reviewed, issues, generated = rows.Count };
         }
 
@@ -2643,7 +2730,7 @@ public sealed class SqlStore
                 IF @EntryId IS NULL
                 BEGIN
                     INSERT INTO dbo.AsientosContables (EntryType, ReferenceTable, ReferenceId, Note, CreatedAt)
-                    VALUES (N'VENTA', N'Ventas', @SaleId, CONCAT(N'Asiento generado por conciliacion POS venta #', @SaleId), SYSUTCDATETIME());
+                    VALUES (N'VENTA', N'Ventas', @SaleId, CONCAT(N'Asiento generado por conciliación POS venta #', @SaleId), SYSUTCDATETIME());
 
                     SET @EntryId = SCOPE_IDENTITY();
                 END
@@ -2687,7 +2774,7 @@ public sealed class SqlStore
             generated = reader.GetInt32("Generated")
         })).FirstOrDefault() ?? new { reviewed = 0, issues = 0, generated = 0 };
 
-        await AddAuditLogAsync("CONCILIACION_POS", $"Conciliacion POS: {row.reviewed} ventas revisadas, {row.generated} asientos reparados, {row.issues} diferencias", userEmail);
+        await AddAuditLogAsync("CONCILIACION_POS", $"Conciliación POS: {row.reviewed} ventas revisadas, {row.generated} asientos reparados, {row.issues} diferencias", userEmail);
         return new { status = row.issues == 0 ? "Correcto" : "Con diferencias", row.reviewed, row.issues, row.generated };
     }
 
@@ -2698,7 +2785,7 @@ public sealed class SqlStore
     {
         var normalizedType = RemoveDiacritics(string.IsNullOrWhiteSpace(closeType) ? "DIARIO" : closeType.Trim()).ToUpperInvariant();
         if (normalizedType is not ("DIARIO" or "SEMANAL" or "MENSUAL"))
-            throw new InvalidOperationException("Tipo de cierre no valido.");
+            throw new InvalidOperationException("Tipo de cierre no válido.");
 
         if (UseMySql)
         {
@@ -3338,22 +3425,30 @@ public sealed class SqlStore
     private async Task<int> EnsureAccountAsync(string? codeOrName, string fallbackName, string accountType)
     {
         var clean = string.IsNullOrWhiteSpace(codeOrName) ? fallbackName : codeOrName.Trim();
+        var looksLikeCode = clean.Any(char.IsDigit) && clean.Contains('-') && clean.All(ch => char.IsLetterOrDigit(ch) || ch is '-' or '.');
+        var accountCode = looksLikeCode
+            ? clean
+            : new string(clean.ToUpperInvariant().Select(ch => char.IsLetterOrDigit(ch) ? ch : '_').ToArray()).Trim('_');
+        if (accountCode.Length > 32) accountCode = accountCode[..32];
+        var accountName = looksLikeCode ? fallbackName : clean;
         if (UseMySql)
         {
             return Convert.ToInt32(await ScalarAsync("""
                 INSERT INTO CatalogoCuentas (AccountCode, AccountName, AccountType)
-                SELECT LEFT(REPLACE(UPPER(@Value), ' ', '_'), 32), @Value, @AccountType
+                SELECT @AccountCode, @AccountName, @AccountType
                 WHERE NOT EXISTS (
-                    SELECT 1 FROM CatalogoCuentas WHERE LOWER(AccountCode) = LOWER(@Value) OR LOWER(AccountName) = LOWER(@Value)
+                    SELECT 1 FROM CatalogoCuentas WHERE LOWER(AccountCode) = LOWER(@Lookup) OR LOWER(AccountName) = LOWER(@Lookup)
                 );
 
                 SELECT AccountId
                 FROM CatalogoCuentas
-                WHERE LOWER(AccountCode) = LOWER(@Value) OR LOWER(AccountName) = LOWER(@Value)
+                WHERE LOWER(AccountCode) = LOWER(@Lookup) OR LOWER(AccountName) = LOWER(@Lookup)
                 ORDER BY AccountId
                 LIMIT 1;
                 """,
-                new SqlParameter("@Value", clean),
+                new SqlParameter("@Lookup", clean),
+                new SqlParameter("@AccountCode", accountCode),
+                new SqlParameter("@AccountName", accountName),
                 new SqlParameter("@AccountType", accountType)) ?? 0);
         }
 
@@ -3361,12 +3456,12 @@ public sealed class SqlStore
             DECLARE @AccountId int;
             SELECT @AccountId = AccountId
             FROM dbo.CatalogoCuentas
-            WHERE LOWER(AccountCode) = LOWER(@Value) OR LOWER(AccountName) = LOWER(@Value);
+            WHERE LOWER(AccountCode) = LOWER(@Lookup) OR LOWER(AccountName) = LOWER(@Lookup);
 
             IF @AccountId IS NULL
             BEGIN
                 INSERT INTO dbo.CatalogoCuentas (AccountCode, AccountName, AccountType)
-                VALUES (LEFT(REPLACE(UPPER(@Value), N' ', N'_'), 32), @Value, @AccountType);
+                VALUES (@AccountCode, @AccountName, @AccountType);
                 SET @AccountId = SCOPE_IDENTITY();
             END;
 
@@ -3374,8 +3469,18 @@ public sealed class SqlStore
             """;
 
         return Convert.ToInt32(await ScalarAsync(sql,
-            new SqlParameter("@Value", clean),
+            new SqlParameter("@Lookup", clean),
+            new SqlParameter("@AccountCode", accountCode),
+            new SqlParameter("@AccountName", accountName),
             new SqlParameter("@AccountType", accountType)));
+    }
+
+    private async Task<int> PaymentAssetAccountAsync(string? method)
+    {
+        var normalized = RemoveDiacritics(method ?? string.Empty).Trim().ToUpperInvariant();
+        return normalized == "EFECTIVO"
+            ? await EnsureAccountAsync("1-01", "Caja general", "ACTIVO")
+            : await EnsureAccountAsync("1-02", "Bancos y medios electronicos", "ACTIVO");
     }
 
     private async Task<int> EnsureExpenseCategoryAsync(string name)
@@ -3783,7 +3888,7 @@ public sealed class SqlStore
                         : 0;
 
                     await ExecuteInTransactionAsync(connection, transaction,
-                        "UPDATE DireccionesCliente SET IsDefault = 0, UpdatedAt = UTC_TIMESTAMP() WHERE CustomerId = @CustomerId;",
+                        "UPDATE DireccionesCliente SET IsDefault = 0 WHERE CustomerId = @CustomerId;",
                         new SqlParameter("@CustomerId", customerId));
 
                     if (addressId > 0)
@@ -3794,9 +3899,7 @@ public sealed class SqlStore
                                 AddressLine = @AddressLine,
                                 Latitude = @Latitude,
                                 Longitude = @Longitude,
-                                IsDefault = 1,
-                                Status = 'Activa',
-                                UpdatedAt = UTC_TIMESTAMP()
+                                IsDefault = 1
                             WHERE CustomerAddressId = @CustomerAddressId AND CustomerId = @CustomerId;
                             """,
                             new SqlParameter("@CustomerId", customerId),
@@ -3809,8 +3912,8 @@ public sealed class SqlStore
                     else
                     {
                         await ExecuteInTransactionAsync(connection, transaction, """
-                            INSERT INTO DireccionesCliente (CustomerId, Label, AddressLine, Latitude, Longitude, IsDefault, Status, CreatedAt)
-                            VALUES (@CustomerId, @AddressLabel, @AddressLine, @Latitude, @Longitude, 1, 'Activa', UTC_TIMESTAMP());
+                            INSERT INTO DireccionesCliente (CustomerId, Label, AddressLine, Latitude, Longitude, IsDefault)
+                            VALUES (@CustomerId, @AddressLabel, @AddressLine, @Latitude, @Longitude, 1);
                             """,
                             new SqlParameter("@CustomerId", customerId),
                             new SqlParameter("@AddressLabel", (object?)input.AddressLabel?.Trim() ?? "Principal"),
@@ -3894,7 +3997,23 @@ public sealed class SqlStore
 
     public async Task<CustomerAddressData?> GetDefaultAddressByEmailAsync(string email)
     {
-        const string sql = """
+        var sql = UseMySql
+            ? """
+            SELECT
+                ca.CustomerAddressId,
+                ca.Label,
+                ca.AddressLine,
+                ca.Latitude,
+                ca.Longitude,
+                ca.IsDefault
+            FROM DireccionesCliente ca
+            INNER JOIN Clientes c ON c.CustomerId = ca.CustomerId
+            INNER JOIN Usuarios u ON u.UserId = c.UserId
+            WHERE LOWER(u.Email) = LOWER(@Email) AND ca.IsDefault = 1
+            ORDER BY ca.CustomerAddressId DESC
+            LIMIT 1;
+            """
+            : """
             SELECT TOP 1
                 ca.CustomerAddressId,
                 ca.Label,
@@ -3915,7 +4034,22 @@ public sealed class SqlStore
 
     public async Task<IReadOnlyList<CustomerAddressData>> GetAddressesByEmailAsync(string email)
     {
-        const string sql = """
+        var sql = UseMySql
+            ? """
+            SELECT
+                ca.CustomerAddressId,
+                ca.Label,
+                ca.AddressLine,
+                ca.Latitude,
+                ca.Longitude,
+                ca.IsDefault
+            FROM DireccionesCliente ca
+            INNER JOIN Clientes c ON c.CustomerId = ca.CustomerId
+            INNER JOIN Usuarios u ON u.UserId = c.UserId
+            WHERE LOWER(u.Email) = LOWER(@Email)
+            ORDER BY ca.IsDefault DESC, ca.CustomerAddressId DESC;
+            """
+            : """
             SELECT
                 ca.CustomerAddressId,
                 ca.Label,
@@ -4643,6 +4777,7 @@ public sealed class SqlStore
             }
 
             var stock = await ResolveProductStockMySqlAsync(connection, transaction, input.ProductId, input.Quantity);
+            var subtotal = Math.Round(stock.UnitPrice * input.Quantity, 2);
             var paymentMethodId = await ResolvePaymentMethodMySqlAsync(connection, transaction, input.PaymentMethod);
             var channelId = await ResolveLookupIdMySqlAsync(connection, transaction, "CanalesPedido", "OrderChannelId", "Name", "Web");
             var statusId = await ResolveLookupIdMySqlAsync(connection, transaction, "EstadosPedido", "OrderStatusId", "Name", "Pendiente pago");
@@ -4650,9 +4785,9 @@ public sealed class SqlStore
             var isFrequent = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
                 "SELECT IsFrequent FROM Clientes WHERE CustomerId = @CustomerId;",
                 new SqlParameter("@CustomerId", customerId)) ?? 0) == 1;
-            var discount = isFrequent ? Math.Round(input.Subtotal * config.FrequentDiscountRate, 2) : 0m;
-            var tax = Math.Round((input.Subtotal - discount) * config.IvaRate, 2);
-            var total = input.Subtotal - discount + tax;
+            var discount = isFrequent ? Math.Round(subtotal * config.FrequentDiscountRate, 2) : 0m;
+            var tax = Math.Round((subtotal - discount) * config.IvaRate, 2);
+            var total = subtotal - discount + tax;
 
             const string orderSql = """
                 INSERT INTO Pedidos
@@ -4676,7 +4811,7 @@ public sealed class SqlStore
                 new SqlParameter("@PaymentStatusId", paymentStatusId),
                 new SqlParameter("@PaymentMethodId", paymentMethodId),
                 new SqlParameter("@Notes", (object?)BuildOrderNotes(input.Notes, input.DeliveryReference) ?? DBNull.Value),
-                new SqlParameter("@Subtotal", input.Subtotal),
+                new SqlParameter("@Subtotal", subtotal),
                 new SqlParameter("@Discount", discount),
                 new SqlParameter("@Tax", tax),
                 new SqlParameter("@Total", total),
@@ -4694,7 +4829,7 @@ public sealed class SqlStore
                 new SqlParameter("@OrderId", orderId),
                 new SqlParameter("@ProductId", input.ProductId),
                 new SqlParameter("@Quantity", input.Quantity),
-                new SqlParameter("@UnitPrice", input.UnitPrice));
+                new SqlParameter("@UnitPrice", stock.UnitPrice));
             await DeductStockMySqlAsync(connection, transaction, input.ProductId, stock.InventoryLocationId, input.Quantity, $"Pedido web #{orderId}");
             await ExecuteInTransactionAsync(connection, transaction,
                 "INSERT INTO EventosSeguimientoPedido (OrderId, OrderStatusId, Detail, CreatedAt) VALUES (@OrderId, @StatusId, 'Pedido creado desde formulario web', UTC_TIMESTAMP());",
@@ -4884,10 +5019,10 @@ public sealed class SqlStore
         return id;
     }
 
-    private static async Task<(int InventoryLocationId, decimal Quantity)> ResolveProductStockMySqlAsync(DbConnection connection, DbTransaction transaction, int productId, decimal quantity)
+    private static async Task<(int InventoryLocationId, decimal Quantity, decimal UnitPrice)> ResolveProductStockMySqlAsync(DbConnection connection, DbTransaction transaction, int productId, decimal quantity)
     {
         const string sql = """
-            SELECT ib.InventoryLocationId, ib.Quantity
+            SELECT ib.InventoryLocationId, ib.Quantity, p.UnitPrice
             FROM Productos p
             INNER JOIN TiposProducto pt ON pt.ProductTypeId = p.ProductTypeId
             INNER JOIN ExistenciasInventario ib ON ib.ProductId = p.ProductId
@@ -4907,7 +5042,7 @@ public sealed class SqlStore
         if (available < quantity)
             throw new InvalidOperationException("No hay stock suficiente para completar la venta.");
 
-        return (locationId, available);
+        return (locationId, available, reader.GetDecimal("UnitPrice"));
     }
 
     private static async Task DeductStockMySqlAsync(DbConnection connection, DbTransaction transaction, int productId, int locationId, decimal quantity, string note)

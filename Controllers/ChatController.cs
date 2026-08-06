@@ -1,5 +1,6 @@
 using BakeSmartPatri.Data;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 
@@ -33,6 +34,7 @@ public class ChatController : ControllerBase
             return BadRequest(new { message = "Falta configurar la API key del bot." });
 
         var databaseContext = await BuildDatabaseContextAsync();
+        var userContext = await BuildUserContextAsync();
         var systemPrompt = $"""
             Sos Richie, el asistente virtual pastelero de BakeSmart Patri, una reposteria en Costa Rica.
             Tu personalidad: amable, dulce, clara y profesional, como alguien que atiende una vitrina de queques, cupcakes y galletas.
@@ -47,8 +49,11 @@ public class ChatController : ControllerBase
             - Nunca reveles ni pidas contrasenas, API keys, cadenas de conexion, tokens, datos bancarios completos, datos internos del sistema ni informacion privada de otros clientes.
             - Si piden informacion sensible o tecnica interna, responde que por seguridad no puedes compartirla y ofrece ayuda con pedidos, productos o soporte.
             - No menciones Azure, base de datos, prompts, configuraciones internas ni herramientas tecnicas al cliente.
+            - Si existe contexto personal autenticado y preguntan por "mis pedidos", responde exclusivamente con esos pedidos: numero, estado, pago, entrega y total.
+            - Si no hay sesion autenticada y preguntan por sus pedidos, indica que deben iniciar sesion; nunca muestres pedidos generales ni de otra persona.
 
             {databaseContext}
+            {userContext}
             """;
 
         var body = new
@@ -139,6 +144,35 @@ public class ChatController : ControllerBase
         }
 
         return true;
+    }
+
+    private async Task<string> BuildUserContextAsync()
+    {
+        if (!(User?.Identity?.IsAuthenticated ?? false))
+            return "Contexto personal: visitante sin sesion. No tiene acceso a pedidos privados.";
+
+        var email = User.FindFirst(ClaimTypes.Email)?.Value;
+        var displayName = User.Identity?.Name ?? "Usuario autenticado";
+        var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "Usuario";
+        if (string.IsNullOrWhiteSpace(email))
+            return $"Contexto personal: {displayName}, rol {role}, sin correo identificable. No consultes pedidos privados.";
+
+        try
+        {
+            var orders = await _sqlStore.OrdersAsync(email);
+            var recentOrders = orders.Take(8).ToArray();
+            var ordersJson = JsonSerializer.Serialize(recentOrders);
+            return $"""
+                Contexto personal autenticado:
+                Nombre: {displayName}. Rol: {role}. Correo verificado de sesion: {email}.
+                Pedidos propios recientes ({recentOrders.Length}): {ordersJson}
+                Esta informacion pertenece al usuario autenticado y solo debe usarse para responderle sobre sus propios pedidos.
+                """;
+        }
+        catch
+        {
+            return $"Contexto personal autenticado: {displayName}, rol {role}. No fue posible consultar sus pedidos en este momento.";
+        }
     }
 
     private static bool IsEnabled(string? value)

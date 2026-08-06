@@ -12,8 +12,11 @@
                 <div id="orderSubtitle" class="sub">Cargando informacion del pedido...</div>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                <a class="btn btn-secondary" href="/Orders/Edit/@orderId">Editar</a>
-                <a class="btn" href="/Orders">Volver</a>
+                @if (!User.IsInRole("Cliente"))
+                {
+                    <a class="btn btn-secondary" href="/Orders/Edit/@orderId">Editar</a>
+                }
+                <a class="btn" href="@(User.IsInRole("Cliente") ? "/Client/Orders" : "/Orders")">Volver</a>
             </div>
         </div>
 
@@ -41,9 +44,9 @@
             </div>
             <div class="card soft">
                 <div style="font-weight:950;">Acciones</div>
-                <div class="muted" style="margin-top:8px;font-weight:700;line-height:1.6;">Actualiza estado, fecha y notas desde editar.</div>
+                <div class="muted" style="margin-top:8px;font-weight:700;line-height:1.6;">@(User.IsInRole("Cliente") ? "Consulta el avance y la ubicación de tu entrega." : "Actualiza estado, fecha y notas desde editar.")</div>
                 <div style="margin-top:12px;">
-                    <a class="btn btn-secondary" href="/Production">Ver producción</a>
+                    <a class="btn btn-secondary" href="@(User.IsInRole("Cliente") ? $"/Client/Track?id={orderId}" : "/Production")">@(User.IsInRole("Cliente") ? "Ver seguimiento" : "Ver producción")</a>
                 </div>
             </div>
         </div>
@@ -51,7 +54,7 @@
 </div>
 
 <script>
-    (() => {
+    window.addEventListener('DOMContentLoaded', () => {
         const orderId = Number('@orderId');
         const money = value => `₡${Number(value || 0).toLocaleString('es-CR')}`;
 
@@ -71,7 +74,7 @@
         }).catch(error => {
             document.getElementById('orderSubtitle').textContent = error.message;
         });
-    })();
+    });
 </script>
 
 @section Styles {

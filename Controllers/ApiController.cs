@@ -46,6 +46,7 @@ public class ApiController : Controller
     }
 
     [HttpGet("dashboard")]
+    [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> Dashboard() => Json(await _sqlStore.DashboardAsync());
 
     [HttpGet("orders")]
@@ -59,6 +60,7 @@ public class ApiController : Controller
     }
 
     [HttpPost("orders/{id:int}/status")]
+    [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] UpdateOrderStatusRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Status))
@@ -69,8 +71,13 @@ public class ApiController : Controller
     }
 
     [HttpPost("orders/{id:int}/pay")]
+    [Authorize(Policy = "AnyUser")]
     public async Task<IActionResult> MarkOrderPaid(int id, [FromBody] MarkPaidRequest request)
     {
+        if (User.IsInRole("Cliente"))
+        {
+            if (!await _sqlStore.OrderBelongsToAsync(id, CurrentUserEmail)) return Forbid();
+        }
         await _sqlStore.MarkOrderPaidAsync(id, string.IsNullOrWhiteSpace(request.Method) ? "Efectivo" : request.Method, CurrentUserEmail);
         return Ok(new { ok = true });
     }
@@ -84,9 +91,11 @@ public class ApiController : Controller
     }
 
     [HttpGet("inventory")]
+    [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> Inventory() => Json(await _sqlStore.InventoryAsync());
 
     [HttpPost("inventory")]
+    [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> SaveInventoryProduct([FromBody] SqlStore.InventoryProductInput? request)
     {
         if (request is null)
@@ -110,6 +119,7 @@ public class ApiController : Controller
     }
 
     [HttpPost("inventory/{id:int}/toggle")]
+    [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> ToggleInventoryProduct(int id)
     {
         await _sqlStore.ToggleInventoryProductAsync(id, CurrentUserEmail);
@@ -117,9 +127,11 @@ public class ApiController : Controller
     }
 
     [HttpGet("inventory/movements")]
+    [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> InventoryMovements() => Json(await _sqlStore.InventoryMovementsAsync());
 
     [HttpPost("inventory/movements")]
+    [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> RegisterInventoryMovement([FromBody] SqlStore.InventoryMovementInput request)
     {
         if (request.ProductId <= 0 || request.Quantity <= 0)
@@ -130,6 +142,7 @@ public class ApiController : Controller
     }
 
     [HttpGet("customers")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Customers() => Json(await _sqlStore.CustomersAsync());
 
     [HttpGet("profile/current")]
@@ -225,7 +238,7 @@ public class ApiController : Controller
     }
 
     [HttpPost("promotions")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> SavePromotion([FromBody] SqlStore.PromotionInput request)
     {
         try
@@ -244,15 +257,22 @@ public class ApiController : Controller
     }
 
     [HttpPost("promotions/{id:int}/toggle")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> TogglePromotion(int id)
     {
-        await _sqlStore.TogglePromotionAsync(id, CurrentUserEmail);
-        return Ok(new { ok = true });
+        try
+        {
+            await _sqlStore.TogglePromotionAsync(id, CurrentUserEmail);
+            return Ok(new { ok = true });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPost("customers/{id:int}/frequent")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> ToggleFrequentCustomer(int id)
     {
         await _sqlStore.MarkCustomerFrequentAsync(id, CurrentUserEmail);
@@ -260,7 +280,7 @@ public class ApiController : Controller
     }
 
     [HttpPost("marketing/campaigns")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> SendMarketingCampaign([FromBody] SqlStore.MarketingCampaignInput request)
     {
         try
@@ -279,9 +299,11 @@ public class ApiController : Controller
     }
 
     [HttpGet("users")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Users() => Json(await _sqlStore.UsersAsync());
 
     [HttpPost("users")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> SaveUser([FromBody] SqlStore.UserInput request)
     {
         request = request with
@@ -320,6 +342,7 @@ public class ApiController : Controller
     }
 
     [HttpPost("users/{id:int}/toggle")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> ToggleUser(int id)
     {
         await _sqlStore.ToggleUserAsync(id);
@@ -330,6 +353,7 @@ public class ApiController : Controller
 
 
     [HttpGet("roles")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Roles() => Json(await _sqlStore.RolesAsync());
 
     [HttpGet("pos/config")]
@@ -364,8 +388,22 @@ public class ApiController : Controller
 
     [HttpPost("orders")]
     [Authorize(Policy = "AnyUser")]
-    public async Task<IActionResult> CreateOrder([FromBody] SqlStore.CreateOrderInput request)
+    public async Task<IActionResult> CreateOrder([FromBody] SqlStore.CreateOrderInput? request)
     {
+        if (request is null)
+            return BadRequest(new { message = "El pedido enviado no tiene un formato valido." });
+
+        if (User.IsInRole("Cliente"))
+        {
+            var profile = await _sqlStore.GetProfileAsync(CurrentUserEmail ?? string.Empty);
+            if (profile is null) return Unauthorized(new { message = "No se encontro el perfil autenticado." });
+            request = request with
+            {
+                CustomerName = $"{profile.FirstName} {profile.LastName}".Trim(),
+                Email = profile.Email,
+                Phone = profile.Phone
+            };
+        }
         if (string.IsNullOrWhiteSpace(request.CustomerName) ||
             string.IsNullOrWhiteSpace(request.Email) ||
             request.ProductId <= 0 ||
@@ -563,11 +601,11 @@ public class ApiController : Controller
     }
 
     [HttpGet("accounting")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Accounting() => Json(await _sqlStore.AccountingOverviewAsync());
 
     [HttpPost("accounting/expenses")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> RegisterExpense([FromBody] SqlStore.AccountingExpenseInput request)
     {
         try
@@ -582,7 +620,7 @@ public class ApiController : Controller
     }
 
     [HttpPost("accounting/supplier-payments")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> RegisterSupplierPayment([FromBody] SqlStore.SupplierPaymentInput request)
     {
         try
@@ -597,7 +635,7 @@ public class ApiController : Controller
     }
 
     [HttpPost("accounting/reconcile-pos")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> ReconcilePos()
     {
         try
@@ -612,7 +650,7 @@ public class ApiController : Controller
     }
 
     [HttpPost("accounting/daily-close")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> DailyAccountingClose([FromBody] AccountingCloseRequest? request = null)
     {
         try
@@ -648,6 +686,7 @@ public class ApiController : Controller
     }
 
     [HttpGet("reports/{type}")]
+    [Authorize(Roles = "Admin,Supervisor")]
     public async Task<IActionResult> Reports(string type, DateTime? start, DateTime? end)
     {
         return Json(await _sqlStore.ReportsAsync(type, start, end));
