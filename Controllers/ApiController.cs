@@ -340,6 +340,7 @@ public class ApiController : Controller
     public async Task<IActionResult> ToggleFrequentCustomer(int id)
     {
         var isFrequent = await _sqlStore.MarkCustomerFrequentAsync(id, CurrentUserEmail);
+        var emailSent = false;
         if (isFrequent)
         {
             var recipient = (await _sqlStore.MarketingRecipientsAsync(new[] { id })).FirstOrDefault();
@@ -350,10 +351,11 @@ public class ApiController : Controller
                     recipient.FullName,
                     "Bienvenido a clientes frecuentes de Repostería Patri",
                     $"Hola {recipient.FullName}, ahora formas parte de nuestros clientes frecuentes. Recibirás promociones y beneficios especiales de Repostería Patri.");
+                emailSent = true;
             }
         }
 
-        return Ok(new { ok = true, frequent = isFrequent, emailSent = isFrequent });
+        return Ok(new { ok = true, frequent = isFrequent, emailSent });
     }
 
     [HttpPost("marketing/campaigns")]

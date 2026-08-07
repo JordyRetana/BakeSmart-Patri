@@ -2267,7 +2267,12 @@ public sealed class SqlStore
                 reader.GetString("FullName"),
                 reader.GetString("Email")), parameters);
 
-        return rows;
+        return rows
+            .Where(recipient =>
+                System.Net.Mail.MailAddress.TryCreate(recipient.Email, out var address)
+                && address.Host.Contains('.', StringComparison.Ordinal)
+                && !address.Host.EndsWith(".local", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
     }
 
     public async Task SubscribeNewsletterAsync(string email)
