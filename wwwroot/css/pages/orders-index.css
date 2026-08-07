@@ -405,3 +405,9 @@
         grid-template-columns: 1fr;
     }
 }
+.orders-delivered-card { margin-top: 1rem; padding: 0; overflow: hidden; }
+.orders-delivered-card summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.1rem 1.25rem; cursor: pointer; font-weight: 850; list-style: none; }
+.orders-delivered-card summary::-webkit-details-marker { display: none; }
+.orders-delivered-card summary span { display: flex; align-items: center; gap: .65rem; }
+.orders-delivered-card > p { margin: 0; padding: 0 1.25rem 1rem; }
+.orders-delivered-list { padding: 0 1.25rem 1.25rem; max-height: 420px; overflow: auto; }
