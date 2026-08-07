@@ -247,7 +247,7 @@
         refreshClient() {
             return Promise.allSettled([
                 load("orders", "/api/orders"),
-                load("inventory", "/api/inventory"),
+                load("inventory", "/api/inventory/catalog", [], { force: true }),
                 load("posConfig", "/api/pos/config", {})
             ]);
         },
