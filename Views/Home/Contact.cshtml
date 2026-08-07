@@ -40,10 +40,26 @@
 
 @section Scripts {
 <script>
-document.getElementById('contactForm')?.addEventListener('submit', event => {
+document.getElementById('contactForm')?.addEventListener('submit', async event => {
     event.preventDefault();
-    app.toast.success('Recibimos tu consulta. Te contactaremos muy pronto.');
-    event.currentTarget.reset();
+    const form = event.currentTarget;
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    try {
+        const response = await fetch('/api/public/contact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(Object.fromEntries(new FormData(form).entries()))
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.message || 'No fue posible enviar la consulta.');
+        app.toast.success('Consulta enviada. También recibirá una confirmación por correo.');
+        form.reset();
+    } catch (error) {
+        app.toast.error(error.message);
+    } finally {
+        button.disabled = false;
+    }
 });
 </script>
 }

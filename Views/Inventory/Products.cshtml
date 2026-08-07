@@ -33,8 +33,19 @@
         <div><label>Codigo</label><input class="form-control" name="code" required /></div>
         <div><label>Precio de venta</label><input class="form-control" name="price" type="number" min="0" step="0.01" required /></div>
         <div class="inventory-modal-full"><label>Nombre del producto</label><input class="form-control" name="description" required /></div>
-        <div><label>Categoria</label><input class="form-control" name="category" placeholder="Queques, Galletas, Cupcakes" required /></div>
-        <div><label>Subcategoria</label><input class="form-control" name="subcategory" /></div>
+        <div><label>Categoria</label><select class="form-control" name="category" id="sellableCategory" required></select></div>
+        <div><label>Subcategoria</label><select class="form-control" name="subcategory" id="sellableSubcategory"></select></div>
+        <div class="inventory-modal-full sellable-image-field">
+            <label>Imagen del producto</label>
+            <div class="sellable-image-picker">
+                <img id="sellableImagePreview" src="/img/products/producto-sin-imagen.svg" alt="Vista previa del producto" />
+                <div>
+                    <input class="form-control" name="imageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif" />
+                    <small>JPG, PNG, WEBP o GIF. La imagen aparecerá en el catálogo y en el POS.</small>
+                </div>
+            </div>
+            <input type="hidden" name="imageUrl" />
+        </div>
         <div><label>Disponibles</label><input class="form-control" name="stock" type="number" min="0" step="1" required /></div>
         <div><label>Minimo</label><input class="form-control" name="minStock" type="number" min="0" step="1" value="2" required /></div>
         <input type="hidden" name="type" value="Producto terminado" />
@@ -49,6 +60,7 @@
 <script>
 (() => {
     let products = [];
+    let categoryOptions = [];
     const search = document.getElementById('productSearch');
     const category = document.getElementById('productCategory');
     const board = document.getElementById('productsBoard');
@@ -66,7 +78,8 @@
         price: Number(p.price || p.costo || 0),
         stock: Number(p.stock || 0),
         minStock: Number(p.min || p.minStock || 0),
-        active: p.active !== false
+        active: p.active !== false,
+        imageUrl: p.imageUrl || '/img/products/producto-sin-imagen.svg'
     });
 
     async function postJson(url, payload = {}) {
@@ -84,7 +97,12 @@
     }
 
     async function loadProducts() {
-        products = (await fetch('/api/inventory').then(r => r.json()))
+        const [inventoryRows, categoryRows] = await Promise.all([
+            fetch('/api/inventory').then(r => r.json()),
+            categoryOptions.length ? Promise.resolve(categoryOptions) : fetch('/api/inventory/categories').then(r => r.json())
+        ]);
+        categoryOptions = categoryRows;
+        products = inventoryRows
             .map(normalize)
             .filter(p => String(p.type).toLowerCase() === 'producto terminado');
         const selected = category.value || 'Todas';
@@ -105,7 +123,7 @@
             const low = p.stock <= p.minStock;
             return `
                 <article class="product-tile ${!p.active ? 'product-tile--inactive' : ''}">
-                    <div class="product-tile__icon"><i class="fas fa-cake-candles"></i></div>
+                    <div class="product-tile__icon product-tile__image"><img src="${clean(p.imageUrl)}" alt="${clean(p.description)}" onerror="this.src='/img/products/producto-sin-imagen.svg'" /></div>
                     <div class="product-tile__body">
                         <span>${clean(p.code)}</span>
                         <h3>${clean(p.description)}</h3>
@@ -126,15 +144,53 @@
     function bindForm(item = null) {
         const form = document.getElementById('sellableProductForm');
         if (!form) return;
+        const categorySelect = form.querySelector('[name="category"]');
+        const subcategorySelect = form.querySelector('[name="subcategory"]');
+        const imageInput = form.querySelector('[name="imageFile"]');
+        const imageUrlInput = form.querySelector('[name="imageUrl"]');
+        const imagePreview = document.getElementById('sellableImagePreview');
+
+        const categories = [...new Set(categoryOptions.map(row => row.category).filter(Boolean))];
+        categorySelect.innerHTML = '<option value="">Seleccione una categoria</option>' + categories.map(value => `<option value="${clean(value)}">${clean(value)}</option>`).join('');
+        const renderSubcategories = selected => {
+            const values = categoryOptions.filter(row => row.category === selected && row.subcategory).map(row => row.subcategory);
+            subcategorySelect.innerHTML = '<option value="">General</option>' + values.map(value => `<option value="${clean(value)}">${clean(value)}</option>`).join('');
+        };
+        categorySelect.addEventListener('change', () => renderSubcategories(categorySelect.value));
         if (item) {
+            categorySelect.value = item.category || '';
+            renderSubcategories(categorySelect.value);
             Object.entries(item).forEach(([key, value]) => {
                 const input = form.querySelector(`[name="${key}"]`);
                 if (input) input.value = value ?? '';
             });
+            imagePreview.src = item.imageUrl;
+        } else {
+            renderSubcategories('');
         }
+        app.selects.enhance(categorySelect);
+        app.selects.enhance(subcategorySelect);
+        app.selects.refresh(categorySelect);
+        app.selects.refresh(subcategorySelect);
+        categorySelect.addEventListener('change', () => app.selects.refresh(subcategorySelect));
+        imageInput.addEventListener('change', () => {
+            const file = imageInput.files?.[0];
+            if (file) imagePreview.src = URL.createObjectURL(file);
+        });
         form.addEventListener('submit', async event => {
             event.preventDefault();
             const data = Object.fromEntries(new FormData(form).entries());
+            const file = imageInput.files?.[0];
+            if (file) {
+                const uploadData = new FormData();
+                uploadData.append('file', file);
+                const uploadResponse = await fetch('/api/assets/site-images', { method: 'POST', body: uploadData });
+                if (!uploadResponse.ok) {
+                    const error = await uploadResponse.json().catch(() => null);
+                    throw new Error(error?.message || 'No se pudo subir la imagen.');
+                }
+                imageUrlInput.value = (await uploadResponse.json()).url;
+            }
             await postJson('/api/inventory', {
                 id: data.id ? Number(data.id) : null,
                 code: data.code,
@@ -145,7 +201,8 @@
                 subcategory: data.subcategory || null,
                 price: Number(data.price || 0),
                 stock: Number(data.stock || 0),
-                minStock: Number(data.minStock || 0)
+                minStock: Number(data.minStock || 0),
+                imageUrl: imageUrlInput.value || null
             });
             app.modal.close();
             app.toast.success('Producto actualizado.');

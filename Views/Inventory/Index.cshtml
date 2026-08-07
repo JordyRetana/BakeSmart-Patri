@@ -22,10 +22,7 @@
         <div class="page-actions inventory-actions">
             <input id="inventorySearch" class="form-control" placeholder="Buscar por código o descripción" />
             <select id="inventoryTypeFilter" class="form-control inventory-type-filter">
-                <option value="todos">Todo el inventario</option>
-                <option value="operativo">Materia prima / empaque</option>
-                <option value="Producto terminado">Productos vendibles</option>
-                <option value="Materia prima">Solo materia prima</option>
+                <option value="Materia prima" selected>Solo materia prima</option>
                 <option value="Empaque">Solo empaques</option>
             </select>
             <select id="inventoryCategory" class="form-control inventory-category"></select>
@@ -115,7 +112,6 @@
                     <label>Tipo</label>
                     <select class="form-control" name="type">
                         <option>Materia prima</option>
-                        <option>Producto terminado</option>
                         <option>Empaque</option>
                         <option>Insumo operativo</option>
                     </select>
@@ -287,7 +283,9 @@
             }
 
             async function loadInventory() {
-                products = (await fetch('/api/inventory').then(r => r.json())).map(normalizeProduct);
+                products = (await fetch('/api/inventory').then(r => r.json()))
+                    .map(normalizeProduct)
+                    .filter(product => product.type !== 'Producto terminado');
                 movements = await fetch('/api/inventory/movements').then(r => r.json());
             }
 

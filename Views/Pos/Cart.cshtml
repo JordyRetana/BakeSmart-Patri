@@ -56,6 +56,13 @@
                     <select class="form-control pos-payment-select" name="paymentMethod" id="checkoutPaymentMethod"></select>
                 </div>
                 <div class="pos-form-block">
+                    <label>Promocion configurada</label>
+                    <select class="form-control" name="promotionId" id="checkoutPromotion">
+                        <option value="">Sin promocion</option>
+                    </select>
+                    <small class="text-muted">Solo se muestran beneficios vigentes para el cliente seleccionado.</small>
+                </div>
+                <div class="pos-form-block">
                     <label>Descuento adicional</label>
                     <div class="pos-input-shell"><i class="fas fa-tag"></i><input class="form-control" type="number" min="0" step="0.01" name="discountRate" value="0" /></div>
                 </div>
@@ -224,18 +231,70 @@
                 return Math.min(numeric > 1 ? numeric / 100 : numeric, 1);
             }
 
-            function currentDiscountBreakdown() {
+            function currentDiscountBreakdown(subtotal) {
                 const manual = normalizeDiscountRate(form.discountRate?.value);
                 const customer = selectedCustomer();
                 const frequent = customer?.frequent ? Math.min(Math.max(Number(store.pos.config().frequentCustomerDiscount || 0), 0), 1) : 0;
-                const totalRate = Math.min(manual + frequent, 1);
-                return { manual, frequent, totalRate, customer };
+                const promotion = store.marketing.promotions().find(row => String(row.id) === document.getElementById('checkoutPromotion').value);
+                const eligibleIds = new Set((promotion?.productIds || []).map(Number));
+                const promotionBase = promotion ? cart.reduce((sum, item) => {
+                    if (!eligibleIds.size) return sum + Number(item.quantity) * Number(item.unitPrice);
+                    if (!item.isCombo) return sum + (eligibleIds.has(Number(item.productId)) ? Number(item.quantity) * Number(item.unitPrice) : 0);
+                    const combo = comboFor(item);
+                    const regular = (combo?.items || []).reduce((value, component) => value + Number(component.unitPrice) * Number(component.quantity), 0);
+                    const eligible = (combo?.items || []).filter(component => eligibleIds.has(Number(component.productId))).reduce((value, component) => value + Number(component.unitPrice) * Number(component.quantity), 0);
+                    return sum + Number(item.quantity) * Number(item.unitPrice) * (regular > 0 ? eligible / regular : 0);
+                }, 0) : 0;
+                const promotionAmount = promotionBase * Number(promotion?.discount || 0);
+                const manualAmount = subtotal * manual;
+                const frequentAmount = subtotal * frequent;
+                const discountAmount = Math.max(manualAmount, frequentAmount, promotionAmount);
+                return { manual, frequent, promotion, promotionAmount, discountAmount, totalRate: subtotal > 0 ? discountAmount / subtotal : 0, customer };
             }
 
             function remainingStock(productId) {
                 const product = store.inventory.list().find(row => Number(row.id) === Number(productId));
                 const item = cart.find(row => Number(row.productId) === Number(productId));
                 return Math.max(0, Number(product?.stock || 0) - Number(item?.quantity || 0));
+            }
+
+            function renderPromotions() {
+                const select = document.getElementById('checkoutPromotion');
+                const selected = select.value;
+                const customer = selectedCustomer();
+                const today = new Date().toISOString().slice(0, 10);
+                const rows = store.marketing.promotions().filter(promotion => promotion.active
+                    && (!promotion.startDate || promotion.startDate <= today)
+                    && (!promotion.endDate || promotion.endDate >= today)
+                    && (!(promotion.customerIds || []).length || (customer && promotion.customerIds.map(Number).includes(Number(customer.id)))));
+                select.innerHTML = '<option value="">Sin promocion</option>' + rows.map(promotion =>
+                    `<option value="${promotion.id}">${promotion.name} · ${Math.round(Number(promotion.discount || 0) * 100)}%</option>`
+                ).join('');
+                select.value = rows.some(row => String(row.id) === selected) ? selected : '';
+                app.selects?.refresh?.(select);
+            }
+
+            function itemKey(item) {
+                return item?.isCombo ? `combo-${item.comboId}` : String(item?.productId);
+            }
+
+            function comboFor(item) {
+                return item?.isCombo ? store.combos.list().find(row => Number(row.id) === Number(item.comboId)) : null;
+            }
+
+            function remainingItemStock(item) {
+                const combo = comboFor(item);
+                if (!combo) return remainingStock(item.productId);
+                const availability = (combo.items || []).map(component => {
+                    const product = store.inventory.list().find(row => Number(row.id) === Number(component.productId));
+                    const used = cart.reduce((sum, row) => {
+                        if (!row.isCombo) return sum + (Number(row.productId) === Number(component.productId) ? Number(row.quantity || 0) : 0);
+                        const rowComponent = comboFor(row)?.items?.find(value => Number(value.productId) === Number(component.productId));
+                        return sum + Number(row.quantity || 0) * Number(rowComponent?.quantity || 0);
+                    }, 0);
+                    return Math.floor((Number(product?.stock || 0) - used) / Math.max(1, Number(component.quantity || 1)));
+                });
+                return Math.max(0, availability.length ? Math.min(...availability) : 0);
             }
 
             function renderCart() {
@@ -249,12 +308,15 @@
                 }
 
                 const firstProduct = store.inventory.list().find(row => Number(row.id) === Number(cart[0]?.productId) || String(row.code || '').toLowerCase() === String(cart[0]?.code || '').toLowerCase());
-                const firstImage = cart[0]?.imageUrl || firstProduct?.imageUrl || '/img/products/producto-sin-imagen.svg';
+                const firstImage = cart[0]?.imageUrl || comboFor(cart[0])?.imageUrl || firstProduct?.imageUrl || '/img/products/producto-sin-imagen.svg';
                 if (checkoutHeroImage) checkoutHeroImage.src = firstImage;
 
                 itemsEl.innerHTML = cart.map(item => {
+                    const key = itemKey(item);
+                    const combo = comboFor(item);
                     const inventoryProduct = store.inventory.list().find(row => Number(row.id) === Number(item.productId) || String(row.code || '').toLowerCase() === String(item.code || '').toLowerCase());
-                    const imageUrl = item.imageUrl || item.image || item.photo || inventoryProduct?.imageUrl || inventoryProduct?.image || '/img/products/producto-sin-imagen.svg';
+                    const imageUrl = item.imageUrl || combo?.imageUrl || item.image || item.photo || inventoryProduct?.imageUrl || inventoryProduct?.image || '/img/products/producto-sin-imagen.svg';
+                    const composition = combo?.items?.map(component => `${component.quantity}× ${component.name}`).join(' · ');
                     return `
                             <div class="pos-cart-item">
                                 <img class="pos-cart-item-image" src="${imageUrl}" alt="${item.name}" />
@@ -262,17 +324,18 @@
                                 <div class="pos-cart-item-header">
                                     <div>
                                         <strong>${item.name}</strong>
-                                        <div class="text-muted" style="font-size:.82rem;">${item.code} - ${fmt(item.unitPrice)} c/u · ${remainingStock(item.productId)} disponibles</div>
+                                        ${composition ? `<div class="text-muted" style="font-size:.78rem;">Incluye ${composition}</div>` : ''}
+                                        <div class="text-muted" style="font-size:.82rem;">${item.code} · ${fmt(item.unitPrice)} c/u · ${remainingItemStock(item)} adicionales disponibles</div>
                                     </div>
-                                    <button class="btn btn-ghost btn-sm" type="button" onclick="removeCheckoutItem(${item.productId})">
+                                    <button class="btn btn-ghost btn-sm" type="button" onclick='removeCheckoutItem(${JSON.stringify(key)})'>
                                         <i class="fas fa-trash-can"></i>
                                     </button>
                                 </div>
                                 <div class="pos-cart-item-footer">
                                     <div class="pos-cart-actions">
-                                        <button class="btn btn-outline btn-sm" type="button" onclick="changeCheckoutQty(${item.productId}, -1)"><i class="fas fa-minus"></i></button>
+                                        <button class="btn btn-outline btn-sm" type="button" onclick='changeCheckoutQty(${JSON.stringify(key)}, -1)'><i class="fas fa-minus"></i></button>
                                         <span style="font-weight:800;min-width:24px;text-align:center;">${item.quantity}</span>
-                                        <button class="btn btn-outline btn-sm" type="button" onclick="changeCheckoutQty(${item.productId}, 1)" ${remainingStock(item.productId) <= 0 ? 'disabled' : ''}><i class="fas fa-plus"></i></button>
+                                        <button class="btn btn-outline btn-sm" type="button" onclick='changeCheckoutQty(${JSON.stringify(key)}, 1)' ${remainingItemStock(item) <= 0 ? 'disabled' : ''}><i class="fas fa-plus"></i></button>
                                     </div>
                                     <strong style="color:var(--primary);">${fmt(item.quantity * item.unitPrice)}</strong>
                                 </div>
@@ -282,9 +345,9 @@
                 }).join('');
 
                 const subtotal = cart.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-                const discountBreakdown = currentDiscountBreakdown();
+                const discountBreakdown = currentDiscountBreakdown(subtotal);
                 const discountRate = discountBreakdown.totalRate;
-                const discount = subtotal * discountRate;
+                const discount = discountBreakdown.discountAmount;
                 const discountedSubtotal = Math.max(0, subtotal - discount);
                 const tax = discountedSubtotal * Number(store.pos.config().iva || 0);
                 const total = pendingOrder?.total ? Number(pendingOrder.total) : discountedSubtotal + tax;
@@ -294,6 +357,7 @@
                             <div class="pos-total-row"><span>Subtotal</span><strong>${fmt(subtotal)}</strong></div>
                             ${discountBreakdown.frequent > 0 ? `<div class="pos-total-row"><span>Cliente frecuente ${Math.round(discountBreakdown.frequent * 100)}%</span><strong>Aplica</strong></div>` : `<div class="pos-total-row"><span>Cliente frecuente</span><strong>0%</strong></div>`}
                             ${discountBreakdown.manual > 0 ? `<div class="pos-total-row"><span>Descuento adicional ${Math.round(discountBreakdown.manual * 100)}%</span><strong>Aplica</strong></div>` : ''}
+                            ${discountBreakdown.promotion ? `<div class="pos-total-row"><span>${discountBreakdown.promotion.name}</span><strong>-${fmt(discountBreakdown.promotionAmount)}</strong></div>` : ''}
                             ${discount > 0 ? `<div class="pos-total-row"><span>Descuento total ${Math.round(discountRate * 100)}%</span><strong>-${fmt(discount)}</strong></div>` : ''}
                             <div class="pos-total-row"><span>IVA</span><strong>${fmt(tax)}</strong></div>
                             <div class="hr"></div>
@@ -378,21 +442,21 @@
                 syncGatewayFields();
             }
 
-            window.changeCheckoutQty = (productId, delta) => {
-                const item = cart.find(row => Number(row.productId) === Number(productId));
+            window.changeCheckoutQty = (key, delta) => {
+                const item = cart.find(row => itemKey(row) === String(key));
                 if (!item) return;
-                if (delta > 0 && remainingStock(productId) <= 0) {
+                if (delta > 0 && remainingItemStock(item) <= 0) {
                     app.toast.warning('La cantidad supera el stock disponible.');
                     return;
                 }
                 item.quantity += delta;
-                if (item.quantity <= 0) cart = cart.filter(row => Number(row.productId) !== Number(productId));
+                if (item.quantity <= 0) cart = cart.filter(row => itemKey(row) !== String(key));
                 saveCart();
                 renderCart();
             };
 
-            window.removeCheckoutItem = (productId) => {
-                cart = cart.filter(row => Number(row.productId) !== Number(productId));
+            window.removeCheckoutItem = (key) => {
+                cart = cart.filter(row => itemKey(row) !== String(key));
                 saveCart();
                 renderCart();
             };
@@ -404,12 +468,14 @@
                 if (!selected) return;
                 form.customerEmail.value = selected.email || '';
                 form.customerPhone.value = selected.phone || '';
+                renderPromotions();
                 renderCart();
             });
 
             form.discountRate.addEventListener('input', renderCart);
             form.customerEmail.addEventListener('input', renderCart);
             form.customerName.addEventListener('input', renderCart);
+            document.getElementById('checkoutPromotion').addEventListener('change', renderCart);
 
             async function completeCheckout(paymentData) {
                 try {
@@ -424,7 +490,8 @@
                         await store.pos.sell({
                             ...Object.fromEntries(new FormData(form).entries()),
                             paymentMethod: paymentData.method || form.paymentMethod.value,
-                            items: cart.map(item => ({ productId: item.productId, quantity: item.quantity }))
+                            items: cart.filter(item => !item.isCombo).map(item => ({ productId: Number(item.productId), quantity: Number(item.quantity) })),
+                            combos: cart.filter(item => item.isCombo).map(item => ({ comboId: Number(item.comboId), quantity: Number(item.quantity) }))
                         });
                     }
 
@@ -504,10 +571,11 @@
             async function initializeCheckout() {
                 try {
                     await store.pos.sessions();
-                    await store.refresh();
+                    await store.refresh({ keys: ['inventory', 'customers', 'posConfig', 'promotions', 'combos'], force: true });
                     renderCustomers();
                     renderPayments();
                     readPendingOrder();
+                    renderPromotions();
                     renderCart();
                 } catch (error) {
                     app.toast.error(error.message);

@@ -4,6 +4,10 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using System.Security.Claims;
 using BakeSmartPatri.Data;
+using BakeSmartPatri.Services;
+using QuestPDF.Infrastructure;
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 if (args.Contains("--check-databases", StringComparer.OrdinalIgnoreCase))
 {
@@ -86,6 +90,12 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddHttpClient();
 builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 builder.Services.AddScoped<SqlStore>();
+builder.Services.AddScoped<ReportExportService>();
+builder.Services.AddHttpClient<IEmailService, MailerSendEmailService>(client =>
+{
+    client.BaseAddress = new Uri("https://api.mailersend.com/v1/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 builder.Services.AddHttpClient("Nominatim", client =>
 {
     client.BaseAddress = new Uri("https://nominatim.openstreetmap.org/");

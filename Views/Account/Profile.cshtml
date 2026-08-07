@@ -159,6 +159,16 @@
                 <input type="hidden" name="longitude" value="@longitude" />
 
                 <div class="profile-field">
+                    <label class="profile-label" for="currentPassword">Contraseña actual</label>
+                    <div class="profile-input-wrap">
+                        <i class="fas fa-shield-halved profile-input-icon"></i>
+                        <input class="profile-input" type="password" id="currentPassword" name="currentPassword"
+                               placeholder="Contraseña actual" required autocomplete="current-password" />
+                        <button type="button" class="profile-eye-btn" onclick="togglePass('currentPassword', this)"><i class="fas fa-eye"></i></button>
+                    </div>
+                </div>
+
+                <div class="profile-field">
                     <label class="profile-label" for="newPassword">Nueva contraseña</label>
                     <div class="profile-input-wrap">
                         <i class="fas fa-lock profile-input-icon"></i>

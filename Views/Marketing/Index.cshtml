@@ -109,6 +109,18 @@
                         <small class="text-muted">Escriba el porcentaje visible: 10 equivale a 10%.</small>
                     </div>
 
+                    <div class="marketing-form-block marketing-form-full">
+                        <label>Productos incluidos</label>
+                        <p class="text-muted" style="margin:.2rem 0 .55rem;">Sin selección aplica a todos los productos. Puede elegir productos existentes con su imagen.</p>
+                        <div id="promotionProducts" class="marketing-option-grid"></div>
+                    </div>
+
+                    <div class="marketing-form-block marketing-form-full">
+                        <label>Clientes beneficiarios</label>
+                        <p class="text-muted" style="margin:.2rem 0 .55rem;">Sin selección queda disponible para todos. Seleccione clientes para crear un beneficio exclusivo.</p>
+                        <div id="promotionCustomers" class="marketing-option-grid marketing-option-grid--customers"></div>
+                    </div>
+
                     <button class="btn btn-primary marketing-submit-btn" type="submit">
                         <i class="fas fa-save"></i>
                         Guardar promoción
@@ -159,11 +171,29 @@
         (() => {
             const search = document.getElementById('marketingSearch');
             let pageInitialized = false;
+            const clean = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+            function renderPromotionTargets(customers) {
+                const products = BakeSmartStore.inventory.sellable();
+                document.getElementById('promotionProducts').innerHTML = products.map(product => `
+                    <label class="marketing-option-card">
+                        <input type="checkbox" name="promotionProduct" value="${product.id}" />
+                        <img src="${clean(product.imageUrl || '/img/products/producto-sin-imagen.svg')}" alt="" />
+                        <span><strong>${clean(product.description || product.item)}</strong><small>${clean(product.code || product.sku)}</small></span>
+                    </label>`).join('');
+                document.getElementById('promotionCustomers').innerHTML = customers.map(customer => `
+                    <label class="marketing-option-card marketing-option-card--customer">
+                        <input type="checkbox" name="promotionCustomer" value="${customer.id}" />
+                        <span class="marketing-customer-avatar"><i class="fas fa-user"></i></span>
+                        <span><strong>${clean(customer.fullName)}</strong><small>${clean(customer.email)}</small></span>
+                    </label>`).join('');
+            }
 
             async function render() {
                 await BakeSmartStore.refresh();
                 const customers = BakeSmartStore.customers.search(search.value);
                 const promotions = BakeSmartStore.marketing.promotions();
+                renderPromotionTargets(BakeSmartStore.customers.list());
 
                 document.getElementById('mkFrequentCount').textContent = customers.filter(x => x.frequent).length;
                 document.getElementById('mkPromoCount').textContent = promotions.filter(x => x.active).length;
@@ -209,6 +239,7 @@
                             <div>
                                 <div class="marketing-promo-name">${p.name}</div>
                                 <div class="marketing-promo-dates">${p.startDate} al ${p.endDate}</div>
+                                <small>${p.productIds?.length ? `${p.productIds.length} producto(s)` : 'Todos los productos'} · ${p.customerIds?.length ? `${p.customerIds.length} cliente(s)` : 'Todos los clientes'}</small>
                             </div>
                             <button class="badge ${p.active ? 'badge-primary' : 'badge-warning'}" type="button" onclick="togglePromotion(${p.id})">
                                 ${(p.discount * 100).toFixed(0)}% · ${p.active ? 'Activa' : 'Inactiva'}
@@ -244,9 +275,10 @@
                 e.preventDefault();
 
                 try {
-                    await BakeSmartStore.marketing.addPromotion(
-                        Object.fromEntries(new FormData(e.target).entries())
-                    );
+                    const data = Object.fromEntries(new FormData(e.target).entries());
+                    data.productIds = [...e.target.querySelectorAll('[name="promotionProduct"]:checked')].map(input => Number(input.value));
+                    data.customerIds = [...e.target.querySelectorAll('[name="promotionCustomer"]:checked')].map(input => Number(input.value));
+                    await BakeSmartStore.marketing.addPromotion(data);
 
                     e.target.reset();
                     app.toast.success('Promoción registrada.');

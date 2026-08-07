@@ -33,7 +33,7 @@ namespace BakeSmartPatri.Controllers
 
         public async Task<IActionResult> New() => View(await BuildIndexModelAsync());
 
-        public async Task<IActionResult> Combos() => View(await BuildIndexModelAsync());
+        public async Task<IActionResult> Combos() => View(await _sqlStore.CombosAsync(activeOnly: true));
 
         public async Task<IActionResult> Details(int id)
         {

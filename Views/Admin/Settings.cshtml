@@ -20,6 +20,7 @@
         <button type="button" class="settings-module-tab" data-settings-tab="home"><i class="fas fa-house"></i><span>Inicio</span></button>
         <button type="button" class="settings-module-tab" data-settings-tab="benefits"><i class="fas fa-star"></i><span>Beneficios</span></button>
         <button type="button" class="settings-module-tab" data-settings-tab="delivery"><i class="fas fa-truck-fast"></i><span>Entrega</span></button>
+        <button type="button" class="settings-module-tab" data-settings-tab="combos"><i class="fas fa-box-open"></i><span>Combos</span></button>
         <button type="button" class="settings-module-tab" data-settings-tab="contact"><i class="fas fa-address-card"></i><span>Contacto</span></button>
     </nav>
 
@@ -179,6 +180,23 @@
                     <input class="form-control" name="siteAddress" placeholder="San Jose, Costa Rica" />
                 </div>
             </div>
+        </section>
+
+        <section class="settings-module-panel" data-settings-panel="combos">
+            <div class="settings-panel-heading"><div><span>Ofertas</span><h3>Combos del catálogo y POS</h3></div></div>
+            <p class="text-muted">Cree el combo usando productos vendibles existentes. Se conservarán productos, cantidades, imágenes, precio especial y descuento.</p>
+            <input type="hidden" id="comboId" />
+            <div class="grid grid-3 settings-grid">
+                <div><label>Nombre</label><input class="form-control" id="comboName" placeholder="Ej. Combo cumpleaños" /></div>
+                <div><label>Precio especial</label><input class="form-control" id="comboPrice" type="number" min="0.01" step="0.01" /></div>
+                <div><label>Descripción</label><input class="form-control" id="comboDescription" /></div>
+            </div>
+            <div id="comboProductEditor" class="settings-combo-products"></div>
+            <div class="settings-combo-actions">
+                <button type="button" class="btn btn-outline" id="clearCombo"><i class="fas fa-eraser"></i> Limpiar</button>
+                <button type="button" class="btn btn-primary" id="saveCombo"><i class="fas fa-save"></i> Guardar combo</button>
+            </div>
+            <div class="settings-subsection"><h3>Combos configurados</h3><div id="settingsComboList" class="settings-combo-list"></div></div>
         </section>
 
         <div class="settings-save-bar">
@@ -486,6 +504,19 @@
         box-shadow: var(--shadow-md);
         z-index: 5;
     }
+
+    .settings-combo-products { display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.75rem;margin:1rem 0; }
+    .settings-combo-product { display:grid;grid-template-columns:64px minmax(0,1fr) 76px;gap:.7rem;align-items:center;padding:.7rem;border:1px solid var(--border);border-radius:12px;background:var(--bg); }
+    .settings-combo-product:has(input[type="checkbox"]:checked) { border-color:var(--primary);background:color-mix(in srgb,var(--primary) 8%,var(--bg)); }
+    .settings-combo-product img { width:64px;height:64px;object-fit:cover;border-radius:10px; }
+    .settings-combo-product__name { display:grid;min-width:0; }
+    .settings-combo-product__name strong,.settings-combo-product__name small { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .settings-combo-actions { display:flex;justify-content:flex-end;gap:.65rem; }
+    .settings-combo-list { display:grid;gap:.65rem; }
+    .settings-combo-card { display:flex;align-items:center;gap:.8rem;padding:.8rem;border:1px solid var(--border);border-radius:12px; }
+    .settings-combo-card img { width:58px;height:58px;object-fit:cover;border-radius:9px; }
+    .settings-combo-card > div { min-width:0;flex:1;display:grid; }
+    .settings-combo-card__actions { display:flex;gap:.45rem; }
 
     @@media (max-width: 920px) {
         .settings-module-tabs {
@@ -911,7 +942,95 @@
                 return escapeHtml(value);
             }
 
-            loadSettings().catch(error => app.toast.error(error.message));
+            function renderComboProducts(combo = null) {
+                const selected = new Map((combo?.items || []).map(item => [Number(item.productId), Number(item.quantity)]));
+                document.getElementById('comboProductEditor').innerHTML = BakeSmartStore.inventory.sellable().map(product => `
+                    <label class="settings-combo-product">
+                        <img src="${escapeAttr(product.imageUrl || '/img/products/producto-sin-imagen.svg')}" alt="" />
+                        <span class="settings-combo-product__name">
+                            <span><input type="checkbox" data-combo-product="${product.id}" ${selected.has(Number(product.id)) ? 'checked' : ''} /> <strong>${escapeHtml(product.description || product.item)}</strong></span>
+                            <small>${escapeHtml(product.code || product.sku)} · ${app.utils.formatCurrency(product.price)}</small>
+                        </span>
+                        <input class="form-control" type="number" min="1" step="1" value="${selected.get(Number(product.id)) || 1}" data-combo-quantity="${product.id}" aria-label="Cantidad" />
+                    </label>`).join('');
+            }
+
+            function renderComboList() {
+                const combos = BakeSmartStore.combos.list();
+                document.getElementById('settingsComboList').innerHTML = combos.map(combo => `
+                    <article class="settings-combo-card">
+                        <img src="${escapeAttr(combo.imageUrl || combo.items?.[0]?.imageUrl || '/img/products/producto-sin-imagen.svg')}" alt="" />
+                        <div><strong>${escapeHtml(combo.name)}</strong><small>${combo.items.length} producto(s) · ${app.utils.formatCurrency(combo.specialPrice)} · ahorro ${app.utils.formatCurrency(combo.discount)}</small></div>
+                        <span class="badge ${combo.active ? 'badge-success' : 'badge-warning'}">${combo.active ? 'Activo' : 'Inactivo'}</span>
+                        <span class="settings-combo-card__actions">
+                            <button type="button" class="btn btn-outline btn-sm" onclick="editSettingsCombo(${combo.id})"><i class="fas fa-pen"></i></button>
+                            <button type="button" class="btn btn-ghost btn-sm" onclick="toggleSettingsCombo(${combo.id})">${combo.active ? 'Pausar' : 'Activar'}</button>
+                            <button type="button" class="btn btn-ghost btn-sm" onclick="deleteSettingsCombo(${combo.id})" aria-label="Eliminar combo"><i class="fas fa-trash"></i></button>
+                        </span>
+                    </article>`).join('') || '<p class="text-muted">Todavía no hay combos configurados.</p>';
+            }
+
+            function clearComboEditor() {
+                document.getElementById('comboId').value = '';
+                document.getElementById('comboName').value = '';
+                document.getElementById('comboPrice').value = '';
+                document.getElementById('comboDescription').value = '';
+                renderComboProducts();
+            }
+
+            window.editSettingsCombo = id => {
+                const combo = BakeSmartStore.combos.list().find(item => Number(item.id) === Number(id));
+                if (!combo) return;
+                document.getElementById('comboId').value = combo.id;
+                document.getElementById('comboName').value = combo.name;
+                document.getElementById('comboPrice').value = combo.specialPrice;
+                document.getElementById('comboDescription').value = combo.description || '';
+                renderComboProducts(combo);
+            };
+            window.toggleSettingsCombo = async id => { await BakeSmartStore.combos.toggle(id); renderComboList(); };
+            window.deleteSettingsCombo = id => {
+                const combo = BakeSmartStore.combos.list().find(item => Number(item.id) === Number(id));
+                app.modal.create({
+                    title: 'Eliminar combo',
+                    message: `¿Desea eliminar “${combo?.name || 'este combo'}”? Se quitará de Configuración, Catálogo y Punto de Venta.`,
+                    confirmText: 'Sí, eliminar',
+                    cancelText: 'Conservar combo',
+                    onConfirm: async () => {
+                        try {
+                            await BakeSmartStore.combos.remove(id);
+                            clearComboEditor();
+                            renderComboList();
+                            app.toast.success('Combo eliminado correctamente.');
+                        } catch (error) { app.toast.error(error.message); }
+                    }
+                });
+            };
+            document.getElementById('clearCombo').addEventListener('click', clearComboEditor);
+            document.getElementById('saveCombo').addEventListener('click', async () => {
+                const items = [...document.querySelectorAll('[data-combo-product]:checked')].map(input => ({
+                    productId: Number(input.dataset.comboProduct),
+                    quantity: Number(document.querySelector(`[data-combo-quantity="${input.dataset.comboProduct}"]`).value || 1)
+                }));
+                const firstProduct = BakeSmartStore.inventory.sellable().find(product => Number(product.id) === Number(items[0]?.productId));
+                try {
+                    await BakeSmartStore.combos.save({
+                        id: document.getElementById('comboId').value,
+                        name: document.getElementById('comboName').value,
+                        description: document.getElementById('comboDescription').value,
+                        specialPrice: document.getElementById('comboPrice').value,
+                        imageUrl: firstProduct?.imageUrl || null,
+                        isActive: true,
+                        items
+                    });
+                    app.toast.success('Combo guardado correctamente.');
+                    clearComboEditor();
+                    renderComboList();
+                } catch (error) { app.toast.error(error.message); }
+            });
+
+            Promise.all([loadSettings(), BakeSmartStore.refresh({ keys: ['inventory', 'combos'], force: true })])
+                .then(() => { clearComboEditor(); renderComboList(); })
+                .catch(error => app.toast.error(error.message));
         })();
     </script>
 }

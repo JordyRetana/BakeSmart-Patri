@@ -1,4 +1,5 @@
 using BakeSmartPatri.Data;
+using BakeSmartPatri.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Mail;
@@ -13,12 +14,16 @@ public class ApiController : Controller
     private readonly SqlStore _sqlStore;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IWebHostEnvironment _environment;
+    private readonly ReportExportService _reportExportService;
+    private readonly IEmailService _emailService;
 
-    public ApiController(SqlStore sqlStore, IHttpClientFactory httpClientFactory, IWebHostEnvironment environment)
+    public ApiController(SqlStore sqlStore, IHttpClientFactory httpClientFactory, IWebHostEnvironment environment, ReportExportService reportExportService, IEmailService emailService)
     {
         _sqlStore = sqlStore;
         _httpClientFactory = httpClientFactory;
         _environment = environment;
+        _reportExportService = reportExportService;
+        _emailService = emailService;
     }
 
     private string? CurrentUserEmail =>
@@ -60,14 +65,40 @@ public class ApiController : Controller
     }
 
     [HttpPost("orders/{id:int}/status")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] UpdateOrderStatusRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Status))
-            return BadRequest(new { message = "Debe indicar el estado." });
+        return BadRequest(new { message = "El estado operativo no se cambia manualmente. Use el flujo de Pedidos y Produccion." });
+    }
 
-        await _sqlStore.UpdateOrderStatusAsync(id, request.Status, CurrentUserEmail);
-        return Ok(new { ok = true });
+    [HttpPost("orders/{id:int}/send-production")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> SendOrderToProduction(int id)
+    {
+        try
+        {
+            var status = await _sqlStore.SendOrderToProductionAsync(id, CurrentUserEmail);
+            return Ok(new { ok = true, status });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("production/{id:int}/advance")]
+    [Authorize(Roles = "Admin,Staff,Repostero,Supervisor")]
+    public async Task<IActionResult> AdvanceProduction(int id)
+    {
+        try
+        {
+            var status = await _sqlStore.AdvanceProductionOrderAsync(id, CurrentUserEmail);
+            return Ok(new { ok = true, status });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPost("orders/{id:int}/pay")]
@@ -93,6 +124,10 @@ public class ApiController : Controller
     [HttpGet("inventory")]
     [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> Inventory() => Json(await _sqlStore.InventoryAsync());
+
+    [HttpGet("inventory/categories")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> InventoryCategories() => Json(await _sqlStore.ProductCategoryOptionsAsync());
 
     [HttpPost("inventory")]
     [Authorize(Policy = "StaffOrAdmin")]
@@ -271,6 +306,35 @@ public class ApiController : Controller
         }
     }
 
+    [HttpGet("combos")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Combos([FromQuery] bool activeOnly = false) => Json(await _sqlStore.CombosAsync(activeOnly));
+
+    [HttpPost("combos")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> SaveCombo([FromBody] SqlStore.ComboInput? request)
+    {
+        if (request is null) return BadRequest(new { message = "No se recibió la información del combo." });
+        try { return Ok(new { ok = true, id = await _sqlStore.SaveComboAsync(request, CurrentUserEmail) }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    [HttpPost("combos/{id:int}/toggle")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> ToggleCombo(int id)
+    {
+        await _sqlStore.ToggleComboAsync(id, CurrentUserEmail);
+        return Ok(new { ok = true });
+    }
+
+    [HttpDelete("combos/{id:int}")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> DeleteCombo(int id)
+    {
+        try { await _sqlStore.DeleteComboAsync(id, CurrentUserEmail); return Ok(new { ok = true }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
     [HttpPost("customers/{id:int}/frequent")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> ToggleFrequentCustomer(int id)
@@ -285,8 +349,23 @@ public class ApiController : Controller
     {
         try
         {
+            var recipients = await _sqlStore.MarketingRecipientsAsync(request.CustomerIds ?? Array.Empty<int>());
+            if (recipients.Count == 0)
+                return BadRequest(new { message = "Los clientes seleccionados no tienen un correo válido." });
+            if (recipients.Count > 50)
+                return BadRequest(new { message = "Puede enviar una campaña a un máximo de 50 clientes por operación." });
+
+            foreach (var recipient in recipients)
+            {
+                await _emailService.SendAsync(
+                    recipient.Email,
+                    recipient.FullName,
+                    string.IsNullOrWhiteSpace(request.Subject) ? "Promoción Repostería Patri" : request.Subject,
+                    request.Message);
+            }
+
             var id = await _sqlStore.SendMarketingCampaignAsync(request, CurrentUserEmail);
-            return Ok(new { ok = true, id });
+            return Ok(new { ok = true, id, sent = recipients.Count });
         }
         catch (InvalidOperationException ex)
         {
@@ -295,6 +374,55 @@ public class ApiController : Controller
         catch (Exception ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("public/contact")]
+    [AllowAnonymous]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> SendContact([FromBody] ContactMessageRequest? request, [FromServices] IConfiguration configuration)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Message))
+            return BadRequest(new { message = "Complete su nombre, correo y mensaje." });
+        if (!IsValidEmail(request.Email))
+            return BadRequest(new { message = "Ingrese un correo electrónico válido." });
+
+        var recipient = configuration["MailerSend:ContactRecipient"];
+        if (string.IsNullOrWhiteSpace(recipient))
+            return StatusCode(503, new { message = "El correo de contacto todavía no está configurado." });
+
+        var subject = string.IsNullOrWhiteSpace(request.Subject) ? "Consulta desde el sitio web" : request.Subject.Trim();
+        var body = $"Nombre: {request.Name.Trim()}\nCorreo: {request.Email.Trim()}\nTeléfono: {request.Phone?.Trim() ?? "No indicado"}\nTipo: {subject}\n\nMensaje:\n{request.Message.Trim()}";
+        try
+        {
+            await _emailService.SendAsync(recipient, "Repostería Patri", $"Nueva consulta: {subject}", body);
+            await _emailService.SendAsync(request.Email, request.Name, "Recibimos su consulta", "Gracias por escribirnos. Recibimos su consulta y nuestro equipo le responderá lo antes posible.");
+            return Ok(new { ok = true });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return StatusCode(503, new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("public/newsletter")]
+    [AllowAnonymous]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> SubscribeNewsletter([FromBody] NewsletterRequest? request)
+    {
+        var email = request?.Email?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (!IsValidEmail(email))
+            return BadRequest(new { message = "Ingrese un correo electrónico válido." });
+
+        try
+        {
+            await _emailService.SendAsync(email, email, "Suscripción confirmada", "Ya forma parte de nuestras novedades. Le enviaremos promociones, productos y fechas especiales de Repostería Patri.");
+            await _sqlStore.SubscribeNewsletterAsync(email);
+            return Ok(new { ok = true });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return StatusCode(503, new { message = ex.Message });
         }
     }
 
@@ -549,14 +677,21 @@ public class ApiController : Controller
         if (string.IsNullOrWhiteSpace(request.Email))
             return BadRequest(new { message = "Indique su correo electronico." });
 
-        var result = await _sqlStore.RequestPasswordResetAsync(request.Email.Trim().ToLowerInvariant());
-        if (!result)
+        var email = request.Email.Trim().ToLowerInvariant();
+        var token = await _sqlStore.CreatePasswordResetTokenAsync(email);
+        if (token is not null)
         {
-            // No revelar si el correo existe o no
-            return Ok(new { ok = true, message = "Si el correo esta registrado, recibira instrucciones para restablecer su contrasena." });
+            var resetUrl = Url.Action("ResetPassword", "Account", new { token }, Request.Scheme, Request.Host.Value)!;
+            try
+            {
+                await _emailService.SendAsync(email, email, "Restablecer contraseña", $"Abra este enlace durante los próximos 30 minutos:\n\n{resetUrl}\n\nSi no realizó esta solicitud, ignore este correo.");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(503, new { message = ex.Message });
+            }
         }
-
-        return Ok(new { ok = true, message = "Contrasena restablecida. Revise la bitacora del sistema para obtener la contrasena temporal (modo desarrollo)." });
+        return Ok(new { ok = true, message = "Si el correo está registrado, recibirá instrucciones para restablecer su contraseña." });
     }
 
     [HttpPost("pos/sell")]
@@ -692,12 +827,38 @@ public class ApiController : Controller
         return Json(await _sqlStore.ReportsAsync(type, start, end));
     }
 
+    [HttpGet("reports/{type}/export/{format}")]
+    [Authorize(Roles = "Admin,Supervisor")]
+    public async Task<IActionResult> ExportReport(string type, string format, DateTime? start, DateTime? end)
+    {
+        var report = await _sqlStore.ReportsAsync(type, start, end);
+        var safeType = type switch
+        {
+            "sales" => "ventas",
+            "inventory" => "inventario",
+            "users" => "usuarios",
+            "promotions" => "promociones",
+            "cashClosures" => "cierres_de_caja",
+            "orders" => "pedidos",
+            _ => "reporte"
+        };
+        var stamp = DateTime.Now.ToString("yyyyMMdd-HHmm");
+        return format.ToLowerInvariant() switch
+        {
+            "xlsx" => File(_reportExportService.CreateExcel(type, report, start, end), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"reporte_{safeType}_{stamp}.xlsx"),
+            "pdf" => File(_reportExportService.CreatePdf(type, report, start, end), "application/pdf", $"reporte_{safeType}_{stamp}.pdf"),
+            _ => BadRequest(new { message = "Formato de reporte no soportado." })
+        };
+    }
+
     public sealed record UpdateOrderStatusRequest(string Status);
     public sealed record MarkPaidRequest(string Method);
     public sealed record OpenCashSessionRequest(decimal Amount);
     public sealed record CloseCashSessionRequest(int Id, decimal DeclaredAmount);
     public sealed record AccountingCloseRequest(string? Type);
     public sealed record ForgotPasswordRequest(string Email);
+    public sealed record ContactMessageRequest(string Name, string Email, string? Phone, string? Subject, string Message);
+    public sealed record NewsletterRequest(string? Email);
 
     private static bool IsValidEmail(string email)
     {

@@ -129,7 +129,7 @@
 
     .accounting-page .accounting-actions-card {
         display: grid !important;
-        grid-template-columns: repeat(2, minmax(320px, 1fr)) !important;
+        grid-template-columns: repeat(3, minmax(260px, 1fr)) !important;
         gap: 1.15rem !important;
     }
 
@@ -423,11 +423,14 @@
 
     @media (max-width: 1200px) {
         .accounting-page .accounting-actions-card {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: repeat(2, minmax(280px, 1fr)) !important;
         }
     }
 
     @media (max-width: 768px) {
+        .accounting-page .accounting-actions-card {
+            grid-template-columns: 1fr !important;
+        }
         .accounting-entries-table {
             table-layout: auto;
             min-width: 1120px !important;

@@ -231,13 +231,15 @@ public sealed class SqlStore
                 p.UnitCost,
                 COALESCE(SUM(ib.Quantity), 0) AS Stock,
                 p.MinStock,
-                p.IsActive
+                p.IsActive,
+                COALESCE(MIN(img.ImageUrl), '/img/products/producto-sin-imagen.svg') AS ImageUrl
             FROM dbo.Productos p
             INNER JOIN dbo.TiposProducto pt ON pt.ProductTypeId = p.ProductTypeId
             INNER JOIN dbo.UnidadesMedida um ON um.UnitMeasureId = p.UnitMeasureId
             INNER JOIN dbo.CategoriasProducto pc ON pc.ProductCategoryId = p.ProductCategoryId
             LEFT JOIN dbo.CategoriasProducto parent ON parent.ProductCategoryId = pc.ParentCategoryId
             LEFT JOIN dbo.ExistenciasInventario ib ON ib.ProductId = p.ProductId
+            LEFT JOIN dbo.ImagenesProducto img ON img.ProductId = p.ProductId AND img.IsPrimary = 1
             GROUP BY p.ProductId, p.Code, p.Name, pt.Name, um.Code, parent.Name, pc.Name,
                      p.UnitPrice, p.UnitCost, p.MinStock, p.IsActive
             ORDER BY pt.Name, COALESCE(parent.Name, pc.Name), p.Name;
@@ -256,24 +258,56 @@ public sealed class SqlStore
             price = reader.GetDecimal("UnitPrice"),
             stock = reader.GetDecimal("Stock"),
             min = reader.GetDecimal("MinStock"),
-            active = reader.GetBoolean("IsActive")
+            active = reader.GetBoolean("IsActive"),
+            imageUrl = reader.GetString("ImageUrl")
         });
+    }
+
+    public async Task<IReadOnlyList<object>> ProductCategoryOptionsAsync()
+    {
+        const string sql = """
+            SELECT parent.ProductCategoryId AS CategoryId,
+                   parent.Name AS CategoryName,
+                   child.ProductCategoryId AS SubcategoryId,
+                   child.Name AS SubcategoryName
+            FROM dbo.CategoriasProducto parent
+            LEFT JOIN dbo.CategoriasProducto child ON child.ParentCategoryId = parent.ProductCategoryId
+            WHERE parent.ParentCategoryId IS NULL
+            ORDER BY parent.Name, child.Name;
+            """;
+        var rows = await QueryAsync(sql, reader => new
+        {
+            categoryId = reader.GetInt32("CategoryId"),
+            category = reader.GetString("CategoryName"),
+            subcategoryId = reader.IsDBNull(reader.GetOrdinal("SubcategoryId")) ? (int?)null : reader.GetInt32("SubcategoryId"),
+            subcategory = reader.GetNullableString("SubcategoryName")
+        });
+        return rows.Cast<object>().ToList();
     }
 
     public async Task<int> SaveInventoryProductAsync(InventoryProductInput input, string? userEmail = null)
     {
         // Validar duplicado de código
-        var existingCode = input.Id is null
-            ? await CodeExistsAsync(input.Code.Trim())
-            : await CodeExistsExcludingAsync(input.Code.Trim(), input.Id.Value);
+        // Ejecutar estas consultas independientes en paralelo evita varias esperas
+        // consecutivas contra la base de datos remota.
+        var codeTask = input.Id is null
+            ? CodeExistsAsync(input.Code.Trim())
+            : CodeExistsExcludingAsync(input.Code.Trim(), input.Id.Value);
+        var typeTask = EnsureProductTypeAsync(input.Type);
+        var unitTask = EnsureUnitMeasureAsync(input.Unit);
+        var categoryTask = EnsureProductCategoryAsync(input.Category, input.Subcategory);
+        var locationTask = EnsureInventoryLocationAsync();
+
+        await Task.WhenAll(codeTask, typeTask, unitTask, categoryTask, locationTask);
+        var existingCode = await codeTask;
 
         if (existingCode)
             throw new InvalidOperationException($"Ya existe un producto con el código '{input.Code.Trim()}'.");
 
-        var typeId = await EnsureProductTypeAsync(input.Type);
-        var unitId = await EnsureUnitMeasureAsync(input.Unit);
-        var categoryId = await EnsureProductCategoryAsync(input.Category, input.Subcategory);
-        var locationId = await EnsureInventoryLocationAsync();
+        var typeId = await typeTask;
+        var unitId = await unitTask;
+        var categoryId = await categoryTask;
+        var locationId = await locationTask;
 
         await using var connection = CreateConnection();
         await connection.OpenAsync();
@@ -361,6 +395,8 @@ public sealed class SqlStore
 
             await SetInventoryBalanceAsync(connection, transaction, productId, locationId, input.Stock);
             await AddInventoryMovementAsync(connection, transaction, productId, locationId, "AJUSTE", Math.Max(input.Stock, 0.01m), "Registro/actualizacion de producto");
+            if (!string.IsNullOrWhiteSpace(input.ImageUrl))
+                await SavePrimaryProductImageAsync(connection, transaction, productId, input.ImageUrl.Trim(), input.Description.Trim());
 
             await transaction.CommitAsync();
 
@@ -389,6 +425,39 @@ public sealed class SqlStore
         var status = await GetProductActiveStatusAsync(productId);
         var action = status ? "activado" : "desactivado";
         await AddAuditLogAsync($"INVENTARIO_{action.ToUpperInvariant()}", $"Producto ID {productId} {action}", userEmail);
+    }
+
+    private static async Task SavePrimaryProductImageAsync(DbConnection connection, DbTransaction transaction, int productId, string imageUrl, string altText)
+    {
+        if (connection is MySqlConnection)
+        {
+            await ExecuteInTransactionAsync(connection, transaction, "UPDATE ImagenesProducto SET IsPrimary = 0 WHERE ProductId = @ProductId;",
+                new SqlParameter("@ProductId", productId));
+            var existingId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
+                "SELECT ProductImageId FROM ImagenesProducto WHERE ProductId = @ProductId AND ImageUrl = @ImageUrl LIMIT 1;",
+                new SqlParameter("@ProductId", productId), new SqlParameter("@ImageUrl", imageUrl)) ?? 0);
+            if (existingId > 0)
+            {
+                await ExecuteInTransactionAsync(connection, transaction,
+                    "UPDATE ImagenesProducto SET AltText = @AltText, IsPrimary = 1, SortOrder = 1 WHERE ProductImageId = @ImageId;",
+                    new SqlParameter("@AltText", altText), new SqlParameter("@ImageId", existingId));
+            }
+            else
+            {
+                await ExecuteInTransactionAsync(connection, transaction,
+                    "INSERT INTO ImagenesProducto (ProductId, ImageUrl, AltText, SortOrder, IsPrimary) VALUES (@ProductId, @ImageUrl, @AltText, 1, 1);",
+                    new SqlParameter("@ProductId", productId), new SqlParameter("@ImageUrl", imageUrl), new SqlParameter("@AltText", altText));
+            }
+            return;
+        }
+
+        await ExecuteInTransactionAsync(connection, transaction, """
+            UPDATE dbo.ImagenesProducto SET IsPrimary = 0 WHERE ProductId = @ProductId;
+            IF EXISTS (SELECT 1 FROM dbo.ImagenesProducto WHERE ProductId = @ProductId AND ImageUrl = @ImageUrl)
+                UPDATE dbo.ImagenesProducto SET AltText = @AltText, IsPrimary = 1, SortOrder = 1 WHERE ProductId = @ProductId AND ImageUrl = @ImageUrl;
+            ELSE
+                INSERT INTO dbo.ImagenesProducto (ProductId, ImageUrl, AltText, SortOrder, IsPrimary) VALUES (@ProductId, @ImageUrl, @AltText, 1, 1);
+            """, new SqlParameter("@ProductId", productId), new SqlParameter("@ImageUrl", imageUrl), new SqlParameter("@AltText", altText));
     }
 
     private async Task<bool> CodeExistsAsync(string code)
@@ -725,11 +794,22 @@ public sealed class SqlStore
 
     public async Task<IReadOnlyList<object>> PromotionsAsync()
     {
-        const string sql = """
-            SELECT PromotionId, Name, StartDate, EndDate, DiscountRate, IsActive
-            FROM dbo.Promociones
-            ORDER BY IsActive DESC, EndDate DESC, Name;
-            """;
+        await EnsureCommerceSchemaAsync();
+        var sql = UseMySql
+            ? """
+              SELECT p.PromotionId, p.Name, p.StartDate, p.EndDate, p.DiscountRate, p.IsActive,
+                     COALESCE((SELECT GROUP_CONCAT(pp.ProductId ORDER BY pp.ProductId) FROM ProductosPromocion pp WHERE pp.PromotionId = p.PromotionId), '') AS ProductIds,
+                     COALESCE((SELECT GROUP_CONCAT(pc.CustomerId ORDER BY pc.CustomerId) FROM PromocionesClientes pc WHERE pc.PromotionId = p.PromotionId), '') AS CustomerIds
+              FROM Promociones p
+              ORDER BY p.IsActive DESC, p.EndDate DESC, p.Name;
+              """
+            : """
+              SELECT p.PromotionId, p.Name, p.StartDate, p.EndDate, p.DiscountRate, p.IsActive,
+                     COALESCE((SELECT STRING_AGG(CONVERT(varchar(20), pp.ProductId), ',') FROM dbo.ProductosPromocion pp WHERE pp.PromotionId = p.PromotionId), '') AS ProductIds,
+                     COALESCE((SELECT STRING_AGG(CONVERT(varchar(20), pc.CustomerId), ',') FROM dbo.PromocionesClientes pc WHERE pc.PromotionId = p.PromotionId), '') AS CustomerIds
+              FROM dbo.Promociones p
+              ORDER BY p.IsActive DESC, p.EndDate DESC, p.Name;
+              """;
 
         return await QueryAsync(sql, reader => new
         {
@@ -738,8 +818,171 @@ public sealed class SqlStore
             startDate = reader.GetDateTime("StartDate").ToString("yyyy-MM-dd"),
             endDate = reader.GetDateTime("EndDate").ToString("yyyy-MM-dd"),
             discount = reader.GetDecimal("DiscountRate"),
-            active = reader.GetBoolean("IsActive")
+            active = reader.GetBoolean("IsActive"),
+            productIds = ParseIdList(reader.GetString("ProductIds")),
+            customerIds = ParseIdList(reader.GetString("CustomerIds"))
         });
+    }
+
+    private static int[] ParseIdList(string? value) => string.IsNullOrWhiteSpace(value)
+        ? []
+        : value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(item => int.TryParse(item, out var id) ? id : 0)
+            .Where(id => id > 0)
+            .Distinct()
+            .ToArray();
+
+    private async Task EnsureCommerceSchemaAsync()
+    {
+        if (UseMySql)
+        {
+            await ExecuteAsync("""
+                CREATE TABLE IF NOT EXISTS PromocionesClientes (
+                    PromotionId int NOT NULL,
+                    CustomerId int NOT NULL,
+                    PRIMARY KEY (PromotionId, CustomerId)
+                );
+                CREATE TABLE IF NOT EXISTS Combos (
+                    ComboId int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    Name varchar(140) NOT NULL,
+                    Description varchar(400) NULL,
+                    SpecialPrice decimal(18,2) NOT NULL,
+                    ImageUrl varchar(500) NULL,
+                    IsActive tinyint(1) NOT NULL DEFAULT 1,
+                    CreatedAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS ComboProductos (
+                    ComboId int NOT NULL,
+                    ProductId int NOT NULL,
+                    Quantity decimal(18,2) NOT NULL,
+                    PRIMARY KEY (ComboId, ProductId)
+                );
+                CREATE TABLE IF NOT EXISTS VentaCombos (
+                    SaleComboId int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    SaleId int NOT NULL,
+                    ComboId int NOT NULL,
+                    Quantity decimal(18,2) NOT NULL,
+                    UnitPrice decimal(18,2) NOT NULL,
+                    DiscountAmount decimal(18,2) NOT NULL DEFAULT 0
+                );
+                """);
+            return;
+        }
+
+        await ExecuteAsync("""
+            IF OBJECT_ID(N'dbo.PromocionesClientes', N'U') IS NULL
+                CREATE TABLE dbo.PromocionesClientes (PromotionId int NOT NULL, CustomerId int NOT NULL, CONSTRAINT PK_PromocionesClientes PRIMARY KEY (PromotionId, CustomerId));
+            IF OBJECT_ID(N'dbo.Combos', N'U') IS NULL
+                CREATE TABLE dbo.Combos (ComboId int IDENTITY(1,1) PRIMARY KEY, Name nvarchar(140) NOT NULL, Description nvarchar(400) NULL, SpecialPrice decimal(18,2) NOT NULL, ImageUrl nvarchar(500) NULL, IsActive bit NOT NULL DEFAULT 1, CreatedAt datetime2 NOT NULL DEFAULT SYSUTCDATETIME());
+            IF OBJECT_ID(N'dbo.ComboProductos', N'U') IS NULL
+                CREATE TABLE dbo.ComboProductos (ComboId int NOT NULL, ProductId int NOT NULL, Quantity decimal(18,2) NOT NULL, CONSTRAINT PK_ComboProductos PRIMARY KEY (ComboId, ProductId));
+            IF OBJECT_ID(N'dbo.VentaCombos', N'U') IS NULL
+                CREATE TABLE dbo.VentaCombos (SaleComboId int IDENTITY(1,1) PRIMARY KEY, SaleId int NOT NULL, ComboId int NOT NULL, Quantity decimal(18,2) NOT NULL, UnitPrice decimal(18,2) NOT NULL, DiscountAmount decimal(18,2) NOT NULL DEFAULT 0);
+            """);
+    }
+
+    public async Task<IReadOnlyList<ComboData>> CombosAsync(bool activeOnly = false)
+    {
+        await EnsureCommerceSchemaAsync();
+        var comboSql = UseMySql
+            ? "SELECT ComboId, Name, Description, SpecialPrice, ImageUrl, IsActive FROM Combos WHERE (@ActiveOnly = 0 OR IsActive = 1) ORDER BY IsActive DESC, Name;"
+            : "SELECT ComboId, Name, Description, SpecialPrice, ImageUrl, IsActive FROM dbo.Combos WHERE (@ActiveOnly = 0 OR IsActive = 1) ORDER BY IsActive DESC, Name;";
+        var combos = await QueryAsync(comboSql, reader => new ComboRow(
+            reader.GetInt32("ComboId"), reader.GetString("Name"), reader.GetNullableString("Description") ?? "",
+            reader.GetDecimal("SpecialPrice"), reader.GetNullableString("ImageUrl") ?? "/img/products/producto-sin-imagen.svg", reader.GetBoolean("IsActive")),
+            new SqlParameter("@ActiveOnly", activeOnly));
+        var result = new List<ComboData>();
+        foreach (var combo in combos)
+        {
+            var itemSql = UseMySql
+                ? """
+                  SELECT cp.ProductId, cp.Quantity, p.Code, p.Name, p.UnitPrice,
+                         COALESCE((SELECT ImageUrl FROM ImagenesProducto WHERE ProductId = p.ProductId ORDER BY IsPrimary DESC, SortOrder LIMIT 1), '/img/products/producto-sin-imagen.svg') AS ImageUrl
+                  FROM ComboProductos cp INNER JOIN Productos p ON p.ProductId = cp.ProductId
+                  WHERE cp.ComboId = @ComboId ORDER BY p.Name;
+                  """
+                : """
+                  SELECT cp.ProductId, cp.Quantity, p.Code, p.Name, p.UnitPrice,
+                         COALESCE((SELECT TOP 1 ImageUrl FROM dbo.ImagenesProducto WHERE ProductId = p.ProductId ORDER BY IsPrimary DESC, SortOrder), '/img/products/producto-sin-imagen.svg') AS ImageUrl
+                  FROM dbo.ComboProductos cp INNER JOIN dbo.Productos p ON p.ProductId = cp.ProductId
+                  WHERE cp.ComboId = @ComboId ORDER BY p.Name;
+                  """;
+            var items = await QueryAsync(itemSql, reader => new ComboProductData(
+                reader.GetInt32("ProductId"), reader.GetDecimal("Quantity"), reader.GetString("Code"), reader.GetString("Name"), reader.GetDecimal("UnitPrice"), reader.GetString("ImageUrl")), new SqlParameter("@ComboId", combo.Id));
+            var regularPrice = items.Sum(item => item.UnitPrice * item.Quantity);
+            result.Add(new ComboData(combo.Id, combo.Name, combo.Description, combo.SpecialPrice, regularPrice, Math.Max(0, regularPrice - combo.SpecialPrice), combo.ImageUrl, combo.Active, items));
+        }
+        return result;
+    }
+
+    public async Task<int> SaveComboAsync(ComboInput input, string? userEmail = null)
+    {
+        await EnsureCommerceSchemaAsync();
+        var name = input.Name?.Trim() ?? "";
+        var items = (input.Items ?? []).Where(item => item.ProductId > 0 && item.Quantity > 0).GroupBy(item => item.ProductId).Select(group => new ComboItemInput(group.Key, group.Sum(item => item.Quantity))).ToArray();
+        if (string.IsNullOrWhiteSpace(name)) throw new InvalidOperationException("Debe indicar el nombre del combo.");
+        if (input.SpecialPrice <= 0) throw new InvalidOperationException("El precio especial debe ser mayor a cero.");
+        if (items.Length == 0) throw new InvalidOperationException("Seleccione al menos un producto para el combo.");
+
+        await using var connection = CreateConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        try
+        {
+            foreach (var item in items)
+            {
+                var validSql = UseMySql
+                    ? "SELECT COUNT(1) FROM Productos p INNER JOIN TiposProducto t ON t.ProductTypeId=p.ProductTypeId WHERE p.ProductId=@ProductId AND p.IsActive=1 AND t.Name='Producto terminado';"
+                    : "SELECT COUNT(1) FROM dbo.Productos p INNER JOIN dbo.TiposProducto t ON t.ProductTypeId=p.ProductTypeId WHERE p.ProductId=@ProductId AND p.IsActive=1 AND t.Name=N'Producto terminado';";
+                if (Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, validSql, new SqlParameter("@ProductId", item.ProductId))) == 0)
+                    throw new InvalidOperationException("Uno de los productos seleccionados no está disponible para venta.");
+            }
+
+            int comboId;
+            if (input.Id is > 0)
+            {
+                var updateSql = UseMySql
+                    ? "UPDATE Combos SET Name=@Name, Description=@Description, SpecialPrice=@SpecialPrice, ImageUrl=@ImageUrl, IsActive=@IsActive WHERE ComboId=@Id;"
+                    : "UPDATE dbo.Combos SET Name=@Name, Description=@Description, SpecialPrice=@SpecialPrice, ImageUrl=@ImageUrl, IsActive=@IsActive WHERE ComboId=@Id;";
+                await ExecuteInTransactionAsync(connection, transaction, updateSql, new SqlParameter("@Name", name), new SqlParameter("@Description", (object?)input.Description?.Trim() ?? DBNull.Value), new SqlParameter("@SpecialPrice", input.SpecialPrice), new SqlParameter("@ImageUrl", (object?)input.ImageUrl?.Trim() ?? DBNull.Value), new SqlParameter("@IsActive", input.IsActive), new SqlParameter("@Id", input.Id.Value));
+                comboId = input.Id.Value;
+            }
+            else
+            {
+                var insertSql = UseMySql
+                    ? "INSERT INTO Combos (Name,Description,SpecialPrice,ImageUrl,IsActive) VALUES (@Name,@Description,@SpecialPrice,@ImageUrl,@IsActive); SELECT LAST_INSERT_ID();"
+                    : "INSERT INTO dbo.Combos (Name,Description,SpecialPrice,ImageUrl,IsActive) OUTPUT INSERTED.ComboId VALUES (@Name,@Description,@SpecialPrice,@ImageUrl,@IsActive);";
+                comboId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, insertSql, new SqlParameter("@Name", name), new SqlParameter("@Description", (object?)input.Description?.Trim() ?? DBNull.Value), new SqlParameter("@SpecialPrice", input.SpecialPrice), new SqlParameter("@ImageUrl", (object?)input.ImageUrl?.Trim() ?? DBNull.Value), new SqlParameter("@IsActive", input.IsActive)));
+            }
+            var comboProductsTable = UseMySql ? "ComboProductos" : "dbo.ComboProductos";
+            await ExecuteInTransactionAsync(connection, transaction, $"DELETE FROM {comboProductsTable} WHERE ComboId=@ComboId;", new SqlParameter("@ComboId", comboId));
+            foreach (var item in items)
+                await ExecuteInTransactionAsync(connection, transaction, $"INSERT INTO {comboProductsTable} (ComboId,ProductId,Quantity) VALUES (@ComboId,@ProductId,@Quantity);", new SqlParameter("@ComboId", comboId), new SqlParameter("@ProductId", item.ProductId), new SqlParameter("@Quantity", item.Quantity));
+            await transaction.CommitAsync();
+            await AddAuditLogAsync("CONFIGURAR_COMBO", $"Combo '{name}' configurado con {items.Length} productos", userEmail);
+            return comboId;
+        }
+        catch { await transaction.RollbackAsync(); throw; }
+    }
+
+    public async Task ToggleComboAsync(int id, string? userEmail = null)
+    {
+        await EnsureCommerceSchemaAsync();
+        var sql = UseMySql ? "UPDATE Combos SET IsActive=CASE WHEN IsActive=1 THEN 0 ELSE 1 END WHERE ComboId=@Id;" : "UPDATE dbo.Combos SET IsActive=CASE WHEN IsActive=1 THEN 0 ELSE 1 END WHERE ComboId=@Id;";
+        await ExecuteAsync(sql, new SqlParameter("@Id", id));
+        await AddAuditLogAsync("CONFIGURAR_COMBO", $"Combo #{id} cambió de estado", userEmail);
+    }
+
+    public async Task DeleteComboAsync(int id, string? userEmail = null)
+    {
+        await EnsureCommerceSchemaAsync();
+        var salesTable = UseMySql ? "VentaCombos" : "dbo.VentaCombos";
+        if (Convert.ToInt32(await ScalarAsync($"SELECT COUNT(1) FROM {salesTable} WHERE ComboId=@Id;", new SqlParameter("@Id", id))) > 0)
+            throw new InvalidOperationException("El combo ya tiene ventas asociadas y no se puede eliminar; puede desactivarlo.");
+        var productTable = UseMySql ? "ComboProductos" : "dbo.ComboProductos";
+        var comboTable = UseMySql ? "Combos" : "dbo.Combos";
+        await ExecuteAsync($"DELETE FROM {productTable} WHERE ComboId=@Id; DELETE FROM {comboTable} WHERE ComboId=@Id;", new SqlParameter("@Id", id));
+        await AddAuditLogAsync("ELIMINAR_COMBO", $"Combo #{id} eliminado", userEmail);
     }
 
     public async Task<IReadOnlyList<object>> UsersAsync()
@@ -1696,6 +1939,7 @@ public sealed class SqlStore
 
     public async Task<int> SavePromotionAsync(PromotionInput input, string? userEmail = null)
     {
+        await EnsureCommerceSchemaAsync();
         var name = (input.Name ?? "").Trim();
         if (string.IsNullOrWhiteSpace(name))
             throw new InvalidOperationException("Debe indicar el nombre del descuento.");
@@ -1751,6 +1995,7 @@ public sealed class SqlStore
                     new SqlParameter("@IsActive", input.IsActive)));
             }
 
+            await SavePromotionAssignmentsAsync(mysqlPromotionId, input.ProductIds, input.CustomerIds);
             await AddAuditLogAsync("CONFIGURAR_DESCUENTO", $"Descuento '{name}' configurado", userEmail);
             return mysqlPromotionId;
         }
@@ -1793,8 +2038,35 @@ public sealed class SqlStore
             new SqlParameter("@DiscountRate", discount),
             new SqlParameter("@IsActive", input.IsActive)));
 
+        await SavePromotionAssignmentsAsync(id, input.ProductIds, input.CustomerIds);
         await AddAuditLogAsync("CONFIGURAR_DESCUENTO", $"Descuento '{name}' configurado", userEmail);
         return id;
+    }
+
+    private async Task SavePromotionAssignmentsAsync(int promotionId, IReadOnlyList<int>? productIds, IReadOnlyList<int>? customerIds)
+    {
+        var products = (productIds ?? []).Where(id => id > 0).Distinct().ToArray();
+        var customers = (customerIds ?? []).Where(id => id > 0).Distinct().ToArray();
+        await using var connection = CreateConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        try
+        {
+            var productTable = UseMySql ? "ProductosPromocion" : "dbo.ProductosPromocion";
+            var customerTable = UseMySql ? "PromocionesClientes" : "dbo.PromocionesClientes";
+            await ExecuteInTransactionAsync(connection, transaction, $"DELETE FROM {productTable} WHERE PromotionId = @PromotionId;", new SqlParameter("@PromotionId", promotionId));
+            await ExecuteInTransactionAsync(connection, transaction, $"DELETE FROM {customerTable} WHERE PromotionId = @PromotionId;", new SqlParameter("@PromotionId", promotionId));
+            foreach (var productId in products)
+                await ExecuteInTransactionAsync(connection, transaction, $"INSERT INTO {productTable} (PromotionId, ProductId) VALUES (@PromotionId, @ProductId);", new SqlParameter("@PromotionId", promotionId), new SqlParameter("@ProductId", productId));
+            foreach (var customerId in customers)
+                await ExecuteInTransactionAsync(connection, transaction, $"INSERT INTO {customerTable} (PromotionId, CustomerId) VALUES (@PromotionId, @CustomerId);", new SqlParameter("@PromotionId", promotionId), new SqlParameter("@CustomerId", customerId));
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<bool> OrderBelongsToAsync(int orderId, string? customerEmail)
@@ -1969,6 +2241,69 @@ public sealed class SqlStore
         return id;
     }
 
+    public async Task<IReadOnlyList<MarketingRecipient>> MarketingRecipientsAsync(IEnumerable<int> customerIds)
+    {
+        var ids = customerIds.Where(id => id > 0).Distinct().ToArray();
+        if (ids.Length == 0) return Array.Empty<MarketingRecipient>();
+
+        var placeholders = string.Join(",", ids.Select((_, index) => $"@Id{index}"));
+        var table = UseMySql ? "Clientes" : "dbo.Clientes";
+        var parameters = ids.Select((id, index) => new SqlParameter($"@Id{index}", id)).ToArray();
+        var rows = await QueryAsync($"""
+            SELECT CustomerId, FullName, Email
+            FROM {table}
+            WHERE CustomerId IN ({placeholders})
+              AND Email IS NOT NULL
+              AND TRIM(Email) <> '';
+            """, reader => new MarketingRecipient(
+                reader.GetInt32("CustomerId"),
+                reader.GetString("FullName"),
+                reader.GetString("Email")), parameters);
+
+        return rows;
+    }
+
+    public async Task SubscribeNewsletterAsync(string email)
+    {
+        email = email.Trim().ToLowerInvariant();
+        if (UseMySql)
+        {
+            await ExecuteAsync("""
+                CREATE TABLE IF NOT EXISTS SuscriptoresNovedades
+                (
+                    SubscriberId int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    Email varchar(254) NOT NULL,
+                    IsActive bit NOT NULL DEFAULT 1,
+                    CreatedAt datetime NOT NULL,
+                    UNIQUE KEY UX_SuscriptoresNovedades_Email (Email)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                INSERT INTO SuscriptoresNovedades (Email, IsActive, CreatedAt)
+                VALUES (@Email, 1, UTC_TIMESTAMP())
+                ON DUPLICATE KEY UPDATE IsActive = 1;
+                """, new SqlParameter("@Email", email));
+            return;
+        }
+
+        await ExecuteAsync("""
+            IF OBJECT_ID(N'dbo.SuscriptoresNovedades', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.SuscriptoresNovedades
+                (
+                    SubscriberId int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    Email nvarchar(254) NOT NULL UNIQUE,
+                    IsActive bit NOT NULL CONSTRAINT DF_SuscriptoresNovedades_IsActive DEFAULT 1,
+                    CreatedAt datetime2 NOT NULL
+                );
+            END;
+
+            IF EXISTS (SELECT 1 FROM dbo.SuscriptoresNovedades WHERE LOWER(Email) = LOWER(@Email))
+                UPDATE dbo.SuscriptoresNovedades SET IsActive = 1 WHERE LOWER(Email) = LOWER(@Email);
+            ELSE
+                INSERT INTO dbo.SuscriptoresNovedades (Email, IsActive, CreatedAt) VALUES (@Email, 1, SYSUTCDATETIME());
+            """, new SqlParameter("@Email", email));
+    }
+
     public async Task<object> ReportsAsync(string type, DateTime? start, DateTime? end)
     {
         return type switch
@@ -1981,6 +2316,78 @@ public sealed class SqlStore
             "orders" => await OrdersReportAsync(start, end),
             _ => new { rows = Array.Empty<object>(), total = 0 }
         };
+    }
+
+    public async Task<string> SendOrderToProductionAsync(int orderId, string? userEmail = null)
+    {
+        var state = await OrderWorkflowStateAsync(orderId);
+        if (state is null) throw new InvalidOperationException("El pedido no existe.");
+        if (!string.Equals(state.Value.PaymentStatus, "Pagado", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Debe completar el pago antes de enviar el pedido a Produccion.");
+
+        var normalized = RemoveDiacritics(state.Value.OrderStatus).ToUpperInvariant();
+        if (normalized == "PENDIENTE PRODUCCION") return "Pendiente produccion";
+        if (normalized != "CONFIRMADO")
+            throw new InvalidOperationException($"El pedido no puede enviarse a Produccion desde el estado '{state.Value.OrderStatus}'.");
+
+        await EnsureOrderStatusAsync("Pendiente produccion");
+        await UpdateOrderStatusAsync(orderId, "Pendiente produccion", userEmail);
+        await AddAuditLogAsync("ENVIAR_A_PRODUCCION", $"Pedido #{orderId} enviado a la cola de Produccion", userEmail);
+        return "Pendiente produccion";
+    }
+
+    public async Task<string> AdvanceProductionOrderAsync(int orderId, string? userEmail = null)
+    {
+        var state = await OrderWorkflowStateAsync(orderId);
+        if (state is null) throw new InvalidOperationException("El pedido no existe.");
+
+        var normalized = RemoveDiacritics(state.Value.OrderStatus).ToUpperInvariant();
+        var next = normalized switch
+        {
+            "PENDIENTE PRODUCCION" => "En produccion",
+            "EN PRODUCCION" => "Listo",
+            "LISTO" => throw new InvalidOperationException("El pedido ya esta listo para entrega."),
+            _ => throw new InvalidOperationException("Este pedido no pertenece a la cola de Produccion.")
+        };
+
+        await EnsureOrderStatusAsync(next);
+        await UpdateOrderStatusAsync(orderId, next, userEmail);
+        await AddAuditLogAsync("AVANCE_PRODUCCION", $"Pedido #{orderId} avanzado a {next}", userEmail);
+        return next;
+    }
+
+    private async Task<(string OrderStatus, string PaymentStatus)?> OrderWorkflowStateAsync(int orderId)
+    {
+        const string sql = """
+            SELECT os.Name AS OrderStatus, ps.Name AS PaymentStatus
+            FROM dbo.Pedidos o
+            INNER JOIN dbo.EstadosPedido os ON os.OrderStatusId = o.OrderStatusId
+            INNER JOIN dbo.EstadosPago ps ON ps.PaymentStatusId = o.PaymentStatusId
+            WHERE o.OrderId = @OrderId;
+            """;
+        var rows = await QueryAsync(sql, reader => (
+            OrderStatus: reader.GetString("OrderStatus"),
+            PaymentStatus: reader.GetString("PaymentStatus")),
+            new SqlParameter("@OrderId", orderId));
+        return rows.Count == 0 ? null : rows[0];
+    }
+
+    private async Task EnsureOrderStatusAsync(string status)
+    {
+        if (UseMySql)
+        {
+            await ExecuteAsync("""
+                INSERT INTO EstadosPedido (Name)
+                SELECT @Status
+                WHERE NOT EXISTS (SELECT 1 FROM EstadosPedido WHERE LOWER(Name) = LOWER(@Status));
+                """, new SqlParameter("@Status", status));
+            return;
+        }
+
+        await ExecuteAsync("""
+            IF NOT EXISTS (SELECT 1 FROM dbo.EstadosPedido WHERE Name = @Status)
+                INSERT INTO dbo.EstadosPedido (Name) VALUES (@Status);
+            """, new SqlParameter("@Status", status));
     }
 
     public async Task UpdateOrderStatusAsync(int orderId, string status, string? userEmail = null)
@@ -2425,12 +2832,11 @@ public sealed class SqlStore
             createdAt = reader.GetDateTime("CreatedAt").ToString("o")
         });
 
-        var expenseCount = Convert.ToInt32(await ScalarAsync(UseMySql
-            ? "SELECT COUNT(1) FROM Gastos"
-            : "SELECT COUNT(1) FROM dbo.Gastos"));
-        var supplierPaymentCount = Convert.ToInt32(await ScalarAsync(UseMySql
-            ? "SELECT COUNT(1) FROM PagosProveedor"
-            : "SELECT COUNT(1) FROM dbo.PagosProveedor"));
+        var expenseCountTask = ScalarAsync(UseMySql ? "SELECT COUNT(1) FROM Gastos" : "SELECT COUNT(1) FROM dbo.Gastos");
+        var supplierPaymentCountTask = ScalarAsync(UseMySql ? "SELECT COUNT(1) FROM PagosProveedor" : "SELECT COUNT(1) FROM dbo.PagosProveedor");
+        await Task.WhenAll(expenseCountTask, supplierPaymentCountTask);
+        var expenseCount = Convert.ToInt32(await expenseCountTask);
+        var supplierPaymentCount = Convert.ToInt32(await supplierPaymentCountTask);
 
         return new { entries, expensesCount = expenseCount, supplierPaymentsCount = supplierPaymentCount };
     }
@@ -2442,10 +2848,15 @@ public sealed class SqlStore
         if (input.Amount <= 0)
             throw new InvalidOperationException("El monto del gasto debe ser mayor a 0.");
 
-        var accountId = await EnsureAccountAsync(input.Account, "Gastos operativos", "GASTO");
-        var cashAccountId = await PaymentAssetAccountAsync(input.Method);
-        var categoryId = await EnsureExpenseCategoryAsync("Operativo");
-        var methodId = await EnsurePaymentMethodAsync(string.IsNullOrWhiteSpace(input.Method) ? "Transferencia" : input.Method.Trim());
+        var accountTask = EnsureAccountAsync(input.Account, "Gastos operativos", "GASTO");
+        var cashAccountTask = PaymentAssetAccountAsync(input.Method);
+        var categoryTask = EnsureExpenseCategoryAsync("Operativo");
+        var methodTask = EnsurePaymentMethodAsync(string.IsNullOrWhiteSpace(input.Method) ? "Transferencia" : input.Method.Trim());
+        await Task.WhenAll(accountTask, cashAccountTask, categoryTask, methodTask);
+        var accountId = await accountTask;
+        var cashAccountId = await cashAccountTask;
+        var categoryId = await categoryTask;
+        var methodId = await methodTask;
 
         if (UseMySql)
         {
@@ -2514,10 +2925,15 @@ public sealed class SqlStore
         if (string.IsNullOrWhiteSpace(input.Method))
             throw new InvalidOperationException("Método de pago no válido.");
 
-        var accountId = await EnsureAccountAsync(input.Account, "Cuentas por pagar", "PASIVO");
-        var cashAccountId = await PaymentAssetAccountAsync(input.Method);
-        var supplierId = await EnsureSupplierAsync(input.Supplier);
-        var methodId = await EnsurePaymentMethodAsync(input.Method);
+        var accountTask = EnsureAccountAsync(input.Account, "Cuentas por pagar", "PASIVO");
+        var cashAccountTask = PaymentAssetAccountAsync(input.Method);
+        var supplierTask = EnsureSupplierAsync(input.Supplier);
+        var methodTask = EnsurePaymentMethodAsync(input.Method);
+        await Task.WhenAll(accountTask, cashAccountTask, supplierTask, methodTask);
+        var accountId = await accountTask;
+        var cashAccountId = await cashAccountTask;
+        var supplierId = await supplierTask;
+        var methodId = await methodTask;
 
         if (UseMySql)
         {
@@ -2581,8 +2997,11 @@ public sealed class SqlStore
     {
         if (UseMySql)
         {
-            var cashAccountId = await EnsureAccountAsync("1-02", "Banco / SINPE / Tarjeta", "ACTIVO");
-            var incomeAccountId = await EnsureAccountAsync("4-01", "Ingresos por ventas", "INGRESO");
+            var cashAccountTask = EnsureAccountAsync("1-02", "Banco / SINPE / Tarjeta", "ACTIVO");
+            var incomeAccountTask = EnsureAccountAsync("4-01", "Ingresos por ventas", "INGRESO");
+            await Task.WhenAll(cashAccountTask, incomeAccountTask);
+            var cashAccountId = await cashAccountTask;
+            var incomeAccountId = await incomeAccountTask;
             var rows = await QueryAsync("""
                 SELECT
                     v.SaleId,
@@ -2651,8 +3070,11 @@ public sealed class SqlStore
                 throw;
             }
 
-            var reviewed = Convert.ToInt32(await ScalarAsync("SELECT COUNT(1) FROM Ventas;"));
-            var issues = Convert.ToInt32(await ScalarAsync("SELECT COUNT(1) FROM Ventas WHERE Total < 0;"));
+            var reviewedTask = ScalarAsync("SELECT COUNT(1) FROM Ventas;");
+            var issuesTask = ScalarAsync("SELECT COUNT(1) FROM Ventas WHERE Total < 0;");
+            await Task.WhenAll(reviewedTask, issuesTask);
+            var reviewed = Convert.ToInt32(await reviewedTask);
+            var issues = Convert.ToInt32(await issuesTask);
             await AddAuditLogAsync("CONCILIACION_POS", $"Conciliación POS: {reviewed} ventas revisadas, {rows.Count} asientos reparados, {issues} diferencias", userEmail);
             return new { status = issues == 0 ? "Correcto" : "Con diferencias", reviewed, issues, generated = rows.Count };
         }
@@ -3805,6 +4227,59 @@ public sealed class SqlStore
         return rows.FirstOrDefault();
     }
 
+    public async Task<string?> CreatePasswordResetTokenAsync(string email)
+    {
+        email = email.Trim().ToLowerInvariant();
+        var userTable = UseMySql ? "Usuarios" : "dbo.Usuarios";
+        var exists = Convert.ToInt32(await ScalarAsync($"SELECT COUNT(1) FROM {userTable} WHERE LOWER(Email) = LOWER(@Email) AND IsActive = 1", new SqlParameter("@Email", email)));
+        if (exists == 0) return null;
+
+        var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+        if (UseMySql)
+        {
+            await ExecuteAsync("""
+                CREATE TABLE IF NOT EXISTS TokensRestablecimiento (ResetTokenId int NOT NULL AUTO_INCREMENT PRIMARY KEY, Email varchar(254) NOT NULL, TokenHash char(64) NOT NULL, ExpiresAt datetime NOT NULL, UsedAt datetime NULL, CreatedAt datetime NOT NULL, UNIQUE KEY UX_TokensRestablecimiento_TokenHash (TokenHash)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                UPDATE TokensRestablecimiento SET UsedAt = UTC_TIMESTAMP() WHERE LOWER(Email) = LOWER(@Email) AND UsedAt IS NULL;
+                INSERT INTO TokensRestablecimiento (Email, TokenHash, ExpiresAt, UsedAt, CreatedAt) VALUES (@Email, @TokenHash, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 30 MINUTE), NULL, UTC_TIMESTAMP());
+                """, new SqlParameter("@Email", email), new SqlParameter("@TokenHash", tokenHash));
+        }
+        else
+        {
+            await ExecuteAsync("""
+                IF OBJECT_ID(N'dbo.TokensRestablecimiento', N'U') IS NULL CREATE TABLE dbo.TokensRestablecimiento (ResetTokenId int IDENTITY(1,1) NOT NULL PRIMARY KEY, Email nvarchar(254) NOT NULL, TokenHash char(64) NOT NULL UNIQUE, ExpiresAt datetime2 NOT NULL, UsedAt datetime2 NULL, CreatedAt datetime2 NOT NULL);
+                UPDATE dbo.TokensRestablecimiento SET UsedAt = SYSUTCDATETIME() WHERE LOWER(Email) = LOWER(@Email) AND UsedAt IS NULL;
+                INSERT INTO dbo.TokensRestablecimiento (Email, TokenHash, ExpiresAt, UsedAt, CreatedAt) VALUES (@Email, @TokenHash, DATEADD(minute, 30, SYSUTCDATETIME()), NULL, SYSUTCDATETIME());
+                """, new SqlParameter("@Email", email), new SqlParameter("@TokenHash", tokenHash));
+        }
+        await AddAuditLogAsync("SOLICITAR_RECUPERACION", $"Se solicitó recuperar la contraseña de {email}");
+        return token;
+    }
+
+    public async Task<bool> ResetPasswordWithTokenAsync(string token, string newPassword)
+    {
+        var tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+        var tokenTable = UseMySql ? "TokensRestablecimiento" : "dbo.TokensRestablecimiento";
+        var nowSql = UseMySql ? "UTC_TIMESTAMP()" : "SYSUTCDATETIME()";
+        var email = (await QueryAsync($"SELECT Email FROM {tokenTable} WHERE TokenHash = @TokenHash AND UsedAt IS NULL AND ExpiresAt > {nowSql};", reader => reader.GetString("Email"), new SqlParameter("@TokenHash", tokenHash))).FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(email)) return false;
+        var userTable = UseMySql ? "Usuarios" : "dbo.Usuarios";
+        await ExecuteAsync($"UPDATE {userTable} SET PasswordHash = @PasswordHash WHERE LOWER(Email) = LOWER(@Email) AND IsActive = 1;", new SqlParameter("@PasswordHash", HashPassword(newPassword)), new SqlParameter("@Email", email));
+        await ExecuteAsync($"UPDATE {tokenTable} SET UsedAt = {nowSql} WHERE TokenHash = @TokenHash;", new SqlParameter("@TokenHash", tokenHash));
+        await AddAuditLogAsync("RECUPERAR_CONTRASENA", $"Contraseña restablecida para {email}");
+        return true;
+    }
+
+    public async Task<bool> ChangePasswordAsync(string email, string currentPassword, string newPassword)
+    {
+        if (await AuthenticateAsync(email, currentPassword) is null) return false;
+        var userTable = UseMySql ? "Usuarios" : "dbo.Usuarios";
+        await ExecuteAsync($"UPDATE {userTable} SET PasswordHash = @PasswordHash WHERE LOWER(Email) = LOWER(@Email) AND IsActive = 1;",
+            new SqlParameter("@PasswordHash", HashPassword(newPassword)), new SqlParameter("@Email", email));
+        await AddAuditLogAsync("CAMBIAR_CONTRASENA", $"Contraseña actualizada desde el perfil para {email}", email);
+        return true;
+    }
+
     public async Task<bool> RequestPasswordResetAsync(string email)
     {
         const string checkSql = "SELECT COUNT(1) FROM dbo.Usuarios WHERE LOWER(Email) = LOWER(@Email) AND IsActive = 1";
@@ -4321,6 +4796,25 @@ public sealed class SqlStore
         return sessionId;
     }
 
+    public async Task<bool> HasOpenCashSessionAsync(string? userEmail)
+    {
+        if (string.IsNullOrWhiteSpace(userEmail)) return false;
+        var sql = UseMySql
+            ? """
+              SELECT COUNT(1)
+              FROM SesionesCaja cs
+              INNER JOIN Usuarios u ON u.UserId = cs.OpenedByUserId
+              WHERE cs.Status = 'Abierta' AND LOWER(u.Email) = LOWER(@UserEmail);
+              """
+            : """
+              SELECT COUNT(1)
+              FROM dbo.SesionesCaja cs
+              INNER JOIN dbo.Usuarios u ON u.UserId = cs.OpenedByUserId
+              WHERE cs.Status = N'Abierta' AND LOWER(u.Email) = LOWER(@UserEmail);
+              """;
+        return Convert.ToInt32(await ScalarAsync(sql, new SqlParameter("@UserEmail", userEmail.Trim()))) > 0;
+    }
+
     public async Task CloseCashSessionAsync(int sessionId, decimal closingAmount, string? userEmail = null)
     {
         if (UseMySql)
@@ -4388,10 +4882,16 @@ public sealed class SqlStore
             SELECT cs.CashSessionId, cs.OpenedAt, cs.ClosedAt, cs.OpeningAmount, cs.ClosingAmount, cs.Status,
                    COALESCE(CONCAT(u.FirstName, N' ', u.LastName), N'Sistema') AS UserName,
                    COALESCE(u.Email, N'') AS UserEmail,
-                   COALESCE(SUM(csp.Amount), 0) AS TotalSales
+                   COALESCE(SUM(csp.Amount), 0) AS TotalSales,
+                   COALESCE(SUM(CASE WHEN LOWER(pm.Name) LIKE '%efectivo%' THEN csp.Amount ELSE 0 END), 0) AS CashSales,
+                   COALESCE(SUM(CASE WHEN LOWER(pm.Name) LIKE '%tarjeta%' THEN csp.Amount ELSE 0 END), 0) AS CardSales,
+                   COALESCE(SUM(CASE WHEN LOWER(pm.Name) LIKE '%sinpe%' THEN csp.Amount ELSE 0 END), 0) AS SinpeSales,
+                   COALESCE(SUM(CASE WHEN LOWER(pm.Name) LIKE '%transfer%' THEN csp.Amount ELSE 0 END), 0) AS TransferSales
             FROM dbo.SesionesCaja cs
             LEFT JOIN dbo.Usuarios u ON u.UserId = cs.OpenedByUserId
             LEFT JOIN dbo.PagosSesionCaja csp ON csp.CashSessionId = cs.CashSessionId
+            LEFT JOIN dbo.Ventas v ON v.SaleId = csp.SaleId
+            LEFT JOIN dbo.MetodosPago pm ON pm.PaymentMethodId = v.PaymentMethodId
             WHERE @IncludeAll = 1
                OR @UserEmail IS NULL
                OR LOWER(u.Email) = LOWER(@UserEmail)
@@ -4407,6 +4907,11 @@ public sealed class SqlStore
             openingAmount = reader.GetDecimal("OpeningAmount"),
             closingAmount = reader.IsDBNull(reader.GetOrdinal("ClosingAmount")) ? (decimal?)null : reader.GetDecimal("ClosingAmount"),
             totalSales = reader.GetDecimal("TotalSales"),
+            cashSales = reader.GetDecimal("CashSales"),
+            cardSales = reader.GetDecimal("CardSales"),
+            sinpeSales = reader.GetDecimal("SinpeSales"),
+            transferSales = reader.GetDecimal("TransferSales"),
+            expectedCash = reader.GetDecimal("OpeningAmount") + reader.GetDecimal("CashSales"),
             userName = reader.GetString("UserName"),
             userEmail = reader.GetString("UserEmail"),
             status = reader.GetString("Status")
@@ -4417,6 +4922,7 @@ public sealed class SqlStore
 
     public async Task<IReadOnlyList<object>> RecentPosSalesAsync()
     {
+        await EnsureCommerceSchemaAsync();
         if (UseMySql)
         {
             await ExecuteAsync("""
@@ -4441,6 +4947,9 @@ public sealed class SqlStore
                 pm.Name AS PaymentMethod,
                 c.FullName AS CustomerName,
                 COALESCE(cs.CashSessionId, 0) AS CashSessionId,
+                COALESCE((SELECT GROUP_CONCAT(CONCAT(cb.Name, ' x', FORMAT(vc.Quantity, 0)) SEPARATOR ' · ')
+                          FROM VentaCombos vc INNER JOIN Combos cb ON cb.ComboId = vc.ComboId
+                          WHERE vc.SaleId = v.SaleId), '') AS ComboSummary,
                 CASE WHEN cn.CreditNoteId IS NULL THEN 0 ELSE 1 END AS HasCreditNote
             FROM Ventas v
             INNER JOIN Pedidos o ON o.OrderId = v.OrderId
@@ -4477,6 +4986,9 @@ public sealed class SqlStore
                 pm.Name AS PaymentMethod,
                 c.FullName AS CustomerName,
                 COALESCE(cs.CashSessionId, 0) AS CashSessionId,
+                COALESCE((SELECT STRING_AGG(CONCAT(cb.Name, N' x', CONVERT(int, vc.Quantity)), N' · ')
+                          FROM dbo.VentaCombos vc INNER JOIN dbo.Combos cb ON cb.ComboId = vc.ComboId
+                          WHERE vc.SaleId = v.SaleId), N'') AS ComboSummary,
                 CASE WHEN cn.CreditNoteId IS NULL THEN CAST(0 AS bit) ELSE CAST(1 AS bit) END AS HasCreditNote
             FROM dbo.Ventas v
             INNER JOIN dbo.Pedidos o ON o.OrderId = v.OrderId
@@ -4501,6 +5013,7 @@ public sealed class SqlStore
             createdAt = reader.GetDateTime("CreatedAt").ToString("o"),
             customerName = reader.GetString("CustomerName"),
             paymentMethod = reader.GetString("PaymentMethod"),
+            comboSummary = reader.GetString("ComboSummary"),
             total = reader.GetDecimal("Total"),
             hasCreditNote = reader.GetBoolean("HasCreditNote")
         });
@@ -4508,6 +5021,7 @@ public sealed class SqlStore
 
     public async Task<int> RegisterSaleAsync(SaleInput input, string? userEmail = null)
     {
+        await EnsureCommerceSchemaAsync();
         if (UseMySql)
             return await RegisterSaleMySqlAsync(input, userEmail);
 
@@ -4617,8 +5131,11 @@ public sealed class SqlStore
             DECLARE @PromotionDiscountRate decimal(18,4) = COALESCE((
                 SELECT MAX(DiscountRate)
                 FROM dbo.Promociones
-                WHERE IsActive = 1
+                WHERE PromotionId = @PromotionId
+                  AND IsActive = 1
                   AND CAST(SYSUTCDATETIME() AS date) BETWEEN StartDate AND EndDate
+                  AND (NOT EXISTS (SELECT 1 FROM dbo.PromocionesClientes pc WHERE pc.PromotionId = @PromotionId)
+                       OR EXISTS (SELECT 1 FROM dbo.PromocionesClientes pc WHERE pc.PromotionId = @PromotionId AND pc.CustomerId = @CustomerId))
             ), 0);
             DECLARE @TaxRate decimal(18,4) = TRY_CAST((SELECT SettingValue FROM dbo.ConfiguracionesAplicacion WHERE SettingKey = N'iva') AS decimal(18,4));
             IF @FrequentDiscountRate IS NULL SET @FrequentDiscountRate = 0;
@@ -4630,7 +5147,12 @@ public sealed class SqlStore
                 DECLARE @FrequentDiscount decimal(18,2) = ROUND(@Subtotal * @FrequentDiscountRate, 2);
                 IF @FrequentDiscount > @EffectiveDiscount SET @EffectiveDiscount = @FrequentDiscount;
             END;
-            DECLARE @PromotionDiscount decimal(18,2) = ROUND(@Subtotal * @PromotionDiscountRate, 2);
+            DECLARE @PromotionBase decimal(18,2) = @Subtotal;
+            IF EXISTS (SELECT 1 FROM dbo.ProductosPromocion WHERE PromotionId = @PromotionId)
+                SELECT @PromotionBase = COALESCE(SUM(si.Quantity * si.UnitPrice), 0)
+                FROM @SaleItems si
+                INNER JOIN dbo.ProductosPromocion pp ON pp.ProductId = si.ProductId AND pp.PromotionId = @PromotionId;
+            DECLARE @PromotionDiscount decimal(18,2) = ROUND(@PromotionBase * @PromotionDiscountRate, 2);
             IF @PromotionDiscount > @EffectiveDiscount SET @EffectiveDiscount = @PromotionDiscount;
 
             DECLARE @DiscountedSubtotal decimal(18,2) = @Subtotal - @EffectiveDiscount;
@@ -4721,6 +5243,7 @@ public sealed class SqlStore
             new SqlParameter("@PaymentMethodName", (object?)input.PaymentMethod?.Trim() ?? "Efectivo"),
             new SqlParameter("@Subtotal", input.Subtotal),
             new SqlParameter("@Discount", input.Discount),
+            new SqlParameter("@PromotionId", (object?)input.PromotionId ?? DBNull.Value),
             new SqlParameter("@Tax", input.Tax),
             new SqlParameter("@Total", input.Total),
             new SqlParameter("@Notes", (object?)input.Notes?.Trim() ?? DBNull.Value),
@@ -4849,8 +5372,13 @@ public sealed class SqlStore
 
     private async Task<int> RegisterSaleMySqlAsync(SaleInput input, string? userEmail)
     {
-        if (input.Items.Count == 0)
+        if (input.Items.Count == 0 && (input.Combos?.Count ?? 0) == 0)
             throw new InvalidOperationException("El carrito esta vacio.");
+
+        var activeCombos = (await CombosAsync(activeOnly: true)).ToDictionary(combo => combo.Id);
+        var comboSelections = (input.Combos ?? []).Where(combo => combo.ComboId > 0 && combo.Quantity > 0).ToArray();
+        foreach (var selection in comboSelections)
+            if (!activeCombos.ContainsKey(selection.ComboId)) throw new InvalidOperationException("Uno de los combos ya no está disponible.");
 
         await using var connection = CreateConnection();
         await connection.OpenAsync();
@@ -4858,6 +5386,30 @@ public sealed class SqlStore
 
         try
         {
+            var expandedItems = new List<SaleItemInput>();
+            decimal saleSubtotal = 0;
+            foreach (var item in input.Items.Where(item => item.ProductId > 0 && item.Quantity > 0))
+            {
+                var price = Convert.ToDecimal(await ScalarInTransactionAsync(connection, transaction, """
+                    SELECT p.UnitPrice FROM Productos p INNER JOIN TiposProducto t ON t.ProductTypeId=p.ProductTypeId
+                    WHERE p.ProductId=@ProductId AND p.IsActive=1 AND t.Name='Producto terminado' LIMIT 1;
+                    """, new SqlParameter("@ProductId", item.ProductId)) ?? throw new InvalidOperationException("Uno de los productos ya no está disponible."));
+                expandedItems.Add(new SaleItemInput(item.ProductId, item.Quantity, price));
+                saleSubtotal += price * item.Quantity;
+            }
+            foreach (var selection in comboSelections)
+            {
+                var combo = activeCombos[selection.ComboId];
+                saleSubtotal += combo.SpecialPrice * selection.Quantity;
+                foreach (var component in combo.Items)
+                {
+                    var lineRegular = component.UnitPrice * component.Quantity;
+                    var allocatedLine = combo.RegularPrice > 0 ? combo.SpecialPrice * lineRegular / combo.RegularPrice : 0;
+                    var allocatedUnit = component.Quantity > 0 ? allocatedLine / component.Quantity : 0;
+                    expandedItems.Add(new SaleItemInput(component.ProductId, component.Quantity * selection.Quantity, Math.Round(allocatedUnit, 4)));
+                }
+            }
+            if (expandedItems.Count == 0) throw new InvalidOperationException("El carrito no contiene productos válidos.");
             var email = string.IsNullOrWhiteSpace(input.CustomerEmail)
                 ? $"mostrador-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}@local"
                 : input.CustomerEmail.Trim().ToLowerInvariant();
@@ -4869,10 +5421,31 @@ public sealed class SqlStore
             var isFrequent = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
                 "SELECT IsFrequent FROM Clientes WHERE CustomerId = @CustomerId;",
                 new SqlParameter("@CustomerId", customerId)) ?? 0) == 1;
-            var frequentDiscount = isFrequent ? Math.Round(input.Subtotal * config.FrequentDiscountRate, 2) : 0m;
-            var manualDiscount = Math.Clamp(input.Discount, 0m, input.Subtotal);
-            var effectiveDiscount = Math.Max(frequentDiscount, manualDiscount);
-            var taxable = Math.Max(0m, input.Subtotal - effectiveDiscount);
+            var frequentDiscount = isFrequent ? Math.Round(saleSubtotal * config.FrequentDiscountRate, 2) : 0m;
+            var manualDiscount = Math.Clamp(input.Discount, 0m, saleSubtotal);
+            var promotionDiscountRate = input.PromotionId is > 0
+                ? Convert.ToDecimal(await ScalarInTransactionAsync(connection, transaction, """
+                    SELECT COALESCE(MAX(p.DiscountRate), 0)
+                    FROM Promociones p
+                    WHERE p.PromotionId = @PromotionId
+                      AND p.IsActive = 1
+                      AND DATE(UTC_TIMESTAMP()) BETWEEN p.StartDate AND p.EndDate
+                      AND (NOT EXISTS (SELECT 1 FROM PromocionesClientes pc WHERE pc.PromotionId = p.PromotionId)
+                           OR EXISTS (SELECT 1 FROM PromocionesClientes pc WHERE pc.PromotionId = p.PromotionId AND pc.CustomerId = @CustomerId));
+                    """, new SqlParameter("@PromotionId", input.PromotionId.Value), new SqlParameter("@CustomerId", customerId)) ?? 0m)
+                : 0m;
+            var promotionProductsCsv = input.PromotionId is > 0
+                ? Convert.ToString(await ScalarInTransactionAsync(connection, transaction,
+                    "SELECT GROUP_CONCAT(ProductId) FROM ProductosPromocion WHERE PromotionId = @PromotionId;",
+                    new SqlParameter("@PromotionId", input.PromotionId.Value)))
+                : null;
+            var promotionProductIds = ParseIdList(promotionProductsCsv).ToHashSet();
+            var promotionBase = promotionProductIds.Count == 0
+                ? saleSubtotal
+                : expandedItems.Where(item => promotionProductIds.Contains(item.ProductId)).Sum(item => item.UnitPrice * item.Quantity);
+            var promotionDiscount = Math.Round(promotionBase * promotionDiscountRate, 2);
+            var effectiveDiscount = Math.Max(Math.Max(frequentDiscount, manualDiscount), promotionDiscount);
+            var taxable = Math.Max(0m, saleSubtotal - effectiveDiscount);
             var tax = Math.Round(taxable * config.IvaRate, 2);
             var total = taxable + tax;
             var paymentMethodId = await ResolvePaymentMethodMySqlAsync(connection, transaction, input.PaymentMethod);
@@ -4901,7 +5474,7 @@ public sealed class SqlStore
                 new SqlParameter("@StatusId", statusId),
                 new SqlParameter("@PaymentStatusId", paymentStatusId),
                 new SqlParameter("@PaymentMethodId", paymentMethodId),
-                new SqlParameter("@Subtotal", input.Subtotal),
+                new SqlParameter("@Subtotal", saleSubtotal),
                 new SqlParameter("@Discount", effectiveDiscount),
                 new SqlParameter("@Tax", tax),
                 new SqlParameter("@Total", total),
@@ -4910,7 +5483,7 @@ public sealed class SqlStore
                 new SqlParameter("@OriginLng", config.OriginLongitude),
                 new SqlParameter("@OriginName", config.OriginName)));
 
-            foreach (var item in input.Items)
+            foreach (var item in expandedItems)
             {
                 var stock = await ResolveProductStockMySqlAsync(connection, transaction, item.ProductId, item.Quantity);
                 await ExecuteInTransactionAsync(connection, transaction,
@@ -4930,7 +5503,7 @@ public sealed class SqlStore
             var saleId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, saleSql,
                 new SqlParameter("@OrderId", orderId),
                 new SqlParameter("@PaymentMethodId", paymentMethodId),
-                new SqlParameter("@Subtotal", input.Subtotal),
+                new SqlParameter("@Subtotal", saleSubtotal),
                 new SqlParameter("@Tax", tax),
                 new SqlParameter("@Total", total)));
             await ExecuteInTransactionAsync(connection, transaction,
@@ -4938,6 +5511,14 @@ public sealed class SqlStore
                 new SqlParameter("@CashSessionId", cashSessionId),
                 new SqlParameter("@SaleId", saleId),
                 new SqlParameter("@Amount", total));
+            foreach (var selection in comboSelections)
+            {
+                var combo = activeCombos[selection.ComboId];
+                await ExecuteInTransactionAsync(connection, transaction, """
+                    INSERT INTO VentaCombos (SaleId, ComboId, Quantity, UnitPrice, DiscountAmount)
+                    VALUES (@SaleId, @ComboId, @Quantity, @UnitPrice, @DiscountAmount);
+                    """, new SqlParameter("@SaleId", saleId), new SqlParameter("@ComboId", combo.Id), new SqlParameter("@Quantity", selection.Quantity), new SqlParameter("@UnitPrice", combo.SpecialPrice), new SqlParameter("@DiscountAmount", combo.Discount * selection.Quantity));
+            }
             await ExecuteInTransactionAsync(connection, transaction,
                 "UPDATE Clientes SET TotalSpent = TotalSpent + @Total WHERE CustomerId = @CustomerId;",
                 new SqlParameter("@Total", total),
@@ -5169,19 +5750,26 @@ public sealed class SqlStore
     public sealed record ProfileInput(string FirstName, string LastName, string? Phone, string? Address, string? NewPassword, int? CustomerAddressId = null, string? AddressLabel = null, decimal? Latitude = null, decimal? Longitude = null);
     public sealed record ProfileData(string FirstName, string LastName, string Email, string Phone, string Address, string Role, int? CustomerAddressId, string AddressLabel, decimal? Latitude, decimal? Longitude, bool IsFrequent);
     public sealed record CustomerAddressData(int Id, string Label, string AddressLine, decimal? Latitude, decimal? Longitude, bool IsDefault);
-    public sealed record InventoryProductInput(int? Id, string Code, string Description, string Type, string Unit, string Category, string? Subcategory, decimal Price, decimal Stock, decimal MinStock);
+    public sealed record InventoryProductInput(int? Id, string Code, string Description, string Type, string Unit, string Category, string? Subcategory, decimal Price, decimal Stock, decimal MinStock, string? ImageUrl = null);
     public sealed record InventoryMovementInput(int ProductId, string Type, decimal Quantity, string? Note);
     public sealed record PaymentMethodInput(int? Id, string Name, decimal CommissionRate, bool IsActive, string? Account);
-    public sealed record PromotionInput(int? Id, string Name, DateTime StartDate, DateTime EndDate, decimal Discount, bool IsActive = true);
+    public sealed record PromotionInput(int? Id, string Name, DateTime StartDate, DateTime EndDate, decimal Discount, bool IsActive = true, IReadOnlyList<int>? ProductIds = null, IReadOnlyList<int>? CustomerIds = null);
+    public sealed record ComboInput(int? Id, string Name, string? Description, decimal SpecialPrice, string? ImageUrl, bool IsActive, IReadOnlyList<ComboItemInput>? Items);
+    public sealed record ComboItemInput(int ProductId, decimal Quantity);
+    public sealed record ComboProductData(int ProductId, decimal Quantity, string Code, string Name, decimal UnitPrice, string ImageUrl);
+    public sealed record ComboData(int Id, string Name, string Description, decimal SpecialPrice, decimal RegularPrice, decimal Discount, string ImageUrl, bool Active, IReadOnlyList<ComboProductData> Items);
     public sealed record MarketingCampaignInput(string? Subject, string Message, IReadOnlyList<int> CustomerIds);
+    public sealed record MarketingRecipient(int CustomerId, string FullName, string Email);
     public sealed record AccountingExpenseInput(string Description, decimal Amount, string? Account, string? Method = null);
     public sealed record SupplierPaymentInput(string Supplier, decimal Amount, string? Account, string Method);
     public sealed record CreditNoteInput(int SaleId, string Reason);
     public sealed record CreateOrderInput(string CustomerName, string Email, string? Phone, int ProductId, decimal Quantity, decimal UnitPrice, decimal Subtotal, decimal Tax, decimal Total, DateTime DeliveryDate, string? Address, string? Notes, string? PaymentMethod, decimal? DestinationLatitude = null, decimal? DestinationLongitude = null, string? DeliveryReference = null, int? CustomerAddressId = null, string? DeliveryMethod = "domicilio");
-    public sealed record SaleInput(string? CustomerName, string? CustomerEmail, string? CustomerPhone, string? PaymentMethod, decimal Subtotal, decimal Discount, decimal Tax, decimal Total, string? Notes, IReadOnlyList<SaleItemInput> Items);
+    public sealed record SaleInput(string? CustomerName, string? CustomerEmail, string? CustomerPhone, string? PaymentMethod, decimal Subtotal, decimal Discount, decimal Tax, decimal Total, string? Notes, IReadOnlyList<SaleItemInput> Items, int? PromotionId = null, IReadOnlyList<ComboSaleInput>? Combos = null);
     public sealed record SaleItemInput(int ProductId, decimal Quantity, decimal UnitPrice);
+    public sealed record ComboSaleInput(int ComboId, decimal Quantity);
 
     private sealed record DashboardRow(int OrdersToday, int InProduction, decimal SalesToday, int LowStock);
+    private sealed record ComboRow(int Id, string Name, string Description, decimal SpecialPrice, string ImageUrl, bool Active);
 }
 
 internal static class SqlReaderExtensions

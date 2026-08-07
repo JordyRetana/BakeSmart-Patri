@@ -509,3 +509,35 @@
         margin-top: .35rem;
     }
 }
+.marketing-option-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .55rem;
+    max-height: 230px;
+    padding: .35rem;
+    overflow: auto;
+}
+
+.marketing-option-card {
+    display: grid;
+    grid-template-columns: auto 44px minmax(0, 1fr);
+    align-items: center;
+    gap: .55rem;
+    padding: .55rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-card);
+    cursor: pointer;
+}
+
+.marketing-option-card:has(input:checked) {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 9%, var(--bg-card));
+}
+
+.marketing-option-card img,
+.marketing-option-card .marketing-customer-avatar { width: 44px; height: 44px; border-radius: 9px; object-fit: cover; }
+.marketing-option-card span:last-child { min-width: 0; display: grid; }
+.marketing-option-card strong, .marketing-option-card small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 620px) { .marketing-option-grid { grid-template-columns: 1fr; } }

@@ -53,13 +53,21 @@
         </div>
     </div>
 
-    <div class="card" style="margin-top:1rem;">
+    <div class="card report-document" style="margin-top:1rem;">
+        <header class="report-print-header">
+            <img src="/img/logo.png" alt="BakeSmart Patri" />
+            <div><strong>BakeSmart Patri</strong><span>Reporte administrativo</span></div>
+            <div class="report-print-generated"></div>
+        </header>
         <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
             <div>
                 <h3 id="reportTitle" style="margin:0;">Selecciona un reporte</h3>
                 <div id="reportMeta" class="text-muted" style="margin-top:.35rem;">Todavía no hay datos cargados.</div>
             </div>
-            <button id="exportReportBtn" class="btn btn-outline" disabled><i class="fas fa-file-csv"></i> Exportar CSV</button>
+            <div class="report-actions">
+                <button id="printReportBtn" class="btn btn-outline" disabled><i class="fas fa-file-pdf"></i> Descargar PDF</button>
+                <button id="exportReportBtn" class="btn btn-outline" disabled><i class="fas fa-file-excel"></i> Descargar Excel</button>
+            </div>
         </div>
         <div class="table-container" style="margin-top:1rem;">
             <table class="table">
@@ -74,6 +82,7 @@
 (() => {
     let currentRows = [];
     let currentName = '';
+    let currentType = '';
 
     function dates() {
         return {
@@ -94,10 +103,21 @@
         currentName = title.toLowerCase().replaceAll(' ', '_');
         document.getElementById('reportTitle').textContent = title;
         document.getElementById('reportMeta').textContent = meta;
+        const { start, end } = dates();
+        document.querySelector('.report-print-generated').innerHTML = `<strong>Periodo: ${start || 'Inicio'} al ${end || 'Actual'}</strong><span>Generado: ${new Date().toLocaleString('es-CR')}</span>`;
         const headers = Object.keys(rows[0] || {});
         document.getElementById('reportHead').innerHTML = headers.length ? `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>` : '';
-        document.getElementById('reportBody').innerHTML = rows.length ? rows.map(row => `<tr>${headers.map(h => `<td>${row[h] ?? ''}</td>`).join('')}</tr>`).join('') : `<tr><td class="text-center text-muted">No existen datos para este reporte.</td></tr>`;
+        const moneyFields = /total|subtotal|impuesto|venta|monto|precio|saldo|ingreso|egreso/i;
+        const dateFields = /fecha|date|creado|apertura|cierre/i;
+        const formatCell = (header, value) => {
+            if (value == null) return '';
+            if (moneyFields.test(header) && Number.isFinite(Number(value))) return app.utils.formatCurrency(Number(value));
+            if (dateFields.test(header) && !Number.isNaN(Date.parse(value))) return new Date(value).toLocaleString('es-CR');
+            return value;
+        };
+        document.getElementById('reportBody').innerHTML = rows.length ? rows.map(row => `<tr>${headers.map(h => `<td>${formatCell(h, row[h])}</td>`).join('')}</tr>`).join('') : `<tr><td class="text-center text-muted">No existen datos para este reporte.</td></tr>`;
         document.getElementById('exportReportBtn').disabled = !rows.length;
+        document.getElementById('printReportBtn').disabled = !rows.length;
     }
 
     window.loadReport = async (type) => {
@@ -105,6 +125,7 @@
             const { start, end } = dates();
             if (start && end && new Date(end) < new Date(start)) throw new Error('La fecha final no puede ser menor a la inicial.');
             const r = await BakeSmartStore.reports.load(type, start, end);
+            currentType = type;
             switch (type) {
                 case 'sales': {
                     drawTable('Reporte de ventas', r.rows, `Ingresos: ${app.utils.formatCurrency(r.totalIncome)} | Transacciones: ${r.totalTransactions}`);
@@ -138,13 +159,17 @@
     };
 
     document.getElementById('exportReportBtn').addEventListener('click', () => {
-        try {
-            BakeSmartStore.reports.exportCsv(`${currentName || 'reporte'}.csv`, currentRows);
-            app.toast.success('Reporte exportado.');
-            renderKpis();
-        } catch (error) {
-            app.toast.error(error.message);
-        }
+        if (!currentType) return;
+        const { start, end } = dates();
+        window.location.assign(`/api/reports/${currentType}/export/xlsx?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
+        app.toast.success('Excel profesional generado.');
+    });
+
+    document.getElementById('printReportBtn').addEventListener('click', () => {
+        if (!currentType) return;
+        const { start, end } = dates();
+        window.location.assign(`/api/reports/${currentType}/export/pdf?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
+        app.toast.success('PDF profesional generado.');
     });
 
     const today = new Date().toISOString().slice(0,10);

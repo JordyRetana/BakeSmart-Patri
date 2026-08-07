@@ -25,6 +25,7 @@
                 <option value="Todos">Todos los estados</option>
                 <option>Pendiente pago</option>
                 <option>Confirmado</option>
+                <option value="Pendiente produccion">Pendiente de producción</option>
                 <option value="En produccion">En producción</option>
                 <option>Listo</option>
                 <option>En camino</option>
@@ -82,7 +83,7 @@
     const list = document.getElementById('ordersList');
     const detail = document.getElementById('ordersDetail');
     const visibleCount = document.getElementById('ordersVisibleCount');
-    const statuses = ['Pendiente pago', 'Confirmado', 'En produccion', 'Listo', 'En camino', 'Entregado'];
+    const statuses = ['Pendiente pago', 'Confirmado', 'Pendiente produccion', 'En produccion', 'Listo', 'En camino', 'Entregado'];
     let orders = [];
     let activeOrderId = null;
     let pageInitialized = false;
@@ -106,6 +107,7 @@
 
     function normalizeStatus(value) {
         const text = normalizeText(value);
+        if (text.includes('pendiente') && text.includes('produccion')) return 'Pendiente produccion';
         if (text.includes('pendiente')) return 'Pendiente pago';
         if (text.includes('confirmado')) return 'Confirmado';
         if (text.includes('produccion')) return 'En produccion';
@@ -121,13 +123,16 @@
 
     function displayStatus(value) {
         const normalized = normalizeStatus(value);
-        return normalized === 'En produccion' ? 'En producción' : normalized;
+        if (normalized === 'En produccion') return 'En producción';
+        if (normalized === 'Pendiente produccion') return 'Pendiente de producción';
+        return normalized;
     }
 
     function getStatusClass(value) {
         switch (normalizeStatus(value)) {
             case 'Pendiente pago': return 'status-pending';
             case 'Confirmado': return 'status-confirmed';
+            case 'Pendiente produccion': return 'status-confirmed';
             case 'En produccion': return 'status-production';
             case 'Listo': return 'status-ready';
             case 'En camino': return 'status-route';
@@ -171,18 +176,11 @@
         );
     }
 
-    function nextStatus(order) {
-        return statuses[Math.min(statusIndex(order.status) + 1, statuses.length - 1)];
-    }
-
     function nextActionLabel(order) {
         if (order.paymentStatus !== 'Pagado') return 'Cobrar pedido';
-        if (order.status === 'Pendiente pago') return 'Confirmar pedido';
         if (order.status === 'Confirmado') return 'Enviar a producción';
-        if (order.status === 'En produccion') return 'Marcar listo';
-        if (order.status === 'Listo') return 'Enviar pedido';
-        if (order.status === 'En camino') return 'Marcar entregado';
-        return 'Pedido cerrado';
+        if (['Pendiente produccion', 'En produccion', 'Listo'].includes(order.status)) return 'Ver en Producción';
+        return '';
     }
 
     function renderProgress(order) {
@@ -276,18 +274,14 @@
             </div>
 
             <div class="orders-detail-actions">
-                <label>
-                    <span>Actualizar estado</span>
-                    <select onchange="changeStatus(${order.id}, this.value)" class="form-control">
-                        ${statuses.map(s => `<option value="${clean(s)}" ${s === order.status ? 'selected' : ''}>${clean(displayStatus(s))}</option>`).join('')}
-                    </select>
-                </label>
-                <button class="btn btn-primary" onclick="advanceOrder(${order.id})" ${order.status === 'Entregado' ? 'disabled' : ''}>
-                    <i class="fas fa-arrow-right"></i> ${clean(nextActionLabel(order))}
-                </button>
                 ${order.paymentStatus !== 'Pagado'
-                    ? `<button class="btn btn-outline" onclick="chargeOrder(${order.id})"><i class="fas fa-credit-card"></i> Cobrar</button>`
-                    : `<a class="btn btn-outline" href="/Client/Track" data-full-reload><i class="fas fa-route"></i> Ver seguimiento</a>`}
+                    ? `<button class="btn btn-primary" onclick="chargeOrder(${order.id})"><i class="fas fa-credit-card"></i> Cobrar pedido</button>`
+                    : order.status === 'Confirmado'
+                        ? `<button class="btn btn-primary" onclick="sendOrderToProduction(${order.id})"><i class="fas fa-kitchen-set"></i> Enviar a producción</button>`
+                        : nextActionLabel(order)
+                            ? `<a class="btn btn-primary" href="/Production" data-full-reload><i class="fas fa-kitchen-set"></i> ${clean(nextActionLabel(order))}</a>`
+                            : ''}
+                <a class="btn btn-outline" href="/Client/Track?id=${order.id}" data-full-reload><i class="fas fa-route"></i> Ver seguimiento</a>
                 <button class="btn btn-ghost orders-danger" onclick="deleteOrder(${order.id})">
                     <i class="fas fa-trash-can"></i> Eliminar pedido
                 </button>
@@ -311,25 +305,19 @@
         renderDetail(rows.find(o => Number(o.id) === Number(activeOrderId)));
     }
 
-    async function saveStatus(id, value) {
-        const normalized = normalizeStatus(value);
-        const response = await fetch(`/api/orders/${id}/status`, {
+    async function sendToProduction(id) {
+        const response = await fetch(`/api/orders/${id}/send-production`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: normalized })
+            headers: { 'Content-Type': 'application/json' }
         });
-        if (!response.ok) throw new Error(await response.text());
+        if (!response.ok) {
+            const error = await response.json().catch(() => null);
+            throw new Error(error?.message || 'No se pudo enviar el pedido a Producción.');
+        }
         await loadOrders();
         activeOrderId = id;
         render();
-
-        if (normalized === 'En camino') {
-            app.toast.info('Ruta activada: el cliente ya puede ver el pedido en el mapa.');
-        } else if (normalized === 'Entregado') {
-            app.toast.success('Pedido entregado y seguimiento cerrado.');
-        } else {
-            app.toast.success(`Pedido #${id} actualizado a ${displayStatus(normalized)}.`);
-        }
+        app.toast.success(`Pedido #${id} enviado a Producción.`);
     }
 
     window.selectOrder = (id) => {
@@ -337,23 +325,9 @@
         render();
     };
 
-    window.changeStatus = async (id, value) => {
+    window.sendOrderToProduction = async id => {
         try {
-            await saveStatus(id, value);
-        } catch (error) {
-            app.toast.error(error.message);
-        }
-    };
-
-    window.advanceOrder = async (id) => {
-        const order = orders.find(item => Number(item.id) === Number(id));
-        if (!order) return;
-        if (order.paymentStatus !== 'Pagado') {
-            chargeOrder(id);
-            return;
-        }
-        try {
-            await saveStatus(id, nextStatus(order));
+            await sendToProduction(id);
         } catch (error) {
             app.toast.error(error.message);
         }

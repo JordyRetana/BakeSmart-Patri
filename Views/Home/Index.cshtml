@@ -233,7 +233,7 @@
         <section class="storefront-newsletter">
             <div class="container storefront-newsletter-grid">
                 <div><i class="fas fa-cake-candles"></i><span><strong>Recibe nuestras novedades</strong>Promociones, productos y fechas especiales.</span></div>
-                <form action="/Home/Contact" method="get">
+                <form id="newsletterForm">
                     <label class="sr-only" for="newsletterEmail">Correo electrónico</label>
                     <input id="newsletterEmail" type="email" name="email" placeholder="Tu correo electrónico" required />
                     <button type="submit">Suscribirme</button>
@@ -280,6 +280,29 @@ else
     {
         <script>
         (() => {
+            document.getElementById('newsletterForm')?.addEventListener('submit', async event => {
+                event.preventDefault();
+                const form = event.currentTarget;
+                const button = form.querySelector('button');
+                const emailInput = form.querySelector('input[name="email"]');
+                button.disabled = true;
+                try {
+                    const response = await fetch('/api/public/newsletter', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: emailInput.value })
+                    });
+                    const result = await response.json().catch(() => ({}));
+                    if (!response.ok) throw new Error(result.message || 'No fue posible completar la suscripción.');
+                    app.toast.success('Suscripción confirmada. Revise su correo.');
+                    form.reset();
+                } catch (error) {
+                    app.toast.error(error.message);
+                } finally {
+                    button.disabled = false;
+                }
+            });
+
             const email = () => (document.body.dataset.userEmail || '').trim().toLowerCase();
             const key = () => `bakesmart:favorites:${email()}`;
             const read = () => {

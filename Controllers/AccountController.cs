@@ -1,4 +1,5 @@
 using BakeSmartPatri.Data;
+using BakeSmartPatri.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
@@ -10,10 +11,12 @@ namespace BakeSmartPatri.Controllers
     public class AccountController : Controller
     {
         private readonly SqlStore _sqlStore;
+        private readonly IEmailService _emailService;
 
-        public AccountController(SqlStore sqlStore)
+        public AccountController(SqlStore sqlStore, IEmailService emailService)
         {
             _sqlStore = sqlStore;
+            _emailService = emailService;
         }
 
         [HttpGet]
@@ -141,6 +144,12 @@ namespace BakeSmartPatri.Controllers
         public async Task<IActionResult> Logout()
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+            if (User.IsInRole("Cajero") && await _sqlStore.HasOpenCashSessionAsync(email))
+            {
+                TempData["CashLogoutBlocked"] = "No puede cerrar sesión mientras tenga una caja abierta. Complete primero el cierre de caja.";
+                return RedirectToAction("Index", "Pos");
+            }
+
             if (!string.IsNullOrWhiteSpace(email))
             {
                 try
@@ -177,7 +186,7 @@ namespace BakeSmartPatri.Controllers
         public async Task<IActionResult> Profile(
             string firstName, string lastName,
             string? phone, string? address,
-            string? newPassword, string? confirmPassword,
+            string? currentPassword, string? newPassword, string? confirmPassword,
             int? customerAddressId, string? addressLabel,
             string? latitude, string? longitude)
         {
@@ -204,6 +213,11 @@ namespace BakeSmartPatri.Controllers
 
             if (!string.IsNullOrWhiteSpace(newPassword))
             {
+                if (string.IsNullOrWhiteSpace(currentPassword))
+                {
+                    TempData["ToastError"] = "Ingrese su contraseña actual.";
+                    return RedirectToAction(nameof(Profile));
+                }
                 if (newPassword.Length < 8)
                 {
                     TempData["ToastError"] = "La nueva contraseña debe tener al menos 8 caracteres.";
@@ -214,10 +228,15 @@ namespace BakeSmartPatri.Controllers
                     TempData["ToastError"] = "Las contraseñas no coinciden.";
                     return RedirectToAction(nameof(Profile));
                 }
+                if (!await _sqlStore.ChangePasswordAsync(email, currentPassword, newPassword))
+                {
+                    TempData["ToastError"] = "La contraseña actual no es correcta.";
+                    return RedirectToAction(nameof(Profile));
+                }
             }
 
             await _sqlStore.UpdateProfileAsync(email, new SqlStore.ProfileInput(
-                firstName, lastName, phone, address, newPassword,
+                firstName, lastName, phone, address, null,
                 customerAddressId, addressLabel, latitudeValue, longitudeValue));
             await _sqlStore.AddAuditLogAsync("ACTUALIZAR_PERFIL", $"Perfil actualizado: {firstName} {lastName}", email);
 
@@ -255,16 +274,53 @@ namespace BakeSmartPatri.Controllers
                 return View();
             }
 
-            var result = await _sqlStore.RequestPasswordResetAsync(email);
-            if (result)
+            var token = await _sqlStore.CreatePasswordResetTokenAsync(email);
+            if (token is not null)
             {
-                TempData["ToastSuccess"] = "Contrasena restablecida. Revise la bitacora del sistema para obtener la temporal.";
+                var resetUrl = Url.Action(nameof(ResetPassword), "Account", new { token }, Request.Scheme, Request.Host.Value)!;
+                try
+                {
+                    await _emailService.SendAsync(email, email, "Restablecer contraseña", $"Recibimos una solicitud para cambiar su contraseña. Abra este enlace durante los próximos 30 minutos:\n\n{resetUrl}\n\nSi no realizó esta solicitud, ignore este correo.");
+                }
+                catch (InvalidOperationException ex)
+                {
+                    TempData["ToastError"] = ex.Message;
+                    return RedirectToAction(nameof(ForgotPassword));
+                }
             }
-            else
-            {
-                TempData["Toast"] = "Si el correo esta registrado, recibira instrucciones.";
-            }
+            TempData["ToastSuccess"] = "Si el correo está registrado, recibirá un enlace válido durante 30 minutos.";
+            return RedirectToAction(nameof(Login));
+        }
 
+        [HttpGet]
+        public IActionResult ResetPassword(string? token)
+        {
+            if (string.IsNullOrWhiteSpace(token)) return RedirectToAction(nameof(ForgotPassword));
+            ViewData["ResetToken"] = token;
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(string token, string newPassword, string confirmPassword)
+        {
+            ViewData["ResetToken"] = token;
+            if (string.IsNullOrWhiteSpace(token) || newPassword.Length < 8)
+            {
+                ViewData["ResetError"] = "La contraseña debe tener al menos 8 caracteres.";
+                return View();
+            }
+            if (!string.Equals(newPassword, confirmPassword, StringComparison.Ordinal))
+            {
+                ViewData["ResetError"] = "Las contraseñas no coinciden.";
+                return View();
+            }
+            if (!await _sqlStore.ResetPasswordWithTokenAsync(token, newPassword))
+            {
+                ViewData["ResetError"] = "El enlace venció o ya fue utilizado. Solicite uno nuevo.";
+                return View();
+            }
+            TempData["ToastSuccess"] = "Contraseña actualizada. Ya puede iniciar sesión.";
             return RedirectToAction(nameof(Login));
         }
 

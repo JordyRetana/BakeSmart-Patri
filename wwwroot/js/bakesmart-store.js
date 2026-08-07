@@ -162,6 +162,7 @@
         inventoryMovements: options => load("inventoryMovements", "/api/inventory/movements", [], options),
         customers: options => load("customers", "/api/customers", [], options),
         promotions: options => load("promotions", "/api/promotions", [], options),
+        combos: options => load("combos", "/api/combos", [], options),
         users: options => load("users", "/api/users", [], options),
         roles: options => load("roles", "/api/roles", [], options),
         posConfig: options => load("posConfig", "/api/pos/config", {}, options),
@@ -173,7 +174,7 @@
         const page = String(document.body?.dataset?.page || location.pathname || "").toLowerCase();
         const keys = new Set(["orders", "inventory", "posConfig"]);
 
-        if (page.startsWith("/pos")) keys.add("customers");
+        if (page.startsWith("/pos")) ["customers", "promotions", "combos"].forEach(key => keys.add(key));
         if (page.startsWith("/client")) keys.add("customers");
         if (page.startsWith("/orders")) keys.add("customers");
         if (page.startsWith("/marketing")) ["customers", "promotions"].forEach(key => keys.add(key));
@@ -183,7 +184,7 @@
         if (page.startsWith("/accounting")) keys.add("accounting");
         if (page.startsWith("/audit")) keys.add("logs");
         if (page.startsWith("/reports")) ["customers", "inventoryMovements", "accounting"].forEach(key => keys.add(key));
-        if (page.startsWith("/admin")) ["customers", "promotions", "users", "roles", "accounting"].forEach(key => keys.add(key));
+        if (page.startsWith("/admin")) ["customers", "promotions", "combos", "users", "roles", "accounting"].forEach(key => keys.add(key));
 
         return [...keys];
     }
@@ -417,7 +418,9 @@
                         startDate: input.startDate,
                         endDate: input.endDate,
                         discount: Number(input.discount || 0) / 100,
-                        isActive: input.isActive !== false
+                        isActive: input.isActive !== false,
+                        productIds: input.productIds || [],
+                        customerIds: input.customerIds || []
                     })
                 });
                 await load("promotions", "/api/promotions", [], { force: true });
@@ -436,6 +439,33 @@
                         customerIds: input.customerIds || []
                     })
                 });
+            }
+        },
+        combos: {
+            list() { return cached("combos"); },
+            async save(input = {}) {
+                const result = await request("/api/combos", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        id: input.id ? Number(input.id) : null,
+                        name: input.name || "",
+                        description: input.description || "",
+                        specialPrice: Number(input.specialPrice || 0),
+                        imageUrl: input.imageUrl || null,
+                        isActive: input.isActive !== false,
+                        items: (input.items || []).map(item => ({ productId: Number(item.productId), quantity: Number(item.quantity || 1) }))
+                    })
+                });
+                await load("combos", "/api/combos", [], { force: true });
+                return result;
+            },
+            async toggle(id) {
+                await request(`/api/combos/${id}/toggle`, { method: "POST", body: JSON.stringify({}) });
+                return load("combos", "/api/combos", [], { force: true });
+            },
+            async remove(id) {
+                await request(`/api/combos/${id}`, { method: "DELETE" });
+                return load("combos", "/api/combos", [], { force: true });
             }
         },
         users: {
@@ -537,13 +567,19 @@
                 if (!session) throw new Error("Debe abrir caja antes de confirmar ventas.");
 
                 const items = Array.isArray(input.items) ? input.items : [];
-                if (!items.length) throw new Error("Agregue productos al carrito antes de cobrar.");
+                const combos = Array.isArray(input.combos) ? input.combos : [];
+                if (!items.length && !combos.length) throw new Error("Agregue productos o combos al carrito antes de cobrar.");
 
                 const products = api.inventory.list();
-                const subtotal = items.reduce((sum, item) => {
+                const subtotalProducts = items.reduce((sum, item) => {
                     const product = products.find(row => Number(row.id) === Number(item.productId));
                     return sum + Number(product?.price || 0) * Number(item.quantity || 0);
                 }, 0);
+                const subtotalCombos = combos.reduce((sum, selection) => {
+                    const combo = api.combos.list().find(row => Number(row.id) === Number(selection.comboId) && row.active);
+                    return sum + Number(combo?.specialPrice || 0) * Number(selection.quantity || 0);
+                }, 0);
+                const subtotal = subtotalProducts + subtotalCombos;
                 const customer = api.customers.list().find(row =>
                     (input.customerEmail && String(row.email || "").toLowerCase() === String(input.customerEmail).toLowerCase()) ||
                     (input.customerName && String(row.fullName || "").toLowerCase() === String(input.customerName).toLowerCase())
@@ -555,7 +591,7 @@
                 };
                 const manualDiscountRate = normalizeDiscountRate(input.discountRate);
                 const frequentDiscountRate = customer?.frequent ? Math.min(Math.max(Number(api.pos.config().frequentCustomerDiscount || 0), 0), 1) : 0;
-                const discountRate = Math.min(manualDiscountRate + frequentDiscountRate, 1);
+                const discountRate = Math.max(manualDiscountRate, frequentDiscountRate);
                 const taxRate = Number(api.pos.config().iva || 0);
                 const discountedSubtotal = Math.max(0, subtotal - subtotal * discountRate);
                 const tax = discountedSubtotal * taxRate;
@@ -567,15 +603,17 @@
                     customerPhone: input.customerPhone || null,
                     paymentMethod: input.paymentMethod || "Efectivo",
                     subtotal,
-                    discount: subtotal * discountRate,
+                    discount: subtotal * manualDiscountRate,
                     tax,
                     total,
                     notes: null,
+                    promotionId: input.promotionId ? Number(input.promotionId) : null,
                     items: items.map(item => ({
                         productId: item.productId,
                         quantity: item.quantity,
                         unitPrice: products.find(row => Number(row.id) === Number(item.productId))?.price || 0
-                    }))
+                    })),
+                    combos: combos.map(combo => ({ comboId: Number(combo.comboId), quantity: Number(combo.quantity || 1) }))
                 };
 
                 const result = await request("/api/pos/sell", { method: "POST", body: JSON.stringify(saleInput) });

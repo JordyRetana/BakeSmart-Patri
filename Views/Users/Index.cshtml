@@ -32,7 +32,7 @@
             <div class="users-section-head">
                 <div>
                     <span class="users-eyebrow">Directorio</span>
-                    <h2>Listado de usuarios</h2>
+                    <h2>Equipo interno</h2>
                 </div>
                 <span class="badge badge-info" id="usersVisibleCount">0 visibles</span>
             </div>
@@ -51,6 +51,19 @@
                     <tbody id="usersTableBody"></tbody>
                 </table>
             </div>
+
+            <details class="users-client-group" id="usersClientGroup">
+                <summary>
+                    <span><i class="fas fa-user-group"></i> Clientes registrados</span>
+                    <span class="badge badge-info" id="clientsCount">0</span>
+                </summary>
+                <div class="table-container users-table-scroll">
+                    <table class="table users-table">
+                        <thead><tr><th>Cliente</th><th>Contacto</th><th>Estado</th><th>Creado</th><th class="text-right">Acciones</th></tr></thead>
+                        <tbody id="clientsTableBody"></tbody>
+                    </table>
+                </div>
+            </details>
         </article>
 
         <aside class="card users-roles-card">
@@ -87,6 +100,7 @@
 (() => {
     const store = window.BakeSmartStore;
     const body = document.getElementById('usersTableBody');
+    const clientsBody = document.getElementById('clientsTableBody');
     const search = document.getElementById('userSearch');
     const rolePreview = document.getElementById('rolePreview');
 
@@ -168,7 +182,7 @@
     function renderUsers() {
         const all = store.users.list();
         const q = search.value.trim().toLowerCase();
-        const users = all.filter(u =>
+        const visible = all.filter(u =>
             !q ||
             `${u.firstName} ${u.lastName}`.toLowerCase().includes(q) ||
             String(u.email || '').toLowerCase().includes(q) ||
@@ -177,7 +191,10 @@
 
         document.getElementById('usersTotal').textContent = all.length;
         document.getElementById('usersActive').textContent = all.filter(x => x.active).length;
-        document.getElementById('usersVisibleCount').textContent = `${users.length} visibles`;
+        const users = visible.filter(u => String(u.role || '').toLowerCase() !== 'cliente');
+        const clients = visible.filter(u => String(u.role || '').toLowerCase() === 'cliente');
+        document.getElementById('usersVisibleCount').textContent = `${users.length} internos`;
+        document.getElementById('clientsCount').textContent = clients.length;
 
         body.innerHTML = users.map(u => `
             <tr>
@@ -194,6 +211,19 @@
                 </td>
             </tr>
         `).join('') || `<tr><td colspan="6" class="text-center text-muted">No hay usuarios para mostrar.</td></tr>`;
+
+        clientsBody.innerHTML = clients.map(u => `
+            <tr>
+                <td><strong>${clean(u.firstName)} ${clean(u.lastName)}</strong><small>${clean(u.address || 'Sin dirección')}</small></td>
+                <td><span>${clean(u.email)}</span><small>${clean(u.phone)}</small></td>
+                <td><span class="badge ${u.active ? 'badge-success' : 'badge-warning'}">${u.active ? 'Activo' : 'Inactivo'}</span></td>
+                <td>${new Date(u.createdAt).toLocaleDateString('es-CR')}</td>
+                <td class="text-right"><div class="users-row-actions">
+                    <button class="btn btn-outline btn-sm" onclick="editUser(${u.id})"><i class="fas fa-pen"></i></button>
+                    <button class="btn btn-outline btn-sm" onclick="toggleUser(${u.id})">${u.active ? 'Desactivar' : 'Activar'}</button>
+                </div></td>
+            </tr>
+        `).join('') || `<tr><td colspan="5" class="text-center text-muted">No hay clientes registrados.</td></tr>`;
     }
 
     window.openUserModal = userId => {

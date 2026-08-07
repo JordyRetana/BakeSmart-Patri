@@ -97,13 +97,11 @@
     today.setHours(0, 0, 0, 0);
 
     const statusMeta = {
-        'Pendiente pago': { badge: 'badge-warning', border: 'var(--warning)', next: 'Confirmado', action: 'Cobrar', icon: 'fa-money-bill-wave', progress: 10 },
-        'Confirmado': { badge: 'badge-info', border: 'var(--info)', next: 'En produccion', action: 'Iniciar', icon: 'fa-play', progress: 25 },
-        'En produccion': { badge: 'badge-primary', border: 'var(--primary)', next: 'Listo', action: 'Listo', icon: 'fa-arrow-right', progress: 60 },
-        'En producción': { badge: 'badge-primary', border: 'var(--primary)', next: 'Listo', action: 'Listo', icon: 'fa-arrow-right', progress: 60 },
-        'Listo': { badge: 'badge-success', border: 'var(--success)', next: 'En camino', action: 'Enviar', icon: 'fa-truck', progress: 82 },
-        'En camino': { badge: 'badge-info', border: 'var(--info)', next: 'Entregado', action: 'Entregar', icon: 'fa-check', progress: 92 },
-        'Entregado': { badge: 'badge-success', border: 'var(--success)', next: '', action: '', icon: 'fa-check', progress: 100 }
+        'Pendiente produccion': { badge: 'badge-warning', border: 'var(--warning)', action: 'Iniciar elaboración', icon: 'fa-play', progress: 20 },
+        'Pendiente producción': { badge: 'badge-warning', border: 'var(--warning)', action: 'Iniciar elaboración', icon: 'fa-play', progress: 20 },
+        'En produccion': { badge: 'badge-primary', border: 'var(--primary)', action: 'Marcar listo', icon: 'fa-check', progress: 65 },
+        'En producción': { badge: 'badge-primary', border: 'var(--primary)', action: 'Marcar listo', icon: 'fa-check', progress: 65 },
+        'Listo': { badge: 'badge-success', border: 'var(--success)', action: '', icon: 'fa-check', progress: 100 }
     };
 
     const setText = (id, value) => {
@@ -120,12 +118,10 @@
 
     function ticket(order, mode) {
         const status = statusOf(order);
-        const meta = statusMeta[status] || statusMeta.Confirmado;
-        const action = status === 'Pendiente pago'
-            ? `<button class="btn btn-primary btn-sm" onclick="chargeProductionOrder(${order.id})"><i class="fas fa-money-bill-wave"></i> Cobrar</button>`
-            : status !== 'Entregado'
-            ? `<button class="btn btn-primary btn-sm" onclick="moveProductionOrder(${order.id}, '${meta.next}')"><i class="fas ${meta.icon}"></i> ${meta.action}</button>`
-            : `<span class="badge badge-success">Completado</span>`;
+        const meta = statusMeta[status] || statusMeta['Pendiente produccion'];
+        const action = status === 'Listo'
+            ? `<span class="badge badge-success"><i class="fas fa-box-check"></i> Listo para entrega</span>`
+            : `<button class="btn btn-primary btn-sm" onclick="moveProductionOrder(${order.id})"><i class="fas ${meta.icon}"></i> ${meta.action}</button>`;
 
         return `
             <div class="card production-ticket" style="border-left:4px solid ${meta.border};">
@@ -154,13 +150,14 @@
 
     function renderProduction() {
         const orders = store.orders.list();
-        const pending = orders.filter(o => ['Pendiente pago', 'Confirmado'].includes(statusOf(o)));
-        const active = orders.filter(o => ['En produccion', 'En producción', 'Listo', 'En camino'].includes(statusOf(o)));
-        const done = orders.filter(o => statusOf(o) === 'Entregado');
+        const productionOrders = orders.filter(o => ['Pendiente produccion', 'Pendiente producción', 'En produccion', 'En producción', 'Listo'].includes(statusOf(o)));
+        const pending = productionOrders.filter(o => ['Pendiente produccion', 'Pendiente producción'].includes(statusOf(o)));
+        const active = productionOrders.filter(o => ['En produccion', 'En producción'].includes(statusOf(o)));
+        const done = productionOrders.filter(o => statusOf(o) === 'Listo');
         const late = orders.filter(o => {
             const delivery = new Date(deliveryOf(o));
             delivery.setHours(0, 0, 0, 0);
-            return delivery < today && statusOf(o) !== 'Entregado';
+            return productionOrders.includes(o) && delivery < today && statusOf(o) !== 'Listo';
         });
 
         setText('prodPendingCount', pending.length);
@@ -174,45 +171,29 @@
         document.getElementById('prodPendingList').innerHTML = pending.map(o => ticket(o, 'pending')).join('') || '<div class="text-muted">No hay pedidos pendientes.</div>';
         document.getElementById('prodActiveList').innerHTML = active.map(o => ticket(o, 'active')).join('') || '<div class="text-muted">No hay pedidos en producción.</div>';
         document.getElementById('prodDoneList').innerHTML = done.map(o => ticket(o, 'done')).join('') || '<div class="text-muted">No hay pedidos completados.</div>';
-        document.getElementById('productionSchedule').innerHTML = orders.slice(0, 5).map(scheduleRow).join('') || '<div class="text-muted">No hay programacion para hoy.</div>';
+        document.getElementById('productionSchedule').innerHTML = productionOrders.slice(0, 5).map(scheduleRow).join('') || '<div class="text-muted">No hay programacion para hoy.</div>';
     }
 
-    window.moveProductionOrder = (orderId, nextStatus) => {
-        store.orders.updateStatus(orderId, nextStatus).then(() => {
+    window.moveProductionOrder = orderId => {
+        fetch(`/api/production/${orderId}/advance`, { method: 'POST', headers: { 'Content-Type': 'application/json' } }).then(async response => {
+            if (!response.ok) {
+                const error = await response.json().catch(() => null);
+                throw new Error(error?.message || 'No se pudo avanzar la producción.');
+            }
+            const result = await response.json();
+            const updatedOrder = store.orders.list().find(order => Number(order.id) === Number(orderId));
+            if (updatedOrder) {
+                updatedOrder.estado = result.status;
+                updatedOrder.status = result.status;
+            }
+            renderProduction();
+            await store.refresh({ keys: ['orders'], force: true });
             renderProduction();
             app.toast.success(`Pedido #${orderId} actualizado.`);
         }).catch(error => app.toast.error(error.message));
     };
 
-    window.chargeProductionOrder = (orderId) => {
-        const order = store.orders.list().find(item => Number(item.id) === Number(orderId));
-        if (!order) {
-            app.toast.error('No se encontro el pedido para cobrar.');
-            return;
-        }
-
-        const product = store.inventory.list().find(item => Number(item.id) === Number(order.productId));
-        const cartItem = {
-            productId: Number(order.productId),
-            name: product?.description || product?.item || order.producto || 'Pedido',
-            code: product?.code || product?.sku || `PED-${order.id}`,
-            unitPrice: Number(order.unitPrice || product?.price || order.total || 0),
-            quantity: Number(order.quantity || 1)
-        };
-
-        sessionStorage.setItem('bakesmart.pos.pendingOrder', JSON.stringify({
-            id: order.id,
-            customerName: order.customerName || order.cliente || '',
-            customerEmail: order.customerEmail || '',
-            paymentMethod: order.paymentMethod || 'Tarjeta',
-            total: Number(order.total || 0),
-            item: cartItem
-        }));
-        sessionStorage.setItem('bakesmart.pos.cart', JSON.stringify([cartItem]));
-        window.location.assign('/Pos/Cart?orderId=' + encodeURIComponent(order.id));
-    };
-
-    store.refresh().then(renderProduction).catch(error => app.toast.error(error.message));
+    store.refresh({ keys: ['orders'], force: true }).then(renderProduction).catch(error => app.toast.error(error.message));
 })();
 </script>
 }

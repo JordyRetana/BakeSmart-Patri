@@ -1,25 +1,29 @@
-@model BakeSmartPatri.Models.CatalogIndexViewModel
+@model IReadOnlyList<BakeSmartPatri.Data.SqlStore.ComboData>
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Combos";
     var culture = new System.Globalization.CultureInfo("es-CR");
-    var products = Model.Products.Where(product => product.IsActive).Take(6).ToList();
 }
 <main class="commerce-page">
-    <header class="commerce-hero commerce-hero--combos"><div><span class="commerce-kicker">Ideas para compartir</span><h1>Combina tus productos favoritos</h1><p>Selecciona una propuesta y crea tu pedido con los productos disponibles.</p></div><i class="fas fa-box-open"></i></header>
+    <header class="commerce-hero commerce-hero--combos">
+        <div><span class="commerce-kicker">Ahorro para compartir</span><h1>Combos preparados para ti</h1><p>Cada combo conserva sus productos, cantidades y precio especial al agregarlo a la compra.</p></div><i class="fas fa-box-open"></i>
+    </header>
     <section class="commerce-section">
-        <div class="commerce-section-title"><span></span><h2>Propuestas para celebrar</h2><span></span></div>
+        <div class="commerce-section-title"><span></span><h2>Combos disponibles</h2><span></span></div>
         <div class="commerce-combo-list">
-            @for (var index = 0; index < products.Count; index += 2)
+            @foreach (var combo in Model)
             {
-                var first = products[index];
-                var second = index + 1 < products.Count ? products[index + 1] : null;
-                var total = first.UnitPrice + (second?.UnitPrice ?? 0);
                 <article class="commerce-combo-tile">
-                    <div class="commerce-combo-images"><img src="@first.ImageUrl" alt="@first.AltText" />@if (second is not null) { <img src="@second.ImageUrl" alt="@second.AltText" /> }</div>
-                    <div><small>Combo sugerido</small><h2>@first.Name @(second is not null ? $"+ {second.Name}" : "")</h2><p>Arma una celebración con productos activos del catálogo.</p><strong>@total.ToString("C0", culture)</strong><a href="/Catalog">Elegir productos</a></div>
+                    <div class="commerce-combo-images">@foreach (var item in combo.Items.Take(3)) { <img src="@item.ImageUrl" alt="@item.Name" /> }</div>
+                    <div>
+                        <small>Ahorra @combo.Discount.ToString("C0", culture)</small><h2>@combo.Name</h2><p>@combo.Description</p>
+                        <ul>@foreach (var item in combo.Items) { <li>@item.Quantity.ToString("0.##") × @item.Name</li> }</ul>
+                        <del>@combo.RegularPrice.ToString("C0", culture)</del> <strong>@combo.SpecialPrice.ToString("C0", culture)</strong>
+                        <a href="/Pos?combo=@combo.Id">Agregar combo</a>
+                    </div>
                 </article>
             }
+            @if (!Model.Any()) { <div class="client-empty-state"><i class="fas fa-box-open"></i><strong>No hay combos activos</strong><span>Pronto publicaremos nuevas opciones.</span></div> }
         </div>
     </section>
 </main>

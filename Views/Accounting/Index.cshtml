@@ -1,5 +1,5 @@
 @section Styles {
-    <link rel="stylesheet" href="~/css/pages/accounting-index.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/accounting-index.css?v=20260806-accounting-layout-3" />
 }
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -102,6 +102,19 @@
             </div>
 
             <div class="accounting-block">
+                <div class="accounting-section-header"><div>
+                    <span class="accounting-eyebrow">Devoluciones</span>
+                    <h3 class="accounting-section-title">Crear nota de crédito</h3>
+                </div></div>
+                <p class="text-muted">Seleccione una venta reciente. El sistema revierte inventario y registra el asiento contable automáticamente.</p>
+                <form id="accountingCreditNoteForm" class="accounting-form">
+                    <div class="accounting-form-block"><label>Venta</label><select class="form-control" name="saleId" id="accountingCreditSale" required><option value="">Cargando ventas…</option></select></div>
+                    <div class="accounting-form-block"><label>Motivo</label><input class="form-control" name="reason" minlength="5" placeholder="Motivo de la devolución" required /></div>
+                    <button class="btn btn-outline accounting-submit-btn" type="submit"><i class="fas fa-rotate-left"></i> Registrar nota de crédito</button>
+                </form>
+            </div>
+
+            <div class="accounting-block">
                 <div class="accounting-section-header">
                     <div>
                         <span class="accounting-eyebrow">Proveedores</span>
@@ -153,6 +166,9 @@
                     </div>
                 </div>
                 <div class="accounting-action-buttons">
+                    <p class="text-muted" style="grid-column:1/-1;margin:0;line-height:1.55;">
+                        La conciliación compara cada venta del POS con su asiento contable. Si falta un asiento o sus montos no cuadran, lo repara y muestra cuántos registros revisó, corrigió y dejó con diferencias.
+                    </p>
                     <button class="btn btn-primary" id="accReconcileBtn" type="button">
                         <i class="fas fa-scale-balanced"></i>
                         Conciliar operaciones
@@ -167,6 +183,7 @@
                         Generar cierre
                     </button>
                 </div>
+                <div class="accounting-close-result" id="accReconcileResult" hidden></div>
                 <div class="accounting-close-result" id="accCloseResult" hidden></div>
             </div>
         </aside>
@@ -276,6 +293,35 @@
                 `;
             }
 
+            async function loadCreditNoteSales() {
+                const sales = await BakeSmartStore.pos.recentSales();
+                const select = document.getElementById('accountingCreditSale');
+                const available = sales.filter(sale => !sale.hasCreditNote);
+                select.innerHTML = '<option value="">Seleccione una venta</option>' + available.map(sale =>
+                    `<option value="${sale.saleId}">#${sale.saleId} · ${escapeHtml(sale.customer || 'Cliente general')} · ${app.utils.formatCurrency(sale.total)}</option>`
+                ).join('');
+                if (!available.length) select.innerHTML = '<option value="">No hay ventas disponibles</option>';
+                select.selectedIndex = 0;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            document.getElementById('accountingCreditNoteForm').addEventListener('submit', async event => {
+                event.preventDefault();
+                const button = event.target.querySelector('button[type="submit"]');
+                button.disabled = true;
+                try {
+                    const data = Object.fromEntries(new FormData(event.target).entries());
+                    const result = await BakeSmartStore.pos.creditNote(data);
+                    event.target.reset();
+                    app.toast.success(`Nota de crédito #${result.id} registrada correctamente.`);
+                    await Promise.all([render(), loadCreditNoteSales()]);
+                } catch (error) {
+                    app.toast.error(error.message);
+                } finally {
+                    button.disabled = false;
+                }
+            });
+
             document.getElementById('expenseForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
 
@@ -308,6 +354,12 @@
                     button.disabled = true;
                     const result = await BakeSmartStore.accounting.reconcile();
                     reconStatus = result.status;
+                    const resultEl = document.getElementById('accReconcileResult');
+                    resultEl.hidden = false;
+                    resultEl.innerHTML = `
+                        <strong>${escapeHtml(result.status)}</strong>
+                        <span>${result.reviewed} ventas revisadas · ${result.generated || 0} asientos reparados · ${result.issues} diferencias pendientes.</span>
+                    `;
                     app.toast.info(`Conciliación completada: ${result.reviewed} revisadas, ${result.generated || 0} reparadas, ${result.issues} diferencias.`);
                     await render();
                 } catch (error) {
@@ -341,7 +393,7 @@
             function initializePage() {
                 if (pageInitialized) return;
                 pageInitialized = true;
-                render().catch(error => app.toast.error(error.message));
+                Promise.all([render(), loadCreditNoteSales()]).catch(error => app.toast.error(error.message));
             }
 
             app.page.ready(initializePage);

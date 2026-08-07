@@ -31,6 +31,13 @@
 }
 
 <div class="page-shell pos-page @(isCashierView ? "pos-page--cashier" : "")">
+    @if (TempData["CashLogoutBlocked"] is string logoutMessage)
+    {
+        <div class="alert alert-warning pos-logout-warning" role="alert">
+            <i class="fas fa-lock"></i>
+            <div><strong>Cierre de caja obligatorio</strong><span>@logoutMessage</span></div>
+        </div>
+    }
     <div class="page-header pos-header">
         <div>
             <div class="pos-kicker">Consola de mostrador</div>
@@ -83,6 +90,11 @@
                             <span id="posProductsBadgeCount">0</span>&nbsp;items
                         </span>
                     </div>
+
+                    <div class="pos-panel-header pos-panel-header--compact" id="posCombosHeader" hidden>
+                        <div><div class="pos-panel-eyebrow">Ofertas configuradas</div><h3 class="pos-panel-title">Combos</h3></div>
+                    </div>
+                    <div class="pos-combos-grid" id="posCombosGrid"></div>
 
                     <div class="pos-products-grid" id="posProductsGrid"></div>
 
@@ -156,6 +168,11 @@
                         </div>
 
                         <div class="pos-form-block">
+                            <label>Promoción</label>
+                            <select class="form-control pos-promotion-select" name="promotionId"><option value="">Sin promoción</option></select>
+                        </div>
+
+                        <div class="pos-form-block">
                             <label>Descuento</label>
                             <input class="form-control" type="number" min="0" step="0.01" name="discountRate" value="0" placeholder="Ej. 0.05" />
                         </div>
@@ -211,6 +228,11 @@
                         <div class="pos-form-block">
                             <label>Método de pago</label>
                             <select class="form-control" name="paymentMethod" id="posPaymentMethodDesktop"></select>
+                        </div>
+
+                        <div class="pos-form-block">
+                            <label>Promoción</label>
+                            <select class="form-control pos-promotion-select" name="promotionId"><option value="">Sin promoción</option></select>
                         </div>
 
                         <div class="pos-form-block">
@@ -333,6 +355,20 @@
                 const session = resolveActiveSession();
                 const products = getProducts();
                 const methods = getConfig().paymentMethods.filter(x => x.active);
+                document.querySelectorAll('.pos-promotion-select').forEach(select => {
+                    const form = select.closest('form');
+                    const email = form?.querySelector('[name="customerEmail"]')?.value?.trim().toLowerCase();
+                    const name = form?.querySelector('[name="customerName"]')?.value?.trim().toLowerCase();
+                    const customer = store.customers.list().find(item => (email && String(item.email).toLowerCase() === email) || (name && String(item.fullName).toLowerCase() === name));
+                    const promotions = store.marketing.promotions().filter(x => x.active
+                        && new Date(`${x.startDate}T00:00:00`) <= new Date()
+                        && new Date(`${x.endDate}T23:59:59`) >= new Date()
+                        && (!x.customerIds?.length || (customer && x.customerIds.map(Number).includes(Number(customer.id)))));
+                    const selected = select.value;
+                    select.innerHTML = '<option value="">Sin promoción</option>' + promotions.map(p => `<option value="${p.id}">${p.name} · ${(Number(p.discount) * 100).toFixed(0)}%</option>`).join('');
+                    select.value = promotions.some(p => String(p.id) === selected) ? selected : '';
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                });
 
                 document.getElementById('posSessionStatus').textContent = session ? `#${String(session.id).slice(-6)}` : 'Sin abrir';
                 document.getElementById('posSessionSales').textContent = fmt(session?.totalSales || 0);
@@ -358,10 +394,18 @@
                             <div class="session-status-title">Responsable</div>
                             <div class="session-status-value">${session.userName}</div>
                             <div class="text-muted" style="margin-top:.35rem;">Apertura: ${new Date(session.openedAt).toLocaleString('es-CR')}</div>
-
+                            <div class="pos-close-summary">
+                                <div><span>Saldo inicial</span><strong>${money(session.openingAmount)}</strong></div>
+                                <div><span>Ventas en efectivo</span><strong>${money(session.cashSales)}</strong></div>
+                                <div><span>Tarjeta</span><strong>${money(session.cardSales)}</strong></div>
+                                <div><span>SINPE</span><strong>${money(session.sinpeSales)}</strong></div>
+                                <div><span>Transferencias</span><strong>${money(session.transferSales)}</strong></div>
+                                <div class="pos-close-summary__total"><span>Efectivo esperado</span><strong>${money(session.expectedCash)}</strong></div>
+                            </div>
                             <div class="session-inline-actions">
-                                <input id="declaredCash" class="form-control" type="number" min="0" placeholder="Efectivo contado" />
-                                <button class="btn btn-outline" type="button" onclick="closeSession()">Cerrar caja</button>
+                                <input id="declaredCash" class="form-control" type="number" min="0" step="0.01" placeholder="Efectivo contado" oninput="updateCashDifference()" />
+                                <div id="cashDifference" class="pos-cash-difference">Ingrese el efectivo contado para calcular la diferencia.</div>
+                                <button class="btn btn-outline" type="button" onclick="closeSession()">Revisar y cerrar caja</button>
                             </div>
                         </div>
                     `;
@@ -414,8 +458,9 @@
                         ${recentSales.slice(0, 6).map(sale => `
                             <button class="pos-sale-row" type="button" onclick="selectCreditNoteSale(${sale.saleId})" ${sale.hasCreditNote ? 'disabled' : ''}>
                                 <span>
-                                    <strong>Venta #${sale.saleId}</strong>
-                                    <small>Pedido #${sale.orderId} · ${sale.customerName}</small>
+                                     <strong>Venta #${sale.saleId}</strong>
+                                     <small>Pedido #${sale.orderId} · ${sale.customerName}</small>
+                                     ${sale.comboSummary ? `<small><i class="fas fa-box-open"></i> ${sale.comboSummary}</small>` : ''}
                                 </span>
                                 <b>${money(sale.total)}</b>
                             </button>
@@ -482,8 +527,20 @@
 
             function renderProducts() {
                 const products = getProducts();
+                const combos = store.combos.list().filter(combo => combo.active);
                 const productsGrid = document.getElementById('posProductsGrid');
                 const tableBody = document.getElementById('posProductsTable');
+                const combosGrid = document.getElementById('posCombosGrid');
+                document.getElementById('posCombosHeader').hidden = combos.length === 0;
+                combosGrid.innerHTML = combos.map(combo => {
+                    const available = Math.max(0, Math.min(...combo.items.map(item => Math.floor(remainingStock(item.productId, products.find(product => Number(product.id) === Number(item.productId))?.stock || 0) / item.quantity))));
+                    return `<article class="pos-combo-card">
+                        <div class="pos-combo-images">${combo.items.slice(0,3).map(item => `<img src="${item.imageUrl}" alt="">`).join('')}</div>
+                        <div><span class="badge badge-primary">Ahorra ${fmt(combo.discount)}</span><h4>${combo.name}</h4><p>${combo.items.map(item => `${item.quantity}× ${item.name}`).join(' · ')}</p></div>
+                        <div class="pos-combo-price"><del>${fmt(combo.regularPrice)}</del><strong>${fmt(combo.specialPrice)}</strong></div>
+                        <button class="pos-product-cart-btn" type="button" onclick="addComboToCart(${combo.id})" ${available <= 0 ? 'disabled' : ''}><i class="fas fa-box-open"></i>${available > 0 ? 'Agregar combo' : 'Sin stock'}</button>
+                    </article>`;
+                }).join('');
 
                 if (!products.length) {
                     productsGrid.innerHTML = `<div class="card pos-empty-products">No se encontraron productos.</div>`;
@@ -545,9 +602,11 @@
             }
 
             function cartQuantity(productId) {
-                return cart
-                    .filter(item => Number(item.productId) === Number(productId))
-                    .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+                return cart.reduce((sum, item) => {
+                    if (!item.isCombo) return sum + (Number(item.productId) === Number(productId) ? Number(item.quantity || 0) : 0);
+                    const component = item.items?.find(row => Number(row.productId) === Number(productId));
+                    return sum + (component ? Number(component.quantity) * Number(item.quantity || 0) : 0);
+                }, 0);
             }
 
             function remainingStock(productId, stock) {
@@ -637,16 +696,16 @@
                                     <strong>${item.name}</strong>
                                     <div class="text-muted" style="font-size:.78rem;">${item.code} · ${fmt(item.unitPrice)} c/u</div>
                                 </div>
-                                <button class="btn btn-ghost btn-sm" type="button" onclick="removeCartItem(${item.productId})" style="color:var(--danger);width:36px;height:36px;padding:0!important;border-radius:50%!important;flex-shrink:0;">
+                                <button class="btn btn-ghost btn-sm" type="button" onclick="removeCartItem('${item.productId}')" style="color:var(--danger);width:36px;height:36px;padding:0!important;border-radius:50%!important;flex-shrink:0;">
                                     <i class="fas fa-trash-can"></i>
                                 </button>
                             </div>
 
                             <div class="pos-cart-item-footer">
                                 <div class="pos-cart-actions">
-                                    <button class="btn btn-outline btn-sm" type="button" onclick="changeQty(${item.productId}, -1)"><i class="fas fa-minus"></i></button>
+                                    <button class="btn btn-outline btn-sm" type="button" onclick="changeQty('${item.productId}', -1)"><i class="fas fa-minus"></i></button>
                                     <span style="font-weight:800;min-width:24px;text-align:center;">${item.quantity}</span>
-                                    <button class="btn btn-outline btn-sm" type="button" onclick="changeQty(${item.productId}, 1)"><i class="fas fa-plus"></i></button>
+                                    <button class="btn btn-outline btn-sm" type="button" onclick="changeQty('${item.productId}', 1)"><i class="fas fa-plus"></i></button>
                                 </div>
                                 <span style="font-weight:800;font-size:1.05rem;color:var(--primary);">${fmt(lineTotal)}</span>
                             </div>
@@ -712,8 +771,37 @@
 
             window.addToCart = addToCart;
 
+            window.addComboToCart = comboId => {
+                if (!resolveActiveSession()) { app.toast.warning('Debe abrir caja antes de agregar combos.'); return; }
+                const combo = store.combos.list().find(item => Number(item.id) === Number(comboId) && item.active);
+                if (!combo) { app.toast.error('El combo ya no está disponible.'); return; }
+                const key = `combo-${combo.id}`;
+                const existing = cart.find(item => item.productId === key);
+                const nextQuantity = Number(existing?.quantity || 0) + 1;
+                const hasStock = combo.items.every(component => {
+                    const product = store.inventory.list().find(item => Number(item.id) === Number(component.productId));
+                    return product && remainingStock(component.productId, product.stock) >= Number(component.quantity);
+                });
+                if (!hasStock) { app.toast.warning('No hay existencias suficientes para completar este combo.'); return; }
+                if (existing) existing.quantity = nextQuantity;
+                else cart.push({ productId: key, comboId: combo.id, isCombo: true, code: `COMBO-${combo.id}`, name: combo.name, quantity: 1, unitPrice: combo.specialPrice, imageUrl: combo.imageUrl, items: combo.items });
+                renderCart();
+                openCartPanel();
+            };
+
             window.changeQty = (productId, delta) => {
-                const item = cart.find(x => Number(x.productId) === Number(productId));
+                const item = cart.find(x => String(x.productId) === String(productId));
+                if (item?.isCombo) {
+                    const newQuantity = item.quantity + delta;
+                    if (newQuantity <= 0) { removeCartItem(productId); return; }
+                    const hasStock = item.items.every(component => {
+                        const product = store.inventory.list().find(row => Number(row.id) === Number(component.productId));
+                        const usedWithoutCurrent = cartQuantity(component.productId) - (Number(component.quantity) * Number(item.quantity));
+                        return product && usedWithoutCurrent + Number(component.quantity) * newQuantity <= Number(product.stock || 0);
+                    });
+                    if (!hasStock) { app.toast.warning('La cantidad supera el stock disponible para el combo.'); return; }
+                    item.quantity = newQuantity; renderCart(); return;
+                }
                 const product = getProducts().find(x => Number(x.id) === Number(productId))
                     || store.inventory.list().find(x => Number(x.id) === Number(productId));
 
@@ -736,7 +824,7 @@
             };
 
             window.removeCartItem = (productId) => {
-                const index = cart.findIndex(x => Number(x.productId) === Number(productId));
+                const index = cart.findIndex(x => String(x.productId) === String(productId));
                 if (index >= 0) {
                     cart.splice(index, 1);
                     renderCart();
@@ -762,7 +850,11 @@
                         return;
                     }
 
-                    const declared = document.getElementById('declaredCash')?.value || 0;
+                    const field = document.getElementById('declaredCash');
+                    if (!field?.value) throw new Error('Ingrese el efectivo contado antes de cerrar la caja.');
+                    const declared = Number(field.value);
+                    const difference = declared - Number(session.expectedCash || 0);
+                    if (!window.confirm(`Confirmar cierre de caja #${session.id}\n\nEfectivo esperado: ${money(session.expectedCash)}\nEfectivo contado: ${money(declared)}\nDiferencia: ${money(difference)}\n\nEsta accion finalizara el turno.`)) return;
                     await store.pos.closeSession(session.id, declared);
 
                     app.toast.info('Caja cerrada correctamente.');
@@ -770,6 +862,17 @@
                 } catch (error) {
                     app.toast.error(error.message);
                 }
+            };
+
+            window.updateCashDifference = () => {
+                const session = resolveActiveSession();
+                const field = document.getElementById('declaredCash');
+                const output = document.getElementById('cashDifference');
+                if (!session || !output || !field?.value) return;
+                const difference = Number(field.value) - Number(session.expectedCash || 0);
+                output.textContent = `Diferencia encontrada: ${money(difference)}`;
+                output.classList.toggle('is-balanced', Math.abs(difference) < 0.01);
+                output.classList.toggle('has-difference', Math.abs(difference) >= 0.01);
             };
 
             window.togglePaymentMethod = async (id) => {
@@ -828,10 +931,11 @@
 
                         await store.pos.sell({
                             ...formData,
-                            items: cart.map(item => ({
+                            items: cart.filter(item => !item.isCombo).map(item => ({
                                 productId: item.productId,
                                 quantity: item.quantity
-                            }))
+                            })),
+                            combos: cart.filter(item => item.isCombo).map(item => ({ comboId: item.comboId, quantity: item.quantity }))
                         });
 
                         recentSales = await store.pos.recentSales();
@@ -915,7 +1019,7 @@
             }, { signal: navSignal });
 
             document.querySelectorAll('.pos-customer-input').forEach(input => {
-                input.addEventListener('change', () => applyCustomerSelection(input));
+                input.addEventListener('change', () => { applyCustomerSelection(input); renderSummary(); });
             });
 
             async function renderAll() {
@@ -938,7 +1042,7 @@
                 renderAll();
                 try {
                     await Promise.allSettled([
-                        store.refresh({ keys: ['inventory', 'customers', 'posConfig'] }),
+                        store.refresh({ keys: ['inventory', 'customers', 'posConfig', 'promotions', 'combos'], force: true }),
                         store.refreshPos()
                     ]);
                     renderAll();
