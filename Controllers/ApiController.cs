@@ -387,7 +387,7 @@ public class ApiController : Controller
         if (!IsValidEmail(request.Email))
             return BadRequest(new { message = "Ingrese un correo electrónico válido." });
 
-        var recipient = configuration["MailerSend:ContactRecipient"];
+        var recipient = configuration["Brevo:ContactRecipient"];
         if (string.IsNullOrWhiteSpace(recipient))
             return StatusCode(503, new { message = "El correo de contacto todavía no está configurado." });
 

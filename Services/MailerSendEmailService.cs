@@ -11,13 +11,13 @@ public interface IEmailService
     Task SendAsync(string toEmail, string toName, string subject, string text, string? html = null, CancellationToken cancellationToken = default);
 }
 
-public sealed class MailerSendEmailService : IEmailService
+public sealed class BrevoEmailService : IEmailService
 {
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
-    private readonly ILogger<MailerSendEmailService> _logger;
+    private readonly ILogger<BrevoEmailService> _logger;
 
-    public MailerSendEmailService(HttpClient httpClient, IConfiguration configuration, ILogger<MailerSendEmailService> logger)
+    public BrevoEmailService(HttpClient httpClient, IConfiguration configuration, ILogger<BrevoEmailService> logger)
     {
         _httpClient = httpClient;
         _configuration = configuration;
@@ -25,46 +25,46 @@ public sealed class MailerSendEmailService : IEmailService
     }
 
     public bool IsConfigured =>
-        !string.IsNullOrWhiteSpace(_configuration["MailerSend:ApiToken"]) &&
-        !string.IsNullOrWhiteSpace(_configuration["MailerSend:FromEmail"]);
+        !string.IsNullOrWhiteSpace(_configuration["Brevo:ApiKey"]) &&
+        !string.IsNullOrWhiteSpace(_configuration["Brevo:FromEmail"]);
 
     public async Task SendAsync(string toEmail, string toName, string subject, string text, string? html = null, CancellationToken cancellationToken = default)
     {
-        var apiToken = _configuration["MailerSend:ApiToken"];
-        var fromEmail = _configuration["MailerSend:FromEmail"];
-        var fromName = _configuration["MailerSend:FromName"] ?? "Reposteria Patri";
+        var apiToken = _configuration["Brevo:ApiKey"];
+        var fromEmail = _configuration["Brevo:FromEmail"];
+        var fromName = _configuration["Brevo:FromName"] ?? "Reposteria Patri";
 
         if (string.IsNullOrWhiteSpace(apiToken) || string.IsNullOrWhiteSpace(fromEmail))
             throw new InvalidOperationException("El servicio de correo todavía no está configurado.");
 
         var payload = new
         {
-            from = new { email = fromEmail.Trim(), name = fromName.Trim() },
+            sender = new { email = fromEmail.Trim(), name = fromName.Trim() },
             to = new[] { new { email = toEmail.Trim(), name = string.IsNullOrWhiteSpace(toName) ? toEmail.Trim() : toName.Trim() } },
             subject = subject.Trim(),
-            text = text.Trim(),
-            html = string.IsNullOrWhiteSpace(html) ? BuildHtml(subject, text) : html
+            textContent = text.Trim(),
+            htmlContent = string.IsNullOrWhiteSpace(html) ? BuildHtml(subject, text) : html
         };
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "email");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiToken.Trim());
+        using var request = new HttpRequestMessage(HttpMethod.Post, "smtp/email");
+        request.Headers.Add("api-key", apiToken.Trim());
         request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
         using var response = await _httpClient.SendAsync(request, cancellationToken);
         if (response.IsSuccessStatusCode)
         {
-            _logger.LogInformation("Correo aceptado por MailerSend para {Recipient}", toEmail);
+            _logger.LogInformation("Correo aceptado por Brevo para {Recipient}", toEmail);
             return;
         }
 
         var providerMessage = await response.Content.ReadAsStringAsync(cancellationToken);
-        _logger.LogError("MailerSend rechazó el correo para {Recipient}. Estado {Status}: {Message}", toEmail, response.StatusCode, providerMessage);
+        _logger.LogError("Brevo rechazó el correo para {Recipient}. Estado {Status}: {Message}", toEmail, response.StatusCode, providerMessage);
         throw new InvalidOperationException(response.StatusCode switch
         {
-            HttpStatusCode.Unauthorized => "MailerSend rechazó las credenciales configuradas.",
-            HttpStatusCode.UnprocessableEntity => "MailerSend rechazó el remitente o el destinatario. Verifique el dominio de envío.",
-            HttpStatusCode.TooManyRequests => "MailerSend alcanzó temporalmente el límite de envíos.",
-            _ => "No fue posible enviar el correo mediante MailerSend."
+            HttpStatusCode.Unauthorized => "Brevo rechazó las credenciales configuradas.",
+            HttpStatusCode.BadRequest => "Brevo rechazó el remitente o el contenido del correo.",
+            HttpStatusCode.TooManyRequests => "Brevo alcanzó temporalmente el límite de envíos.",
+            _ => "No fue posible enviar el correo mediante Brevo."
         });
     }
 

@@ -91,9 +91,9 @@ builder.Services.AddHttpClient();
 builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 builder.Services.AddScoped<SqlStore>();
 builder.Services.AddScoped<ReportExportService>();
-builder.Services.AddHttpClient<IEmailService, MailerSendEmailService>(client =>
+builder.Services.AddHttpClient<IEmailService, BrevoEmailService>(client =>
 {
-    client.BaseAddress = new Uri("https://api.mailersend.com/v1/");
+    client.BaseAddress = new Uri("https://api.brevo.com/v3/");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 builder.Services.AddHttpClient("Nominatim", client =>
