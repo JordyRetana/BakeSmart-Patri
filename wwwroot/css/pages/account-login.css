@@ -20,6 +20,16 @@ body.dark .password-card .login-title, body.dark .password-card .input-label { c
 body.dark .password-card .login-subtitle { color:#c8c4d7 !important; }
 body.dark .password-card .input { color:#fff !important; background:#101424 !important; border-color:#62577b !important; }
 
+/* Pantallas de recuperación: mantener el texto legible sobre el panel de color. */
+.login-card.password-card { display:grid !important; grid-template-columns:1fr 1.12fr !important; width:min(100%,980px) !important; min-height:390px !important; padding:0 !important; }
+.password-card .login-hero { min-height:390px !important; padding:2.5rem !important; place-items:center !important; background:linear-gradient(145deg,#6f35df,#c1438a) !important; }
+.password-card .login-hero > * { position:relative; z-index:2; }
+.password-card .login-hero .login-title { color:#fff !important; text-shadow:none !important; }
+.password-card .login-hero .login-subtitle { color:rgba(255,255,255,.88) !important; }
+.password-card .login-form { padding:2.5rem !important; background:#fff !important; }
+body.dark .password-card .login-form { background:#171b2b !important; }
+@media (max-width:760px) { .login-card.password-card { grid-template-columns:1fr !important; } .password-card .login-hero { min-height:250px !important; } .password-card .login-form { padding:1.5rem !important; } }
+
 .login-card {
     width: 100% !important;
     min-height: 690px;
