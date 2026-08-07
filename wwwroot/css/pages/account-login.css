@@ -7,6 +7,19 @@
     align-content: center !important;
 }
 
+.password-page-shell { min-height:calc(100vh - 150px); padding:clamp(2rem,6vw,5rem) 1rem; }
+.password-card { width:min(100%,560px); margin:auto; display:block; padding:clamp(1.5rem,4vw,2.75rem); background:#fff; color:#20243a; }
+.password-card .login-hero { text-align:center; }
+.password-card .login-title { color:#20243a !important; font-size:clamp(1.65rem,4vw,2.2rem) !important; line-height:1.18; }
+.password-card .login-subtitle { color:#667085 !important; font-size:1rem; line-height:1.6; }
+.password-card .input-label { color:#2d3148 !important; font-weight:800; }
+.password-card .input { color:#20243a !important; background:#fff !important; border:2px solid #ddd5eb !important; }
+.password-card .input::placeholder { color:#8b8fa3 !important; }
+body.dark .password-card { background:#171b2b !important; color:#f7f5ff !important; border-color:#51476b !important; }
+body.dark .password-card .login-title, body.dark .password-card .input-label { color:#f7f5ff !important; }
+body.dark .password-card .login-subtitle { color:#c8c4d7 !important; }
+body.dark .password-card .input { color:#fff !important; background:#101424 !important; border-color:#62577b !important; }
+
 .login-card {
     width: 100% !important;
     min-height: 690px;
