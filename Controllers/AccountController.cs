@@ -284,12 +284,12 @@ namespace BakeSmartPatri.Controllers
                 }
                 catch (InvalidOperationException ex)
                 {
-                    TempData["ToastError"] = ex.Message;
-                    return RedirectToAction(nameof(ForgotPassword));
+                    ViewData["ResetError"] = ex.Message;
+                    return View();
                 }
             }
-            TempData["ToastSuccess"] = "Si el correo está registrado, recibirá un enlace válido durante 30 minutos.";
-            return RedirectToAction(nameof(Login));
+            ViewData["ResetMessage"] = "Si el correo está registrado, recibirá un enlace válido durante 30 minutos. Revise también Spam y Promociones.";
+            return View();
         }
 
         [HttpGet]

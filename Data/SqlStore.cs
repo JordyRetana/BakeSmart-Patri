@@ -4244,6 +4244,56 @@ public sealed class SqlStore
         email = email.Trim().ToLowerInvariant();
         var userTable = UseMySql ? "Usuarios" : "dbo.Usuarios";
         var exists = Convert.ToInt32(await ScalarAsync($"SELECT COUNT(1) FROM {userTable} WHERE LOWER(Email) = LOWER(@Email) AND IsActive = 1", new SqlParameter("@Email", email)));
+        if (exists == 0)
+        {
+            var anyUser = Convert.ToInt32(await ScalarAsync(
+                $"SELECT COUNT(1) FROM {userTable} WHERE LOWER(Email) = LOWER(@Email)",
+                new SqlParameter("@Email", email)));
+            if (anyUser > 0)
+                return null;
+
+            var customerTable = UseMySql ? "Clientes" : "dbo.Clientes";
+            var customerSql = UseMySql
+                ? $"SELECT FullName, Phone FROM {customerTable} WHERE LOWER(Email) = LOWER(@Email) ORDER BY CustomerId LIMIT 1;"
+                : $"SELECT TOP 1 FullName, Phone FROM {customerTable} WHERE LOWER(Email) = LOWER(@Email) ORDER BY CustomerId;";
+            var customer = (await QueryAsync(customerSql, reader => new
+            {
+                FullName = reader.GetString("FullName"),
+                Phone = reader.GetNullableString("Phone")
+            }, new SqlParameter("@Email", email))).FirstOrDefault();
+
+            if (customer is not null)
+            {
+                var nameParts = customer.FullName.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var firstName = nameParts.ElementAtOrDefault(0) ?? "Cliente";
+                var lastName = nameParts.ElementAtOrDefault(1) ?? "Repostería Patri";
+                var temporaryPasswordHash = HashPassword(Convert.ToBase64String(RandomNumberGenerator.GetBytes(48)));
+                var roleTable = UseMySql ? "Roles" : "dbo.Roles";
+                var roleId = Convert.ToInt32(await ScalarAsync(
+                    $"SELECT RoleId FROM {roleTable} WHERE RoleName = 'Cliente'",
+                    Array.Empty<SqlParameter>()));
+
+                var userId = UseMySql
+                    ? Convert.ToInt32(await ScalarAsync("""
+                        INSERT INTO Usuarios (RoleId, FirstName, LastName, Email, Phone, PasswordHash, AddressLine, IsActive, CreatedAt)
+                        VALUES (@RoleId, @FirstName, @LastName, @Email, @Phone, @PasswordHash, NULL, 1, UTC_TIMESTAMP());
+                        SELECT LAST_INSERT_ID();
+                        """, new SqlParameter("@RoleId", roleId), new SqlParameter("@FirstName", firstName),
+                        new SqlParameter("@LastName", lastName), new SqlParameter("@Email", email),
+                        new SqlParameter("@Phone", (object?)customer.Phone ?? DBNull.Value), new SqlParameter("@PasswordHash", temporaryPasswordHash)))
+                    : Convert.ToInt32(await ScalarAsync("""
+                        INSERT INTO dbo.Usuarios (RoleId, FirstName, LastName, Email, Phone, PasswordHash, AddressLine, IsActive, CreatedAt)
+                        OUTPUT INSERTED.UserId
+                        VALUES (@RoleId, @FirstName, @LastName, @Email, @Phone, @PasswordHash, NULL, 1, SYSUTCDATETIME());
+                        """, new SqlParameter("@RoleId", roleId), new SqlParameter("@FirstName", firstName),
+                        new SqlParameter("@LastName", lastName), new SqlParameter("@Email", email),
+                        new SqlParameter("@Phone", (object?)customer.Phone ?? DBNull.Value), new SqlParameter("@PasswordHash", temporaryPasswordHash)));
+
+                await ExecuteAsync($"UPDATE {customerTable} SET UserId = @UserId WHERE LOWER(Email) = LOWER(@Email) AND UserId IS NULL;",
+                    new SqlParameter("@UserId", userId), new SqlParameter("@Email", email));
+                exists = 1;
+            }
+        }
         if (exists == 0) return null;
 
         var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
