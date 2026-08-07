@@ -2353,7 +2353,7 @@ public sealed class SqlStore
 
         await EnsureOrderStatusAsync("Pendiente produccion");
         await UpdateOrderStatusAsync(orderId, "Pendiente produccion", userEmail);
-        await AddAuditLogAsync("ENVIAR_A_PRODUCCION", $"Pedido #{orderId} enviado a la cola de Produccion", userEmail);
+        try { await AddAuditLogAsync("ENVIAR_A_PRODUCCION", $"Pedido #{orderId} enviado a la cola de Produccion", userEmail); } catch { }
         return "Pendiente produccion";
     }
 
@@ -2440,7 +2440,11 @@ public sealed class SqlStore
                 INNER JOIN EstadosPedido os ON LOWER(os.Name) = LOWER(@Status)
                 SET o.OrderStatusId = os.OrderStatusId
                 WHERE o.OrderId = @OrderId;
+                """,
+                new SqlParameter("@OrderId", orderId),
+                new SqlParameter("@Status", status));
 
+            await ExecuteAsync("""
                 INSERT INTO EventosSeguimientoPedido (OrderId, OrderStatusId, Detail, CreatedAt)
                 SELECT @OrderId, os.OrderStatusId, CONCAT('Estado actualizado a ', os.Name), UTC_TIMESTAMP()
                 FROM EstadosPedido os
@@ -2451,7 +2455,7 @@ public sealed class SqlStore
                 new SqlParameter("@Status", status));
 
             var normalizedMySql = RemoveDiacritics(status).ToUpperInvariant();
-            await AddAuditLogAsync(normalizedMySql.Contains("ENTREGADO") ? "ENTREGA_PEDIDO" : "ACTUALIZAR_ESTADO_PEDIDO", $"Pedido #{orderId} actualizado a {status}", userEmail);
+            try { await AddAuditLogAsync(normalizedMySql.Contains("ENTREGADO") ? "ENTREGA_PEDIDO" : "ACTUALIZAR_ESTADO_PEDIDO", $"Pedido #{orderId} actualizado a {status}", userEmail); } catch { }
             return;
         }
 

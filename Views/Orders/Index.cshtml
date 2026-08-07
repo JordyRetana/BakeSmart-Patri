@@ -362,8 +362,10 @@
             headers: { 'Content-Type': 'application/json' }
         });
         if (!response.ok) {
-            const error = await response.json().catch(() => null);
-            throw new Error(error?.message || 'No se pudo enviar el pedido a Producción.');
+            const text = await response.text();
+            let message = text || 'No se pudo enviar el pedido a Producción.';
+            try { message = JSON.parse(text)?.message || message; } catch { }
+            throw new Error(message);
         }
         await loadOrders();
         activeOrderId = id;
