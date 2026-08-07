@@ -2444,15 +2444,22 @@ public sealed class SqlStore
                 new SqlParameter("@OrderId", orderId),
                 new SqlParameter("@Status", status));
 
-            await ExecuteAsync("""
-                INSERT INTO EventosSeguimientoPedido (OrderId, OrderStatusId, Detail, CreatedAt)
-                SELECT @OrderId, os.OrderStatusId, CONCAT('Estado actualizado a ', os.Name), UTC_TIMESTAMP()
-                FROM EstadosPedido os
-                WHERE LOWER(os.Name) = LOWER(@Status)
-                  AND EXISTS (SELECT 1 FROM Pedidos WHERE OrderId = @OrderId);
-                """,
-                new SqlParameter("@OrderId", orderId),
-                new SqlParameter("@Status", status));
+            // Algunas instalaciones antiguas aun no tienen la tabla de seguimiento.
+            // El registro del evento es complementario y no debe revertir el cambio
+            // operativo del pedido ni responder 500 despues de actualizarlo.
+            try
+            {
+                await ExecuteAsync("""
+                    INSERT INTO EventosSeguimientoPedido (OrderId, OrderStatusId, Detail, CreatedAt)
+                    SELECT @OrderId, os.OrderStatusId, CONCAT('Estado actualizado a ', os.Name), UTC_TIMESTAMP()
+                    FROM EstadosPedido os
+                    WHERE LOWER(os.Name) = LOWER(@Status)
+                      AND EXISTS (SELECT 1 FROM Pedidos WHERE OrderId = @OrderId);
+                    """,
+                    new SqlParameter("@OrderId", orderId),
+                    new SqlParameter("@Status", status));
+            }
+            catch { }
 
             var normalizedMySql = RemoveDiacritics(status).ToUpperInvariant();
             try { await AddAuditLogAsync(normalizedMySql.Contains("ENTREGADO") ? "ENTREGA_PEDIDO" : "ACTUALIZAR_ESTADO_PEDIDO", $"Pedido #{orderId} actualizado a {status}", userEmail); } catch { }

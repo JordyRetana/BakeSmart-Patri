@@ -84,6 +84,14 @@ public class ApiController : Controller
         {
             return BadRequest(new { message = ex.Message });
         }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                message = "No se pudo enviar el pedido a Produccion.",
+                detail = ex.GetBaseException().Message
+            });
+        }
     }
 
     [HttpPost("orders/{id:int}/advance-delivery")]
