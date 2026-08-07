@@ -341,18 +341,18 @@ public class ApiController : Controller
     {
         var isFrequent = await _sqlStore.MarkCustomerFrequentAsync(id, CurrentUserEmail);
         var emailSent = false;
-        if (isFrequent)
+        var recipient = (await _sqlStore.MarketingRecipientsAsync(new[] { id })).FirstOrDefault();
+        if (recipient is not null)
         {
-            var recipient = (await _sqlStore.MarketingRecipientsAsync(new[] { id })).FirstOrDefault();
-            if (recipient is not null)
-            {
-                await _emailService.SendAsync(
-                    recipient.Email,
-                    recipient.FullName,
-                    "Bienvenido a clientes frecuentes de Repostería Patri",
-                    $"Hola {recipient.FullName}, ahora formas parte de nuestros clientes frecuentes. Recibirás promociones y beneficios especiales de Repostería Patri.");
-                emailSent = true;
-            }
+            var subject = isFrequent
+                ? "Bienvenido a clientes frecuentes de Repostería Patri"
+                : "Actualización de cliente frecuente de Repostería Patri";
+            var message = isFrequent
+                ? $"Hola {recipient.FullName}, ahora formas parte de nuestros clientes frecuentes. Recibirás promociones y beneficios especiales de Repostería Patri."
+                : $"Hola {recipient.FullName}, te confirmamos que tu estado de cliente frecuente fue desactivado. Puedes volver a formar parte del programa cuando se active nuevamente.";
+
+            await _emailService.SendAsync(recipient.Email, recipient.FullName, subject, message);
+            emailSent = true;
         }
 
         return Ok(new { ok = true, frequent = isFrequent, emailSent });
