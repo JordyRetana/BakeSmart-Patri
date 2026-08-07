@@ -290,24 +290,17 @@ public sealed class SqlStore
         // Validar duplicado de código
         // Ejecutar estas consultas independientes en paralelo evita varias esperas
         // consecutivas contra la base de datos remota.
-        var codeTask = input.Id is null
-            ? CodeExistsAsync(input.Code.Trim())
-            : CodeExistsExcludingAsync(input.Code.Trim(), input.Id.Value);
-        var typeTask = EnsureProductTypeAsync(input.Type);
-        var unitTask = EnsureUnitMeasureAsync(input.Unit);
-        var categoryTask = EnsureProductCategoryAsync(input.Category, input.Subcategory);
-        var locationTask = EnsureInventoryLocationAsync();
-
-        await Task.WhenAll(codeTask, typeTask, unitTask, categoryTask, locationTask);
-        var existingCode = await codeTask;
+        var existingCode = input.Id is null
+            ? await CodeExistsAsync(input.Code.Trim())
+            : await CodeExistsExcludingAsync(input.Code.Trim(), input.Id.Value);
 
         if (existingCode)
             throw new InvalidOperationException($"Ya existe un producto con el código '{input.Code.Trim()}'.");
 
-        var typeId = await typeTask;
-        var unitId = await unitTask;
-        var categoryId = await categoryTask;
-        var locationId = await locationTask;
+        var typeId = await EnsureProductTypeAsync(input.Type);
+        var unitId = await EnsureUnitMeasureAsync(input.Unit);
+        var categoryId = await EnsureProductCategoryAsync(input.Category, input.Subcategory);
+        var locationId = await EnsureInventoryLocationAsync();
 
         await using var connection = CreateConnection();
         await connection.OpenAsync();
@@ -394,7 +387,8 @@ public sealed class SqlStore
             }
 
             await SetInventoryBalanceAsync(connection, transaction, productId, locationId, input.Stock);
-            await AddInventoryMovementAsync(connection, transaction, productId, locationId, "AJUSTE", Math.Max(input.Stock, 0.01m), "Registro/actualizacion de producto");
+            if (input.Stock > 0)
+                await AddInventoryMovementAsync(connection, transaction, productId, locationId, "AJUSTE", input.Stock, "Registro/actualizacion de producto");
             if (!string.IsNullOrWhiteSpace(input.ImageUrl))
                 await SavePrimaryProductImageAsync(connection, transaction, productId, input.ImageUrl.Trim(), input.Description.Trim());
 

@@ -151,6 +151,12 @@ public class ApiController : Controller
         {
             return BadRequest(new { message = ex.Message });
         }
+        catch (Exception ex)
+        {
+            HttpContext.RequestServices.GetRequiredService<ILogger<ApiController>>()
+                .LogError(ex, "No se pudo guardar el producto de inventario {Code}", request.Code);
+            return StatusCode(500, new { message = "No se pudo guardar el producto. Verifique el código y la categoría." });
+        }
     }
 
     [HttpPost("inventory/{id:int}/toggle")]
