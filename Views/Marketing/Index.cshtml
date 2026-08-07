@@ -56,14 +56,13 @@
                     <span class="marketing-eyebrow">Clientes</span>
                     <h3 class="marketing-panel-title">Base de clientes</h3>
                 </div>
-                <span class="badge badge-info">Seleccione destinatarios para campañas</span>
+                <span class="badge badge-info">Envío a clientes con correo registrado</span>
             </div>
 
             <div class="table-container marketing-table-wrap">
                 <table class="table marketing-table marketing-customers-table">
                     <thead>
                         <tr>
-                            <th>Enviar</th>
                             <th>Cliente</th>
                             <th>Contacto</th>
                             <th>Total gastado</th>
@@ -144,7 +143,7 @@
                         <div>
                             <span class="marketing-eyebrow">Campaña</span>
                             <h3 class="marketing-panel-title">Comunicación a clientes</h3>
-                            <p class="text-muted" style="margin:.25rem 0 0;">Se enviará solo a los clientes marcados en la tabla.</p>
+                            <p class="text-muted" style="margin:.25rem 0 0;">Se enviará a todos los clientes que tengan un correo registrado.</p>
                         </div>
                     </div>
 
@@ -154,7 +153,7 @@
                     </div>
                     <div class="marketing-form-block marketing-form-full">
                         <label>Mensaje</label>
-                        <textarea class="form-control" name="message" rows="4" placeholder="Mensaje para clientes seleccionados" required></textarea>
+                        <textarea class="form-control" name="message" rows="4" placeholder="Mensaje para los clientes registrados" required></textarea>
                     </div>
                     <button class="btn btn-outline marketing-submit-btn" type="submit">
                         <i class="fas fa-paper-plane"></i>
@@ -202,7 +201,6 @@
 
                 document.getElementById('marketingCustomers').innerHTML = customers.map(c => `
                     <tr>
-                        <td><input type="checkbox" class="marketing-recipient" value="${c.id}" /></td>
                         <td>
                             <div class="marketing-customer-cell">
                                 <span class="marketing-customer-avatar"><i class="fas fa-user"></i></span>
@@ -229,7 +227,7 @@
                     </tr>
                 `).join('') || `
                     <tr>
-                        <td colspan="6" class="text-center text-muted">No se encontraron clientes.</td>
+                        <td colspan="5" class="text-center text-muted">No se encontraron clientes.</td>
                     </tr>
                 `;
 
@@ -292,17 +290,13 @@
                 e.preventDefault();
 
                 try {
-                    const selected = [...document.querySelectorAll('.marketing-recipient:checked')]
-                        .map(input => Number(input.value));
-
                     await BakeSmartStore.marketing.sendCampaign({
                         ...Object.fromEntries(new FormData(e.target).entries()),
-                        customerIds: selected
+                        customerIds: []
                     });
 
                     e.target.reset();
-                    document.querySelectorAll('.marketing-recipient:checked').forEach(input => input.checked = false);
-                    app.toast.success('Comunicación enviada y registrada en bitácora.');
+                    app.toast.success('Comunicación enviada a todos los clientes con correo.');
                 } catch (error) {
                     app.toast.error(error.message);
                 }

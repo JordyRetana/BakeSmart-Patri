@@ -1903,7 +1903,7 @@ public sealed class SqlStore
         });
     }
 
-    public async Task MarkCustomerFrequentAsync(int customerId, string? userEmail = null)
+    public async Task<bool> MarkCustomerFrequentAsync(int customerId, string? userEmail = null)
     {
         if (UseMySql)
         {
@@ -1920,8 +1920,11 @@ public sealed class SqlStore
                 """,
                 new SqlParameter("@CustomerId", customerId));
 
+            var mysqlIsFrequent = Convert.ToBoolean(await ScalarAsync(
+                "SELECT IsFrequent FROM Clientes WHERE CustomerId = @CustomerId;",
+                new SqlParameter("@CustomerId", customerId)));
             await AddAuditLogAsync("CREAR_CLIENTE_FRECUENTE", $"Cliente ID {customerId} cambio marca frecuente", userEmail);
-            return;
+            return mysqlIsFrequent;
         }
 
         const string sql = """
@@ -1934,7 +1937,11 @@ public sealed class SqlStore
             """;
 
         await ExecuteAsync(sql, new SqlParameter("@CustomerId", customerId));
+        var isFrequent = Convert.ToBoolean(await ScalarAsync(
+            "SELECT IsFrequent FROM dbo.Clientes WHERE CustomerId = @CustomerId;",
+            new SqlParameter("@CustomerId", customerId)));
         await AddAuditLogAsync("CREAR_CLIENTE_FRECUENTE", $"Cliente ID {customerId} cambio marca frecuente", userEmail);
+        return isFrequent;
     }
 
     public async Task<int> SavePromotionAsync(PromotionInput input, string? userEmail = null)
@@ -2244,17 +2251,17 @@ public sealed class SqlStore
     public async Task<IReadOnlyList<MarketingRecipient>> MarketingRecipientsAsync(IEnumerable<int> customerIds)
     {
         var ids = customerIds.Where(id => id > 0).Distinct().ToArray();
-        if (ids.Length == 0) return Array.Empty<MarketingRecipient>();
-
-        var placeholders = string.Join(",", ids.Select((_, index) => $"@Id{index}"));
         var table = UseMySql ? "Clientes" : "dbo.Clientes";
+        var filter = ids.Length == 0
+            ? string.Empty
+            : $"AND CustomerId IN ({string.Join(",", ids.Select((_, index) => $"@Id{index}"))})";
         var parameters = ids.Select((id, index) => new SqlParameter($"@Id{index}", id)).ToArray();
         var rows = await QueryAsync($"""
             SELECT CustomerId, FullName, Email
             FROM {table}
-            WHERE CustomerId IN ({placeholders})
-              AND Email IS NOT NULL
-              AND TRIM(Email) <> '';
+            WHERE Email IS NOT NULL
+              AND TRIM(Email) <> ''
+              {filter};
             """, reader => new MarketingRecipient(
                 reader.GetInt32("CustomerId"),
                 reader.GetString("FullName"),

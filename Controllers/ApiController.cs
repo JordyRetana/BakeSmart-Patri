@@ -339,8 +339,21 @@ public class ApiController : Controller
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> ToggleFrequentCustomer(int id)
     {
-        await _sqlStore.MarkCustomerFrequentAsync(id, CurrentUserEmail);
-        return Ok(new { ok = true });
+        var isFrequent = await _sqlStore.MarkCustomerFrequentAsync(id, CurrentUserEmail);
+        if (isFrequent)
+        {
+            var recipient = (await _sqlStore.MarketingRecipientsAsync(new[] { id })).FirstOrDefault();
+            if (recipient is not null)
+            {
+                await _emailService.SendAsync(
+                    recipient.Email,
+                    recipient.FullName,
+                    "Bienvenido a clientes frecuentes de Repostería Patri",
+                    $"Hola {recipient.FullName}, ahora formas parte de nuestros clientes frecuentes. Recibirás promociones y beneficios especiales de Repostería Patri.");
+            }
+        }
+
+        return Ok(new { ok = true, frequent = isFrequent, emailSent = isFrequent });
     }
 
     [HttpPost("marketing/campaigns")]
@@ -351,7 +364,7 @@ public class ApiController : Controller
         {
             var recipients = await _sqlStore.MarketingRecipientsAsync(request.CustomerIds ?? Array.Empty<int>());
             if (recipients.Count == 0)
-                return BadRequest(new { message = "Los clientes seleccionados no tienen un correo válido." });
+                return BadRequest(new { message = "No hay clientes registrados con un correo válido." });
             if (recipients.Count > 50)
                 return BadRequest(new { message = "Puede enviar una campaña a un máximo de 50 clientes por operación." });
 
@@ -364,7 +377,8 @@ public class ApiController : Controller
                     request.Message);
             }
 
-            var id = await _sqlStore.SendMarketingCampaignAsync(request, CurrentUserEmail);
+            var campaign = request with { CustomerIds = recipients.Select(recipient => recipient.CustomerId).ToArray() };
+            var id = await _sqlStore.SendMarketingCampaignAsync(campaign, CurrentUserEmail);
             return Ok(new { ok = true, id, sent = recipients.Count });
         }
         catch (InvalidOperationException ex)
