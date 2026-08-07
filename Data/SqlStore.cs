@@ -287,7 +287,7 @@ public sealed class SqlStore
 
     public async Task<int> SaveInventoryProductAsync(InventoryProductInput input, string? userEmail = null)
     {
-        // Validar duplicado de código
+        // Validar duplicado de cÃ³digo
         // Ejecutar estas consultas independientes en paralelo evita varias esperas
         // consecutivas contra la base de datos remota.
         var existingCode = input.Id is null
@@ -295,7 +295,7 @@ public sealed class SqlStore
             : await CodeExistsExcludingAsync(input.Code.Trim(), input.Id.Value);
 
         if (existingCode)
-            throw new InvalidOperationException($"Ya existe un producto con el código '{input.Code.Trim()}'.");
+            throw new InvalidOperationException($"Ya existe un producto con el cÃ³digo '{input.Code.Trim()}'.");
 
         var typeId = await EnsureProductTypeAsync(input.Type);
         var unitId = await EnsureUnitMeasureAsync(input.Unit);
@@ -410,7 +410,7 @@ public sealed class SqlStore
             throw;
         }
 
-        // La auditoría no debe convertir un guardado confirmado en un error visible.
+        // La auditorÃ­a no debe convertir un guardado confirmado en un error visible.
         try
         {
             var action = input.Id is > 0 ? "actualizado" : "creado";
@@ -944,7 +944,7 @@ public sealed class SqlStore
                     ? "SELECT COUNT(1) FROM Productos p INNER JOIN TiposProducto t ON t.ProductTypeId=p.ProductTypeId WHERE p.ProductId=@ProductId AND p.IsActive=1 AND t.Name='Producto terminado';"
                     : "SELECT COUNT(1) FROM dbo.Productos p INNER JOIN dbo.TiposProducto t ON t.ProductTypeId=p.ProductTypeId WHERE p.ProductId=@ProductId AND p.IsActive=1 AND t.Name=N'Producto terminado';";
                 if (Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, validSql, new SqlParameter("@ProductId", item.ProductId))) == 0)
-                    throw new InvalidOperationException("Uno de los productos seleccionados no está disponible para venta.");
+                    throw new InvalidOperationException("Uno de los productos seleccionados no estÃ¡ disponible para venta.");
             }
 
             int comboId;
@@ -979,7 +979,7 @@ public sealed class SqlStore
         await EnsureCommerceSchemaAsync();
         var sql = UseMySql ? "UPDATE Combos SET IsActive=CASE WHEN IsActive=1 THEN 0 ELSE 1 END WHERE ComboId=@Id;" : "UPDATE dbo.Combos SET IsActive=CASE WHEN IsActive=1 THEN 0 ELSE 1 END WHERE ComboId=@Id;";
         await ExecuteAsync(sql, new SqlParameter("@Id", id));
-        await AddAuditLogAsync("CONFIGURAR_COMBO", $"Combo #{id} cambió de estado", userEmail);
+        await AddAuditLogAsync("CONFIGURAR_COMBO", $"Combo #{id} cambiÃ³ de estado", userEmail);
     }
 
     public async Task DeleteComboAsync(int id, string? userEmail = null)
@@ -1466,10 +1466,10 @@ public sealed class SqlStore
         {
             await ExecuteAsync("""
                 INSERT INTO Roles (RoleName, Description, IsSystemRole)
-                SELECT 'Cajero', 'Gestión de caja, ventas y pedidos de mostrador', 1
+                SELECT 'Cajero', 'GestiÃ³n de caja, ventas y pedidos de mostrador', 1
                 WHERE NOT EXISTS (SELECT 1 FROM Roles WHERE RoleName = 'Cajero');
                 INSERT INTO Roles (RoleName, Description, IsSystemRole)
-                SELECT 'Repostero', 'Producción, recetas e inventario operativo', 1
+                SELECT 'Repostero', 'ProducciÃ³n, recetas e inventario operativo', 1
                 WHERE NOT EXISTS (SELECT 1 FROM Roles WHERE RoleName = 'Repostero');
                 INSERT INTO Roles (RoleName, Description, IsSystemRole)
                 SELECT 'Supervisor', 'Seguimiento operativo, reportes y control de tienda', 1
@@ -1499,11 +1499,11 @@ public sealed class SqlStore
         const string sql = """
             IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'Cajero')
                 INSERT INTO dbo.Roles (RoleName, Description, IsSystemRole)
-                VALUES (N'Cajero', N'Gestión de caja, ventas y pedidos de mostrador', 1);
+                VALUES (N'Cajero', N'GestiÃ³n de caja, ventas y pedidos de mostrador', 1);
 
             IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'Repostero')
                 INSERT INTO dbo.Roles (RoleName, Description, IsSystemRole)
-                VALUES (N'Repostero', N'Producción, recetas e inventario operativo', 1);
+                VALUES (N'Repostero', N'ProducciÃ³n, recetas e inventario operativo', 1);
 
             IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'Supervisor')
                 INSERT INTO dbo.Roles (RoleName, Description, IsSystemRole)
@@ -1539,75 +1539,75 @@ public sealed class SqlStore
         if (normalized.Contains("admin"))
             return new[]
             {
-                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
-                "Reportes", "Bitácora", "Configuración", "Usuarios", "Roles",
-                "Contabilidad", "Marketing", "Catálogo", "Perfil"
+                "Dashboard", "Pedidos", "ProducciÃ³n", "Inventario", "Punto de venta",
+                "Reportes", "BitÃ¡cora", "ConfiguraciÃ³n", "Usuarios", "Roles",
+                "Contabilidad", "Marketing", "CatÃ¡logo", "Perfil"
             };
 
         if (normalized.Contains("staff"))
             return new[]
             {
-                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
-                "Bitácora", "Configuración", "Catálogo", "Perfil"
+                "Dashboard", "Pedidos", "ProducciÃ³n", "Inventario", "Punto de venta",
+                "BitÃ¡cora", "ConfiguraciÃ³n", "CatÃ¡logo", "Perfil"
             };
 
         if (normalized.Contains("super"))
             return new[]
             {
-                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
-                "Reportes", "Bitácora", "Contabilidad", "Marketing", "Perfil"
+                "Dashboard", "Pedidos", "ProducciÃ³n", "Inventario", "Punto de venta",
+                "Reportes", "BitÃ¡cora", "Contabilidad", "Marketing", "Perfil"
             };
 
         if (normalized.Contains("caj"))
-            return new[] { "Dashboard", "Pedidos", "Punto de venta", "Catálogo", "Perfil" };
+            return new[] { "Dashboard", "Pedidos", "Punto de venta", "CatÃ¡logo", "Perfil" };
 
         if (normalized.Contains("repost"))
-            return new[] { "Dashboard", "Producción", "Inventario", "Pedidos", "Perfil" };
+            return new[] { "Dashboard", "ProducciÃ³n", "Inventario", "Pedidos", "Perfil" };
 
         if (normalized.Contains("cliente"))
-            return new[] { "Catálogo", "Pedido rápido", "Mis pedidos", "Seguimiento", "Perfil" };
+            return new[] { "CatÃ¡logo", "Pedido rÃ¡pido", "Mis pedidos", "Seguimiento", "Perfil" };
 
         return roleName switch
         {
             "Admin" => new[]
             {
-                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
-                "Reportes", "Bitácora", "Configuración", "Usuarios", "Roles",
-                "Contabilidad", "Marketing", "Catálogo", "Perfil"
+                "Dashboard", "Pedidos", "ProducciÃ³n", "Inventario", "Punto de venta",
+                "Reportes", "BitÃ¡cora", "ConfiguraciÃ³n", "Usuarios", "Roles",
+                "Contabilidad", "Marketing", "CatÃ¡logo", "Perfil"
             },
             "Staff" => new[]
             {
-                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
-                "Bitácora", "Configuración", "Catálogo", "Perfil"
+                "Dashboard", "Pedidos", "ProducciÃ³n", "Inventario", "Punto de venta",
+                "BitÃ¡cora", "ConfiguraciÃ³n", "CatÃ¡logo", "Perfil"
             },
             "Supervisor" => new[]
             {
-                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
-                "Reportes", "Bitácora", "Contabilidad", "Marketing", "Perfil"
+                "Dashboard", "Pedidos", "ProducciÃ³n", "Inventario", "Punto de venta",
+                "Reportes", "BitÃ¡cora", "Contabilidad", "Marketing", "Perfil"
             },
             "Cajero" => new[]
             {
-                "Dashboard", "Pedidos", "Punto de venta", "Catálogo", "Perfil"
+                "Dashboard", "Pedidos", "Punto de venta", "CatÃ¡logo", "Perfil"
             },
             "Repostero" => new[]
             {
-                "Dashboard", "Producción", "Inventario", "Pedidos", "Perfil"
+                "Dashboard", "ProducciÃ³n", "Inventario", "Pedidos", "Perfil"
             },
             "Cliente" => new[]
             {
-                "Catálogo", "Pedido rápido", "Mis pedidos", "Seguimiento", "Perfil"
+                "CatÃ¡logo", "Pedido rÃ¡pido", "Mis pedidos", "Seguimiento", "Perfil"
             },
             _ => new[] { "Perfil" }
         };
     }
 
     private static string NormalizeUiCopy(string value) => (value ?? "")
-        .Replace("Gestion de", "Gestión de", StringComparison.Ordinal)
-        .Replace("Produccion", "Producción", StringComparison.Ordinal)
-        .Replace("Catalogo", "Catálogo", StringComparison.Ordinal)
-        .Replace("Configuracion", "Configuración", StringComparison.Ordinal)
-        .Replace("Bitacora", "Bitácora", StringComparison.Ordinal)
-        .Replace("Pedido rapido", "Pedido rápido", StringComparison.Ordinal);
+        .Replace("Gestion de", "GestiÃ³n de", StringComparison.Ordinal)
+        .Replace("Produccion", "ProducciÃ³n", StringComparison.Ordinal)
+        .Replace("Catalogo", "CatÃ¡logo", StringComparison.Ordinal)
+        .Replace("Configuracion", "ConfiguraciÃ³n", StringComparison.Ordinal)
+        .Replace("Bitacora", "BitÃ¡cora", StringComparison.Ordinal)
+        .Replace("Pedido rapido", "Pedido rÃ¡pido", StringComparison.Ordinal);
 
     public async Task<IReadOnlyList<object>> PaymentMethodsAsync()
     {
@@ -2109,7 +2109,7 @@ public sealed class SqlStore
     public async Task TogglePromotionAsync(int id, string? userEmail = null)
     {
         if (id <= 0)
-            throw new InvalidOperationException("La promoción no es válida.");
+            throw new InvalidOperationException("La promociÃ³n no es vÃ¡lida.");
 
         if (UseMySql)
         {
@@ -2117,7 +2117,7 @@ public sealed class SqlStore
                 "SELECT COUNT(1) FROM Promociones WHERE PromotionId = @Id;",
                 new SqlParameter("@Id", id))) > 0;
             if (!exists)
-                throw new InvalidOperationException("La promoción no existe.");
+                throw new InvalidOperationException("La promociÃ³n no existe.");
 
             await ExecuteAsync("""
                 UPDATE Promociones
@@ -2125,7 +2125,7 @@ public sealed class SqlStore
                 WHERE PromotionId = @Id;
                 """, new SqlParameter("@Id", id));
 
-            await AddAuditLogAsync("CONFIGURAR_DESCUENTO", $"Promoción ID {id} cambió de estado", userEmail);
+            await AddAuditLogAsync("CONFIGURAR_DESCUENTO", $"PromociÃ³n ID {id} cambiÃ³ de estado", userEmail);
             return;
         }
 
@@ -2136,7 +2136,7 @@ public sealed class SqlStore
             """;
 
         await ExecuteAsync(sql, new SqlParameter("@Id", id));
-        await AddAuditLogAsync("CONFIGURAR_DESCUENTO", $"Promoción ID {id} cambió de estado", userEmail);
+        await AddAuditLogAsync("CONFIGURAR_DESCUENTO", $"PromociÃ³n ID {id} cambiÃ³ de estado", userEmail);
     }
 
     public async Task<int> SendMarketingCampaignAsync(MarketingCampaignInput input, string? userEmail = null)
@@ -2144,13 +2144,13 @@ public sealed class SqlStore
         if (input.CustomerIds is null || input.CustomerIds.Count == 0)
             throw new InvalidOperationException("Debe seleccionar al menos un destinatario.");
         if (string.IsNullOrWhiteSpace(input.Message))
-            throw new InvalidOperationException("Debe redactar el mensaje de la comunicación.");
+            throw new InvalidOperationException("Debe redactar el mensaje de la comunicaciÃ³n.");
 
-        var subject = string.IsNullOrWhiteSpace(input.Subject) ? "Promoción BakeSmart" : input.Subject.Trim();
+        var subject = string.IsNullOrWhiteSpace(input.Subject) ? "PromociÃ³n BakeSmart" : input.Subject.Trim();
         var message = input.Message.Trim();
         var customerIds = input.CustomerIds.Where(id => id > 0).Distinct().ToArray();
         if (customerIds.Length == 0)
-            throw new InvalidOperationException("Debe seleccionar al menos un destinatario válido.");
+            throw new InvalidOperationException("Debe seleccionar al menos un destinatario vÃ¡lido.");
         if (subject.Length > 160)
             throw new InvalidOperationException("El asunto no puede superar 160 caracteres.");
 
@@ -2201,7 +2201,7 @@ public sealed class SqlStore
                 }
 
                 await transaction.CommitAsync();
-                await AddAuditLogAsync("COMUNICACION_MARKETING", $"Campaña #{mysqlCampaignId} registrada para {customerIds.Length} clientes", userEmail);
+                await AddAuditLogAsync("COMUNICACION_MARKETING", $"CampaÃ±a #{mysqlCampaignId} registrada para {customerIds.Length} clientes", userEmail);
                 return mysqlCampaignId;
             }
             catch
@@ -2253,7 +2253,7 @@ public sealed class SqlStore
             new SqlParameter("@RecipientCount", customerIds.Length),
             new SqlParameter("@RecipientsJson", System.Text.Json.JsonSerializer.Serialize(customerIds))));
 
-        await AddAuditLogAsync("COMUNICACION_MARKETING", $"Campaña #{id} registrada para {customerIds.Length} clientes", userEmail);
+        await AddAuditLogAsync("COMUNICACION_MARKETING", $"CampaÃ±a #{id} registrada para {customerIds.Length} clientes", userEmail);
         return id;
     }
 
@@ -2422,9 +2422,14 @@ public sealed class SqlStore
         if (UseMySql)
         {
             await ExecuteAsync("""
-                INSERT INTO EstadosPedido (Name)
-                SELECT @Status
-                WHERE NOT EXISTS (SELECT 1 FROM EstadosPedido WHERE LOWER(Name) = LOWER(@Status));
+                INSERT INTO EstadosPedido (Name, SortOrder)
+                SELECT @Status, COALESCE(MAX(SortOrder), 0) + 1
+                FROM EstadosPedido
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM EstadosPedido existing
+                    WHERE LOWER(existing.Name) = LOWER(@Status)
+                );
                 """, new SqlParameter("@Status", status));
             return;
         }
@@ -2900,7 +2905,7 @@ public sealed class SqlStore
     public async Task<int> RegisterExpenseAsync(AccountingExpenseInput input, string? userEmail = null)
     {
         if (string.IsNullOrWhiteSpace(input.Description))
-            throw new InvalidOperationException("Debe indicar la descripción del gasto.");
+            throw new InvalidOperationException("Debe indicar la descripciÃ³n del gasto.");
         if (input.Amount <= 0)
             throw new InvalidOperationException("El monto del gasto debe ser mayor a 0.");
 
@@ -2979,7 +2984,7 @@ public sealed class SqlStore
         if (input.Amount <= 0)
             throw new InvalidOperationException("El monto del pago debe ser mayor a 0.");
         if (string.IsNullOrWhiteSpace(input.Method))
-            throw new InvalidOperationException("Método de pago no válido.");
+            throw new InvalidOperationException("MÃ©todo de pago no vÃ¡lido.");
 
         var accountTask = EnsureAccountAsync(input.Account, "Cuentas por pagar", "PASIVO");
         var cashAccountTask = PaymentAssetAccountAsync(input.Method);
@@ -3101,7 +3106,7 @@ public sealed class SqlStore
                 {
                     var entryId = pendingRow.entryId ?? Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
                         INSERT INTO AsientosContables (EntryType, ReferenceTable, ReferenceId, Note, CreatedAt)
-                        VALUES ('VENTA', 'Ventas', @SaleId, CONCAT('Asiento generado por conciliación POS venta #', @SaleId), UTC_TIMESTAMP());
+                        VALUES ('VENTA', 'Ventas', @SaleId, CONCAT('Asiento generado por conciliaciÃ³n POS venta #', @SaleId), UTC_TIMESTAMP());
                         SELECT LAST_INSERT_ID();
                         """, new SqlParameter("@SaleId", pendingRow.saleId)));
 
@@ -3131,7 +3136,7 @@ public sealed class SqlStore
             await Task.WhenAll(reviewedTask, issuesTask);
             var reviewed = Convert.ToInt32(await reviewedTask);
             var issues = Convert.ToInt32(await issuesTask);
-            await AddAuditLogAsync("CONCILIACION_POS", $"Conciliación POS: {reviewed} ventas revisadas, {rows.Count} asientos reparados, {issues} diferencias", userEmail);
+            await AddAuditLogAsync("CONCILIACION_POS", $"ConciliaciÃ³n POS: {reviewed} ventas revisadas, {rows.Count} asientos reparados, {issues} diferencias", userEmail);
             return new { status = issues == 0 ? "Correcto" : "Con diferencias", reviewed, issues, generated = rows.Count };
         }
 
@@ -3208,7 +3213,7 @@ public sealed class SqlStore
                 IF @EntryId IS NULL
                 BEGIN
                     INSERT INTO dbo.AsientosContables (EntryType, ReferenceTable, ReferenceId, Note, CreatedAt)
-                    VALUES (N'VENTA', N'Ventas', @SaleId, CONCAT(N'Asiento generado por conciliación POS venta #', @SaleId), SYSUTCDATETIME());
+                    VALUES (N'VENTA', N'Ventas', @SaleId, CONCAT(N'Asiento generado por conciliaciÃ³n POS venta #', @SaleId), SYSUTCDATETIME());
 
                     SET @EntryId = SCOPE_IDENTITY();
                 END
@@ -3252,7 +3257,7 @@ public sealed class SqlStore
             generated = reader.GetInt32("Generated")
         })).FirstOrDefault() ?? new { reviewed = 0, issues = 0, generated = 0 };
 
-        await AddAuditLogAsync("CONCILIACION_POS", $"Conciliación POS: {row.reviewed} ventas revisadas, {row.generated} asientos reparados, {row.issues} diferencias", userEmail);
+        await AddAuditLogAsync("CONCILIACION_POS", $"ConciliaciÃ³n POS: {row.reviewed} ventas revisadas, {row.generated} asientos reparados, {row.issues} diferencias", userEmail);
         return new { status = row.issues == 0 ? "Correcto" : "Con diferencias", row.reviewed, row.issues, row.generated };
     }
 
@@ -3263,7 +3268,7 @@ public sealed class SqlStore
     {
         var normalizedType = RemoveDiacritics(string.IsNullOrWhiteSpace(closeType) ? "DIARIO" : closeType.Trim()).ToUpperInvariant();
         if (normalizedType is not ("DIARIO" or "SEMANAL" or "MENSUAL"))
-            throw new InvalidOperationException("Tipo de cierre no válido.");
+            throw new InvalidOperationException("Tipo de cierre no vÃ¡lido.");
 
         if (UseMySql)
         {
@@ -4310,7 +4315,7 @@ public sealed class SqlStore
             {
                 var nameParts = customer.FullName.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 var firstName = nameParts.ElementAtOrDefault(0) ?? "Cliente";
-                var lastName = nameParts.ElementAtOrDefault(1) ?? "Repostería Patri";
+                var lastName = nameParts.ElementAtOrDefault(1) ?? "ReposterÃ­a Patri";
                 var temporaryPasswordHash = HashPassword(Convert.ToBase64String(RandomNumberGenerator.GetBytes(48)));
                 var roleTable = UseMySql ? "Roles" : "dbo.Roles";
                 var roleId = Convert.ToInt32(await ScalarAsync(
@@ -4358,7 +4363,7 @@ public sealed class SqlStore
                 INSERT INTO dbo.TokensRestablecimiento (Email, TokenHash, ExpiresAt, UsedAt, CreatedAt) VALUES (@Email, @TokenHash, DATEADD(minute, 30, SYSUTCDATETIME()), NULL, SYSUTCDATETIME());
                 """, new SqlParameter("@Email", email), new SqlParameter("@TokenHash", tokenHash));
         }
-        await AddAuditLogAsync("SOLICITAR_RECUPERACION", $"Se solicitó recuperar la contraseña de {email}");
+        await AddAuditLogAsync("SOLICITAR_RECUPERACION", $"Se solicitÃ³ recuperar la contraseÃ±a de {email}");
         return token;
     }
 
@@ -4372,7 +4377,7 @@ public sealed class SqlStore
         var userTable = UseMySql ? "Usuarios" : "dbo.Usuarios";
         await ExecuteAsync($"UPDATE {userTable} SET PasswordHash = @PasswordHash WHERE LOWER(Email) = LOWER(@Email) AND IsActive = 1;", new SqlParameter("@PasswordHash", HashPassword(newPassword)), new SqlParameter("@Email", email));
         await ExecuteAsync($"UPDATE {tokenTable} SET UsedAt = {nowSql} WHERE TokenHash = @TokenHash;", new SqlParameter("@TokenHash", tokenHash));
-        await AddAuditLogAsync("RECUPERAR_CONTRASENA", $"Contraseña restablecida para {email}");
+        await AddAuditLogAsync("RECUPERAR_CONTRASENA", $"ContraseÃ±a restablecida para {email}");
         return true;
     }
 
@@ -4382,7 +4387,7 @@ public sealed class SqlStore
         var userTable = UseMySql ? "Usuarios" : "dbo.Usuarios";
         await ExecuteAsync($"UPDATE {userTable} SET PasswordHash = @PasswordHash WHERE LOWER(Email) = LOWER(@Email) AND IsActive = 1;",
             new SqlParameter("@PasswordHash", HashPassword(newPassword)), new SqlParameter("@Email", email));
-        await AddAuditLogAsync("CAMBIAR_CONTRASENA", $"Contraseña actualizada desde el perfil para {email}", email);
+        await AddAuditLogAsync("CAMBIAR_CONTRASENA", $"ContraseÃ±a actualizada desde el perfil para {email}", email);
         return true;
     }
 
@@ -4393,8 +4398,8 @@ public sealed class SqlStore
         if (exists == 0)
             return false;
 
-        // En un entorno real, aquí se enviaría un email con un token.
-        // Por ahora, generamos una contraseña temporal y la registramos en bitácora.
+        // En un entorno real, aquÃ­ se enviarÃ­a un email con un token.
+        // Por ahora, generamos una contraseÃ±a temporal y la registramos en bitÃ¡cora.
         var tempPassword = $"Temp{Guid.NewGuid().ToString("N")[..8]}!";
         var hash = HashPassword(tempPassword);
 
@@ -4864,7 +4869,7 @@ public sealed class SqlStore
             return newSessionId;
         }
 
-        // Verificar que no haya sesión activa
+        // Verificar que no haya sesiÃ³n activa
         const string checkSql = """
             DECLARE @UserId int;
             IF @UserEmail IS NOT NULL
@@ -4898,7 +4903,7 @@ public sealed class SqlStore
             new SqlParameter("@UserEmail", (object?)userEmail ?? DBNull.Value),
             new SqlParameter("@Amount", openingAmount)));
 
-        await AddAuditLogAsync("APERTURA_CAJA", $"Sesión de caja #{sessionId} abierta con ₡{openingAmount:N0}", userEmail);
+        await AddAuditLogAsync("APERTURA_CAJA", $"SesiÃ³n de caja #{sessionId} abierta con â‚¡{openingAmount:N0}", userEmail);
         return sessionId;
     }
 
@@ -4979,7 +4984,7 @@ public sealed class SqlStore
         if (updated == 0)
             throw new InvalidOperationException("No se encontro una caja abierta para cerrar.");
 
-        await AddAuditLogAsync("CIERRE_CAJA", $"Sesión de caja #{sessionId} cerrada con ₡{closingAmount:N0}", userEmail);
+        await AddAuditLogAsync("CIERRE_CAJA", $"SesiÃ³n de caja #{sessionId} cerrada con â‚¡{closingAmount:N0}", userEmail);
     }
 
     public async Task<IReadOnlyList<object>> CashSessionsAsync(string? userEmail = null, bool includeAll = false)
@@ -5053,7 +5058,7 @@ public sealed class SqlStore
                 pm.Name AS PaymentMethod,
                 c.FullName AS CustomerName,
                 COALESCE(cs.CashSessionId, 0) AS CashSessionId,
-                COALESCE((SELECT GROUP_CONCAT(CONCAT(cb.Name, ' x', FORMAT(vc.Quantity, 0)) SEPARATOR ' · ')
+                COALESCE((SELECT GROUP_CONCAT(CONCAT(cb.Name, ' x', FORMAT(vc.Quantity, 0)) SEPARATOR ' Â· ')
                           FROM VentaCombos vc INNER JOIN Combos cb ON cb.ComboId = vc.ComboId
                           WHERE vc.SaleId = v.SaleId), '') AS ComboSummary,
                 CASE WHEN cn.CreditNoteId IS NULL THEN 0 ELSE 1 END AS HasCreditNote
@@ -5092,7 +5097,7 @@ public sealed class SqlStore
                 pm.Name AS PaymentMethod,
                 c.FullName AS CustomerName,
                 COALESCE(cs.CashSessionId, 0) AS CashSessionId,
-                COALESCE((SELECT STRING_AGG(CONCAT(cb.Name, N' x', CONVERT(int, vc.Quantity)), N' · ')
+                COALESCE((SELECT STRING_AGG(CONCAT(cb.Name, N' x', CONVERT(int, vc.Quantity)), N' Â· ')
                           FROM dbo.VentaCombos vc INNER JOIN dbo.Combos cb ON cb.ComboId = vc.ComboId
                           WHERE vc.SaleId = v.SaleId), N'') AS ComboSummary,
                 CASE WHEN cn.CreditNoteId IS NULL THEN CAST(0 AS bit) ELSE CAST(1 AS bit) END AS HasCreditNote
@@ -5131,7 +5136,7 @@ public sealed class SqlStore
         if (UseMySql)
             return await RegisterSaleMySqlAsync(input, userEmail);
 
-        // Serializar items a JSON para pasarlos como parámetro
+        // Serializar items a JSON para pasarlos como parÃ¡metro
         var itemsJson = System.Text.Json.JsonSerializer.Serialize(input.Items.Select(i => new
         {
             productId = i.ProductId,
@@ -5305,7 +5310,7 @@ public sealed class SqlStore
 
             DECLARE @SaleId int = SCOPE_IDENTITY();
 
-            -- Asociar a sesión de caja activa
+            -- Asociar a sesiÃ³n de caja activa
             INSERT INTO dbo.PagosSesionCaja (CashSessionId, SaleId, Amount)
             VALUES (@ActiveSessionId, @SaleId, @EffectiveTotal);
 
@@ -5356,7 +5361,7 @@ public sealed class SqlStore
             new SqlParameter("@UserEmail", (object?)userEmail ?? DBNull.Value),
             new SqlParameter("@ItemsJson", itemsJson)));
 
-        await AddAuditLogAsync("VENTA_POS", $"Venta POS #{orderId} por ₡{input.Total:N0}", userEmail);
+        await AddAuditLogAsync("VENTA_POS", $"Venta POS #{orderId} por â‚¡{input.Total:N0}", userEmail);
         return orderId;
     }
 
@@ -5484,7 +5489,7 @@ public sealed class SqlStore
         var activeCombos = (await CombosAsync(activeOnly: true)).ToDictionary(combo => combo.Id);
         var comboSelections = (input.Combos ?? []).Where(combo => combo.ComboId > 0 && combo.Quantity > 0).ToArray();
         foreach (var selection in comboSelections)
-            if (!activeCombos.ContainsKey(selection.ComboId)) throw new InvalidOperationException("Uno de los combos ya no está disponible.");
+            if (!activeCombos.ContainsKey(selection.ComboId)) throw new InvalidOperationException("Uno de los combos ya no estÃ¡ disponible.");
 
         await using var connection = CreateConnection();
         await connection.OpenAsync();
@@ -5499,7 +5504,7 @@ public sealed class SqlStore
                 var price = Convert.ToDecimal(await ScalarInTransactionAsync(connection, transaction, """
                     SELECT p.UnitPrice FROM Productos p INNER JOIN TiposProducto t ON t.ProductTypeId=p.ProductTypeId
                     WHERE p.ProductId=@ProductId AND p.IsActive=1 AND t.Name='Producto terminado' LIMIT 1;
-                    """, new SqlParameter("@ProductId", item.ProductId)) ?? throw new InvalidOperationException("Uno de los productos ya no está disponible."));
+                    """, new SqlParameter("@ProductId", item.ProductId)) ?? throw new InvalidOperationException("Uno de los productos ya no estÃ¡ disponible."));
                 expandedItems.Add(new SaleItemInput(item.ProductId, item.Quantity, price));
                 saleSubtotal += price * item.Quantity;
             }
@@ -5515,7 +5520,7 @@ public sealed class SqlStore
                     expandedItems.Add(new SaleItemInput(component.ProductId, component.Quantity * selection.Quantity, Math.Round(allocatedUnit, 4)));
                 }
             }
-            if (expandedItems.Count == 0) throw new InvalidOperationException("El carrito no contiene productos válidos.");
+            if (expandedItems.Count == 0) throw new InvalidOperationException("El carrito no contiene productos vÃ¡lidos.");
             var email = string.IsNullOrWhiteSpace(input.CustomerEmail)
                 ? $"mostrador-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}@local"
                 : input.CustomerEmail.Trim().ToLowerInvariant();
