@@ -305,10 +305,10 @@ public sealed class SqlStore
         await using var connection = CreateConnection();
         await connection.OpenAsync();
         await using var transaction = await connection.BeginTransactionAsync();
+        int productId;
 
         try
         {
-            int productId;
             if (input.Id is > 0)
             {
                 var updateProduct = UseMySql
@@ -393,17 +393,22 @@ public sealed class SqlStore
                 await SavePrimaryProductImageAsync(connection, transaction, productId, input.ImageUrl.Trim(), input.Description.Trim());
 
             await transaction.CommitAsync();
-
-            var action = input.Id is > 0 ? "actualizado" : "creado";
-            await AddAuditLogAsync($"INVENTARIO_PRODUCTO_{action.ToUpperInvariant()}", $"Producto '{input.Code}' {action}: {input.Description}", userEmail);
-
-            return productId;
         }
         catch
         {
             await transaction.RollbackAsync();
             throw;
         }
+
+        // La auditoría no debe convertir un guardado confirmado en un error visible.
+        try
+        {
+            var action = input.Id is > 0 ? "actualizado" : "creado";
+            await AddAuditLogAsync($"INVENTARIO_PRODUCTO_{action.ToUpperInvariant()}", $"Producto '{input.Code}' {action}: {input.Description}", userEmail);
+        }
+        catch { }
+
+        return productId;
     }
 
     public async Task ToggleInventoryProductAsync(int productId, string? userEmail = null)

@@ -179,35 +179,39 @@
         });
         form.addEventListener('submit', async event => {
             event.preventDefault();
-            const data = Object.fromEntries(new FormData(form).entries());
-            const file = imageInput.files?.[0];
-            if (file) {
-                const uploadData = new FormData();
-                uploadData.append('file', file);
-                const uploadResponse = await fetch('/api/assets/site-images', { method: 'POST', body: uploadData });
-                if (!uploadResponse.ok) {
-                    const error = await uploadResponse.json().catch(() => null);
-                    throw new Error(error?.message || 'No se pudo subir la imagen.');
+            try {
+                const data = Object.fromEntries(new FormData(form).entries());
+                const file = imageInput.files?.[0];
+                if (file) {
+                    const uploadData = new FormData();
+                    uploadData.append('file', file);
+                    const uploadResponse = await fetch('/api/assets/site-images', { method: 'POST', body: uploadData });
+                    if (!uploadResponse.ok) {
+                        const error = await uploadResponse.json().catch(() => null);
+                        throw new Error(error?.message || 'No se pudo subir la imagen.');
+                    }
+                    imageUrlInput.value = (await uploadResponse.json()).url;
                 }
-                imageUrlInput.value = (await uploadResponse.json()).url;
+                await postJson('/api/inventory', {
+                    id: data.id ? Number(data.id) : null,
+                    code: data.code,
+                    description: data.description,
+                    type: 'Producto terminado',
+                    unit: 'unidad',
+                    category: data.category,
+                    subcategory: data.subcategory || null,
+                    price: Number(data.price || 0),
+                    stock: Number(data.stock || 0),
+                    minStock: Number(data.minStock || 0),
+                    imageUrl: imageUrlInput.value || null
+                });
+                app.modal.close();
+                app.toast.success('Producto guardado correctamente.');
+                await loadProducts();
+                render();
+            } catch (error) {
+                app.toast.error(error.message || 'No se pudo guardar el producto.');
             }
-            await postJson('/api/inventory', {
-                id: data.id ? Number(data.id) : null,
-                code: data.code,
-                description: data.description,
-                type: 'Producto terminado',
-                unit: 'unidad',
-                category: data.category,
-                subcategory: data.subcategory || null,
-                price: Number(data.price || 0),
-                stock: Number(data.stock || 0),
-                minStock: Number(data.minStock || 0),
-                imageUrl: imageUrlInput.value || null
-            });
-            app.modal.close();
-            app.toast.success('Producto actualizado.');
-            await loadProducts();
-            render();
         });
     }
 

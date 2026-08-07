@@ -149,7 +149,15 @@
 
                 <div>
                     <label>Subcategoría</label>
-                    <input class="form-control" name="subcategory" />
+                    <select class="form-control" name="subcategory">
+                        <option value="General">General</option>
+                        <option value="Secos">Secos</option>
+                        <option value="Lácteos">Lácteos</option>
+                        <option value="Saborizantes">Saborizantes</option>
+                        <option value="Cajas">Cajas</option>
+                        <option value="Bolsas">Bolsas</option>
+                        <option value="Utensilios">Utensilios</option>
+                    </select>
                 </div>
 
                 <div>
@@ -470,7 +478,10 @@
                     content: template ? template.innerHTML : ''
                 });
 
-                if (section === 'product') bindProductForm();
+                if (section === 'product') {
+                    app.selects.enhanceAll();
+                    bindProductForm();
+                }
                 if (section === 'movement') bindMovementForm();
             };
 
