@@ -225,3 +225,23 @@
         display: grid;
     }
 }
+.users-client-group {
+    margin-top: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.users-client-group > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.15rem;
+    cursor: pointer;
+    font-weight: 800;
+    background: color-mix(in srgb, var(--primary) 7%, var(--bg-card));
+}
+
+.users-client-group > summary::marker { display: none; }
+.users-client-group[open] > summary { border-bottom: 1px solid var(--border); }
