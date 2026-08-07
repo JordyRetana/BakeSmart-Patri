@@ -360,21 +360,20 @@ public sealed class SqlStore
                 var insertProduct = UseMySql
                     ? """
                       INSERT INTO Productos
-                          (ProductTypeId, ProductCategoryId, UnitMeasureId, Code, Name, Description, UnitPrice, UnitCost, MinStock, IsActive)
+                          (ProductTypeId, ProductCategoryId, UnitMeasureId, Code, Name, Description, UnitPrice, UnitCost, MinStock, IsActive, CreatedAt)
                       VALUES
-                          (@ProductTypeId, @ProductCategoryId, @UnitMeasureId, @Code, @Name, @Description, @UnitPrice, @UnitCost, @MinStock, 1);
-
-                      SELECT LAST_INSERT_ID();
+                          (@ProductTypeId, @ProductCategoryId, @UnitMeasureId, @Code, @Name, @Description, @UnitPrice, @UnitCost, @MinStock, 1, UTC_TIMESTAMP());
                       """
                     : """
                     INSERT INTO dbo.Productos
-                        (ProductTypeId, ProductCategoryId, UnitMeasureId, Code, Name, Description, UnitPrice, UnitCost, MinStock, IsActive)
+                        (ProductTypeId, ProductCategoryId, UnitMeasureId, Code, Name, Description, UnitPrice, UnitCost, MinStock, IsActive, CreatedAt)
                     OUTPUT INSERTED.ProductId
                     VALUES
-                        (@ProductTypeId, @ProductCategoryId, @UnitMeasureId, @Code, @Name, @Description, @UnitPrice, @UnitCost, @MinStock, 1);
+                        (@ProductTypeId, @ProductCategoryId, @UnitMeasureId, @Code, @Name, @Description, @UnitPrice, @UnitCost, @MinStock, 1, SYSUTCDATETIME());
                     """;
 
-                productId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, insertProduct,
+                var insertParameters = new[]
+                {
                     new SqlParameter("@ProductTypeId", typeId),
                     new SqlParameter("@ProductCategoryId", categoryId),
                     new SqlParameter("@UnitMeasureId", unitId),
@@ -383,7 +382,18 @@ public sealed class SqlStore
                     new SqlParameter("@Description", input.Description.Trim()),
                     new SqlParameter("@UnitPrice", input.Price),
                     new SqlParameter("@UnitCost", input.Price),
-                    new SqlParameter("@MinStock", input.MinStock)));
+                    new SqlParameter("@MinStock", input.MinStock)
+                };
+
+                if (UseMySql)
+                {
+                    await ExecuteInTransactionAsync(connection, transaction, insertProduct, insertParameters);
+                    productId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, "SELECT LAST_INSERT_ID();"));
+                }
+                else
+                {
+                    productId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, insertProduct, insertParameters));
+                }
             }
 
             await SetInventoryBalanceAsync(connection, transaction, productId, locationId, input.Stock);

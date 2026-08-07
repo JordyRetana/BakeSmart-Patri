@@ -155,7 +155,11 @@ public class ApiController : Controller
         {
             HttpContext.RequestServices.GetRequiredService<ILogger<ApiController>>()
                 .LogError(ex, "No se pudo guardar el producto de inventario {Code}", request.Code);
-            return StatusCode(500, new { message = "No se pudo guardar el producto. Verifique el código y la categoría." });
+            var environment = HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>();
+            var message = environment.IsDevelopment()
+                ? $"No se pudo guardar el producto: {ex.GetBaseException().Message}"
+                : "No se pudo guardar el producto. Verifique el código y la categoría.";
+            return StatusCode(500, new { message });
         }
     }
 
