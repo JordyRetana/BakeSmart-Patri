@@ -86,6 +86,21 @@ public class ApiController : Controller
         }
     }
 
+    [HttpPost("orders/{id:int}/advance-delivery")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> AdvanceOrderDelivery(int id)
+    {
+        try
+        {
+            var status = await _sqlStore.AdvanceOrderDeliveryAsync(id, CurrentUserEmail);
+            return Ok(new { ok = true, status });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPost("production/{id:int}/advance")]
     [Authorize(Roles = "Admin,Staff,Repostero,Supervisor")]
     public async Task<IActionResult> AdvanceProduction(int id)

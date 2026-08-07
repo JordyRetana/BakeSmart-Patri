@@ -2377,6 +2377,26 @@ public sealed class SqlStore
         return next;
     }
 
+    public async Task<string> AdvanceOrderDeliveryAsync(int orderId, string? userEmail = null)
+    {
+        var state = await OrderWorkflowStateAsync(orderId);
+        if (state is null) throw new InvalidOperationException("El pedido no existe.");
+
+        var normalized = RemoveDiacritics(state.Value.OrderStatus).ToUpperInvariant();
+        var next = normalized switch
+        {
+            "LISTO" => "En camino",
+            "EN CAMINO" => "Entregado",
+            "ENTREGADO" => throw new InvalidOperationException("El pedido ya fue entregado."),
+            _ => throw new InvalidOperationException("Produccion debe marcar el pedido como listo antes de enviarlo a entrega.")
+        };
+
+        await EnsureOrderStatusAsync(next);
+        await UpdateOrderStatusAsync(orderId, next, userEmail);
+        await AddAuditLogAsync("AVANCE_ENTREGA", $"Pedido #{orderId} avanzado a {next}", userEmail);
+        return next;
+    }
+
     private async Task<(string OrderStatus, string PaymentStatus)?> OrderWorkflowStateAsync(int orderId)
     {
         const string sql = """

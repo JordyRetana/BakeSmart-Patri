@@ -86,7 +86,7 @@
                             <input type="search" id="quickProductSearch" placeholder="Buscar producto disponible" autocomplete="off" />
                         </label>
                         <select id="quickProductSort" class="quick-sort" aria-label="Ordenar productos">
-                            <option value="featured">Destacados</option>
+                            <option value="all">Todos los productos</option>
                             <option value="priceAsc">Menor precio</option>
                             <option value="priceDesc">Mayor precio</option>
                             <option value="stockDesc">Mas stock</option>
@@ -416,7 +416,6 @@
         let rows = products.filter(product =>
         product.active &&
         isSellableProduct(product) &&
-        product.stock > 0 &&
         (!query ||
         product.name.toLowerCase().includes(query) ||
         product.code.toLowerCase().includes(query))
@@ -455,7 +454,7 @@
         </span>
         <span class="quick-product__meta">
         <strong>${money(product.price)}</strong>
-        <small>${product.stock} disp.</small>
+        <small>${product.stock > 0 ? `${product.stock} disp.` : 'Por encargo'}</small>
         </span>
         </button>
         `;
@@ -476,7 +475,7 @@
         await BakeSmartStore.refreshClient();
         products = BakeSmartStore.inventory.list().map(normalizeProduct);
         document.getElementById('clientAvailableProducts').textContent =
-        products.filter(product => product.active && isSellableProduct(product) && product.stock > 0).length;
+        products.filter(product => product.active && isSellableProduct(product)).length;
 
         fillPaymentMethods();
         renderProducts();
@@ -919,7 +918,7 @@
         await BakeSmartStore.refresh({ force: true });
         products = BakeSmartStore.inventory.list().map(normalizeProduct);
         document.getElementById('clientAvailableProducts').textContent =
-        products.filter(item => item.active && isSellableProduct(item) && item.stock > 0).length;
+        products.filter(item => item.active && isSellableProduct(item)).length;
         renderProducts();
         renderSummary();
         updateSummary();

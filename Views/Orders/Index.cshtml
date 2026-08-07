@@ -29,7 +29,6 @@
                 <option value="En produccion">En producción</option>
                 <option>Listo</option>
                 <option>En camino</option>
-                <option>Entregado</option>
             </select>
         </div>
     </div>
@@ -73,6 +72,15 @@
             </div>
         </aside>
     </div>
+
+    <details class="card orders-delivered-card">
+        <summary>
+            <span><i class="fas fa-circle-check"></i> Pedidos entregados</span>
+            <strong id="ordersDeliveredCount" class="orders-count-pill">0</strong>
+        </summary>
+        <p class="text-muted">Historial de pedidos finalizados. No aparecen en la bandeja operativa.</p>
+        <div id="ordersDeliveredList" class="orders-list orders-delivered-list"></div>
+    </details>
 </div>
 
 @section Scripts {
@@ -83,6 +91,8 @@
     const list = document.getElementById('ordersList');
     const detail = document.getElementById('ordersDetail');
     const visibleCount = document.getElementById('ordersVisibleCount');
+    const deliveredList = document.getElementById('ordersDeliveredList');
+    const deliveredCount = document.getElementById('ordersDeliveredCount');
     const statuses = ['Pendiente pago', 'Confirmado', 'Pendiente produccion', 'En produccion', 'Listo', 'En camino', 'Entregado'];
     let orders = [];
     let activeOrderId = null;
@@ -170,7 +180,7 @@
     function filteredOrders() {
         const q = search.value.trim().toLowerCase();
         const st = normalizeStatus(status.value);
-        return orders.filter(o =>
+        return orders.filter(o => o.status !== 'Entregado' &&
             (!q || o.customerName.toLowerCase().includes(q) || o.customerEmail.toLowerCase().includes(q) || String(o.id).includes(q)) &&
             (status.value === 'Todos' || o.status === st)
         );
@@ -179,7 +189,7 @@
     function nextActionLabel(order) {
         if (order.paymentStatus !== 'Pagado') return 'Cobrar pedido';
         if (order.status === 'Confirmado') return 'Enviar a producción';
-        if (['Pendiente produccion', 'En produccion', 'Listo'].includes(order.status)) return 'Ver en Producción';
+        if (['Pendiente produccion', 'En produccion'].includes(order.status)) return 'Ver en Producción';
         return '';
     }
 
@@ -223,6 +233,28 @@
                 <span>Ajusta la busqueda o cambia el estado.</span>
             </div>
         `;
+    }
+
+    function renderDelivered() {
+        const delivered = orders.filter(order => order.status === 'Entregado');
+        deliveredCount.textContent = delivered.length;
+        deliveredList.innerHTML = delivered.map(o => `
+            <button type="button" class="orders-list-item" onclick="selectOrder(${o.id})">
+                <span class="orders-list-icon"><i class="fas fa-circle-check"></i></span>
+                <span class="orders-list-main">
+                    <span class="orders-list-top">
+                        <strong>#${o.id} - ${clean(o.customerName)}</strong>
+                        <b>${app.utils.formatCurrency(o.total)}</b>
+                    </span>
+                    <span class="orders-list-sub">${clean(o.producto || 'Pedido sin detalle')}</span>
+                </span>
+                <span class="orders-status-badge status-delivered">Entregado</span>
+            </button>
+        `).join('') || `
+            <div class="orders-empty-list">
+                <i class="fas fa-box-open"></i>
+                <strong>No hay pedidos entregados</strong>
+            </div>`;
     }
 
     function cleanupDetailSelectMenus() {
@@ -278,9 +310,13 @@
                     ? `<button class="btn btn-primary" onclick="chargeOrder(${order.id})"><i class="fas fa-credit-card"></i> Cobrar pedido</button>`
                     : order.status === 'Confirmado'
                         ? `<button class="btn btn-primary" onclick="sendOrderToProduction(${order.id})"><i class="fas fa-kitchen-set"></i> Enviar a producción</button>`
-                        : nextActionLabel(order)
-                            ? `<a class="btn btn-primary" href="/Production" data-full-reload><i class="fas fa-kitchen-set"></i> ${clean(nextActionLabel(order))}</a>`
-                            : ''}
+                        : order.status === 'Listo'
+                            ? `<button class="btn btn-primary" onclick="advanceDelivery(${order.id})"><i class="fas fa-truck-fast"></i> Enviar a entrega</button>`
+                            : order.status === 'En camino'
+                                ? `<button class="btn btn-primary" onclick="advanceDelivery(${order.id})"><i class="fas fa-circle-check"></i> Marcar entregado</button>`
+                                : nextActionLabel(order)
+                                    ? `<a class="btn btn-primary" href="/Production" data-full-reload><i class="fas fa-kitchen-set"></i> ${clean(nextActionLabel(order))}</a>`
+                                    : ''}
                 <a class="btn btn-outline" href="/Client/Track?id=${order.id}" data-full-reload><i class="fas fa-route"></i> Ver seguimiento</a>
                 <button class="btn btn-ghost orders-danger" onclick="deleteOrder(${order.id})">
                     <i class="fas fa-trash-can"></i> Eliminar pedido
@@ -302,8 +338,23 @@
         }
 
         renderList(rows);
+        renderDelivered();
         renderDetail(rows.find(o => Number(o.id) === Number(activeOrderId)));
     }
+
+    window.advanceDelivery = async id => {
+        try {
+            const response = await fetch(`/api/orders/${id}/advance-delivery`, { method: 'POST' });
+            const result = await response.json().catch(() => null);
+            if (!response.ok) throw new Error(result?.message || 'No se pudo avanzar la entrega.');
+            await loadOrders();
+            activeOrderId = id;
+            render();
+            app.toast.success(result.status === 'Entregado' ? `Pedido #${id} entregado.` : `Pedido #${id} enviado a entrega.`);
+        } catch (error) {
+            app.toast.error(error.message);
+        }
+    };
 
     async function sendToProduction(id) {
         const response = await fetch(`/api/orders/${id}/send-production`, {
@@ -322,6 +373,11 @@
 
     window.selectOrder = (id) => {
         activeOrderId = id;
+        const selected = orders.find(order => Number(order.id) === Number(id));
+        if (selected?.status === 'Entregado') {
+            renderDetail(selected);
+            return;
+        }
         render();
     };
 
