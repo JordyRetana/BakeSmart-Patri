@@ -21,7 +21,8 @@ public class ChatController : ControllerBase
         _sqlStore = sqlStore;
     }
 
-    public sealed record ChatRequest(string Message);
+    public sealed record ChatRequest(string Message, IReadOnlyList<ChatMessage>? History = null, string? Page = null);
+    public sealed record ChatMessage(string Role, string Content);
 
     [HttpPost]
     public async Task<IActionResult> Post([FromBody] ChatRequest req)
@@ -56,14 +57,29 @@ public class ChatController : ControllerBase
             {userContext}
             """;
 
+        var conversation = new List<object> { new { role = "system", content = systemPrompt } };
+        foreach (var item in req.History?
+                     .Where(x => x is not null &&
+                                 (string.Equals(x.Role, "user", StringComparison.OrdinalIgnoreCase) ||
+                                  string.Equals(x.Role, "assistant", StringComparison.OrdinalIgnoreCase)) &&
+                                 !string.IsNullOrWhiteSpace(x.Content))
+                     .TakeLast(10) ?? Enumerable.Empty<ChatMessage>())
+        {
+            var content = item.Content.Trim();
+            conversation.Add(new
+            {
+                role = string.Equals(item.Role, "assistant", StringComparison.OrdinalIgnoreCase) ? "assistant" : "user",
+                content = content[..Math.Min(content.Length, 1200)]
+            });
+        }
+        conversation.Add(new { role = "user", content = req.Message.Trim() });
+
         var body = new
         {
             model = "llama-3.3-70b-versatile",
-            messages = new[]
-            {
-                new { role = "system", content = systemPrompt },
-                new { role = "user", content = req.Message }
-            }
+            temperature = 0.35,
+            max_tokens = 450,
+            messages = conversation
         };
 
         var request = new HttpRequestMessage(HttpMethod.Post, "https://api.groq.com/openai/v1/chat/completions");
@@ -73,7 +89,7 @@ public class ChatController : ControllerBase
         var response = await _http.SendAsync(request);
         var json = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
-            return StatusCode((int)response.StatusCode, new { message = "El servicio del bot no respondio correctamente." });
+            return StatusCode((int)response.StatusCode, new { message = "Richie no pudo responder en este momento. Intente de nuevo en unos segundos." });
 
         using var doc = JsonDocument.Parse(json);
         var reply = doc.RootElement

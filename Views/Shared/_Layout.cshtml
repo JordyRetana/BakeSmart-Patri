@@ -798,6 +798,17 @@
         const box = document.getElementById('chat-box');
         const input = document.getElementById('chat-input');
         const sendBtn = document.getElementById('chat-send');
+        const historyKey = 'bakesmart:richie-history';
+        let history = [];
+
+        try {
+        const saved = JSON.parse(localStorage.getItem(historyKey) || '[]');
+        history = Array.isArray(saved) ? saved.slice(-10) : [];
+        } catch { history = []; }
+
+        function saveHistory() {
+        localStorage.setItem(historyKey, JSON.stringify(history.slice(-10)));
+        }
 
         toggleBtn.addEventListener('click', () => {
         widget.classList.toggle('open');
@@ -816,21 +827,43 @@
         return div;
         }
 
+        function isAffirmative(value) {
+        return /^(si|sí|dale|ok|okay|claro|continuar|quiero|por favor|sipi)\b/i.test(value.trim());
+        }
+
+        function lastAssistantAskedForLogin() {
+        const previous = [...history].reverse().find(item => item.role === 'assistant');
+        return previous && /(inicia|iniciar|inicie).*sesion|sesión.*inicia/i.test(previous.content);
+        }
+
         async function send() {
         const msg = input.value.trim();
         if (!msg) return;
         input.value = '';
         addMsg('user', msg);
+
+        if (isAffirmative(msg) && lastAssistantAskedForLogin()) {
+        history.push({ role: 'user', content: msg });
+        saveHistory();
+        addMsg('bot', 'Perfecto, te llevo al inicio de sesión para continuar.');
+        window.setTimeout(() => {
+        window.location.href = `/Account/Login?ReturnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+        }, 450);
+        return;
+        }
         const typingEl = addMsg('typing', 'Richie esta decorando la respuesta... 🍰');
 
         try {
         const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg })
+        body: JSON.stringify({ message: msg, history, page: window.location.pathname })
         });
         const data = await res.json();
         typingEl.remove();
+        if (!res.ok) throw new Error(data.message || 'Richie no pudo responder.');
+        history.push({ role: 'user', content: msg }, { role: 'assistant', content: data.reply });
+        saveHistory();
         addMsg('bot', data.reply);
         } catch (err) {
         typingEl.remove();
