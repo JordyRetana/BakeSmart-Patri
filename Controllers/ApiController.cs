@@ -140,6 +140,27 @@ public class ApiController : Controller
     [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> Inventory() => Json(await _sqlStore.InventoryAsync());
 
+    [HttpGet("inventory/catalog")]
+    [Authorize(Policy = "AnyUser")]
+    public async Task<IActionResult> CatalogInventory()
+    {
+        var products = await _sqlStore.CatalogProductsAsync();
+        return Json(products.Where(product => product.IsActive).Select(product => new
+        {
+            id = product.Id,
+            sku = product.Code,
+            item = product.Name,
+            description = product.Name,
+            type = "Producto terminado",
+            category = product.Category,
+            subcategory = product.Subcategory,
+            price = product.UnitPrice,
+            stock = product.Stock,
+            active = product.IsActive,
+            imageUrl = product.ImageUrl
+        }));
+    }
+
     [HttpGet("inventory/categories")]
     [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> InventoryCategories() => Json(await _sqlStore.ProductCategoryOptionsAsync());
