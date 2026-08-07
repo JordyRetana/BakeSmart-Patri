@@ -2341,7 +2341,9 @@ public sealed class SqlStore
 
     public async Task<string> SendOrderToProductionAsync(int orderId, string? userEmail = null)
     {
-        var state = await OrderWorkflowStateAsync(orderId);
+        (string OrderStatus, string PaymentStatus)? state;
+        try { state = await OrderWorkflowStateAsync(orderId); }
+        catch (Exception ex) { throw new InvalidOperationException($"No se pudo consultar el pedido: {ex.GetBaseException().Message}", ex); }
         if (state is null) throw new InvalidOperationException("El pedido no existe.");
         if (!string.Equals(state.Value.PaymentStatus, "Pagado", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Debe completar el pago antes de enviar el pedido a Produccion.");
@@ -2351,8 +2353,10 @@ public sealed class SqlStore
         if (normalized != "CONFIRMADO")
             throw new InvalidOperationException($"El pedido no puede enviarse a Produccion desde el estado '{state.Value.OrderStatus}'.");
 
-        await EnsureOrderStatusAsync("Pendiente produccion");
-        await UpdateOrderStatusAsync(orderId, "Pendiente produccion", userEmail);
+        try { await EnsureOrderStatusAsync("Pendiente produccion"); }
+        catch (Exception ex) { throw new InvalidOperationException($"No se pudo preparar el estado de Produccion: {ex.GetBaseException().Message}", ex); }
+        try { await UpdateOrderStatusAsync(orderId, "Pendiente produccion", userEmail); }
+        catch (Exception ex) { throw new InvalidOperationException($"No se pudo actualizar el pedido: {ex.GetBaseException().Message}", ex); }
         try { await AddAuditLogAsync("ENVIAR_A_PRODUCCION", $"Pedido #{orderId} enviado a la cola de Produccion", userEmail); } catch { }
         return "Pendiente produccion";
     }

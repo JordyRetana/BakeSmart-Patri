@@ -364,7 +364,12 @@
         if (!response.ok) {
             const text = await response.text();
             let message = text || 'No se pudo enviar el pedido a Producción.';
-            try { message = JSON.parse(text)?.message || message; } catch { }
+            try {
+                const payload = JSON.parse(text);
+                message = payload?.detail
+                    ? `${payload.message || 'No se pudo enviar el pedido a Producción.'} Detalle: ${payload.detail}`
+                    : payload?.message || message;
+            } catch { }
             throw new Error(message);
         }
         await loadOrders();
