@@ -477,6 +477,19 @@
             form.customerName.addEventListener('input', renderCart);
             document.getElementById('checkoutPromotion').addEventListener('change', renderCart);
 
+            async function startStripeCheckout(orderIds) {
+                const response = await fetch('/api/payments/stripe/checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderIds })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result.url) {
+                    throw new Error(result.message || 'No fue posible iniciar el pago seguro con tarjeta.');
+                }
+                window.location.assign(result.url);
+            }
+
             async function completeCheckout(paymentData) {
                 try {
                     await store.pos.sessions();
@@ -531,6 +544,20 @@
                 data.method = method;
                 if (!method) {
                     app.toast.error('Seleccione un metodo de pago.');
+                    return;
+                }
+                if (pendingOrder && shouldShowCardFields(method)) {
+                    try {
+                        paymentConfirmBtn.disabled = true;
+                        paymentConfirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirigiendo a Stripe';
+                        setPaymentStatus('processing', 'Abriendo pago seguro', 'Será redirigido a Stripe para completar el cobro.', 'fa-spinner fa-spin');
+                        await startStripeCheckout([Number(pendingOrder.id)]);
+                    } catch (error) {
+                        app.toast.error(error.message || 'No fue posible iniciar el pago seguro.');
+                        paymentConfirmBtn.disabled = false;
+                        paymentConfirmBtn.innerHTML = '<i class="fas fa-lock"></i> Aprobar cobro';
+                        setPaymentStatus('error', 'No se pudo abrir Stripe', 'Intente nuevamente o seleccione otro método de pago.', 'fa-triangle-exclamation');
+                    }
                     return;
                 }
                 if (!String(data.holder || '').trim()) {
