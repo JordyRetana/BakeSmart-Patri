@@ -5013,8 +5013,8 @@ public sealed class SqlStore
         return await QueryAsync(sql, reader => new
         {
             id = reader.GetInt32("CashSessionId"),
-            openedAt = reader.GetDateTime("OpenedAt").ToString("o"),
-            closedAt = reader.IsDBNull(reader.GetOrdinal("ClosedAt")) ? null : reader.GetDateTime("ClosedAt").ToString("o"),
+            openedAt = DateTime.SpecifyKind(reader.GetDateTime("OpenedAt"), DateTimeKind.Utc).ToString("O"),
+            closedAt = reader.IsDBNull(reader.GetOrdinal("ClosedAt")) ? null : DateTime.SpecifyKind(reader.GetDateTime("ClosedAt"), DateTimeKind.Utc).ToString("O"),
             openingAmount = reader.GetDecimal("OpeningAmount"),
             closingAmount = reader.IsDBNull(reader.GetOrdinal("ClosingAmount")) ? (decimal?)null : reader.GetDecimal("ClosingAmount"),
             totalSales = reader.GetDecimal("TotalSales"),

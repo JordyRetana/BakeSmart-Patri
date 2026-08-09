@@ -261,6 +261,27 @@
             let products = [];
             let movements = [];
             let categoriesInitialized = false;
+            const rawCategories = {
+                'Materia prima': {
+                    'Ingredientes secos': ['Harinas', 'Azúcares', 'Cacao y chocolate', 'Levaduras', 'Especias'],
+                    'Lácteos y huevos': ['Leche', 'Mantequilla', 'Quesos crema', 'Huevos'],
+                    'Frutas y rellenos': ['Frutas frescas', 'Pulpa', 'Mermeladas', 'Rellenos'],
+                    'Coberturas y decoración': ['Fondant', 'Crema', 'Colorantes', 'Sprinkles'],
+                    'Saborizantes': ['Esencias', 'Extractos', 'Licores culinarios']
+                },
+                'Empaque': {
+                    'Cajas y envases': ['Cajas para queque', 'Cajas para cupcakes', 'Envases', 'Domos'],
+                    'Bolsas y envolturas': ['Bolsas', 'Papel encerado', 'Film plástico', 'Aluminio'],
+                    'Etiquetado': ['Etiquetas', 'Stickers', 'Tarjetas'],
+                    'Desechables': ['Platos', 'Cubiertos', 'Servilletas']
+                },
+                'Insumo operativo': {
+                    'Limpieza': ['Desinfectantes', 'Jabones', 'Paños'],
+                    'Utensilios': ['Mangas', 'Boquillas', 'Espátulas'],
+                    'Oficina': ['Papelería', 'Impresión'],
+                    'Mantenimiento': ['Repuestos', 'Herramientas']
+                }
+            };
 
             function normalizeProduct(p) {
                 return {
@@ -330,6 +351,23 @@
             function bindProductForm() {
                 const form = document.getElementById('inventoryForm');
                 if (!form) return;
+                const typeSelect = form.querySelector('[name="type"]');
+                const categorySelect = form.querySelector('[name="category"]');
+                const subcategorySelect = form.querySelector('[name="subcategory"]');
+                const refreshRawCategories = (keepCategory = '', keepSubcategory = '') => {
+                    const groups = rawCategories[typeSelect.value] || rawCategories['Materia prima'];
+                    const categoryNames = Object.keys(groups);
+                    categorySelect.innerHTML = categoryNames.map(value => `<option value="${value}">${value}</option>`).join('');
+                    categorySelect.value = categoryNames.includes(keepCategory) ? keepCategory : categoryNames[0];
+                    const subcategories = groups[categorySelect.value] || [];
+                    subcategorySelect.innerHTML = subcategories.map(value => `<option value="${value}">${value}</option>`).join('');
+                    subcategorySelect.value = subcategories.includes(keepSubcategory) ? keepSubcategory : subcategories[0];
+                    [categorySelect, subcategorySelect].forEach(select => app.selects.refresh(select));
+                };
+                typeSelect.addEventListener('change', () => refreshRawCategories());
+                categorySelect.addEventListener('change', () => refreshRawCategories(categorySelect.value, ''));
+                refreshRawCategories(categorySelect.value, subcategorySelect.value);
+                form.refreshRawCategories = refreshRawCategories;
 
                 form.addEventListener('submit', async (event) => {
                     event.preventDefault();
@@ -495,6 +533,8 @@
                     const input = form.querySelector(`[name="${key}"]`);
                     if (input) input.value = value;
                 }
+
+                form.refreshRawCategories?.(item.category, item.subcategory);
 
                 form.querySelectorAll('select').forEach(select => app.selects.refresh(select));
             };

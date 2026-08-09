@@ -61,6 +61,17 @@
 (() => {
     let products = [];
     let categoryOptions = [];
+    const sellableCategories = {
+        'Queques y tortas': ['Chocolate', 'Vainilla', 'Frutas', 'Red velvet', 'Personalizados'],
+        'Pasteles': ['Cumpleaños', 'Bodas', 'Eventos', 'Temáticos'],
+        'Cupcakes': ['Clásicos', 'Rellenos', 'Decorados', 'Mini cupcakes'],
+        'Galletas': ['Decoradas', 'Mantequilla', 'Avena', 'Chocolate', 'Sin azúcar'],
+        'Postres': ['Cheesecake', 'Tres leches', 'Mousse', 'Brownies', 'Tartaletas'],
+        'Panadería': ['Pan dulce', 'Pan salado', 'Roles', 'Croissants'],
+        'Bocadillos': ['Salados', 'Dulces', 'Mesas de eventos'],
+        'Bebidas': ['Café', 'Frías', 'Batidos'],
+        'Temporada': ['Navidad', 'San Valentín', 'Halloween', 'Día de la madre']
+    };
     const search = document.getElementById('productSearch');
     const category = document.getElementById('productCategory');
     const board = document.getElementById('productsBoard');
@@ -150,10 +161,10 @@
         const imageUrlInput = form.querySelector('[name="imageUrl"]');
         const imagePreview = document.getElementById('sellableImagePreview');
 
-        const categories = [...new Set(categoryOptions.map(row => row.category).filter(Boolean))];
+        const categories = [...new Set([...Object.keys(sellableCategories), item?.category].filter(Boolean))];
         categorySelect.innerHTML = '<option value="">Seleccione una categoria</option>' + categories.map(value => `<option value="${clean(value)}">${clean(value)}</option>`).join('');
         const renderSubcategories = selected => {
-            const values = categoryOptions.filter(row => row.category === selected && row.subcategory).map(row => row.subcategory);
+            const values = [...new Set([...(sellableCategories[selected] || []), item?.category === selected ? item.subcategory : null].filter(Boolean))];
             subcategorySelect.innerHTML = '<option value="">General</option>' + values.map(value => `<option value="${clean(value)}">${clean(value)}</option>`).join('');
         };
         categorySelect.addEventListener('change', () => renderSubcategories(categorySelect.value));
