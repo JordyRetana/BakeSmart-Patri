@@ -1054,20 +1054,62 @@ public class ApiController : Controller
         var capture = await client.PostAsync($"{baseUrl}/v2/checkout/orders/{Uri.EscapeDataString(token)}/capture", null);
         if (!capture.IsSuccessStatusCode) return Redirect("/Client/Orders?paypal=error");
         using var document = JsonDocument.Parse(await capture.Content.ReadAsStringAsync());
-        var order = document.RootElement;
-        if (!order.TryGetProperty("status", out var paymentStatus) || paymentStatus.GetString() != "COMPLETED") return Redirect("/Client/Orders?paypal=error");
+        var confirmed = await ConfirmPayPalOrderAsync(document.RootElement, User.IsInRole("Cliente") ? CurrentUserEmail : null);
+        return Redirect(confirmed ? "/Client/Orders?paypal=success" : "/Client/Orders?paypal=error");
+    }
 
-        var unit = order.GetProperty("purchase_units")[0];
-        var customId = unit.TryGetProperty("custom_id", out var custom) ? custom.GetString() : null;
-        var values = (customId ?? string.Empty).Split(';', StringSplitOptions.RemoveEmptyEntries)
-            .Select(item => item.Split('=', 2)).Where(item => item.Length == 2)
-            .ToDictionary(item => item[0], item => item[1], StringComparer.OrdinalIgnoreCase);
-        if (!values.TryGetValue("orders", out var orders) || (User.IsInRole("Cliente") && (!values.TryGetValue("email", out var email) || !string.Equals(email, CurrentUserEmail, StringComparison.OrdinalIgnoreCase))))
-            return Redirect("/Client/Orders?paypal=error");
-        values.TryGetValue("email", out var owner);
-        foreach (var orderId in orders.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(value => int.TryParse(value, out var id) ? id : 0).Where(id => id > 0))
-            await _sqlStore.MarkOrderPaidAsync(orderId, "PayPal", owner);
-        return Redirect("/Client/Orders?paypal=success");
+    [HttpPost("payments/paypal/webhook")]
+    [AllowAnonymous]
+    public async Task<IActionResult> PayPalWebhook()
+    {
+        var clientId = _configuration["PayPal:ClientId"];
+        var secret = _configuration["PayPal:Secret"];
+        var webhookId = _configuration["PayPal:WebhookId"];
+        if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(secret) || string.IsNullOrWhiteSpace(webhookId))
+            return StatusCode(StatusCodes.Status503ServiceUnavailable);
+
+        using var reader = new StreamReader(Request.Body, Encoding.UTF8);
+        var payload = await reader.ReadToEndAsync();
+        JsonDocument eventDocument;
+        try { eventDocument = JsonDocument.Parse(payload); }
+        catch (JsonException) { return BadRequest(); }
+        using (eventDocument)
+        {
+            var baseUrl = string.Equals(_configuration["PayPal:Environment"], "live", StringComparison.OrdinalIgnoreCase)
+                ? "https://api-m.paypal.com"
+                : "https://api-m.sandbox.paypal.com";
+            var accessToken = await GetPayPalAccessTokenAsync(baseUrl, clientId, secret);
+            if (string.IsNullOrWhiteSpace(accessToken)) return StatusCode(StatusCodes.Status503ServiceUnavailable);
+
+            var verification = new
+            {
+                auth_algo = Request.Headers["PAYPAL-AUTH-ALGO"].ToString(),
+                cert_url = Request.Headers["PAYPAL-CERT-URL"].ToString(),
+                transmission_id = Request.Headers["PAYPAL-TRANSMISSION-ID"].ToString(),
+                transmission_sig = Request.Headers["PAYPAL-TRANSMISSION-SIG"].ToString(),
+                transmission_time = Request.Headers["PAYPAL-TRANSMISSION-TIME"].ToString(),
+                webhook_id = webhookId,
+                webhook_event = eventDocument.RootElement
+            };
+            var client = _httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            var verified = await client.PostAsJsonAsync($"{baseUrl}/v1/notifications/verify-webhook-signature", verification);
+            if (!verified.IsSuccessStatusCode) return Unauthorized();
+            using var verificationDocument = JsonDocument.Parse(await verified.Content.ReadAsStringAsync());
+            if (!verificationDocument.RootElement.TryGetProperty("verification_status", out var status) || status.GetString() != "SUCCESS") return Unauthorized();
+
+            var root = eventDocument.RootElement;
+            if (!root.TryGetProperty("event_type", out var type) || type.GetString() != "PAYMENT.CAPTURE.COMPLETED") return Ok();
+            if (!root.TryGetProperty("resource", out var resource) || !resource.TryGetProperty("supplementary_data", out var supplementary) ||
+                !supplementary.TryGetProperty("related_ids", out var related) || !related.TryGetProperty("order_id", out var orderId)) return BadRequest();
+
+            var paypalOrderId = orderId.GetString();
+            if (string.IsNullOrWhiteSpace(paypalOrderId)) return BadRequest();
+            var orderResponse = await client.GetAsync($"{baseUrl}/v2/checkout/orders/{Uri.EscapeDataString(paypalOrderId)}");
+            if (!orderResponse.IsSuccessStatusCode) return BadRequest();
+            using var orderDocument = JsonDocument.Parse(await orderResponse.Content.ReadAsStringAsync());
+            return await ConfirmPayPalOrderAsync(orderDocument.RootElement, null) ? Ok() : BadRequest();
+        }
     }
 
     [HttpPost("payments/stripe/webhook")]
@@ -1155,6 +1197,23 @@ public class ApiController : Controller
         if (!response.IsSuccessStatusCode) return null;
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         return document.RootElement.TryGetProperty("access_token", out var token) ? token.GetString() : null;
+    }
+
+    private async Task<bool> ConfirmPayPalOrderAsync(JsonElement order, string? expectedCustomerEmail)
+    {
+        if (!order.TryGetProperty("status", out var paymentStatus) || paymentStatus.GetString() != "COMPLETED" ||
+            !order.TryGetProperty("purchase_units", out var units) || units.GetArrayLength() == 0) return false;
+        var unit = units[0];
+        var customId = unit.TryGetProperty("custom_id", out var custom) ? custom.GetString() : null;
+        var values = (customId ?? string.Empty).Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Select(item => item.Split('=', 2)).Where(item => item.Length == 2)
+            .ToDictionary(item => item[0], item => item[1], StringComparer.OrdinalIgnoreCase);
+        if (!values.TryGetValue("orders", out var orders) ||
+            (!string.IsNullOrWhiteSpace(expectedCustomerEmail) && (!values.TryGetValue("email", out var email) || !string.Equals(email, expectedCustomerEmail, StringComparison.OrdinalIgnoreCase)))) return false;
+        values.TryGetValue("email", out var owner);
+        foreach (var orderId in orders.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(value => int.TryParse(value, out var id) ? id : 0).Where(id => id > 0))
+            await _sqlStore.MarkOrderPaidAsync(orderId, "PayPal", owner);
+        return true;
     }
 
     private static bool IsValidEmail(string email)
