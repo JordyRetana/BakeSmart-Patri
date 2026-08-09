@@ -854,11 +854,21 @@
                     if (!field?.value) throw new Error('Ingrese el efectivo contado antes de cerrar la caja.');
                     const declared = Number(field.value);
                     const difference = declared - Number(session.expectedCash || 0);
-                    if (!window.confirm(`Confirmar cierre de caja #${session.id}\n\nEfectivo esperado: ${money(session.expectedCash)}\nEfectivo contado: ${money(declared)}\nDiferencia: ${money(difference)}\n\nEsta accion finalizara el turno.`)) return;
-                    await store.pos.closeSession(session.id, declared);
-
-                    app.toast.info('Caja cerrada correctamente.');
-                    await renderAll();
+                    app.modal.create({
+                        title: `Cerrar caja #${session.id}`,
+                        message: `Efectivo esperado: ${money(session.expectedCash)}<br>Efectivo contado: ${money(declared)}<br>Diferencia: ${money(difference)}<br><br>Esta acción finalizará el turno.`,
+                        confirmText: 'Sí, cerrar caja',
+                        cancelText: 'Revisar efectivo',
+                        onConfirm: async () => {
+                            try {
+                                await store.pos.closeSession(session.id, declared);
+                                app.toast.success('Caja cerrada correctamente.');
+                                await renderAll();
+                            } catch (error) {
+                                app.toast.error(error.message);
+                            }
+                        }
+                    });
                 } catch (error) {
                     app.toast.error(error.message);
                 }

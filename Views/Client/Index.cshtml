@@ -336,6 +336,7 @@
         let pageInitialized = false;
         let products = [];
         let selectedProduct = null;
+        const selectedProducts = new Map();
         let currentProfile = null;
         let pendingPayment = null;
         let addressPicker = null;
@@ -431,9 +432,21 @@
         return rows;
         }
 
-        function selectProduct(id) {
-        selectedProduct = products.find(product => Number(product.id) === Number(id)) || null;
-        productInput.value = selectedProduct ? selectedProduct.id : '';
+        function selectProduct(id, mode = 'toggle') {
+        const product = products.find(item => Number(item.id) === Number(id)) || null;
+        if (!product) return;
+
+        if (mode === 'toggle' && selectedProducts.has(Number(product.id))) {
+        selectedProducts.delete(Number(product.id));
+        selectedProduct = [...selectedProducts.values()].at(-1)?.product || null;
+        } else {
+        const existing = selectedProducts.get(Number(product.id));
+        selectedProducts.set(Number(product.id), { product, quantity: existing?.quantity || 1 });
+        selectedProduct = product;
+        }
+
+        productInput.value = [...selectedProducts.keys()].join(',');
+        quantityInput.value = selectedProduct ? (selectedProducts.get(Number(selectedProduct.id))?.quantity || 1) : 1;
         renderProducts();
         updateSummary();
         }
@@ -443,7 +456,7 @@
         productsEmpty.hidden = rows.length > 0;
 
         productsGrid.innerHTML = rows.map(product => {
-        const selected = selectedProduct && Number(selectedProduct.id) === Number(product.id);
+        const selected = selectedProducts.has(Number(product.id));
         const imageUrl = product.imageUrl || '/img/products/producto-sin-imagen.svg';
         return `
         <button class="quick-product ${selected ? 'quick-product--selected' : ''}" type="button" data-product-id="${product.id}">
@@ -481,7 +494,7 @@
         renderProducts();
 
         const first = availableProducts()[0];
-        if (first) selectProduct(first.id);
+        if (first) selectProduct(first.id, 'replace');
         applyCatalogCartCheckout();
         }
 
@@ -605,7 +618,8 @@
         if (!cartCheckoutItems.length) return;
 
         const first = cartCheckoutItems[0];
-        selectProduct(first.id);
+        selectedProducts.clear();
+        selectProduct(first.id, 'replace');
         quantityInput.value = first.quantity;
         updateSummary();
         submitBtn.innerHTML = `<i class="fas fa-receipt"></i> Registrar ${cartCheckoutItems.length} producto${cartCheckoutItems.length === 1 ? '' : 's'} del carrito`;
@@ -663,9 +677,10 @@
         }
 
         function updateSummary() {
-        const quantity = Math.max(1, Number(quantityInput.value || 1));
-        const price = Number(selectedProduct?.price || 0);
-        const subtotal = price * quantity;
+        const orderItems = cartCheckoutItems.length
+        ? cartCheckoutItems.map(item => ({ product: item.product, quantity: item.quantity }))
+        : [...selectedProducts.values()];
+        const subtotal = orderItems.reduce((sum, item) => sum + Number(item.product?.price || 0) * Math.max(1, Number(item.quantity || 1)), 0);
         const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
         const frequentRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
         const promotionRate = Number(BakeSmartStore.pos.config().activePromotionDiscount || 0);
@@ -674,7 +689,9 @@
         const discountedSubtotal = Math.max(0, subtotal - discount);
         const tax = discountedSubtotal * taxRate;
 
-        document.getElementById('quickSummaryProduct').textContent = selectedProduct?.name || 'Seleccione un producto';
+        document.getElementById('quickSummaryProduct').textContent = orderItems.length === 1
+        ? orderItems[0].product?.name || 'Seleccione un producto'
+        : orderItems.length > 1 ? `${orderItems.length} productos seleccionados` : 'Seleccione uno o más productos';
         document.getElementById('quickSubtotal').textContent = money(subtotal);
         document.getElementById('quickDiscountRow').hidden = discount <= 0;
         document.getElementById('quickDiscount').textContent = `-${money(discount)}`;
@@ -763,7 +780,15 @@
 
         productSearch.addEventListener('input', renderProducts);
         productSort.addEventListener('change', renderProducts);
-        quantityInput.addEventListener('input', updateSummary);
+        quantityInput.addEventListener('input', () => {
+        if (selectedProduct && selectedProducts.has(Number(selectedProduct.id))) {
+        selectedProducts.set(Number(selectedProduct.id), {
+        product: selectedProduct,
+        quantity: Math.max(1, Number(quantityInput.value || 1))
+        });
+        }
+        updateSummary();
+        });
         deliveryMethod.addEventListener('change', toggleQuickDelivery);
         paymentMethod.addEventListener('change', syncPaymentFields);
         document.getElementById('clientMiniOrders').addEventListener('click', event => {
@@ -853,10 +878,10 @@
         const product = selectedProduct || products.find(item => Number(item.id) === Number(data.productId));
         const orderItems = cartCheckoutItems.length
         ? cartCheckoutItems.map(item => ({ product: item.product, quantity: item.quantity }))
-        : [{ product, quantity }];
+        : [...selectedProducts.values()].map(item => ({ product: item.product, quantity: item.quantity || quantity }));
 
-        if (orderItems.some(item => !item.product)) {
-        app.toast.error('Seleccione un producto disponible.');
+        if (!orderItems.length || orderItems.some(item => !item.product)) {
+        app.toast.error('Seleccione al menos un producto disponible.');
         return;
         }
 
@@ -925,6 +950,10 @@
         if (cartCheckoutItems.length) {
         clearCatalogCart();
         cartCheckoutItems = [];
+        } else {
+        selectedProducts.clear();
+        selectedProduct = null;
+        productInput.value = '';
         }
         if (shouldOpenGateway(data.paymentMethod) && createdOrders.length === 1) {
         openPaymentGateway(result.id, total, data.paymentMethod);

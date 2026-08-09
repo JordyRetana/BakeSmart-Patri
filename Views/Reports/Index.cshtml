@@ -105,8 +105,16 @@
         document.getElementById('reportMeta').textContent = meta;
         const { start, end } = dates();
         document.querySelector('.report-print-generated').innerHTML = `<strong>Periodo: ${start || 'Inicio'} al ${end || 'Actual'}</strong><span>Generado: ${new Date().toLocaleString('es-CR')}</span>`;
-        const headers = Object.keys(rows[0] || {});
-        document.getElementById('reportHead').innerHTML = headers.length ? `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>` : '';
+        const hiddenFields = /image|imagen|photo|foto|avatar/i;
+        const headers = [...new Set(rows.flatMap(row => Object.keys(row)))].filter(h => !hiddenFields.test(h));
+        const friendlyHeader = header => ({
+            id: 'N.º', saleId: 'N.º venta', orderId: 'N.º pedido', productId: 'N.º producto',
+            customerName: 'Cliente', customerEmail: 'Correo', customerPhone: 'Teléfono',
+            paymentStatus: 'Estado de pago', orderStatus: 'Estado del pedido', isActive: 'Activo',
+            unitPrice: 'Precio unitario', minimumStock: 'Stock mínimo', createdAt: 'Fecha de creación',
+            updatedAt: 'Última actualización', userName: 'Usuario'
+        }[header] || header.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').replace(/^./, c => c.toUpperCase()));
+        document.getElementById('reportHead').innerHTML = headers.length ? `<tr>${headers.map(h => `<th>${friendlyHeader(h)}</th>`).join('')}</tr>` : '';
         const moneyFields = /total|subtotal|impuesto|venta|monto|precio|saldo|ingreso|egreso/i;
         const dateFields = /fecha|date|creado|apertura|cierre/i;
         const formatCell = (header, value) => {

@@ -23,25 +23,31 @@ public sealed class ReportExportService
         var sheet = workbook.Worksheets.Add("Reporte");
         sheet.ShowGridLines = false;
 
-        var lastColumn = Math.Max(1, model.Headers.Count);
-        sheet.Range(1, 1, 1, lastColumn).Merge().Value = "BakeSmart Patri";
-        sheet.Range(2, 1, 2, lastColumn).Merge().Value = model.Title;
-        sheet.Range(3, 1, 3, lastColumn).Merge().Value = $"Periodo: {model.Period}  |  Generado: {DateTime.Now.ToString("dd/MM/yyyy HH:mm", CostaRica)}";
-        sheet.Range(4, 1, 4, lastColumn).Merge().Value = model.Summary;
+        var logoPath = Path.Combine(_environment.WebRootPath, "img", "logo.png");
+        var hasLogo = File.Exists(logoPath);
+        var firstColumn = hasLogo ? 2 : 1;
+        var lastColumn = Math.Max(firstColumn, firstColumn + model.Headers.Count - 1);
+        if (hasLogo)
+            sheet.AddPicture(logoPath).MoveTo(sheet.Cell(1, 1)).WithSize(46, 46);
 
-        var title = sheet.Range(1, 1, 1, lastColumn);
+        sheet.Range(1, firstColumn, 1, lastColumn).Merge().Value = "Repostería Patri · BakeSmart";
+        sheet.Range(2, firstColumn, 2, lastColumn).Merge().Value = model.Title;
+        sheet.Range(3, firstColumn, 3, lastColumn).Merge().Value = $"Periodo: {model.Period}  |  Generado: {DateTime.Now.ToString("dd/MM/yyyy HH:mm", CostaRica)}";
+        sheet.Range(4, firstColumn, 4, lastColumn).Merge().Value = model.Summary;
+
+        var title = sheet.Range(1, firstColumn, 1, lastColumn);
         title.Style.Fill.BackgroundColor = XLColor.FromHtml(Purple);
         title.Style.Font.FontColor = XLColor.White;
         title.Style.Font.Bold = true;
         title.Style.Font.FontSize = 18;
         title.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-        sheet.Range(2, 1, 2, lastColumn).Style.Font.SetBold().Font.SetFontSize(14).Font.SetFontColor(XLColor.FromHtml(Purple));
-        sheet.Range(3, 1, 4, lastColumn).Style.Font.SetFontColor(XLColor.FromHtml("#667085"));
+        sheet.Range(2, firstColumn, 2, lastColumn).Style.Font.SetBold().Font.SetFontSize(14).Font.SetFontColor(XLColor.FromHtml(Purple));
+        sheet.Range(3, firstColumn, 4, lastColumn).Style.Font.SetFontColor(XLColor.FromHtml("#667085"));
 
         const int headerRow = 6;
         for (var column = 0; column < model.Headers.Count; column++)
-            sheet.Cell(headerRow, column + 1).Value = model.Headers[column].Label;
-        var header = sheet.Range(headerRow, 1, headerRow, lastColumn);
+            sheet.Cell(headerRow, firstColumn + column).Value = model.Headers[column].Label;
+        var header = sheet.Range(headerRow, firstColumn, headerRow, lastColumn);
         header.Style.Fill.BackgroundColor = XLColor.FromHtml(Pink);
         header.Style.Font.FontColor = XLColor.White;
         header.Style.Font.Bold = true;
@@ -54,17 +60,17 @@ public sealed class ReportExportService
             {
                 var definition = model.Headers[column];
                 var value = model.Rows[rowIndex].TryGetProperty(definition.Key, out var property) ? property : default;
-                WriteExcelValue(sheet.Cell(excelRow, column + 1), definition.Key, value);
+                WriteExcelValue(sheet.Cell(excelRow, firstColumn + column), definition.Key, value);
             }
             if (rowIndex % 2 == 1)
-                sheet.Range(excelRow, 1, excelRow, lastColumn).Style.Fill.BackgroundColor = XLColor.FromHtml("#F7F4FB");
-            sheet.Range(excelRow, 1, excelRow, lastColumn).Style.Border.BottomBorder = XLBorderStyleValues.Hair;
-            sheet.Range(excelRow, 1, excelRow, lastColumn).Style.Border.BottomBorderColor = XLColor.FromHtml("#E4E7EC");
+                sheet.Range(excelRow, firstColumn, excelRow, lastColumn).Style.Fill.BackgroundColor = XLColor.FromHtml("#F7F4FB");
+            sheet.Range(excelRow, firstColumn, excelRow, lastColumn).Style.Border.BottomBorder = XLBorderStyleValues.Hair;
+            sheet.Range(excelRow, firstColumn, excelRow, lastColumn).Style.Border.BottomBorderColor = XLColor.FromHtml("#E4E7EC");
         }
 
         if (model.Rows.Count > 0)
         {
-            var tableRange = sheet.Range(headerRow, 1, headerRow + model.Rows.Count, lastColumn);
+            var tableRange = sheet.Range(headerRow, firstColumn, headerRow + model.Rows.Count, lastColumn);
             tableRange.SetAutoFilter();
         }
 
@@ -156,7 +162,13 @@ public sealed class ReportExportService
         var rows = root.TryGetProperty("rows", out var rowsElement)
             ? rowsElement.EnumerateArray().Select(row => row.Clone()).ToList()
             : [];
-        var headers = rows.Count == 0 ? [] : rows[0].EnumerateObject().Select(property => new Header(property.Name, Friendly(property.Name))).ToList();
+        var headers = rows.Count == 0
+            ? []
+            : rows.SelectMany(row => row.EnumerateObject().Select(property => property.Name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(key => !IsImageField(key))
+                .Select(key => new Header(key, Friendly(key)))
+                .ToList();
         var summary = string.Join("  ·  ", root.EnumerateObject()
             .Where(property => property.Name != "rows")
             .Select(property => $"{Friendly(property.Name)}: {FormatSummary(property.Name, property.Value)}"));
@@ -197,6 +209,7 @@ public sealed class ReportExportService
 
     private static bool IsMoney(string key) => key.Contains("total", StringComparison.OrdinalIgnoreCase) || key.Contains("monto", StringComparison.OrdinalIgnoreCase) || key.Contains("income", StringComparison.OrdinalIgnoreCase) || key.Contains("subtotal", StringComparison.OrdinalIgnoreCase) || key.Contains("tax", StringComparison.OrdinalIgnoreCase) || key.Contains("precio", StringComparison.OrdinalIgnoreCase) || key.Contains("costo", StringComparison.OrdinalIgnoreCase);
     private static bool IsDate(string key) => key.Contains("fecha", StringComparison.OrdinalIgnoreCase) || key.Contains("date", StringComparison.OrdinalIgnoreCase) || key.Contains("apertura", StringComparison.OrdinalIgnoreCase) || key.Contains("cierre", StringComparison.OrdinalIgnoreCase);
+    private static bool IsImageField(string key) => key.Contains("image", StringComparison.OrdinalIgnoreCase) || key.Contains("imagen", StringComparison.OrdinalIgnoreCase) || key.Contains("photo", StringComparison.OrdinalIgnoreCase) || key.Contains("foto", StringComparison.OrdinalIgnoreCase) || key.Contains("avatar", StringComparison.OrdinalIgnoreCase);
     private static string Period(DateTime? start, DateTime? end) => $"{start?.ToString("dd/MM/yyyy") ?? "Todos"} - {end?.ToString("dd/MM/yyyy") ?? "Actual"}";
     private static string Title(string type) => type switch { "sales" => "Reporte de ventas", "inventory" => "Reporte de inventario", "users" => "Reporte de usuarios", "promotions" => "Reporte de promociones", "cashClosures" => "Reporte de cierres de caja", "orders" => "Reporte de pedidos", _ => "Reporte administrativo" };
     private static string Friendly(string value)
@@ -206,7 +219,12 @@ public sealed class ReportExportService
             "totalIncome" => "Ingresos totales", "totalTransactions" => "Transacciones", "lowStock" => "Stock bajo",
             "negativeStock" => "Stock negativo", "activeUsers" => "Usuarios activos", "activePromotions" => "Promociones activas",
             "totalSales" => "Ventas totales", "totalOrders" => "Pedidos", "montoInicial" => "Monto inicial",
-            "montoFinal" => "Monto final", "totalVentas" => "Total ventas", _ => string.Concat(value.Select((character, index) => index > 0 && char.IsUpper(character) ? $" {char.ToLowerInvariant(character)}" : character.ToString())).Replace('_', ' ').Trim()
+            "montoFinal" => "Monto final", "totalVentas" => "Total ventas", "id" => "N.º", "saleId" => "N.º venta",
+            "orderId" => "N.º pedido", "productId" => "N.º producto", "customerName" => "Cliente", "customerEmail" => "Correo",
+            "customerPhone" => "Teléfono", "paymentStatus" => "Estado de pago", "orderStatus" => "Estado del pedido",
+            "isActive" => "Activo", "unitPrice" => "Precio unitario", "stock" => "Existencia", "minimumStock" => "Stock mínimo",
+            "createdAt" => "Fecha de creación", "updatedAt" => "Última actualización", "userName" => "Usuario", "role" => "Rol",
+            _ => string.Concat(value.Select((character, index) => index > 0 && char.IsUpper(character) ? $" {char.ToLowerInvariant(character)}" : character.ToString())).Replace('_', ' ').Trim()
         };
         return string.IsNullOrEmpty(label) ? label : char.ToUpperInvariant(label[0]) + label[1..];
     }

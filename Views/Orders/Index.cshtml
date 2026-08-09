@@ -421,16 +421,23 @@
     };
 
     window.deleteOrder = (id) => {
-        if (!confirm(`Eliminar pedido #${id}? Esto lo quitara del cliente, rastreo y flujo operativo.`)) return;
-
-        fetch(`/api/orders/${id}`, { method: 'DELETE' })
-            .then(async response => {
-                if (!response.ok) throw new Error(await response.text());
-                await loadOrders();
-                app.toast.success(`Pedido #${id} eliminado.`);
-                render();
-            })
-            .catch(error => app.toast.error(error.message));
+        app.modal.create({
+            title: `Eliminar pedido #${id}`,
+            message: 'Esta acción quitará el pedido del cliente, del rastreo y del flujo operativo.',
+            confirmText: 'Sí, eliminar',
+            cancelText: 'Conservar pedido',
+            onConfirm: async () => {
+                try {
+                    const response = await fetch(`/api/orders/${id}`, { method: 'DELETE' });
+                    if (!response.ok) throw new Error(await response.text());
+                    await loadOrders();
+                    app.toast.success(`Pedido #${id} eliminado.`);
+                    render();
+                } catch (error) {
+                    app.toast.error(error.message);
+                }
+            }
+        });
     };
 
     search.addEventListener('input', render);
