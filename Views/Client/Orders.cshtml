@@ -255,6 +255,7 @@
                 document.getElementById('ordersPaymentTitle').textContent = `Pagar pedido #${selectedOrder.id}`;
                 document.getElementById('ordersPaymentTotal').textContent = app.utils.formatCurrency(selectedOrder.total);
                 paymentModal.hidden = false;
+                syncPaymentFields();
             };
 
             function syncPaymentFields() {
