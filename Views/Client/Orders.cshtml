@@ -90,6 +90,7 @@
                 <span>Metodo</span>
                 <select class="form-control" name="method" id="ordersPaymentMethod">
                     <option>Tarjeta</option>
+                    <option>PayPal</option>
                     <option>SINPE</option>
                 </select>
             </label>
@@ -111,7 +112,7 @@
                     <input class="form-control" name="cvv" maxlength="4" inputmode="numeric" placeholder="123" />
                 </label>
             </div>
-            <p class="payment-modal__note">Simulacion segura: no se guarda informacion sensible.</p>
+            <p class="payment-modal__note" id="ordersPaymentNote">Los pagos con tarjeta y PayPal se validan directamente con la pasarela segura.</p>
             <button class="btn btn-primary" type="submit" id="ordersPaymentSubmit">
                 <i class="fas fa-lock"></i>
                 Confirmar pago
@@ -257,10 +258,25 @@
             };
 
             function syncPaymentFields() {
-                const isSinpe = paymentMethod.value === 'SINPE';
+                const onlineGateway = paymentMethod.value === 'Tarjeta' || paymentMethod.value === 'PayPal';
                 document.querySelectorAll('#ordersPaymentModal .payment-card-field').forEach(field => {
-                    field.hidden = isSinpe;
+                    field.hidden = onlineGateway || paymentMethod.value === 'SINPE';
                 });
+                paymentForm.holder.required = !onlineGateway;
+                document.getElementById('ordersPaymentNote').textContent = onlineGateway
+                    ? `Serás redirigido a ${paymentMethod.value} para completar y validar el pago.`
+                    : 'Registre la referencia del pago SINPE.';
+            }
+
+            async function startGatewayCheckout(path) {
+                const response = await fetch(path, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderIds: [Number(selectedOrder.id)] })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result.url) throw new Error(result.message || 'No fue posible iniciar el pago seguro.');
+                window.location.assign(result.url);
             }
 
             function closePaymentModal() {
@@ -278,16 +294,16 @@
                 if (!selectedOrder) return;
 
                 const data = Object.fromEntries(new FormData(paymentForm).entries());
-                if (data.method === 'Tarjeta') {
-                    const digits = String(data.card || '').replace(/\D/g, '');
-                    if (digits.length < 12 || !data.expiry || !data.cvv) {
-                        app.toast.error('Complete los datos de tarjeta para simular el pago.');
-                        return;
-                    }
-                }
-
                 try {
                     paymentSubmit.disabled = true;
+                    if (data.method === 'Tarjeta') {
+                        await startGatewayCheckout('/api/payments/stripe/checkout');
+                        return;
+                    }
+                    if (data.method === 'PayPal') {
+                        await startGatewayCheckout('/api/payments/paypal/checkout');
+                        return;
+                    }
                     await BakeSmartStore.orders.markPaid(selectedOrder.id, data.method);
                     await BakeSmartStore.refresh();
                     app.toast.success('Pago registrado. Tu pedido fue enviado al flujo operativo.');
