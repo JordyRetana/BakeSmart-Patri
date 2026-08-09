@@ -3,7 +3,9 @@ using BakeSmartPatri.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Mail;
+using System.Net.Http.Headers;
 using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 
 namespace BakeSmartPatri.Controllers;
@@ -16,14 +18,16 @@ public class ApiController : Controller
     private readonly IWebHostEnvironment _environment;
     private readonly ReportExportService _reportExportService;
     private readonly IEmailService _emailService;
+    private readonly IConfiguration _configuration;
 
-    public ApiController(SqlStore sqlStore, IHttpClientFactory httpClientFactory, IWebHostEnvironment environment, ReportExportService reportExportService, IEmailService emailService)
+    public ApiController(SqlStore sqlStore, IHttpClientFactory httpClientFactory, IWebHostEnvironment environment, ReportExportService reportExportService, IEmailService emailService, IConfiguration configuration)
     {
         _sqlStore = sqlStore;
         _httpClientFactory = httpClientFactory;
         _environment = environment;
         _reportExportService = reportExportService;
         _emailService = emailService;
+        _configuration = configuration;
     }
 
     private string? CurrentUserEmail =>
@@ -897,6 +901,78 @@ public class ApiController : Controller
         return Json(await _sqlStore.ReportsAsync(type, start, end));
     }
 
+    [HttpPost("payments/stripe/checkout")]
+    [Authorize(Policy = "AnyUser")]
+    public async Task<IActionResult> StartStripeCheckout([FromBody] StripeCheckoutRequest? request)
+    {
+        var secret = _configuration["Stripe:SecretKey"];
+        if (string.IsNullOrWhiteSpace(secret))
+            return BadRequest(new { message = "Stripe todavía no está configurado en el servidor." });
+
+        var ids = (request?.OrderIds ?? []).Where(id => id > 0).Distinct().ToArray();
+        if (ids.Length == 0) return BadRequest(new { message = "No hay pedidos válidos para cobrar." });
+
+        var email = CurrentUserEmail ?? string.Empty;
+        var rawOrders = JsonSerializer.SerializeToElement(await _sqlStore.OrdersAsync(User.IsInRole("Cliente") ? email : null));
+        var selected = rawOrders.EnumerateArray()
+            .Where(order => order.TryGetProperty("id", out var id) && ids.Contains(id.GetInt32()))
+            .Where(order => !order.TryGetProperty("paymentStatus", out var status) || !string.Equals(status.GetString(), "Pagado", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (selected.Length != ids.Length) return BadRequest(new { message = "Uno de los pedidos no existe, no pertenece al usuario o ya fue pagado." });
+
+        var origin = $"{Request.Scheme}://{Request.Host}";
+        var form = new List<KeyValuePair<string, string>>
+        {
+            new("mode", "payment"),
+            new("success_url", $"{origin}/api/payments/stripe/complete?session_id={{CHECKOUT_SESSION_ID}}"),
+            new("cancel_url", $"{origin}/Client/Orders?stripe=cancelled"),
+            new("client_reference_id", string.Join(',', ids)),
+            new("metadata[orders]", string.Join(',', ids)),
+            new("metadata[email]", email)
+        };
+        for (var index = 0; index < selected.Length; index++)
+        {
+            var order = selected[index];
+            var id = order.GetProperty("id").GetInt32();
+            var total = order.GetProperty("total").GetDecimal();
+            form.Add(new($"line_items[{index}][price_data][currency]", "crc"));
+            form.Add(new($"line_items[{index}][price_data][product_data][name]", $"Pedido BakeSmart #{id}"));
+            form.Add(new($"line_items[{index}][price_data][unit_amount]", decimal.Round(total * 100m, 0).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            form.Add(new($"line_items[{index}][quantity]", "1"));
+        }
+
+        var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{secret}:")));
+        var response = await client.PostAsync("https://api.stripe.com/v1/checkout/sessions", new FormUrlEncodedContent(form));
+        var json = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode) return BadRequest(new { message = "Stripe no pudo iniciar el cobro." });
+        using var document = JsonDocument.Parse(json);
+        return Ok(new { url = document.RootElement.GetProperty("url").GetString() });
+    }
+
+    [HttpGet("payments/stripe/complete")]
+    [Authorize(Policy = "AnyUser")]
+    public async Task<IActionResult> CompleteStripeCheckout(string session_id)
+    {
+        var secret = _configuration["Stripe:SecretKey"];
+        if (string.IsNullOrWhiteSpace(secret) || string.IsNullOrWhiteSpace(session_id)) return Redirect("/Client/Orders?stripe=error");
+        var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{secret}:")));
+        var response = await client.GetAsync($"https://api.stripe.com/v1/checkout/sessions/{Uri.EscapeDataString(session_id)}");
+        if (!response.IsSuccessStatusCode) return Redirect("/Client/Orders?stripe=error");
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var session = document.RootElement;
+        var paid = session.TryGetProperty("payment_status", out var paymentStatus) && paymentStatus.GetString() == "paid";
+        var metadata = session.TryGetProperty("metadata", out var meta) ? meta : default;
+        var owner = metadata.ValueKind == JsonValueKind.Object && metadata.TryGetProperty("email", out var ownerEmail) ? ownerEmail.GetString() : null;
+        var orders = metadata.ValueKind == JsonValueKind.Object && metadata.TryGetProperty("orders", out var orderIds) ? orderIds.GetString() : null;
+        if (!paid || string.IsNullOrWhiteSpace(orders) || (User.IsInRole("Cliente") && !string.Equals(owner, CurrentUserEmail, StringComparison.OrdinalIgnoreCase)))
+            return Redirect("/Client/Orders?stripe=error");
+        foreach (var orderId in orders.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(value => int.TryParse(value, out var id) ? id : 0).Where(id => id > 0))
+            await _sqlStore.MarkOrderPaidAsync(orderId, "Tarjeta", CurrentUserEmail);
+        return Redirect("/Client/Orders?stripe=success");
+    }
+
     [HttpGet("reports/{type}/export/{format}")]
     [Authorize(Roles = "Admin,Supervisor")]
     public async Task<IActionResult> ExportReport(string type, string format, DateTime? start, DateTime? end)
@@ -926,6 +1002,7 @@ public class ApiController : Controller
     public sealed record OpenCashSessionRequest(decimal Amount);
     public sealed record CloseCashSessionRequest(int Id, decimal DeclaredAmount);
     public sealed record AccountingCloseRequest(string? Type);
+    public sealed record StripeCheckoutRequest(IReadOnlyList<int>? OrderIds);
     public sealed record ForgotPasswordRequest(string Email);
     public sealed record ContactMessageRequest(string Name, string Email, string? Phone, string? Subject, string Message);
     public sealed record NewsletterRequest(string? Email);

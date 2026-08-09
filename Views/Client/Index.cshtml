@@ -787,6 +787,17 @@
         quantity: Math.max(1, Number(quantityInput.value || 1))
         });
         }
+
+        async function startStripeCheckout(orderIds) {
+        const response = await fetch('/api/payments/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderIds })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.url) throw new Error(result.message || 'No se pudo iniciar el pago seguro con Stripe.');
+        window.location.assign(result.url);
+        }
         updateSummary();
         });
         deliveryMethod.addEventListener('change', toggleQuickDelivery);
@@ -857,6 +868,10 @@
 
         try {
         paymentConfirmBtn.disabled = true;
+        if (String(data.method || '').toLowerCase().includes('tarjeta')) {
+        await startStripeCheckout([pendingPayment.orderId]);
+        return;
+        }
         await BakeSmartStore.orders.markPaid(pendingPayment.orderId, data.method);
         await BakeSmartStore.refresh({ force: true });
         renderSummary();
@@ -954,6 +969,10 @@
         selectedProducts.clear();
         selectedProduct = null;
         productInput.value = '';
+        }
+        if (String(data.paymentMethod || '').toLowerCase().includes('tarjeta')) {
+        await startStripeCheckout(createdOrders.map(order => Number(order.id)));
+        return;
         }
         if (shouldOpenGateway(data.paymentMethod) && createdOrders.length === 1) {
         openPaymentGateway(result.id, total, data.paymentMethod);
