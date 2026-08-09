@@ -2500,6 +2500,10 @@ public sealed class SqlStore
     {
         if (UseMySql)
         {
+            // Los cobros confirmados por una pasarela deben conservar su propio
+            // método en ventas y reportes, incluso si el administrador todavía
+            // no lo agregó manualmente en Configuración.
+            var confirmedMethodId = await EnsurePaymentMethodAsync(method);
             var cashAccountId = await EnsureAccountAsync("1-02", "Banco / SINPE / Tarjeta", "ACTIVO");
             var incomeAccountId = await EnsureAccountAsync("4-01", "Ingresos por ventas", "INGRESO");
 
@@ -2508,7 +2512,7 @@ public sealed class SqlStore
             await using var transaction = await connection.BeginTransactionAsync();
             try
             {
-                var paymentMethodId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
+                var paymentMethodId = confirmedMethodId > 0 ? confirmedMethodId : Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
                     SELECT COALESCE(
                         (SELECT PaymentMethodId FROM MetodosPago WHERE LOWER(Name) = LOWER(@Method) LIMIT 1),
                         (SELECT PaymentMethodId FROM MetodosPago WHERE Name = 'Tarjeta' LIMIT 1),
