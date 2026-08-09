@@ -11,6 +11,11 @@
         <div class="grid grid-2" style="gap:.75rem;">
             <input id="reportStart" class="form-control" type="date" />
             <input id="reportEnd" class="form-control" type="date" />
+            <select id="reportActivityFilter" class="form-control" aria-label="Filtrar por actividad">
+                <option value="all">Todos los estados</option>
+                <option value="active">Solo activos</option>
+                <option value="inactive">Solo inactivos</option>
+            </select>
         </div>
     </div>
 
@@ -81,8 +86,11 @@
 <script>
 (() => {
     let currentRows = [];
+    let currentSourceRows = [];
     let currentName = '';
     let currentType = '';
+    let currentTitle = '';
+    let currentMeta = '';
 
     function dates() {
         return {
@@ -98,15 +106,29 @@
         document.getElementById('reportOrdersKpi').textContent = BakeSmartStore.orders.list().length;
     }
 
-    function drawTable(title, rows, meta) {
-        currentRows = rows;
+    function isActiveRow(row) {
+        const value = row.isActive ?? row.active ?? row.activo;
+        if (value == null) return null;
+        return value === true || value === 1 || String(value).toLowerCase() === 'true' || String(value).toLowerCase() === 'activo';
+    }
+
+    function drawTable(title, rows, meta, preserveSource = false) {
+        if (!preserveSource) currentSourceRows = rows;
+        currentTitle = title;
+        currentMeta = meta;
+        const activity = document.getElementById('reportActivityFilter').value;
+        const visibleRows = activity === 'all' ? rows : rows.filter(row => {
+            const active = isActiveRow(row);
+            return active == null || (activity === 'active' ? active : !active);
+        });
+        currentRows = visibleRows;
         currentName = title.toLowerCase().replaceAll(' ', '_');
         document.getElementById('reportTitle').textContent = title;
-        document.getElementById('reportMeta').textContent = meta;
+        document.getElementById('reportMeta').textContent = activity === 'all' ? meta : `${meta} · Mostrando ${visibleRows.length} registros`;
         const { start, end } = dates();
         document.querySelector('.report-print-generated').innerHTML = `<strong>Periodo: ${start || 'Inicio'} al ${end || 'Actual'}</strong><span>Generado: ${new Date().toLocaleString('es-CR')}</span>`;
         const hiddenFields = /image|imagen|photo|foto|avatar/i;
-        const headers = [...new Set(rows.flatMap(row => Object.keys(row)))].filter(h => !hiddenFields.test(h));
+        const headers = [...new Set(visibleRows.flatMap(row => Object.keys(row)))].filter(h => !hiddenFields.test(h));
         const friendlyHeader = header => ({
             id: 'N.º', saleId: 'N.º venta', orderId: 'N.º pedido', productId: 'N.º producto',
             customerName: 'Cliente', customerEmail: 'Correo', customerPhone: 'Teléfono',
@@ -123,9 +145,9 @@
             if (dateFields.test(header) && !Number.isNaN(Date.parse(value))) return new Date(value).toLocaleString('es-CR');
             return value;
         };
-        document.getElementById('reportBody').innerHTML = rows.length ? rows.map(row => `<tr>${headers.map(h => `<td>${formatCell(h, row[h])}</td>`).join('')}</tr>`).join('') : `<tr><td class="text-center text-muted">No existen datos para este reporte.</td></tr>`;
-        document.getElementById('exportReportBtn').disabled = !rows.length;
-        document.getElementById('printReportBtn').disabled = !rows.length;
+        document.getElementById('reportBody').innerHTML = visibleRows.length ? visibleRows.map(row => `<tr>${headers.map(h => `<td>${formatCell(h, row[h])}</td>`).join('')}</tr>`).join('') : `<tr><td class="text-center text-muted">No existen datos para este reporte.</td></tr>`;
+        document.getElementById('exportReportBtn').disabled = !visibleRows.length;
+        document.getElementById('printReportBtn').disabled = !visibleRows.length;
     }
 
     window.loadReport = async (type) => {
@@ -178,6 +200,10 @@
         const { start, end } = dates();
         window.location.assign(`/api/reports/${currentType}/export/pdf?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
         app.toast.success('PDF profesional generado.');
+    });
+
+    document.getElementById('reportActivityFilter').addEventListener('change', () => {
+        if (currentType) drawTable(currentTitle, currentSourceRows, currentMeta, true);
     });
 
     const today = new Date().toISOString().slice(0,10);
