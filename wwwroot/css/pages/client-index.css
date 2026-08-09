@@ -258,6 +258,7 @@
 }
 
 .quick-product {
+    position: relative;
     display: grid;
     grid-template-columns: 82px minmax(0, 1fr);
     gap: .85rem;
@@ -279,6 +280,22 @@
 .quick-product--selected {
     border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
     background: color-mix(in srgb, var(--primary-light) 34%, var(--bg));
+}
+
+.quick-product--selected::after {
+    content: '✓';
+    position: absolute;
+    top: .5rem;
+    right: .5rem;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    color: #fff;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    box-shadow: 0 4px 10px color-mix(in srgb, var(--primary) 35%, transparent);
+    font-weight: 900;
 }
 
 .quick-product:hover {
@@ -309,9 +326,10 @@
 }
 
 .quick-product__body strong {
+    display: -webkit-box;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
     line-height: 1.2;
 }
 
