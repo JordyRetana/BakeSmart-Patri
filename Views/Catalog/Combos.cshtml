@@ -6,7 +6,7 @@
 }
 <main class="commerce-page">
     <header class="commerce-hero commerce-hero--combos">
-        <div><span class="commerce-kicker">Ahorro para compartir</span><h1>Combos preparados para ti</h1><p>Cada combo conserva sus productos, cantidades y precio especial al agregarlo a la compra.</p></div><i class="fas fa-box-open"></i>
+        <div><span class="commerce-kicker">Ahorro para compartir</span><h1>Combos preparados para ti</h1><p>Agrega los productos del combo al carrito y revisa tu pedido antes de continuar.</p></div><i class="fas fa-box-open"></i>
     </header>
     <section class="commerce-section">
         <div class="commerce-section-title"><span></span><h2>Combos disponibles</h2><span></span></div>
@@ -19,7 +19,7 @@
                         <small>Ahorra @combo.Discount.ToString("C0", culture)</small><h2>@combo.Name</h2><p>@combo.Description</p>
                         <ul>@foreach (var item in combo.Items) { <li>@item.Quantity.ToString("0.##") × @item.Name</li> }</ul>
                         <del>@combo.RegularPrice.ToString("C0", culture)</del> <strong>@combo.SpecialPrice.ToString("C0", culture)</strong>
-                        <a href="/Pos?combo=@combo.Id">Agregar combo</a>
+                        <button type="button" class="commerce-combo-add" onclick="addCatalogCombo(@combo.Id)">Agregar al carrito</button>
                     </div>
                 </article>
             }
@@ -27,3 +27,22 @@
         </div>
     </section>
 </main>
+<script>
+    const catalogCombos = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(combo => new { id = combo.Id, name = combo.Name, items = combo.Items.Select(item => new { productId = item.ProductId, quantity = item.Quantity, name = item.Name, unitPrice = item.UnitPrice }) })));
+    function addCatalogCombo(comboId) {
+        const combo = catalogCombos.find(row => Number(row.id) === Number(comboId));
+        if (!combo) return;
+        const email = (document.body.dataset.userEmail || '').trim().toLowerCase();
+        const key = `bakesmart:catalog-cart:${email || 'guest'}`;
+        let cart = [];
+        try { cart = JSON.parse(localStorage.getItem(key) || '[]'); } catch { cart = []; }
+        (combo.items || []).forEach(item => {
+            const itemId = Number(item.productId);
+            const existing = cart.find(row => Number(row.id) === itemId);
+            if (existing) existing.quantity = Number(existing.quantity || 0) + Number(item.quantity || 1);
+            else cart.push({ id: itemId, name: item.name, price: Number(item.unitPrice || 0), quantity: Number(item.quantity || 1), comboName: combo.name });
+        });
+        localStorage.setItem(key, JSON.stringify(cart));
+        window.location.href = '/Catalog/Cart';
+    }
+</script>

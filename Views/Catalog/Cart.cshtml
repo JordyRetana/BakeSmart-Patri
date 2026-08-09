@@ -77,7 +77,7 @@
         empty.hidden = valid.length > 0;
         document.querySelector('.catalog-cart-page__layout').hidden = !valid.length;
         const count = valid.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-        const total = valid.reduce((sum, item) => sum + Number(item.product.price || item.price || 0) * Number(item.quantity || 0), 0);
+        const total = valid.reduce((sum, item) => sum + Number(item.price || item.product.price || 0) * Number(item.quantity || 0), 0);
         document.getElementById('cartSummaryCount').textContent = `${count} producto${count === 1 ? '' : 's'}`;
         document.getElementById('cartSummaryTotal').textContent = money(total);
         lines.innerHTML = valid.map(item => `<article class="catalog-cart-line"><img src="${clean(item.product.imageUrl || '/img/products/producto-sin-imagen.svg')}" alt=""><div class="catalog-cart-line__info"><strong title="${clean(item.product.name)}">${clean(item.product.name)}</strong><small>${clean(item.product.code || 'Producto')} · ${money(item.product.price || item.price)}</small></div><div class="catalog-cart-line__actions"><div class="catalog-cart-line__quantity"><button data-quantity="${item.id}" data-change="-1" aria-label="Restar">−</button><strong>${item.quantity}</strong><button data-quantity="${item.id}" data-change="1" aria-label="Sumar">+</button></div><button class="btn btn-ghost btn-sm" data-remove="${item.id}" aria-label="Quitar"><i class="fas fa-trash"></i></button></div></article>`).join('');
