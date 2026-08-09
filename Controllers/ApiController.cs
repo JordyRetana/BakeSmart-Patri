@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Mail;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
@@ -973,6 +974,34 @@ public class ApiController : Controller
         return Redirect("/Client/Orders?stripe=success");
     }
 
+    [HttpPost("payments/stripe/webhook")]
+    [AllowAnonymous]
+    public async Task<IActionResult> StripeWebhook()
+    {
+        var webhookSecret = _configuration["Stripe:WebhookSecret"];
+        if (string.IsNullOrWhiteSpace(webhookSecret)) return StatusCode(StatusCodes.Status503ServiceUnavailable);
+
+        using var reader = new StreamReader(Request.Body, Encoding.UTF8);
+        var payload = await reader.ReadToEndAsync();
+        if (!Request.Headers.TryGetValue("Stripe-Signature", out var signature) || !IsValidStripeSignature(payload, signature.ToString(), webhookSecret))
+            return Unauthorized();
+
+        using var document = JsonDocument.Parse(payload);
+        var root = document.RootElement;
+        if (!root.TryGetProperty("type", out var type) || type.GetString() != "checkout.session.completed") return Ok();
+        if (!root.TryGetProperty("data", out var data) || !data.TryGetProperty("object", out var session)) return BadRequest();
+        if (!session.TryGetProperty("payment_status", out var paymentStatus) || paymentStatus.GetString() != "paid") return Ok();
+
+        var metadata = session.TryGetProperty("metadata", out var value) ? value : default;
+        var orders = metadata.ValueKind == JsonValueKind.Object && metadata.TryGetProperty("orders", out var orderIds) ? orderIds.GetString() : null;
+        var owner = metadata.ValueKind == JsonValueKind.Object && metadata.TryGetProperty("email", out var ownerEmail) ? ownerEmail.GetString() : null;
+        if (string.IsNullOrWhiteSpace(orders)) return BadRequest();
+
+        foreach (var orderId in orders.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(value => int.TryParse(value, out var id) ? id : 0).Where(id => id > 0))
+            await _sqlStore.MarkOrderPaidAsync(orderId, "Tarjeta", owner);
+        return Ok();
+    }
+
     [HttpGet("reports/{type}/export/{format}")]
     [Authorize(Roles = "Admin,Supervisor")]
     public async Task<IActionResult> ExportReport(string type, string format, DateTime? start, DateTime? end)
@@ -1006,6 +1035,21 @@ public class ApiController : Controller
     public sealed record ForgotPasswordRequest(string Email);
     public sealed record ContactMessageRequest(string Name, string Email, string? Phone, string? Subject, string Message);
     public sealed record NewsletterRequest(string? Email);
+
+    private static bool IsValidStripeSignature(string payload, string header, string secret)
+    {
+        var parts = header.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => part.Split('=', 2))
+            .Where(part => part.Length == 2)
+            .ToArray();
+        var timestamp = parts.FirstOrDefault(part => part[0] == "t")?.ElementAtOrDefault(1);
+        if (!long.TryParse(timestamp, out var unix) || Math.Abs(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - unix) > 300) return false;
+        var signedPayload = $"{timestamp}.{payload}";
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var expected = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(signedPayload)));
+        return parts.Where(part => part[0] == "v1").Select(part => part[1]).Any(candidate =>
+            candidate.Length == expected.Length && CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(candidate), Encoding.ASCII.GetBytes(expected)));
+    }
 
     private static bool IsValidEmail(string email)
     {
