@@ -974,6 +974,102 @@ public class ApiController : Controller
         return Redirect("/Client/Orders?stripe=success");
     }
 
+    [HttpPost("payments/paypal/checkout")]
+    [Authorize(Policy = "AnyUser")]
+    public async Task<IActionResult> StartPayPalCheckout([FromBody] StripeCheckoutRequest? request)
+    {
+        var clientId = _configuration["PayPal:ClientId"];
+        var secret = _configuration["PayPal:Secret"];
+        if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(secret))
+            return BadRequest(new { message = "PayPal todavía no está configurado en el servidor." });
+
+        var ids = (request?.OrderIds ?? []).Where(id => id > 0).Distinct().ToArray();
+        if (ids.Length == 0) return BadRequest(new { message = "No hay pedidos válidos para cobrar." });
+
+        var email = CurrentUserEmail ?? string.Empty;
+        var rawOrders = JsonSerializer.SerializeToElement(await _sqlStore.OrdersAsync(User.IsInRole("Cliente") ? email : null));
+        var selected = rawOrders.EnumerateArray()
+            .Where(order => order.TryGetProperty("id", out var id) && ids.Contains(id.GetInt32()))
+            .Where(order => !order.TryGetProperty("paymentStatus", out var status) || !string.Equals(status.GetString(), "Pagado", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (selected.Length != ids.Length) return BadRequest(new { message = "Uno de los pedidos no existe, no pertenece al usuario o ya fue pagado." });
+
+        var baseUrl = string.Equals(_configuration["PayPal:Environment"], "live", StringComparison.OrdinalIgnoreCase)
+            ? "https://api-m.paypal.com"
+            : "https://api-m.sandbox.paypal.com";
+        var accessToken = await GetPayPalAccessTokenAsync(baseUrl, clientId, secret);
+        if (string.IsNullOrWhiteSpace(accessToken)) return BadRequest(new { message = "PayPal no pudo autenticar la pasarela." });
+
+        var total = selected.Sum(order => order.GetProperty("total").GetDecimal());
+        var origin = $"{Request.Scheme}://{Request.Host}";
+        var payload = new
+        {
+            intent = "CAPTURE",
+            purchase_units = new[]
+            {
+                new
+                {
+                    custom_id = $"orders={string.Join(',', ids)};email={email}",
+                    description = $"Pedidos BakeSmart #{string.Join(", ", ids)}",
+                    amount = new { currency_code = _configuration["PayPal:Currency"] ?? "CRC", value = total.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) }
+                }
+            },
+            application_context = new
+            {
+                return_url = $"{origin}/api/payments/paypal/complete",
+                cancel_url = $"{origin}/Client/Orders?paypal=cancelled",
+                user_action = "PAY_NOW",
+                shipping_preference = "NO_SHIPPING"
+            }
+        };
+
+        var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        var response = await client.PostAsJsonAsync($"{baseUrl}/v2/checkout/orders", payload);
+        if (!response.IsSuccessStatusCode) return BadRequest(new { message = "PayPal no pudo iniciar el cobro." });
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var approvalUrl = document.RootElement.GetProperty("links").EnumerateArray()
+            .FirstOrDefault(link => link.TryGetProperty("rel", out var rel) && rel.GetString() == "payer-action")
+            .GetProperty("href").GetString();
+        return Ok(new { url = approvalUrl });
+    }
+
+    [HttpGet("payments/paypal/complete")]
+    [Authorize(Policy = "AnyUser")]
+    public async Task<IActionResult> CompletePayPalCheckout(string token)
+    {
+        var clientId = _configuration["PayPal:ClientId"];
+        var secret = _configuration["PayPal:Secret"];
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(secret))
+            return Redirect("/Client/Orders?paypal=error");
+
+        var baseUrl = string.Equals(_configuration["PayPal:Environment"], "live", StringComparison.OrdinalIgnoreCase)
+            ? "https://api-m.paypal.com"
+            : "https://api-m.sandbox.paypal.com";
+        var accessToken = await GetPayPalAccessTokenAsync(baseUrl, clientId, secret);
+        if (string.IsNullOrWhiteSpace(accessToken)) return Redirect("/Client/Orders?paypal=error");
+
+        var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        var capture = await client.PostAsync($"{baseUrl}/v2/checkout/orders/{Uri.EscapeDataString(token)}/capture", null);
+        if (!capture.IsSuccessStatusCode) return Redirect("/Client/Orders?paypal=error");
+        using var document = JsonDocument.Parse(await capture.Content.ReadAsStringAsync());
+        var order = document.RootElement;
+        if (!order.TryGetProperty("status", out var paymentStatus) || paymentStatus.GetString() != "COMPLETED") return Redirect("/Client/Orders?paypal=error");
+
+        var unit = order.GetProperty("purchase_units")[0];
+        var customId = unit.TryGetProperty("custom_id", out var custom) ? custom.GetString() : null;
+        var values = (customId ?? string.Empty).Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Select(item => item.Split('=', 2)).Where(item => item.Length == 2)
+            .ToDictionary(item => item[0], item => item[1], StringComparer.OrdinalIgnoreCase);
+        if (!values.TryGetValue("orders", out var orders) || (User.IsInRole("Cliente") && (!values.TryGetValue("email", out var email) || !string.Equals(email, CurrentUserEmail, StringComparison.OrdinalIgnoreCase))))
+            return Redirect("/Client/Orders?paypal=error");
+        values.TryGetValue("email", out var owner);
+        foreach (var orderId in orders.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(value => int.TryParse(value, out var id) ? id : 0).Where(id => id > 0))
+            await _sqlStore.MarkOrderPaidAsync(orderId, "PayPal", owner);
+        return Redirect("/Client/Orders?paypal=success");
+    }
+
     [HttpPost("payments/stripe/webhook")]
     [AllowAnonymous]
     public async Task<IActionResult> StripeWebhook()
@@ -1049,6 +1145,16 @@ public class ApiController : Controller
         var expected = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(signedPayload)));
         return parts.Where(part => part[0] == "v1").Select(part => part[1]).Any(candidate =>
             candidate.Length == expected.Length && CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(candidate), Encoding.ASCII.GetBytes(expected)));
+    }
+
+    private async Task<string?> GetPayPalAccessTokenAsync(string baseUrl, string clientId, string secret)
+    {
+        var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{secret}")));
+        var response = await client.PostAsync($"{baseUrl}/v1/oauth2/token", new FormUrlEncodedContent([new KeyValuePair<string, string>("grant_type", "client_credentials")]));
+        if (!response.IsSuccessStatusCode) return null;
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return document.RootElement.TryGetProperty("access_token", out var token) ? token.GetString() : null;
     }
 
     private static bool IsValidEmail(string email)

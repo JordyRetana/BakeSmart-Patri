@@ -107,6 +107,7 @@
                 <span>Metodo</span>
                 <select class="form-control" name="method" id="posGatewayMethod">
                     <option>Tarjeta</option>
+                    <option>PayPal</option>
                     <option>SINPE</option>
                     <option>Efectivo</option>
                     <option>Transferencia</option>
@@ -182,7 +183,7 @@
                     .filter(method => method.active)
                     .map(method => method.name);
 
-                const fallbackMethods = ['Efectivo', 'SINPE', 'Transferencia', 'Tarjeta'];
+                const fallbackMethods = ['Efectivo', 'SINPE', 'Transferencia', 'Tarjeta', 'PayPal'];
                 const methods = activeMethods.length ? activeMethods : fallbackMethods;
                 const options = methods.map(name => `<option value="${name}">${name}</option>`).join('');
                 const checkoutPaymentMethod = document.getElementById('checkoutPaymentMethod');
@@ -490,6 +491,17 @@
                 window.location.assign(result.url);
             }
 
+            async function startPayPalCheckout(orderIds) {
+                const response = await fetch('/api/payments/paypal/checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderIds })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result.url) throw new Error(result.message || 'No fue posible iniciar el pago seguro con PayPal.');
+                window.location.assign(result.url);
+            }
+
             async function completeCheckout(paymentData) {
                 try {
                     await store.pos.sessions();
@@ -544,6 +556,19 @@
                 data.method = method;
                 if (!method) {
                     app.toast.error('Seleccione un metodo de pago.');
+                    return;
+                }
+                if (pendingOrder && method.toLowerCase().includes('paypal')) {
+                    try {
+                        paymentConfirmBtn.disabled = true;
+                        paymentConfirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirigiendo a PayPal';
+                        setPaymentStatus('processing', 'Abriendo pago seguro', 'Será redirigido a PayPal para completar el cobro.', 'fa-spinner fa-spin');
+                        await startPayPalCheckout([Number(pendingOrder.id)]);
+                    } catch (error) {
+                        app.toast.error(error.message || 'No fue posible iniciar el pago seguro.');
+                        paymentConfirmBtn.disabled = false;
+                        paymentConfirmBtn.innerHTML = '<i class="fas fa-lock"></i> Aprobar cobro';
+                    }
                     return;
                 }
                 if (pendingOrder && shouldShowCardFields(method)) {
