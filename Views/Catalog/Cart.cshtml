@@ -51,7 +51,24 @@
     const clean = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
     let items = [];
 
-    function read() { try { return JSON.parse(localStorage.getItem(activeKey) || '[]'); } catch { return []; } }
+    function readItems(key) { try { const value = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(value) ? value : []; } catch { return []; } }
+    function read() {
+        const userKey = keyFor(email || 'guest');
+        const guestKey = keyFor('guest');
+        const merged = new Map();
+        (email ? [guestKey, userKey] : [guestKey]).flatMap(readItems).forEach(item => {
+            const id = Number(item?.id);
+            if (!id) return;
+            const previous = merged.get(id);
+            merged.set(id, previous ? { ...item, quantity: Number(previous.quantity || 0) + Number(item.quantity || 0) } : item);
+        });
+        const result = [...merged.values()];
+        if (email && result.length) {
+            localStorage.setItem(userKey, JSON.stringify(result));
+            localStorage.removeItem(guestKey);
+        }
+        return result;
+    }
     function save() { localStorage.setItem(activeKey, JSON.stringify(items)); render(); }
     function render() {
         const valid = items.map(item => ({ ...item, product: productById.get(Number(item.id)) })).filter(item => item.product);

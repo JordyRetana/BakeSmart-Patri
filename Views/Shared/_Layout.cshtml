@@ -203,7 +203,7 @@
                         <a href="/Account/Login"><i class="far fa-user"></i><span>Mi cuenta</span></a>
                         <a href="/Catalog/Favorites"><i class="far fa-heart"></i><span>Favoritos</span></a>
                     }
-                    <a href="/Catalog?cart=open" data-store-cart-link><i class="fas fa-cart-shopping"></i><span>Carrito</span></a>
+                    <a href="/Catalog/Cart" data-store-cart-link><i class="fas fa-cart-shopping"></i><span>Carrito</span></a>
                     <button class="storefront-theme theme-toggle" type="button" onclick="window.app.theme.toggle()" aria-label="Cambiar tema"><i class="fas fa-moon"></i></button>
                 </div>
             </div>
@@ -568,31 +568,8 @@
             const currentUserEmail = () => (document.body.dataset.userEmail || '').trim().toLowerCase();
             const cartKey = identity => `bakesmart:catalog-cart:${(identity || 'guest').trim().toLowerCase()}`;
 
-            function hasCatalogCartItems() {
-                try {
-                    const keys = [cartKey('guest')];
-                    const email = currentUserEmail();
-                    if (email) keys.push(cartKey(email));
-                    return keys.some(key => {
-                        const items = JSON.parse(localStorage.getItem(key) || '[]');
-                        return Array.isArray(items) && items.some(item => Number(item?.id) > 0 && Number(item?.quantity || 0) > 0);
-                    });
-                } catch {
-                    return false;
-                }
-            }
-
             document.querySelectorAll('[data-store-cart-link]').forEach(link => {
-                link.addEventListener('click', event => {
-                    if (!hasCatalogCartItems()) return;
-                    const email = currentUserEmail();
-                    event.preventDefault();
-                    if (!email) {
-                        window.location.href = `/Account/Login?ReturnUrl=${encodeURIComponent('/Client?cart=checkout')}`;
-                        return;
-                    }
-                    window.location.href = '/Client?cart=checkout';
-                });
+                link.setAttribute('href', '/Catalog/Cart');
             });
         })();
     </script>
