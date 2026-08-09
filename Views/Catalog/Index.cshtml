@@ -162,7 +162,7 @@
         <span id="cartTotal" style="color:var(--primary);font-size:1.15rem;">₡0</span>
     </div>
 
-    <a href="/Client?cart=checkout" class="btn btn-primary btn-block catalog-checkout-link" style="min-height:50px;">
+    <a href="/Catalog/Cart" class="btn btn-primary btn-block catalog-checkout-link" style="min-height:50px;">
         <i class="fas fa-arrow-right"></i>
         Finalizar pedido
     </a>
@@ -182,7 +182,7 @@
         <span>Total:</span>
         <span id="cartTotalDesktop" style="color:var(--primary);">₡0</span>
     </div>
-    <a href="/Client?cart=checkout" class="btn btn-primary btn-block catalog-checkout-link">
+    <a href="/Catalog/Cart" class="btn btn-primary btn-block catalog-checkout-link">
         <i class="fas fa-arrow-right"></i>
         Finalizar pedido
     </a>
@@ -403,8 +403,7 @@
             return;
         }
 
-        if (!requireLogin('Inicia sesión para finalizar el pedido.', '/Client?cart=checkout')) return;
-        window.location.href = '/Client?cart=checkout';
+        window.location.href = '/Catalog/Cart';
     });
 
     function updateCartDisplay() {

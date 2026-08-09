@@ -25,6 +25,11 @@ namespace BakeSmartPatri.Controllers
             return View(await BuildIndexModelAsync());
         }
 
+        public async Task<IActionResult> Cart()
+        {
+            return View(await BuildIndexModelAsync());
+        }
+
         public IActionResult Categories() => RedirectToAction(nameof(Index), new { categories = "open" });
 
         public async Task<IActionResult> Offers() => View(await BuildIndexModelAsync());

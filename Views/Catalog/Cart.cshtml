@@ -1,0 +1,82 @@
+@model BakeSmartPatri.Models.CatalogIndexViewModel
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Carrito";
+}
+
+<main class="page-shell catalog-cart-page">
+    <header class="catalog-cart-page__hero">
+        <div><span><i class="fas fa-cart-shopping"></i> Tu compra</span><h1>Carrito de pedidos</h1><p>Revisa cantidades y productos antes de continuar con la entrega y el pago.</p></div>
+        <a href="/Catalog" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Seguir comprando</a>
+    </header>
+    <section class="catalog-cart-page__layout">
+        <div id="cartLines" class="catalog-cart-page__lines"></div>
+        <aside class="catalog-cart-page__summary">
+            <span>Resumen</span><strong id="cartSummaryCount">0 productos</strong>
+            <div><span>Subtotal</span><strong id="cartSummaryTotal">₡0</strong></div>
+            <small>El impuesto, promociones y dirección se calculan en el siguiente paso.</small>
+            <button id="cartCheckout" class="btn btn-primary" type="button"><i class="fas fa-arrow-right"></i> Continuar al pedido</button>
+        </aside>
+    </section>
+    <section id="cartEmpty" class="client-empty-state" hidden><i class="fas fa-basket-shopping"></i><strong>Tu carrito está vacío</strong><span>Agrega productos del catálogo para crear tu pedido.</span><a href="/Catalog" class="btn btn-primary">Ver catálogo</a></section>
+</main>
+
+@section Styles {
+<style>
+.catalog-cart-page { max-width:1100px;margin:0 auto; }
+.catalog-cart-page__hero { display:flex;justify-content:space-between;gap:1rem;align-items:center;padding:1.5rem 0;flex-wrap:wrap; }
+.catalog-cart-page__hero span { color:var(--primary);font-weight:800; }
+.catalog-cart-page__hero h1 { margin:.35rem 0; }
+.catalog-cart-page__hero p { margin:0;color:var(--text-light); }
+.catalog-cart-page__layout { display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:1.25rem;align-items:start; }
+.catalog-cart-page__lines { display:grid;gap:.75rem; }
+.catalog-cart-line { display:grid;grid-template-columns:82px minmax(0,1fr) auto;gap:1rem;align-items:center;padding:.8rem;border:1px solid var(--border);border-radius:16px;background:var(--bg); }
+.catalog-cart-line img { width:82px;height:70px;border-radius:12px;object-fit:cover; }
+.catalog-cart-line__info { min-width:0;display:grid;gap:.25rem; }.catalog-cart-line__info strong { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }.catalog-cart-line__info small { color:var(--text-light); }
+.catalog-cart-line__actions { display:flex;align-items:center;gap:.55rem; }.catalog-cart-line__quantity { display:flex;align-items:center;gap:.35rem;padding:.25rem;border:1px solid var(--border);border-radius:10px; }.catalog-cart-line__quantity button { width:30px;height:30px;border:0;border-radius:8px;background:var(--bg-alt);color:var(--primary);font-weight:900;cursor:pointer; }.catalog-cart-line__quantity strong { min-width:24px;text-align:center; }
+.catalog-cart-page__summary { position:sticky;top:1rem;display:grid;gap:.9rem;padding:1.1rem;border:1px solid var(--border);border-radius:16px;background:var(--bg);box-shadow:var(--shadow-sm); }.catalog-cart-page__summary > span { color:var(--primary);font-weight:800;text-transform:uppercase;font-size:.75rem;letter-spacing:.06em; }.catalog-cart-page__summary > div { display:flex;justify-content:space-between;padding-top:.8rem;border-top:1px solid var(--border); }.catalog-cart-page__summary small { color:var(--text-light);line-height:1.45; }
+@@media(max-width:760px){.catalog-cart-page__layout{grid-template-columns:1fr}.catalog-cart-page__summary{position:static}.catalog-cart-line{grid-template-columns:64px minmax(0,1fr)}.catalog-cart-line img{width:64px;height:64px}.catalog-cart-line__actions{grid-column:1/-1;justify-content:space-between}}
+</style>
+}
+
+@section Scripts {
+<script>
+(() => {
+    const email = (document.body.dataset.userEmail || '').trim().toLowerCase();
+    const products = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Products.Select(p => new { id = p.Id, name = p.Name, price = p.UnitPrice, imageUrl = p.ImageUrl, code = p.Code })));
+    const productById = new Map(products.map(product => [Number(product.id), product]));
+    const keyFor = identity => `bakesmart:catalog-cart:${(identity || 'guest').trim().toLowerCase()}`;
+    const activeKey = keyFor(email || 'guest');
+    const money = value => app.utils.formatCurrency(Number(value || 0));
+    const clean = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
+    let items = [];
+
+    function read() { try { return JSON.parse(localStorage.getItem(activeKey) || '[]'); } catch { return []; } }
+    function save() { localStorage.setItem(activeKey, JSON.stringify(items)); render(); }
+    function render() {
+        const valid = items.map(item => ({ ...item, product: productById.get(Number(item.id)) })).filter(item => item.product);
+        const lines = document.getElementById('cartLines');
+        const empty = document.getElementById('cartEmpty');
+        empty.hidden = valid.length > 0;
+        document.querySelector('.catalog-cart-page__layout').hidden = !valid.length;
+        const count = valid.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        const total = valid.reduce((sum, item) => sum + Number(item.product.price || item.price || 0) * Number(item.quantity || 0), 0);
+        document.getElementById('cartSummaryCount').textContent = `${count} producto${count === 1 ? '' : 's'}`;
+        document.getElementById('cartSummaryTotal').textContent = money(total);
+        lines.innerHTML = valid.map(item => `<article class="catalog-cart-line"><img src="${clean(item.product.imageUrl || '/img/products/producto-sin-imagen.svg')}" alt=""><div class="catalog-cart-line__info"><strong title="${clean(item.product.name)}">${clean(item.product.name)}</strong><small>${clean(item.product.code || 'Producto')} · ${money(item.product.price || item.price)}</small></div><div class="catalog-cart-line__actions"><div class="catalog-cart-line__quantity"><button data-quantity="${item.id}" data-change="-1" aria-label="Restar">−</button><strong>${item.quantity}</strong><button data-quantity="${item.id}" data-change="1" aria-label="Sumar">+</button></div><button class="btn btn-ghost btn-sm" data-remove="${item.id}" aria-label="Quitar"><i class="fas fa-trash"></i></button></div></article>`).join('');
+    }
+    document.getElementById('cartLines').addEventListener('click', event => {
+        const quantity = event.target.closest('[data-quantity]');
+        const remove = event.target.closest('[data-remove]');
+        if (quantity) { const item = items.find(row => Number(row.id) === Number(quantity.dataset.quantity)); if (!item) return; item.quantity = Math.max(1, Number(item.quantity || 1) + Number(quantity.dataset.change)); save(); }
+        if (remove) { items = items.filter(item => Number(item.id) !== Number(remove.dataset.remove)); save(); }
+    });
+    document.getElementById('cartCheckout').addEventListener('click', () => {
+        if (!items.length) return;
+        if (!email) { window.location.href = `/Account/Login?ReturnUrl=${encodeURIComponent('/Catalog/Cart')}`; return; }
+        window.location.href = '/Client?cart=checkout';
+    });
+    items = read(); render();
+})();
+</script>
+}

@@ -53,10 +53,10 @@
             </div>
 
             <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
-                <a href="/Orders/Create?product=@Model.Product.Id" class="btn btn-primary">
+                <button type="button" id="addDetailToCart" class="btn btn-primary">
                     <i class="fas fa-shopping-cart"></i>
-                    Crear pedido
-                </a>
+                    Agregar al carrito
+                </button>
                 <a href="/Catalog" class="btn btn-outline">
                     <i class="fas fa-book-open"></i>
                     Ver más productos
@@ -93,6 +93,24 @@
     function setMainImage(url) {
         document.getElementById('mainProductImage').src = url;
     }
+
+    document.getElementById('addDetailToCart').addEventListener('click', () => {
+        const email = (document.body.dataset.userEmail || '').trim().toLowerCase();
+        const key = `bakesmart:catalog-cart:${email || 'guest'}`;
+        const product = {
+            id: @Model.Product.Id,
+            name: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Product.Name)),
+            price: @Model.Product.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            quantity: 1
+        };
+        let cart = [];
+        try { cart = JSON.parse(localStorage.getItem(key) || '[]'); } catch { cart = []; }
+        const item = cart.find(row => Number(row.id) === product.id);
+        if (item) item.quantity = Math.max(1, Number(item.quantity || 1) + 1);
+        else cart.push(product);
+        localStorage.setItem(key, JSON.stringify(cart));
+        window.location.href = '/Catalog/Cart';
+    });
 </script>
 
 @section Styles {
