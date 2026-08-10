@@ -51,7 +51,6 @@ namespace BakeSmartPatri.Controllers
         public async Task<IActionResult> Login(string email, string password, string? returnUrl = null)
         {
             email = (email ?? "").Trim().ToLowerInvariant();
-            phone = string.IsNullOrWhiteSpace(phone) ? null : Regex.Replace(phone, @"[^\d+]", "");
             password ??= "";
 
             var user = await _sqlStore.AuthenticateAsync(email, password);
@@ -89,6 +88,7 @@ namespace BakeSmartPatri.Controllers
             firstName = (firstName ?? "").Trim();
             lastName = (lastName ?? "").Trim();
             email = (email ?? "").Trim().ToLowerInvariant();
+            phone = string.IsNullOrWhiteSpace(phone) ? null : Regex.Replace(phone, @"[^\d+]", "");
             password ??= "";
             confirmPassword ??= "";
 
@@ -150,13 +150,6 @@ namespace BakeSmartPatri.Controllers
             {
                 TempData["CashLogoutBlocked"] = "No puede cerrar sesión mientras tenga una caja abierta. Complete primero el cierre de caja.";
                 return RedirectToAction("Index", "Pos");
-            }
-
-            if (!string.IsNullOrWhiteSpace(phone) && !Regex.IsMatch(phone, @"^\+[1-9]\d{7,14}$"))
-            {
-                TempData["Toast"] = "El teléfono debe incluir un prefijo de país y una cantidad válida de dígitos.";
-                ViewData["ReturnUrl"] = returnUrl ?? "";
-                return View();
             }
 
             if (!string.IsNullOrWhiteSpace(email))
@@ -317,6 +310,13 @@ namespace BakeSmartPatri.Controllers
             if (string.IsNullOrWhiteSpace(token) || newPassword.Length < 8)
             {
                 ViewData["ResetError"] = "La contraseña debe tener al menos 8 caracteres.";
+                return View();
+            }
+
+            if (!string.IsNullOrWhiteSpace(phone) && !Regex.IsMatch(phone, @"^\+[1-9]\d{7,14}$"))
+            {
+                TempData["Toast"] = "El teléfono debe incluir un prefijo de país y una cantidad válida de dígitos.";
+                ViewData["ReturnUrl"] = returnUrl ?? "";
                 return View();
             }
             if (!string.Equals(newPassword, confirmPassword, StringComparison.Ordinal))
