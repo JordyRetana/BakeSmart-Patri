@@ -1043,9 +1043,15 @@ public class ApiController : Controller
             return BadRequest(new { message = string.IsNullOrWhiteSpace(detail) ? "PayPal no pudo iniciar el cobro." : $"PayPal rechazó el cobro: {detail}" });
         }
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var approvalUrl = document.RootElement.GetProperty("links").EnumerateArray()
-            .FirstOrDefault(link => link.TryGetProperty("rel", out var rel) && rel.GetString() == "payer-action")
-            .GetProperty("href").GetString();
+        var approvalLink = document.RootElement.GetProperty("links").EnumerateArray()
+            .FirstOrDefault(link => link.TryGetProperty("rel", out var rel) &&
+                (string.Equals(rel.GetString(), "payer-action", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(rel.GetString(), "approve", StringComparison.OrdinalIgnoreCase)));
+        var approvalUrl = approvalLink.ValueKind == JsonValueKind.Object && approvalLink.TryGetProperty("href", out var href)
+            ? href.GetString()
+            : null;
+        if (string.IsNullOrWhiteSpace(approvalUrl))
+            return BadRequest(new { message = "PayPal no devolvió el enlace de autorización." });
         return Ok(new { url = approvalUrl });
     }
 
