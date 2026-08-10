@@ -38,7 +38,20 @@ namespace BakeSmartPatri.Controllers
 
         public IActionResult About() => View();
 
-        public IActionResult Contact() => View();
+        public async Task<IActionResult> Contact()
+        {
+            try
+            {
+                ViewBag.SiteSettings = await _sqlStore.SettingsDictionaryAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "No se pudo cargar la configuración pública de contacto.");
+                ViewBag.SiteSettings = new Dictionary<string, string>();
+            }
+
+            return View();
+        }
 
         public IActionResult Error() => View();
     }

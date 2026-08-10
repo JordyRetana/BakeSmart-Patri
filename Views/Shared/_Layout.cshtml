@@ -1,3 +1,5 @@
+@using BakeSmartPatri.Data
+@inject SqlStore SqlStore
 @{
     var title = ViewData["Title"] as string ?? "BakeSmart Patri";
     var isAuth = User?.Identity?.IsAuthenticated ?? false;
@@ -33,6 +35,20 @@
     var currentPath = Context.Request.Path.ToString().ToLower();
     var showStorefrontHeader = !isAuth || isClient;
     var enablePageLoader = false;
+    IReadOnlyDictionary<string, string> siteSettings;
+    try
+    {
+        siteSettings = await SqlStore.SettingsDictionaryAsync();
+    }
+    catch
+    {
+        siteSettings = new Dictionary<string, string>();
+    }
+    string siteSetting(string key, string fallback) => siteSettings.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value) ? value.Trim() : fallback;
+    var sitePhone = siteSetting("sitePhone", "+506 8888-8888");
+    var siteEmail = siteSetting("siteEmail", "info@bakesmart.com");
+    var siteAddress = siteSetting("siteAddress", "San José, Costa Rica");
+    var sitePhoneHref = "tel:" + new string(sitePhone.Where(char.IsDigit).ToArray());
 }
 <!DOCTYPE html>
 <html lang="es">
@@ -453,9 +469,9 @@
             <div>
                 <h4 class="footer-title">Contacto</h4>
                 <ul class="footer-links">
-                    <li><i class="fas fa-phone" style="width: 20px; margin-right: 0.5rem;"></i> +506 8888-8888</li>
-                    <li><i class="fas fa-envelope" style="width: 20px; margin-right: 0.5rem;"></i> info@bakesmart.com</li>
-                    <li><i class="fas fa-map-marker-alt" style="width: 20px; margin-right: 0.5rem;"></i> San José, Costa Rica</li>
+                    <li><i class="fas fa-phone" style="width: 20px; margin-right: 0.5rem;"></i> <a href="@sitePhoneHref">@sitePhone</a></li>
+                    <li><i class="fas fa-envelope" style="width: 20px; margin-right: 0.5rem;"></i> <a href="mailto:@siteEmail">@siteEmail</a></li>
+                    <li><i class="fas fa-map-marker-alt" style="width: 20px; margin-right: 0.5rem;"></i> @siteAddress</li>
                     <li><i class="fas fa-clock" style="width: 20px; margin-right: 0.5rem;"></i> Lun-Vie: 8am - 6pm</li>
                 </ul>
             </div>

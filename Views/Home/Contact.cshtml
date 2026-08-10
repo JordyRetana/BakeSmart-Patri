@@ -1,6 +1,12 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Contacto";
+    var siteSettings = ViewBag.SiteSettings as IReadOnlyDictionary<string, string> ?? new Dictionary<string, string>();
+    string siteSetting(string key, string fallback) => siteSettings.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value) ? value.Trim() : fallback;
+    var sitePhone = siteSetting("sitePhone", "+506 8888-8888");
+    var siteEmail = siteSetting("siteEmail", "info@bakesmart.com");
+    var siteAddress = siteSetting("siteAddress", "San José, Costa Rica");
+    var sitePhoneHref = "tel:" + new string(sitePhone.Where(char.IsDigit).ToArray());
 }
 
 @section Styles { <link rel="stylesheet" href="~/css/pages/public-info.css" asp-append-version="true" /> }
@@ -18,9 +24,9 @@
     <section class="contact-layout">
         <div class="contact-details">
             <div class="story-section-title"><span>Estamos cerca</span><h2>Elige el medio que prefieras</h2></div>
-            <a href="tel:+50688888888"><i class="fas fa-phone"></i><span><small>Telefono</small><strong>+506 8888-8888</strong></span><i class="fas fa-arrow-right"></i></a>
-            <a href="mailto:info@bakesmart.com"><i class="fas fa-envelope"></i><span><small>Correo</small><strong>info@bakesmart.com</strong></span><i class="fas fa-arrow-right"></i></a>
-            <div><i class="fas fa-location-dot"></i><span><small>Ubicacion</small><strong>San Jose, Costa Rica</strong></span></div>
+            <a href="@sitePhoneHref"><i class="fas fa-phone"></i><span><small>Telefono</small><strong>@sitePhone</strong></span><i class="fas fa-arrow-right"></i></a>
+            <a href="mailto:@siteEmail"><i class="fas fa-envelope"></i><span><small>Correo</small><strong>@siteEmail</strong></span><i class="fas fa-arrow-right"></i></a>
+            <div><i class="fas fa-location-dot"></i><span><small>Ubicacion</small><strong>@siteAddress</strong></span></div>
             <div><i class="fas fa-clock"></i><span><small>Horario</small><strong>Lunes a viernes, 8:00 a.m. - 6:00 p.m.</strong></span></div>
         </div>
 
