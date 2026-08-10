@@ -15,15 +15,6 @@
         <a class="btn btn-outline" href="/Catalog"><i class="fas fa-arrow-left"></i> Volver al catálogo</a>
     </header>
 
-    <section class="catalog-favorites-login" id="favoritesLoginNotice" hidden>
-        <i class="fas fa-lock"></i>
-        <div>
-            <strong>Inicia sesión para usar favoritos</strong>
-            <p>Asi podemos separar tus productos guardados de los demas clientes.</p>
-        </div>
-        <a class="btn btn-primary" href="/Account/Login?ReturnUrl=/Catalog/Favorites">Iniciar sesión</a>
-    </section>
-
     <section class="catalog-favorites-empty" id="favoritesEmpty" hidden>
         <i class="far fa-heart"></i>
         <h2>Aun no tienes favoritos</h2>
@@ -64,9 +55,7 @@
 <script>
 (() => {
     const email = (document.body.dataset.userEmail || '').trim().toLowerCase();
-    const authenticated = document.body.dataset.userAuthenticated === 'true';
-    const key = `bakesmart:favorites:${email || (authenticated ? 'authenticated' : 'guest')}`;
-    const loginNotice = document.getElementById('favoritesLoginNotice');
+    const key = `bakesmart:favorites:${email || 'guest'}`;
     const empty = document.getElementById('favoritesEmpty');
     const cards = [...document.querySelectorAll('[data-favorite-card]')];
 
@@ -83,13 +72,6 @@
     }
 
     function render() {
-        if (!authenticated) {
-            loginNotice.hidden = false;
-            empty.hidden = true;
-            cards.forEach(card => card.hidden = true);
-            return;
-        }
-
         const ids = readFavorites();
         let visible = 0;
         cards.forEach(card => {
@@ -97,7 +79,6 @@
             card.hidden = !active;
             if (active) visible++;
         });
-        loginNotice.hidden = true;
         empty.hidden = visible > 0;
     }
 
