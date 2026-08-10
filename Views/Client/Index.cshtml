@@ -755,6 +755,8 @@
         quantity: Math.max(1, Number(quantityInput.value || 1))
         });
         }
+        updateSummary();
+        });
 
         async function startStripeCheckout(orderIds) {
         const response = await fetch('/api/payments/stripe/checkout', {
@@ -777,8 +779,6 @@
         if (!response.ok || !result.url) throw new Error(result.message || 'No se pudo iniciar el pago seguro con PayPal.');
         window.location.assign(result.url);
         }
-        updateSummary();
-        });
         deliveryMethod.addEventListener('change', toggleQuickDelivery);
         paymentMethod.addEventListener('change', syncPaymentFields);
         document.getElementById('clientMiniOrders').addEventListener('click', event => {
