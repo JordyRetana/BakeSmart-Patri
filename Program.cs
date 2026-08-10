@@ -89,11 +89,12 @@ else
     dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath));
 }
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options => options.Filters.AddService<AuditMutationFilter>());
 builder.Services.AddHttpClient();
 builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 builder.Services.AddScoped<SqlStore>();
 builder.Services.AddScoped<ReportExportService>();
+builder.Services.AddScoped<AuditMutationFilter>();
 builder.Services.AddHttpClient<IEmailService, BrevoEmailService>(client =>
 {
     client.BaseAddress = new Uri("https://api.brevo.com/v3/");

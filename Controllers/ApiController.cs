@@ -1177,11 +1177,20 @@ public class ApiController : Controller
             _ => "reporte"
         };
         var stamp = DateTime.Now.ToString("yyyyMMdd-HHmm");
-        return format.ToLowerInvariant() switch
+        var normalizedFormat = format.ToLowerInvariant();
+        if (normalizedFormat is not "xlsx" and not "pdf")
+            return BadRequest(new { message = "Formato de reporte no soportado." });
+
+        await _sqlStore.AddAuditLogAsync(
+            "DESCARGAR_REPORTE",
+            $"Descargó reporte de {safeType} en formato {normalizedFormat.ToUpperInvariant()} ({start:yyyy-MM-dd} a {end:yyyy-MM-dd})",
+            CurrentUserEmail);
+
+        return normalizedFormat switch
         {
             "xlsx" => File(_reportExportService.CreateExcel(type, report, start, end), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"reporte_{safeType}_{stamp}.xlsx"),
             "pdf" => File(_reportExportService.CreatePdf(type, report, start, end), "application/pdf", $"reporte_{safeType}_{stamp}.pdf"),
-            _ => BadRequest(new { message = "Formato de reporte no soportado." })
+            _ => BadRequest()
         };
     }
 
