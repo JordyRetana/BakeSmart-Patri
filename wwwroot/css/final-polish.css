@@ -114,6 +114,42 @@ body.app-body select option {
     z-index: 50000 !important;
 }
 
+/* POS mobile navigation: dedicated logo and menu columns, with a full usable drawer. */
+@media (max-width: 860px) {
+    .navbar-container {
+        grid-template-columns: max-content 42px minmax(0, 1fr) max-content !important;
+        gap: .55rem !important;
+    }
+
+    .navbar-container > .navbar-brand {
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+    }
+
+    .navbar-container > .mobile-nav-toggle {
+        grid-column: 2 !important;
+        grid-row: 1 !important;
+        margin: 0 !important;
+        position: static !important;
+    }
+
+    .navbar-container > .navbar-actions {
+        grid-column: 4 !important;
+        grid-row: 1 !important;
+    }
+
+    body.mobile-nav-open .navbar-menu {
+        top: 74px !important;
+        right: .5rem !important;
+        bottom: .5rem !important;
+        left: .5rem !important;
+        width: auto !important;
+        height: auto !important;
+        max-height: none !important;
+        border-radius: 18px !important;
+    }
+}
+
 .payment-modal__dialog,
 .pos-payment-modal__dialog {
     z-index: 50001 !important;
@@ -1694,5 +1730,28 @@ body.dark .navbar .user-profile {
         max-height: min(70dvh, 420px) !important;
         border-radius: 18px !important;
         transform-origin: top right !important;
+    }
+}
+
+/* Final mobile POS navigation override. */
+@media (max-width: 860px) {
+    .navbar-container {
+        grid-template-columns: max-content 42px minmax(0, 1fr) max-content !important;
+        gap: .55rem !important;
+    }
+
+    .navbar-container > .navbar-brand { grid-column: 1 !important; grid-row: 1 !important; }
+    .navbar-container > .mobile-nav-toggle { grid-column: 2 !important; grid-row: 1 !important; margin: 0 !important; position: static !important; }
+    .navbar-container > .navbar-actions { grid-column: 4 !important; grid-row: 1 !important; }
+
+    body.mobile-nav-open .navbar-menu {
+        top: 74px !important;
+        right: .5rem !important;
+        bottom: .5rem !important;
+        left: .5rem !important;
+        width: auto !important;
+        height: auto !important;
+        max-height: none !important;
+        border-radius: 18px !important;
     }
 }
