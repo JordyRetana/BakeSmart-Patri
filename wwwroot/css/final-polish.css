@@ -784,32 +784,34 @@ body[data-page="/pos"] .pos-header::before {
     }
 }
 
-/* Home popular products: a simple, symmetric product row without unused white space. */
+/* Home popular products: editorial showcase aligned with the storefront language. */
 body[data-page="/"] .storefront-popular .storefront-product-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 1.3rem !important;
+    gap: 1.45rem !important;
     align-items: stretch !important;
 }
 
 body[data-page="/"] .storefront-popular .storefront-product-card {
     display: flex !important;
     flex-direction: column !important;
-    height: 470px !important;
+    height: 438px !important;
     min-height: 0 !important;
-    background: #fff !important;
-    border: 1px solid #e6d9ec !important;
-    border-radius: 18px !important;
-    box-shadow: 0 14px 32px rgba(65, 38, 91, .10) !important;
+    background: linear-gradient(155deg, #ffffff 0%, #fbf7fd 100%) !important;
+    border: 1px solid #e4d7eb !important;
+    border-radius: 22px !important;
+    box-shadow: 0 16px 34px rgba(65, 38, 91, .11) !important;
     overflow: hidden !important;
 }
 
 body[data-page="/"] .storefront-popular .storefront-product-card::after { display: none !important; }
-body[data-page="/"] .storefront-popular .storefront-product-image { position: relative !important; inset: auto !important; aspect-ratio: auto !important; flex: 0 0 260px !important; height: 260px !important; }
-body[data-page="/"] .storefront-popular .storefront-product-body { display: grid !important; grid-template-rows: auto minmax(2.4em, auto) auto auto 42px !important; gap: .4rem !important; height: 210px !important; min-height: 0 !important; padding: 1rem !important; color: #273044 !important; }
-body[data-page="/"] .storefront-popular .storefront-product-body small { color: var(--store-coral) !important; }
-body[data-page="/"] .storefront-popular .storefront-product-body h3 { min-height: 2.4em !important; color: #273044 !important; font-size: .92rem !important; }
-body[data-page="/"] .storefront-popular .storefront-product-body > strong { margin: 0 !important; color: #17375d !important; }
-body[data-page="/"] .storefront-popular .storefront-product-body > a { min-height: 42px !important; margin: 0 !important; border: 0 !important; border-radius: 11px !important; background: linear-gradient(135deg, var(--store-purple), var(--store-coral)) !important; color: #fff !important; }
+body[data-page="/"] .storefront-popular .storefront-product-card:hover { transform: translateY(-6px) !important; box-shadow: 0 24px 46px rgba(75, 41, 100, .18) !important; }
+body[data-page="/"] .storefront-popular .storefront-product-image { position: relative !important; inset: auto !important; aspect-ratio: auto !important; flex: 0 0 224px !important; height: 224px !important; margin: .65rem .65rem 0 !important; border-radius: 16px !important; overflow: hidden !important; }
+body[data-page="/"] .storefront-popular .storefront-product-image::after { content: ""; position: absolute; inset: 45% 0 0; background: linear-gradient(180deg, transparent, rgba(37, 21, 48, .26)); }
+body[data-page="/"] .storefront-popular .storefront-product-body { display: grid !important; grid-template-rows: auto minmax(2.35em, auto) auto auto 40px !important; gap: .34rem !important; height: 214px !important; min-height: 0 !important; padding: .85rem 1rem 1rem !important; color: #273044 !important; }
+body[data-page="/"] .storefront-popular .storefront-product-body small { width: fit-content; padding: .22rem .52rem; border-radius: 999px; background: #f1e8fb; color: var(--store-purple) !important; font-size: .62rem !important; }
+body[data-page="/"] .storefront-popular .storefront-product-body h3 { min-height: 2.35em !important; color: #253758 !important; font-size: .96rem !important; }
+body[data-page="/"] .storefront-popular .storefront-product-body > strong { margin: 0 !important; color: #56318f !important; font-size: 1.16rem !important; }
+body[data-page="/"] .storefront-popular .storefront-product-body > a { min-height: 40px !important; margin: 0 !important; border: 1px solid #7e45db !important; border-radius: 12px !important; background: linear-gradient(135deg, #7c3aed, #c13d84) !important; color: #fff !important; }
 @media (max-width: 760px) { body[data-page="/"] .storefront-popular .storefront-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
 
 @media (max-width: 760px) {
