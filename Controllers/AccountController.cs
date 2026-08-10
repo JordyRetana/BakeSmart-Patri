@@ -99,6 +99,13 @@ namespace BakeSmartPatri.Controllers
                 return View();
             }
 
+            if (!string.IsNullOrWhiteSpace(phone) && !Regex.IsMatch(phone, @"^\+[1-9]\d{7,14}$"))
+            {
+                TempData["Toast"] = "El teléfono debe incluir un prefijo de país y una cantidad válida de dígitos.";
+                ViewData["ReturnUrl"] = returnUrl ?? "";
+                return View();
+            }
+
             if (password.Length < 8)
             {
                 TempData["Toast"] = "La contraseña debe tener al menos 8 caracteres.";
@@ -313,12 +320,6 @@ namespace BakeSmartPatri.Controllers
                 return View();
             }
 
-            if (!string.IsNullOrWhiteSpace(phone) && !Regex.IsMatch(phone, @"^\+[1-9]\d{7,14}$"))
-            {
-                TempData["Toast"] = "El teléfono debe incluir un prefijo de país y una cantidad válida de dígitos.";
-                ViewData["ReturnUrl"] = returnUrl ?? "";
-                return View();
-            }
             if (!string.Equals(newPassword, confirmPassword, StringComparison.Ordinal))
             {
                 ViewData["ResetError"] = "Las contraseñas no coinciden.";
