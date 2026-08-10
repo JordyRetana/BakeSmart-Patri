@@ -24,7 +24,8 @@
         })
         .ToList();
     var offerProducts = products.Skip(1).Take(3).ToList();
-    var popularProducts = products.Take(5).ToList();
+    // La portada usa una fila editorial uniforme; el resto queda disponible en “Ver todos”.
+    var popularProducts = products.Take(4).ToList();
     var settings = ViewBag.HomeSettings as IReadOnlyDictionary<string, string> ?? new Dictionary<string, string>();
     string setting(string key, string fallback) => settings.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value) ? value : fallback;
     var heroEyebrow = setting("siteHeroEyebrow", "Especial de temporada");
