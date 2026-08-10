@@ -929,6 +929,21 @@ body[data-page="/pos"] .pos-featured-products-header h3 { margin: .12rem 0 0; co
 body[data-page="/pos"] .pos-featured-products-header small { color: #748094; }
 @media (max-width: 650px) { body[data-page="/pos"] .pos-featured-products-header { align-items: flex-start; flex-direction: column; gap: .2rem; } }
 
+/* Payment-method form: preserve readable labels instead of squeezing four controls into one row. */
+body[data-page="/pos"] .pos-payment-config-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: .75rem !important;
+}
+body[data-page="/pos"] .pos-payment-config-form .form-control {
+    min-width: 0 !important;
+    text-overflow: ellipsis;
+}
+body[data-page="/pos"] .pos-payment-config-form .btn {
+    grid-column: 1 / -1 !important;
+    min-height: 46px !important;
+}
+@media (max-width: 650px) { body[data-page="/pos"] .pos-payment-config-form { grid-template-columns: 1fr !important; } }
+
 @media (max-width: 600px) {
     .navbar .navbar-brand-text {
         display: none !important;
