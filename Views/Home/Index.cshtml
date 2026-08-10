@@ -7,9 +7,15 @@
     var isStaff = User?.IsInRole("Staff") ?? false;
     var isClient = User?.IsInRole("Cliente") ?? false;
     var culture = new System.Globalization.CultureInfo("es-CR");
-    var products = Model.Products.Where(product => product.IsActive).ToList();
+    var products = Model.Products
+        .Where(product => product.IsActive)
+        .GroupBy(product => string.IsNullOrWhiteSpace(product.Code) ? $"id-{product.Id}" : product.Code.Trim(), StringComparer.OrdinalIgnoreCase)
+        .Select(group => group.OrderByDescending(product => product.Id).First())
+        .ToList();
     var heroProduct = products.FirstOrDefault();
     var categoryCards = Model.Categories
+        .GroupBy(category => category.Name.Trim().TrimEnd('s', 'S'), StringComparer.OrdinalIgnoreCase)
+        .Select(group => group.OrderByDescending(category => products.Count(product => product.Category == category.Name)).First())
         .Take(5)
         .Select(category => new
         {
