@@ -60,14 +60,14 @@
 
                     <div class="input-group">
                         <label class="input-label" for="registerPhone"><i class="fas fa-phone"></i> Teléfono</label>
-                        <div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:.5rem;">
+                        <div class="register-phone-row">
                             <select class="input" id="registerPhoneCountry" aria-label="País del teléfono">
-                                <option value="+506" data-min="8" data-max="8">🇨🇷 Costa Rica +506</option>
-                                <option value="+1" data-min="10" data-max="10">🇺🇸 EE. UU. +1</option>
-                                <option value="+52" data-min="10" data-max="10">🇲🇽 México +52</option>
-                                <option value="+34" data-min="9" data-max="9">🇪🇸 España +34</option>
-                                <option value="+57" data-min="10" data-max="10">🇨🇴 Colombia +57</option>
-                                <option value="+54" data-min="10" data-max="10">🇦🇷 Argentina +54</option>
+                                <option value="+506" data-min="8" data-max="8">🇨🇷 CR +506</option>
+                                <option value="+1" data-min="10" data-max="10">🇺🇸 US +1</option>
+                                <option value="+52" data-min="10" data-max="10">🇲🇽 MX +52</option>
+                                <option value="+34" data-min="9" data-max="9">🇪🇸 ES +34</option>
+                                <option value="+57" data-min="10" data-max="10">🇨🇴 CO +57</option>
+                                <option value="+54" data-min="10" data-max="10">🇦🇷 AR +54</option>
                             </select>
                             <input class="input" id="registerPhone" name="phone" type="tel" inputmode="numeric" placeholder="6000 0000" autocomplete="tel" />
                         </div>
@@ -172,7 +172,7 @@
         const digits = phoneInput.value.replace(/\D/g, '').slice(0, max);
         phoneInput.value = digits;
         phoneInput.placeholder = '0'.repeat(min);
-        phoneHelp.textContent = `${option.textContent.trim()}: ingresa ${min} dígitos; el prefijo se agrega automáticamente.`;
+        phoneHelp.textContent = `${option.textContent.trim()} · ${min} dígitos`;
         phoneInput.setCustomValidity(digits && digits.length !== min ? `Ingresa exactamente ${min} dígitos para el país seleccionado.` : '');
         return !digits || digits.length === min;
     };
