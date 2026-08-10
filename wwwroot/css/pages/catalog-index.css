@@ -277,6 +277,11 @@ body.catalog-sidebar-open {
     padding: 1rem;
 }
 
+.catalog-favorites-login[hidden],
+.catalog-favorites-empty[hidden] {
+    display: none !important;
+}
+
 .catalog-favorites-login > i,
 .catalog-favorites-empty > i {
     display: grid;
