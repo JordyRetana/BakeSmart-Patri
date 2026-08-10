@@ -864,3 +864,4 @@ html.dark-start .payment-modal__close {
         width: 100%;
     }
 }
+ .payment-modal__sinpe{display:grid;gap:.35rem;padding:1rem;border:1px solid rgba(124,58,237,.28);border-radius:12px;background:rgba(124,58,237,.06);color:var(--text,#25293b)}.payment-modal__sinpe strong{font-size:1.25rem;color:#6d28d9;letter-spacing:.03em}.payment-modal__sinpe small{color:var(--muted,#667085);line-height:1.45}

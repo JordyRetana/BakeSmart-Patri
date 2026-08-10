@@ -5,6 +5,7 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Mis pedidos";
+    var sinpeBusinessNumber = Context.RequestServices.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>()["Business:SinpeNumber"] ?? "+506 8888 8888";
 }
 
 <div class="page-shell client-orders-page">
@@ -77,7 +78,7 @@
         <div class="payment-modal__header">
             <span class="payment-modal__icon"><i class="fas fa-shield-halved"></i></span>
             <div>
-                <span class="payment-modal__eyebrow">Pasarela de pago</span>
+                <span class="payment-modal__eyebrow">Pago seguro</span>
                 <h2 id="ordersPaymentTitle">Pagar pedido</h2>
             </div>
         </div>
@@ -87,35 +88,23 @@
         </div>
         <form id="ordersPaymentForm" class="payment-form" novalidate>
             <label>
-                <span>Metodo</span>
+                <span>Método de pago</span>
                 <select class="form-control" name="method" id="ordersPaymentMethod">
-                    <option>Tarjeta</option>
-                    <option>PayPal</option>
+                    <option value="Tarjeta">Tarjeta segura con Stripe</option>
+                    <option value="PayPal">PayPal</option>
                     <option>SINPE</option>
+                    <option>Efectivo</option>
                 </select>
             </label>
-            <label>
-                <span>Titular</span>
-                <input class="form-control" name="holder" required placeholder="Nombre del titular" />
-            </label>
-            <label class="payment-card-field">
-                <span>Tarjeta</span>
-                <input class="form-control" name="card" maxlength="19" inputmode="numeric" placeholder="4242 4242 4242 4242" />
-            </label>
-            <div class="payment-form__grid payment-card-field">
-                <label>
-                    <span>Vence</span>
-                    <input class="form-control" name="expiry" maxlength="5" placeholder="MM/AA" />
-                </label>
-                <label>
-                    <span>CVV</span>
-                    <input class="form-control" name="cvv" maxlength="4" inputmode="numeric" placeholder="123" />
-                </label>
+            <div class="payment-modal__sinpe" id="ordersSinpeInstructions" hidden>
+                <span>Realiza el SINPE Móvil al número de la empresa</span>
+                <strong>@sinpeBusinessNumber</strong>
+                <small>El pedido queda pendiente hasta que el negocio confirme la transferencia.</small>
             </div>
             <p class="payment-modal__note" id="ordersPaymentNote">Los pagos con tarjeta y PayPal se validan directamente con la pasarela segura.</p>
-            <button class="btn btn-primary" type="button" id="ordersPaymentSubmit" onclick="submitClientPayment()">
+            <button class="btn btn-primary" type="button" id="ordersPaymentSubmit">
                 <i class="fas fa-lock"></i>
-                Confirmar pago
+                Continuar
             </button>
         </form>
     </section>
@@ -259,14 +248,15 @@
             };
 
             function syncPaymentFields() {
-                const onlineGateway = paymentMethod.value === 'Tarjeta' || paymentMethod.value === 'PayPal';
-                document.querySelectorAll('#ordersPaymentModal .payment-card-field').forEach(field => {
-                    field.hidden = onlineGateway || paymentMethod.value === 'SINPE';
-                });
-                paymentForm.holder.required = !onlineGateway;
-                document.getElementById('ordersPaymentNote').textContent = onlineGateway
-                    ? `Serás redirigido a ${paymentMethod.value} para completar y validar el pago.`
-                    : 'Registre la referencia del pago SINPE.';
+                const value = paymentMethod.value;
+                document.getElementById('ordersSinpeInstructions').hidden = value !== 'SINPE';
+                document.getElementById('ordersPaymentNote').textContent = value === 'PayPal'
+                    ? 'Serás redirigido a PayPal para autorizar y validar el pago.'
+                    : value === 'SINPE'
+                    ? 'Confirma únicamente después de hacer la transferencia.'
+                    : value === 'Efectivo'
+                    ? 'Pagarás en efectivo al retirar o recibir tu pedido. No se registrará como pagado hasta el cobro.'
+                    : 'Serás redirigido a Stripe para completar y validar el pago.';
             }
 
             async function startGatewayCheckout(path) {
@@ -304,9 +294,9 @@
                         await startGatewayCheckout('/api/payments/paypal/checkout');
                         return;
                     }
-                    await BakeSmartStore.orders.markPaid(selectedOrder.id, data.method);
-                    await BakeSmartStore.refresh();
-                    app.toast.success('Pago registrado. Tu pedido fue enviado al flujo operativo.');
+                    app.toast.success(data.method === 'SINPE'
+                        ? 'Transferencia SINPE reportada. Confirmaremos el pago al validarla.'
+                        : 'El pedido se cobrará en efectivo al momento de la entrega.');
                     closePaymentModal();
                     render();
                 } catch (error) {
@@ -316,7 +306,7 @@
                 }
             }
 
-            window.submitClientPayment = submitClientPayment;
+            paymentSubmit.addEventListener('click', () => { void submitClientPayment(); });
             paymentForm.addEventListener('submit', event => {
                 event.preventDefault();
                 submitClientPayment();

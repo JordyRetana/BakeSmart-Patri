@@ -7,6 +7,7 @@
     ViewData["Title"] = "Mi panel";
     var nameLabel = User?.Identity?.Name ?? "Cliente";
     var emailLabel = User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
+    var sinpeBusinessNumber = Context.RequestServices.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>()["Business:SinpeNumber"] ?? "+506 8888 8888";
 }
 
 <div class="page-shell client-dashboard-page client-dashboard-page--loading" id="clientDashboardPage">
@@ -266,37 +267,23 @@
             <span>Total a pagar</span>
             <strong id="paymentModalTotal">0</strong>
         </div>
-        <form id="clientPaymentForm" class="payment-form">
+        <form id="clientPaymentForm" class="payment-form" novalidate>
             <label>
-                <span>Metodo</span>
+                <span>Método de pago</span>
                 <select class="form-control" name="method" id="paymentGatewayMethod">
-                    <option>Tarjeta</option>
-                    <option>PayPal</option>
+                    <option value="Tarjeta">Tarjeta segura con Stripe</option>
+                    <option value="PayPal">PayPal</option>
                     <option>SINPE</option>
-                    <option>Transferencia</option>
                     <option>Efectivo</option>
                 </select>
             </label>
-            <label>
-                <span id="paymentReferenceLabel">Nombre del titular</span>
-                <input class="form-control" name="holder" id="paymentReferenceInput" placeholder="Nombre en la tarjeta o SINPE" required />
-            </label>
-            <label class="payment-card-field">
-                <span>Numero de tarjeta</span>
-                <input class="form-control" name="card" inputmode="numeric" maxlength="19" placeholder="4242 4242 4242 4242" />
-            </label>
-            <div class="payment-form__grid payment-card-field">
-                <label>
-                    <span>Vence</span>
-                    <input class="form-control" name="expiry" placeholder="MM/AA" maxlength="5" />
-                </label>
-                <label>
-                    <span>CVV</span>
-                    <input class="form-control" name="cvv" inputmode="numeric" maxlength="4" placeholder="123" />
-                </label>
+            <div class="payment-modal__sinpe" id="paymentSinpeInstructions" hidden>
+                <span>Realiza el SINPE Móvil al número de la empresa</span>
+                <strong>@sinpeBusinessNumber</strong>
+                <small>El pedido queda pendiente hasta que el negocio confirme la transferencia.</small>
             </div>
-            <p class="payment-modal__note">Simulacion segura para desarrollo: no se guarda informacion sensible.</p>
-            <button class="btn btn-primary quick-submit" type="submit" id="paymentConfirmBtn">
+            <p class="payment-modal__note" id="paymentGatewayNote">Serás redirigido a Stripe para pagar de forma segura.</p>
+            <button class="btn btn-primary quick-submit" type="button" id="paymentConfirmBtn">
                 <i class="fas fa-lock"></i>
                 <span id="paymentConfirmText">Pagar pedido</span>
             </button>
@@ -704,14 +691,13 @@
         function normalizeGatewayMethod(method) {
         const value = String(method || '').toLowerCase();
         if (value.includes('sinpe')) return 'SINPE';
-        if (value.includes('transfer')) return 'Transferencia';
         if (value.includes('efectivo')) return 'Efectivo';
         return 'Tarjeta';
         }
 
         function shouldOpenGateway(method) {
         const value = String(method || '').toLowerCase();
-        return value.includes('linea') || value.includes('tarjeta') || value.includes('sinpe') || value.includes('transfer');
+        return value.includes('linea') || value.includes('tarjeta') || value.includes('sinpe');
         }
 
         function openPaymentGateway(orderId, total, method, mode = 'full') {
@@ -726,7 +712,6 @@
         paymentMethod.dispatchEvent(new Event('change', { bubbles: true }));
         syncPaymentFields();
         paymentModal.hidden = false;
-        paymentForm.holder.value = document.getElementById('quickCustomerName').value || '';
         }
 
         function closePaymentGateway() {
@@ -739,34 +724,15 @@
 
         function syncPaymentFields() {
         const value = String(paymentMethod.value || '').toLowerCase();
-        const isCard = value.includes('tarjeta');
-        document.querySelectorAll('.payment-card-field').forEach(field => {
-        field.hidden = !isCard;
-        field.style.display = isCard ? '' : 'none';
-        field.querySelectorAll('input').forEach(input => {
-        input.disabled = !isCard;
-        input.required = isCard;
-        if (!isCard) input.value = '';
-        });
-        });
-
-        if (value.includes('sinpe')) {
-        paymentReferenceLabel.textContent = 'Referencia SINPE';
-        paymentReferenceInput.placeholder = 'Telefono o comprobante SINPE';
-        paymentReferenceInput.required = true;
-        } else if (value.includes('transfer')) {
-        paymentReferenceLabel.textContent = 'Referencia de transferencia';
-        paymentReferenceInput.placeholder = 'Banco o numero de comprobante';
-        paymentReferenceInput.required = true;
-        } else if (value.includes('efectivo')) {
-        paymentReferenceLabel.textContent = 'Recibido por';
-        paymentReferenceInput.placeholder = 'Nombre de quien recibe el efectivo';
-        paymentReferenceInput.required = false;
-        } else {
-        paymentReferenceLabel.textContent = 'Titular de la tarjeta';
-        paymentReferenceInput.placeholder = 'Nombre del titular';
-        paymentReferenceInput.required = true;
-        }
+        const sinpe = value.includes('sinpe');
+        document.getElementById('paymentSinpeInstructions').hidden = !sinpe;
+        document.getElementById('paymentGatewayNote').textContent = value.includes('paypal')
+        ? 'Serás redirigido a PayPal para autorizar y validar el pago.'
+        : sinpe
+        ? 'Confirma únicamente después de hacer la transferencia.'
+        : value.includes('efectivo')
+        ? 'Pagarás en efectivo al retirar o recibir tu pedido. No se registrará como pagado hasta el cobro.'
+        : 'Serás redirigido a Stripe para pagar de forma segura.';
         }
 
         function toggleQuickDelivery() {
@@ -866,8 +832,7 @@
         continuePendingSubmit();
         });
 
-        paymentForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
+        async function submitPaymentGateway() {
         if (!pendingPayment) return;
 
         const data = Object.fromEntries(new FormData(paymentForm).entries());
@@ -882,31 +847,26 @@
         }
         return;
         }
-        if (data.method === 'Tarjeta') {
-        const digits = String(data.card || '').replace(/\D/g, '');
-        if (digits.length < 12 || !data.expiry || !data.cvv) {
-        app.toast.error('Complete los datos de tarjeta para simular el pago.');
-        return;
-        }
-        }
-
         try {
         paymentConfirmBtn.disabled = true;
         if (String(data.method || '').toLowerCase().includes('tarjeta')) {
         await startStripeCheckout([pendingPayment.orderId]);
         return;
         }
-        await BakeSmartStore.orders.markPaid(pendingPayment.orderId, data.method);
-        await BakeSmartStore.refresh({ force: true });
-        renderSummary();
-        app.toast.success(`Pago aprobado. Pedido #${pendingPayment.orderId} confirmado para producción.`);
+        const isSinpe = String(data.method || '').toLowerCase().includes('sinpe');
+        app.toast.success(isSinpe
+        ? `Transferencia SINPE reportada para el pedido #${pendingPayment.orderId}. Se confirmará al validarla.`
+        : `El pedido #${pendingPayment.orderId} se cobrará en efectivo al momento de la entrega.`);
         closePaymentGateway();
         } catch (error) {
         app.toast.error(error.message);
         } finally {
         paymentConfirmBtn.disabled = false;
         }
-        });
+        }
+
+        paymentConfirmBtn.addEventListener('click', () => { void submitPaymentGateway(); });
+        paymentForm.addEventListener('submit', event => { event.preventDefault(); void submitPaymentGateway(); });
 
         form.addEventListener('submit', async (event) => {
         event.preventDefault();
