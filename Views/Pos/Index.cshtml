@@ -96,6 +96,13 @@
                     </div>
                     <div class="pos-combos-grid" id="posCombosGrid"></div>
 
+                    <div class="pos-featured-products-header">
+                        <div>
+                            <span>Selección rápida</span>
+                            <h3>Productos populares</h3>
+                        </div>
+                        <small>Accesos rápidos; el inventario completo está abajo.</small>
+                    </div>
                     <div class="pos-products-grid" id="posProductsGrid"></div>
 
                     <section class="pos-products-list-panel">
@@ -579,7 +586,8 @@
                     return;
                 }
 
-                productsGrid.innerHTML = products.map(product => {
+                const featuredProducts = products.slice(0, 4);
+                productsGrid.innerHTML = featuredProducts.map(product => {
                     const availableStock = remainingStock(product.id, product.stock);
                     const stockPct = Math.min(100, Math.round((availableStock / Math.max(product.stock, 20)) * 100));
                     const stockColor = stockPct > 50 ? 'var(--success)' : stockPct > 20 ? 'var(--warning)' : 'var(--danger)';
