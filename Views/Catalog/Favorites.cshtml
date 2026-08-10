@@ -64,7 +64,8 @@
 <script>
 (() => {
     const email = (document.body.dataset.userEmail || '').trim().toLowerCase();
-    const key = `bakesmart:favorites:${email}`;
+    const authenticated = document.body.dataset.userAuthenticated === 'true';
+    const key = `bakesmart:favorites:${email || (authenticated ? 'authenticated' : 'guest')}`;
     const loginNotice = document.getElementById('favoritesLoginNotice');
     const empty = document.getElementById('favoritesEmpty');
     const cards = [...document.querySelectorAll('[data-favorite-card]')];
@@ -82,7 +83,7 @@
     }
 
     function render() {
-        if (!email) {
+        if (!authenticated) {
             loginNotice.hidden = false;
             empty.hidden = true;
             cards.forEach(card => card.hidden = true);

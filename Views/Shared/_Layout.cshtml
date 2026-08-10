@@ -8,6 +8,9 @@
     var isBaker = User?.IsInRole("Repostero") ?? false;
     var isSupervisor = User?.IsInRole("Supervisor") ?? false;
     var isOperational = isAdmin || isStaff || isCashier || isBaker || isSupervisor;
+    var userEmail = User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+        ?? User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+        ?? string.Empty;
 
     string userInitials = "U";
     string userName = "Usuario";
@@ -110,7 +113,7 @@
         }
     </style>
 </head>
-<body class="app-body page-ready" data-page="@currentPath" data-user-email="@(User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "")">
+<body class="app-body page-ready" data-page="@currentPath" data-user-email="@userEmail" data-user-authenticated="@isAuth.ToString().ToLowerInvariant()">
     @if (enablePageLoader)
     {
         <div id="pageLoader" class="page-loader" aria-hidden="true">
