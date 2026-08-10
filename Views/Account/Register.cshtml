@@ -4,7 +4,7 @@
 }
 
 @section Styles {
-    <link rel="stylesheet" href="/css/pages/account-register.css?v=auth-redesign-20260718" />
+    <link rel="stylesheet" href="/css/pages/account-register.css?v=phone-inline-20260809" />
 }
 
 <div class="auth-page-shell register-page">
@@ -60,7 +60,7 @@
 
                     <div class="input-group">
                         <label class="input-label" for="registerPhone"><i class="fas fa-phone"></i> Teléfono</label>
-                        <div class="register-phone-row" style="grid-template-columns:132px minmax(0,1fr);">
+                        <div class="register-phone-row">
                             <select class="input" id="registerPhoneCountry" aria-label="País del teléfono">
                                 <option value="+506" data-min="8" data-max="8">🇨🇷 +506</option>
                                 <option value="+1" data-min="10" data-max="10">🇺🇸 +1</option>
@@ -71,7 +71,6 @@
                             </select>
                             <input class="input" id="registerPhone" name="phone" type="tel" inputmode="numeric" placeholder="6000 0000" autocomplete="tel" />
                         </div>
-                        <small id="registerPhoneHelp" class="text-muted">Costa Rica: ingresa 8 dígitos; el +506 se agrega automáticamente.</small>
                     </div>
 
                     <div class="input-group register-full">
@@ -172,7 +171,7 @@
         const digits = phoneInput.value.replace(/\D/g, '').slice(0, max);
         phoneInput.value = digits;
         phoneInput.placeholder = '0'.repeat(min);
-        phoneHelp.textContent = `${option.textContent.trim()} · ${min} dígitos`;
+        if (phoneHelp) phoneHelp.textContent = `${option.textContent.trim()} · ${min} dígitos`;
         phoneInput.setCustomValidity(digits && digits.length !== min ? `Ingresa exactamente ${min} dígitos para el país seleccionado.` : '');
         return !digits || digits.length === min;
     };
