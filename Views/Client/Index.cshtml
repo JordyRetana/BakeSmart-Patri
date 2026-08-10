@@ -692,6 +692,7 @@
         const value = String(method || '').toLowerCase();
         if (value.includes('sinpe')) return 'SINPE';
         if (value.includes('efectivo')) return 'Efectivo';
+        if (value.includes('paypal')) return 'PayPal';
         return 'Tarjeta';
         }
 
@@ -700,9 +701,9 @@
         return value.includes('linea') || value.includes('tarjeta') || value.includes('sinpe');
         }
 
-        function openPaymentGateway(orderId, total, method, mode = 'full') {
+        function openPaymentGateway(orderId, total, method, mode = 'full', orderIds = [orderId]) {
         const amount = mode === 'deposit' ? Math.max(1, Number(total || 0) * 0.3) : Number(total || 0);
-        pendingPayment = { orderId, total: amount, method, mode };
+        pendingPayment = { orderId, orderIds, total: amount, method, mode };
         if (paymentModal.parentElement !== document.body) {
         document.body.appendChild(paymentModal);
         }
@@ -839,7 +840,7 @@
         if (String(data.method || '').toLowerCase().includes('paypal')) {
         try {
         paymentConfirmBtn.disabled = true;
-        await startPayPalCheckout([pendingPayment.orderId]);
+        await startPayPalCheckout(pendingPayment.orderIds);
         } catch (error) {
         app.toast.error(error.message);
         } finally {
@@ -850,7 +851,7 @@
         try {
         paymentConfirmBtn.disabled = true;
         if (String(data.method || '').toLowerCase().includes('tarjeta')) {
-        await startStripeCheckout([pendingPayment.orderId]);
+        await startStripeCheckout(pendingPayment.orderIds);
         return;
         }
         const isSinpe = String(data.method || '').toLowerCase().includes('sinpe');
@@ -955,7 +956,7 @@
         productInput.value = '';
         }
         const selectedPayment = String(data.paymentMethod || '').toLowerCase();
-        if (selectedPayment.includes('linea') || selectedPayment.includes('tarjeta')) {
+        if (selectedPayment.includes('tarjeta')) {
         await startStripeCheckout(createdOrders.map(order => Number(order.id)));
         return;
         }
@@ -963,8 +964,8 @@
         await startPayPalCheckout(createdOrders.map(order => Number(order.id)));
         return;
         }
-        if (shouldOpenGateway(data.paymentMethod) && createdOrders.length === 1) {
-        openPaymentGateway(result.id, total, data.paymentMethod);
+        if (shouldOpenGateway(data.paymentMethod)) {
+        openPaymentGateway(result.id, total, data.paymentMethod, 'full', createdOrders.map(order => Number(order.id)));
         } else {
         app.toast.warning(createdOrders.length > 1 ? 'Pedidos registrados desde el carrito. Puedes pagar cada abono desde Mis pedidos.' : 'Pedido registrado. Para iniciar producción se requiere un abono anticipado o pago en tienda.');
         }
