@@ -420,7 +420,10 @@
             const normalizedCurrent = isDelivered(order)
                 ? steps.length - 1
                 : (hasLiveRoute && isInternational && currentStep >= 3 ? currentStep + 1 : currentStep);
-            const state = index < normalizedCurrent ? 'done' : index === normalizedCurrent ? 'current' : 'pending';
+            const isDeliveredStep = normalizeStatus(step).includes('entregad');
+            const state = index < normalizedCurrent || (index === normalizedCurrent && isDeliveredStep)
+                ? 'done'
+                : index === normalizedCurrent ? 'current' : 'pending';
             const icon = state === 'done' ? 'fa-check' : state === 'current' ? 'fa-bolt' : 'fa-clock';
             const detail = state === 'done'
                 ? 'Completado'
