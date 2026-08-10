@@ -315,8 +315,9 @@
             list() {
                 const trackingSteps = ["Pendiente pago", "Confirmado", "En produccion", "Listo", "En camino", "Entregado"];
                 const stepFor = status => {
-                    const normalized = String(status || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                    const index = trackingSteps.findIndex(step => step === normalized);
+                    const normalized = String(status || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+                    if (normalized.includes("entregad") || normalized.includes("finaliz")) return trackingSteps.length - 1;
+                    const index = trackingSteps.findIndex(step => step.toLowerCase() === normalized);
                     return index >= 0 ? index : 0;
         };
 

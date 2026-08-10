@@ -145,12 +145,13 @@
     }
 
     function canShowLiveRoute(order) {
-        const status = normalizeStatus(order.status);
-        return status.includes('camino') || status.includes('entregado');
+        const status = normalizeStatus(order.status || order.estado || order.deliveryStatus);
+        return status.includes('camino') || status.includes('entregad') || status.includes('finaliz');
     }
 
     function isDelivered(order) {
-        return normalizeStatus(order.status).includes('entregado');
+        const status = normalizeStatus(order.status || order.estado || order.deliveryStatus);
+        return status.includes('entregad') || status.includes('finaliz');
     }
 
     function routeWaitingMessage(order) {
@@ -366,7 +367,9 @@
 
     function renderLiveStatus(order, hasLiveRoute) {
         const steps = order.tracking?.steps || ['Pendiente pago', 'Confirmado', 'En produccion', 'Listo', 'En camino', 'Entregado'];
-        const currentStep = Math.min(Math.max(Number(order.tracking?.currentStep || 0), 0), Math.max(steps.length - 1, 1));
+        const currentStep = isDelivered(order)
+            ? Math.max(steps.length - 1, 0)
+            : Math.min(Math.max(Number(order.tracking?.currentStep || 0), 0), Math.max(steps.length - 1, 1));
         const progress = isDelivered(order) ? 100 : Math.max(8, Math.round((currentStep / Math.max(steps.length - 1, 1)) * 100));
         const live = hasLiveRoute && !isDelivered(order);
         document.getElementById('trackLiveIcon').className = `fas ${live ? 'fa-motorcycle' : isDelivered(order) ? 'fa-circle-check' : 'fa-box'}`;
@@ -402,7 +405,9 @@
     }
 
     function renderTimeline(order, destination, hasLiveRoute) {
-        const currentStep = order.tracking?.currentStep || 0;
+        const currentStep = isDelivered(order)
+            ? Math.max((order.tracking?.steps || ['Pedido recibido', 'Confirmado', 'En producción', 'Listo', 'Entregado']).length - 1, 0)
+            : (order.tracking?.currentStep || 0);
         const isInternational = destination.country !== 'Costa Rica';
         const extraLabel = isInternational ? 'Salida aerea internacional' : 'Ruta terrestre metropolitana';
         const steps = [...(order.tracking?.steps || ['Pedido recibido', 'Confirmado', 'En producción', 'Listo', 'Entregado'])];
@@ -412,7 +417,9 @@
         }
 
         document.getElementById('trackingTimeline').innerHTML = steps.map((step, index) => {
-            const normalizedCurrent = hasLiveRoute && isInternational && currentStep >= 3 ? currentStep + 1 : currentStep;
+            const normalizedCurrent = isDelivered(order)
+                ? steps.length - 1
+                : (hasLiveRoute && isInternational && currentStep >= 3 ? currentStep + 1 : currentStep);
             const state = index < normalizedCurrent ? 'done' : index === normalizedCurrent ? 'current' : 'pending';
             const icon = state === 'done' ? 'fa-check' : state === 'current' ? 'fa-bolt' : 'fa-clock';
             const detail = state === 'done'
