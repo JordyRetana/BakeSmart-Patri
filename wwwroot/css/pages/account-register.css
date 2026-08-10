@@ -294,6 +294,22 @@
     border-radius: 8px !important;
 }
 
+.register-phone-row {
+    display: grid;
+    grid-template-columns: minmax(132px, .6fr) minmax(0, 1fr);
+    gap: .65rem;
+}
+
+.register-phone-row .input { min-width: 0; }
+
+.register-phone-row + #registerPhoneHelp {
+    display: block;
+    margin-top: .42rem;
+    color: #69738a !important;
+    font-size: .78rem;
+    font-weight: 700;
+}
+
 .auth-help-card {
     display: flex;
     align-items: center;
@@ -375,6 +391,8 @@ body.dark .input-label {
     .auth-help-card .btn {
         width: 100%;
     }
+
+    .register-phone-row { grid-template-columns: 1fr; }
 }
 
 /* Page-specific overrides against older global auth rules. */
