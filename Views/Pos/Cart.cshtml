@@ -211,6 +211,7 @@
                 if (!pendingOrder) return;
                 form.customerName.value = pendingOrder.customerName || '';
                 form.customerEmail.value = pendingOrder.customerEmail || '';
+                form.customerPhone.value = pendingOrder.customerPhone || '';
                 if (pendingOrder.paymentMethod) {
                     form.paymentMethod.value = pendingOrder.paymentMethod;
                     form.paymentMethod.dispatchEvent(new Event('change', { bubbles: true }));

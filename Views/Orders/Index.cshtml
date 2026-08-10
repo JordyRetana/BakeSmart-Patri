@@ -412,6 +412,7 @@
             id: order.id,
             customerName: order.customerName || '',
             customerEmail: order.customerEmail || '',
+            customerPhone: order.customerPhone || order.phone || order.telefono || '',
             paymentMethod: order.paymentMethod || 'Tarjeta',
             total: Number(order.total || 0),
             item: cartItem
