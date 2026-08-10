@@ -1804,3 +1804,41 @@ body.dark .navbar .user-profile {
         overflow-y: auto !important;
     }
 }
+
+/* POS header: on a phone the heading and search are normal vertical blocks. */
+@media (max-width: 760px) {
+    body[data-page="/pos"] .pos-page--cashier .page-header.pos-header,
+    body[data-page="/pos"] .pos-page--cashier .pos-header {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        grid-template-columns: none !important;
+        min-height: 0 !important;
+        height: auto !important;
+        padding: 1rem !important;
+        gap: .85rem !important;
+    }
+
+    body[data-page="/pos"] .pos-header > div,
+    body[data-page="/pos"] .pos-header .pos-search-box {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    body[data-page="/pos"] .pos-header .pos-search-box input {
+        display: block !important;
+        width: 100% !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        box-sizing: border-box !important;
+    }
+
+    body[data-page="/pos"] .pos-header .pos-title {
+        font-size: 1.7rem !important;
+        line-height: 1.12 !important;
+        white-space: normal !important;
+        overflow-wrap: normal !important;
+        word-break: normal !important;
+    }
+}
