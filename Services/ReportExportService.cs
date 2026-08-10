@@ -25,7 +25,8 @@ public sealed class ReportExportService
 
         var logoPath = Path.Combine(_environment.WebRootPath, "img", "logo.png");
         var hasLogo = File.Exists(logoPath);
-        var firstColumn = hasLogo ? 2 : 1;
+        // El logo se superpone en el encabezado: no debe reservar una columna vacía en toda la hoja.
+        var firstColumn = 1;
         var lastColumn = Math.Max(firstColumn, firstColumn + model.Headers.Count - 1);
         if (hasLogo)
             sheet.AddPicture(logoPath).MoveTo(sheet.Cell(1, 1)).WithSize(46, 46);
@@ -41,6 +42,7 @@ public sealed class ReportExportService
         title.Style.Font.Bold = true;
         title.Style.Font.FontSize = 18;
         title.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+        if (hasLogo) title.Style.Alignment.Indent = 5;
         sheet.Range(2, firstColumn, 2, lastColumn).Style.Font.SetBold().Font.SetFontSize(14).Font.SetFontColor(XLColor.FromHtml(Purple));
         sheet.Range(3, firstColumn, 4, lastColumn).Style.Font.SetFontColor(XLColor.FromHtml("#667085"));
 
