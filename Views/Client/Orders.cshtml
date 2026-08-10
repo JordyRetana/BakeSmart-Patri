@@ -113,7 +113,7 @@
                 </label>
             </div>
             <p class="payment-modal__note" id="ordersPaymentNote">Los pagos con tarjeta y PayPal se validan directamente con la pasarela segura.</p>
-            <button class="btn btn-primary" type="submit" id="ordersPaymentSubmit">
+            <button class="btn btn-primary" type="button" id="ordersPaymentSubmit" onclick="submitClientPayment()">
                 <i class="fas fa-lock"></i>
                 Confirmar pago
             </button>
@@ -290,8 +290,7 @@
             document.querySelectorAll('[data-payment-close]').forEach(button => button.addEventListener('click', closePaymentModal));
             paymentMethod.addEventListener('change', syncPaymentFields);
 
-            paymentForm.addEventListener('submit', async event => {
-                event.preventDefault();
+            async function submitClientPayment() {
                 if (!selectedOrder) return;
 
                 const data = Object.fromEntries(new FormData(paymentForm).entries());
@@ -315,6 +314,12 @@
                 } finally {
                     paymentSubmit.disabled = false;
                 }
+            }
+
+            window.submitClientPayment = submitClientPayment;
+            paymentForm.addEventListener('submit', event => {
+                event.preventDefault();
+                submitClientPayment();
             });
 
             search.addEventListener('input', render);
