@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 
 namespace BakeSmartPatri.Controllers
 {
@@ -50,6 +51,7 @@ namespace BakeSmartPatri.Controllers
         public async Task<IActionResult> Login(string email, string password, string? returnUrl = null)
         {
             email = (email ?? "").Trim().ToLowerInvariant();
+            phone = string.IsNullOrWhiteSpace(phone) ? null : Regex.Replace(phone, @"[^\d+]", "");
             password ??= "";
 
             var user = await _sqlStore.AuthenticateAsync(email, password);
@@ -148,6 +150,13 @@ namespace BakeSmartPatri.Controllers
             {
                 TempData["CashLogoutBlocked"] = "No puede cerrar sesión mientras tenga una caja abierta. Complete primero el cierre de caja.";
                 return RedirectToAction("Index", "Pos");
+            }
+
+            if (!string.IsNullOrWhiteSpace(phone) && !Regex.IsMatch(phone, @"^\+[1-9]\d{7,14}$"))
+            {
+                TempData["Toast"] = "El teléfono debe incluir un prefijo de país y una cantidad válida de dígitos.";
+                ViewData["ReturnUrl"] = returnUrl ?? "";
+                return View();
             }
 
             if (!string.IsNullOrWhiteSpace(email))

@@ -59,8 +59,19 @@
                     </div>
 
                     <div class="input-group">
-                        <label class="input-label"><i class="fas fa-phone"></i> Telefono</label>
-                        <input class="input" name="phone" placeholder="+506 6000 0000" autocomplete="tel" />
+                        <label class="input-label" for="registerPhone"><i class="fas fa-phone"></i> Teléfono</label>
+                        <div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:.5rem;">
+                            <select class="input" id="registerPhoneCountry" aria-label="País del teléfono">
+                                <option value="+506" data-min="8" data-max="8">🇨🇷 Costa Rica +506</option>
+                                <option value="+1" data-min="10" data-max="10">🇺🇸 EE. UU. +1</option>
+                                <option value="+52" data-min="10" data-max="10">🇲🇽 México +52</option>
+                                <option value="+34" data-min="9" data-max="9">🇪🇸 España +34</option>
+                                <option value="+57" data-min="10" data-max="10">🇨🇴 Colombia +57</option>
+                                <option value="+54" data-min="10" data-max="10">🇦🇷 Argentina +54</option>
+                            </select>
+                            <input class="input" id="registerPhone" name="phone" type="tel" inputmode="numeric" placeholder="6000 0000" autocomplete="tel" />
+                        </div>
+                        <small id="registerPhoneHelp" class="text-muted">Costa Rica: ingresa 8 dígitos; el +506 se agrega automáticamente.</small>
                     </div>
 
                     <div class="input-group register-full">
@@ -150,10 +161,35 @@
     const submit = document.getElementById('registerSubmitBtn');
     if (!form || !submit) return;
 
-    form.addEventListener('submit', () => {
+    const phoneInput = document.getElementById('registerPhone');
+    const phoneCountry = document.getElementById('registerPhoneCountry');
+    const phoneHelp = document.getElementById('registerPhoneHelp');
+    const syncPhone = () => {
+        if (!phoneInput || !phoneCountry) return true;
+        const option = phoneCountry.options[phoneCountry.selectedIndex];
+        const min = Number(option.dataset.min || 8);
+        const max = Number(option.dataset.max || 15);
+        const digits = phoneInput.value.replace(/\D/g, '').slice(0, max);
+        phoneInput.value = digits;
+        phoneInput.placeholder = '0'.repeat(min);
+        phoneHelp.textContent = `${option.textContent.trim()}: ingresa ${min} dígitos; el prefijo se agrega automáticamente.`;
+        phoneInput.setCustomValidity(digits && digits.length !== min ? `Ingresa exactamente ${min} dígitos para el país seleccionado.` : '');
+        return !digits || digits.length === min;
+    };
+    phoneCountry?.addEventListener('change', syncPhone);
+    phoneInput?.addEventListener('input', syncPhone);
+    syncPhone();
+
+    form.addEventListener('submit', event => {
+        if (!syncPhone() || !form.checkValidity()) {
+            event.preventDefault();
+            form.reportValidity();
+            return;
+        }
+        if (phoneInput?.value) phoneInput.value = `${phoneCountry.value}${phoneInput.value}`;
         submit.disabled = true;
         submit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando cuenta...';
-    }, { once: true });
+    });
 })();
 </script>
 }
