@@ -219,7 +219,7 @@ public sealed class ReportExportService
         var label = value switch
         {
             "totalIncome" => "Ingresos totales", "totalTransactions" => "Transacciones", "lowStock" => "Stock bajo",
-            "negativeStock" => "Stock negativo", "activeUsers" => "Usuarios activos", "activePromotions" => "Promociones activas",
+            "negativeStock" => "Stock negativo", "activeUsers" => "Usuarios habilitados", "activePromotions" => "Promociones activas",
             "totalSales" => "Ventas totales", "totalOrders" => "Pedidos", "montoInicial" => "Monto inicial",
             "montoFinal" => "Monto final", "totalVentas" => "Total ventas", "id" => "N.º", "saleId" => "N.º venta",
             "orderId" => "N.º pedido", "productId" => "N.º producto", "customerName" => "Cliente", "customerEmail" => "Correo",

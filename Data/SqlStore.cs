@@ -3600,7 +3600,8 @@ public sealed class SqlStore
     private async Task<object> UsersReportAsync()
     {
         var rows = await UsersAsync();
-        return new { rows, activeUsers = rows.Count() };
+        var activeUsers = rows.Count(row => row.GetType().GetProperty("active")?.GetValue(row) is true);
+        return new { rows, activeUsers };
     }
 
     private async Task<object> PromotionsReportAsync(DateTime? start, DateTime? end)

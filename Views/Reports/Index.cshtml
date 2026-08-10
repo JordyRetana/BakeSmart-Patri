@@ -21,7 +21,7 @@
 
     <div class="grid grid-3" style="gap:1rem; margin-bottom:1rem;">
         <div class="card"><div class="text-muted">Productos en inventario</div><h2 id="reportInventoryKpi" style="margin:0;"></h2></div>
-        <div class="card"><div class="text-muted">Usuarios activos</div><h2 id="reportUsersKpi" style="margin:0;"></h2></div>
+        <div class="card"><div class="text-muted">Usuarios habilitados</div><h2 id="reportUsersKpi" style="margin:0;"></h2></div>
         <div class="card"><div class="text-muted">Pedidos del periodo</div><h2 id="reportOrdersKpi" style="margin:0;"></h2></div>
     </div>
 
@@ -166,7 +166,7 @@
                     break;
                 }
                 case 'users': {
-                    drawTable('Reporte de usuarios', r.rows, `Usuarios activos: ${r.activeUsers}`);
+                    drawTable('Reporte de usuarios', r.rows, `Usuarios habilitados: ${r.activeUsers}`);
                     break;
                 }
                 case 'promotions': {
