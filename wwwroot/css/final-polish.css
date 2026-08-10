@@ -748,6 +748,32 @@ body[data-page="/pos"] .pos-header::before {
     }
 }
 
+/* Home popular products: a simple, symmetric product row without unused white space. */
+body[data-page="/"] .storefront-popular .storefront-product-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 1.15rem !important;
+}
+
+body[data-page="/"] .storefront-popular .storefront-product-card {
+    display: grid !important;
+    grid-template-rows: 250px auto !important;
+    min-height: 0 !important;
+    background: #fff !important;
+    border: 1px solid #e8deef !important;
+    border-radius: 14px !important;
+    box-shadow: 0 10px 26px rgba(45, 27, 62, .08) !important;
+    overflow: hidden !important;
+}
+
+body[data-page="/"] .storefront-popular .storefront-product-card::after { display: none !important; }
+body[data-page="/"] .storefront-popular .storefront-product-image { position: relative !important; inset: auto !important; aspect-ratio: auto !important; }
+body[data-page="/"] .storefront-popular .storefront-product-body { min-height: 0 !important; padding: .9rem 1rem 1rem !important; color: #273044 !important; }
+body[data-page="/"] .storefront-popular .storefront-product-body small { color: var(--store-coral) !important; }
+body[data-page="/"] .storefront-popular .storefront-product-body h3 { min-height: 2.4em !important; color: #273044 !important; font-size: .92rem !important; }
+body[data-page="/"] .storefront-popular .storefront-product-body > strong { margin: .45rem 0 .7rem !important; color: #17375d !important; }
+body[data-page="/"] .storefront-popular .storefront-product-body > a { min-height: 38px !important; margin-top: 0 !important; border: 0 !important; background: linear-gradient(135deg, var(--store-purple), var(--store-coral)) !important; color: #fff !important; }
+@media (max-width: 760px) { body[data-page="/"] .storefront-popular .storefront-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+
 @media (max-width: 760px) {
     body[data-page="/marketing"] .marketing-table-wrap,
     body[data-page="/marketing"] .table-container {
