@@ -183,7 +183,7 @@
         if (page.startsWith("/roles")) keys.add("roles");
         if (page.startsWith("/accounting")) keys.add("accounting");
         if (page.startsWith("/audit")) keys.add("logs");
-        if (page.startsWith("/reports")) ["customers", "inventoryMovements", "accounting"].forEach(key => keys.add(key));
+        if (page.startsWith("/reports")) ["customers", "inventoryMovements", "accounting", "users"].forEach(key => keys.add(key));
         if (page.startsWith("/admin")) ["customers", "promotions", "combos", "users", "roles", "accounting"].forEach(key => keys.add(key));
 
         return [...keys];
@@ -671,7 +671,7 @@
             },
             sales() { return { rows: [], totalIncome: 0, totalTransactions: 0 }; },
             inventory() { return { rows: cached("inventory"), lowStock: cached("inventory").filter(x => Number(x.stock) <= Number(x.min)).length, negativeStock: 0 }; },
-            users() { return { rows: cached("users"), activeUsers: cached("users").filter(x => x.active).length }; },
+            users() { return { rows: cached("users"), activeUsers: cached("users").filter(x => x.active ?? x.isActive ?? x.activo).length }; },
             promotions() { return { rows: cached("promotions"), activePromotions: cached("promotions").filter(x => x.active).length }; },
             cashClosures() { return { rows: [], totalSales: 0 }; },
             orders() { return { rows: cached("orders"), totalOrders: cached("orders").length }; },
