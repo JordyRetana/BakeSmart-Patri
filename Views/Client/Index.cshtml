@@ -894,8 +894,10 @@
         return;
         }
 
+        const originalSubmitLabel = submitBtn.innerHTML;
         try {
         submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando y preparando pago seguro...';
 
         const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
         const frequentRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
@@ -952,11 +954,12 @@
         selectedProduct = null;
         productInput.value = '';
         }
-        if (String(data.paymentMethod || '').toLowerCase().includes('tarjeta')) {
+        const selectedPayment = String(data.paymentMethod || '').toLowerCase();
+        if (selectedPayment.includes('linea') || selectedPayment.includes('tarjeta')) {
         await startStripeCheckout(createdOrders.map(order => Number(order.id)));
         return;
         }
-        if (String(data.paymentMethod || '').toLowerCase().includes('paypal')) {
+        if (selectedPayment.includes('paypal')) {
         await startPayPalCheckout(createdOrders.map(order => Number(order.id)));
         return;
         }
@@ -971,6 +974,7 @@
         app.toast.error(error.message);
         } finally {
         submitBtn.disabled = false;
+        submitBtn.innerHTML = originalSubmitLabel || '<i class="fas fa-receipt"></i> Registrar pedido';
         }
         });
 

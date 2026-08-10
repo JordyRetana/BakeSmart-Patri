@@ -1001,7 +1001,16 @@ public class ApiController : Controller
         if (string.IsNullOrWhiteSpace(accessToken)) return BadRequest(new { message = "PayPal no pudo autenticar la pasarela." });
 
         var total = selected.Sum(order => order.GetProperty("total").GetDecimal());
-        var currency = (_configuration["PayPal:Currency"] ?? "CRC").Trim().ToUpperInvariant();
+        var configuredCurrency = (_configuration["PayPal:Currency"] ?? "USD").Trim().ToUpperInvariant();
+        // PayPal Checkout no admite CRC para esta cuenta. Convertimos únicamente el cobro de PayPal,
+        // manteniendo los pedidos y reportes internos en colones.
+        var currency = configuredCurrency == "CRC" ? "USD" : configuredCurrency;
+        var exchangeRate = decimal.TryParse(_configuration["PayPal:UsdExchangeRate"], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var configuredRate) && configuredRate > 0
+            ? configuredRate
+            : 520m;
+        var paypalTotal = currency == "USD"
+            ? Math.Max(0.01m, decimal.Round(total / exchangeRate, 2, MidpointRounding.AwayFromZero))
+            : total;
         var origin = $"{Request.Scheme}://{Request.Host}";
         var payload = new
         {
@@ -1012,7 +1021,7 @@ public class ApiController : Controller
                 {
                     custom_id = $"orders={string.Join(',', ids)};email={email}",
                     description = $"Pedidos BakeSmart #{string.Join(", ", ids)}",
-                    amount = new { currency_code = currency, value = FormatPayPalAmount(total, currency) }
+                    amount = new { currency_code = currency, value = FormatPayPalAmount(paypalTotal, currency) }
                 }
             },
             application_context = new
