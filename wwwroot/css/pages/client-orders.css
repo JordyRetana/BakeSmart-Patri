@@ -116,7 +116,7 @@
     }
 
     .client-order-card {
-        padding: 1.1rem;
+        padding: .9rem 1rem;
     }
 
     .client-order-card:hover {
@@ -135,7 +135,7 @@
         align-items: flex-start;
         gap: 1rem;
         flex-wrap: wrap;
-        margin-bottom: 1rem;
+        margin-bottom: .7rem;
     }
 
     .client-order-id {
@@ -159,16 +159,20 @@
 
     .client-order-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1.2fr) repeat(3, minmax(150px, .6fr));
-        gap: .75rem;
+        grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(120px, .55fr));
+        gap: 0;
         align-items: stretch;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
     }
 
     .client-order-field {
-        padding: .85rem;
-        border-radius: 14px;
+        padding: .65rem .75rem;
+        border-radius: 0;
         background: var(--bg-alt);
-        border: 1px solid var(--border);
+        border: 0;
+        border-right: 1px solid var(--border);
     }
 
     .client-order-field span {
@@ -191,7 +195,7 @@
         align-items: center;
         gap: 1rem;
         flex-wrap: wrap;
-        margin-top: 1rem;
+        margin-top: .7rem;
     }
 
     .client-order-buttons {
@@ -208,6 +212,16 @@
     body.dark .client-order-field {
         background: #111827;
         border-color: #334155;
+    }
+
+    .client-order-field:last-child { border-right: 0; }
+
+    @@media (max-width: 760px) {
+        .client-orders-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .client-order-grid { grid-template-columns: 1fr 1fr; }
+        .client-order-field { border-bottom: 1px solid var(--border); }
+        .client-order-field:nth-child(2n) { border-right: 0; }
+        .client-order-field:nth-last-child(-n+2) { border-bottom: 0; }
     }
 
     .payment-modal[hidden] {
