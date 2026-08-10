@@ -1755,3 +1755,52 @@ body.dark .navbar .user-profile {
         border-radius: 18px !important;
     }
 }
+
+/* Keep the operational mobile bar simple: logo, menu trigger and actions never overlap. */
+@media (max-width: 860px) {
+    .navbar-container {
+        display: flex !important;
+        position: relative !important;
+        align-items: center !important;
+        min-height: 66px !important;
+        padding: .55rem .8rem !important;
+    }
+
+    .navbar-container > .navbar-brand {
+        display: flex !important;
+        flex: 0 0 48px !important;
+        width: 48px !important;
+        padding: 0 !important;
+    }
+
+    .navbar-container > .navbar-brand .navbar-brand-text { display: none !important; }
+
+    .navbar-container > .mobile-nav-toggle {
+        display: inline-flex !important;
+        flex: 0 0 42px !important;
+        width: 42px !important;
+        height: 42px !important;
+        margin-left: .6rem !important;
+        position: static !important;
+        transform: none !important;
+    }
+
+    .navbar-container > .navbar-actions {
+        display: flex !important;
+        width: auto !important;
+        margin-left: auto !important;
+    }
+
+    body.mobile-nav-open .navbar-menu {
+        position: fixed !important;
+        inset: 74px 0 0 0 !important;
+        width: 100% !important;
+        height: calc(100dvh - 74px) !important;
+        max-height: none !important;
+        margin: 0 !important;
+        padding: 1rem !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        overflow-y: auto !important;
+    }
+}
