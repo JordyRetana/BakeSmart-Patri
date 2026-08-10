@@ -1634,3 +1634,37 @@ body.dark .navbar .user-profile {
     border-color: rgba(167, 139, 250, .3) !important;
     background: linear-gradient(145deg, #252d43, #171e30) !important;
 }
+
+/* Mobile navigation: keep menus inside the viewport and use a compact account popover. */
+@media (max-width: 860px) {
+    html, body { overflow-x: hidden !important; }
+
+    body.mobile-nav-open .navbar-menu {
+        top: 74px !important;
+        right: .75rem !important;
+        bottom: auto !important;
+        left: .75rem !important;
+        width: auto !important;
+        height: auto !important;
+        max-height: calc(100dvh - 90px) !important;
+        box-sizing: border-box !important;
+    }
+
+    body.mobile-nav-open .navbar-menu .navbar-link,
+    body.mobile-nav-open .navbar-menu .dropdown {
+        display: flex !important;
+        width: 100% !important;
+    }
+
+    .storefront-tools .storefront-account .user-dropdown {
+        position: absolute !important;
+        top: calc(100% + .55rem) !important;
+        right: 0 !important;
+        bottom: auto !important;
+        left: auto !important;
+        width: min(300px, calc(100vw - 1rem)) !important;
+        max-height: min(70dvh, 420px) !important;
+        border-radius: 18px !important;
+        transform-origin: top right !important;
+    }
+}

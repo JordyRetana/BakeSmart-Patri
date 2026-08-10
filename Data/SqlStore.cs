@@ -542,7 +542,7 @@ public sealed class SqlStore
             INNER JOIN dbo.CategoriasProducto pc ON pc.ProductCategoryId = p.ProductCategoryId
             LEFT JOIN dbo.CategoriasProducto parent ON parent.ProductCategoryId = pc.ParentCategoryId
             WHERE p.IsActive = 1
-              AND pt.Name = N'Producto terminado'
+              AND pt.Name IN (N'Producto terminado', N'Producto vendible')
             ORDER BY CategoryName;
             """;
 
@@ -586,7 +586,7 @@ public sealed class SqlStore
                 ) pick ON pick.ProductId = pi.ProductId AND pick.ProductImageId = pi.ProductImageId
             ) img ON img.ProductId = p.ProductId
             WHERE p.IsActive = 1
-              AND pt.Name = 'Producto terminado'
+              AND pt.Name IN ('Producto terminado', 'Producto vendible')
             GROUP BY p.ProductId, p.Code, p.Name, p.Description, parent.Name, pc.Name,
                      p.UnitPrice, um.Code, img.ImageUrl, img.AltText, p.IsActive
             ORDER BY COALESCE(parent.Name, pc.Name), p.Name;
@@ -618,7 +618,7 @@ public sealed class SqlStore
                 ORDER BY pi.IsPrimary DESC, pi.SortOrder, pi.ProductImageId
             ) img
             WHERE p.IsActive = 1
-              AND pt.Name = N'Producto terminado'
+              AND pt.Name IN (N'Producto terminado', N'Producto vendible')
             GROUP BY p.ProductId, p.Code, p.Name, p.Description, parent.Name, pc.Name,
                      p.UnitPrice, um.Code, img.ImageUrl, img.AltText, p.IsActive
             ORDER BY COALESCE(parent.Name, pc.Name), p.Name;
