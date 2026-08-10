@@ -36,6 +36,7 @@ if (args.Contains("--mysql-smoke", StringComparer.OrdinalIgnoreCase))
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration
     .AddJsonFile("appsettings.Payments.json", optional: true, reloadOnChange: true)
+    .AddJsonFile("appsettings.StripeKeys.json", optional: true, reloadOnChange: true)
     .AddJsonFile("appsettings.PayPalWebhook.json", optional: true, reloadOnChange: true)
     .AddJsonFile("appsettings.Azure.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
