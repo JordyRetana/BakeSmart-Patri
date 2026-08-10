@@ -486,7 +486,6 @@
             const addButton = document.querySelector(`[data-id="${productId}"][data-name][data-price]`);
             if (addButton) {
                 addProductButton(addButton);
-                openCartSheet();
             }
         } else if (parameters.get('cart') === 'open' && cart.length) {
             openCartSheet();
