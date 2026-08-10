@@ -295,12 +295,36 @@
 }
 
 .register-phone-row {
-    display: grid;
-    grid-template-columns: minmax(132px, .6fr) minmax(0, 1fr);
-    gap: .65rem;
+    display: flex;
+    align-items: stretch;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #dcd3e8;
+    border-radius: 8px;
+    background: #fff;
 }
 
-.register-phone-row .input { min-width: 0; }
+.register-phone-row .input {
+    min-width: 0;
+    min-height: 42px;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+.register-phone-row select.input {
+    flex: 0 0 132px;
+    width: 132px;
+    font-weight: 800;
+    border-right: 1px solid #e6deee !important;
+}
+
+.register-phone-row input.input { flex: 1 1 auto; }
+
+.register-phone-row:focus-within {
+    border-color: #7b43e6;
+    box-shadow: 0 0 0 3px rgba(123, 67, 230, .12);
+}
 
 .register-phone-row + #registerPhoneHelp {
     display: block;
@@ -392,7 +416,7 @@ body.dark .input-label {
         width: 100%;
     }
 
-    .register-phone-row { grid-template-columns: 1fr; }
+    .register-phone-row select.input { flex-basis: 120px; width: 120px; }
 }
 
 /* Page-specific overrides against older global auth rules. */
