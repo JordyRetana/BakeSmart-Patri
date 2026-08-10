@@ -39,7 +39,7 @@
         </div>
     </section>
 
-    <div class="grid grid-4 track-kpis">
+    <div class="grid grid-3 track-kpis">
         <div class="card metric-card">
             <div class="text-muted">Pedido</div>
             <h2 id="trackOrderId"></h2>
@@ -51,10 +51,6 @@
         <div class="card metric-card">
             <div class="text-muted">Tipo de ruta</div>
             <h2 id="trackRouteType"></h2>
-        </div>
-        <div class="card metric-card">
-            <div class="text-muted">Destino</div>
-            <h2 id="trackDestinationCountry"></h2>
         </div>
     </div>
 
@@ -448,8 +444,6 @@
             <div class="summary-row"><span>Origen</span><strong>${origin.name}</strong></div>
             <div class="summary-row"><span>Cliente</span><strong>${order.customerName}</strong></div>
             <div class="summary-row"><span>Direccion</span><strong>${order.address}</strong></div>
-            <div class="summary-row"><span>Destino visual</span><strong>${destination.name}</strong></div>
-            <div class="summary-row"><span>Latitud / longitud</span><strong>${destination.lat.toFixed(5)}, ${destination.lng.toFixed(5)}</strong></div>
             <div class="summary-row"><span>Modalidad</span><strong>${routeType}</strong></div>
             <div class="summary-row"><span>Entrega</span><strong>${new Date(order.deliveryDate).toLocaleDateString('es-CR')}</strong></div>
             <div class="summary-row"><span>Productos</span><strong>${(order.items || []).map(i => `${i.quantity} x ${i.name}`).join(', ') || 'Sin detalle'}</strong></div>
@@ -527,7 +521,6 @@
         document.getElementById('trackOrderId').textContent = `#${order.id}`;
         document.getElementById('trackStatus').textContent = order.status;
         document.getElementById('trackRouteType').textContent = routeType;
-        document.getElementById('trackDestinationCountry').textContent = destination.country;
         document.getElementById('trackMeta').textContent = `${origin.city}, ${origin.country} -> ${destination.name}, ${destination.country}`;
 
         clearVisuals();
@@ -645,7 +638,6 @@
             document.getElementById('trackOrderId').textContent = '-';
             document.getElementById('trackStatus').textContent = 'Sin actividad';
             document.getElementById('trackRouteType').textContent = '-';
-            document.getElementById('trackDestinationCountry').textContent = '-';
             document.getElementById('trackMeta').textContent = 'Todavía no hay pedidos para mostrar.';
             document.getElementById('deliveryMap').innerHTML = `
                 <div class="track-empty-state">

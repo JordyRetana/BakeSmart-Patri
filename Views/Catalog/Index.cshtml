@@ -329,7 +329,6 @@
     }
 
     function addProductButton(button) {
-        if (!requireLogin('Inicia sesión para ordenar productos.')) return;
         addToCart(Number(button.dataset.id), button.dataset.name, Number(button.dataset.price));
     }
 
@@ -453,13 +452,12 @@
         updateCartDisplay();
         document.querySelectorAll('.catalog-checkout-link').forEach(link => {
             link.addEventListener('click', event => {
-                if (!requireLogin('Inicia sesión para finalizar el pedido.', '/Client?cart=checkout')) {
-                    event.preventDefault();
-                }
+                event.preventDefault();
                 if (!cart.length) {
-                    event.preventDefault();
                     app.toast.warning('Agrega productos al carrito antes de finalizar el pedido.');
+                    return;
                 }
+                window.location.href = '/Catalog/Cart';
             });
         });
 

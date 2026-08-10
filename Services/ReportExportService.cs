@@ -29,7 +29,7 @@ public sealed class ReportExportService
         var firstColumn = 1;
         var lastColumn = Math.Max(firstColumn, firstColumn + model.Headers.Count - 1);
         if (hasLogo)
-            sheet.AddPicture(logoPath).MoveTo(sheet.Cell(1, 1)).WithSize(46, 46);
+            sheet.AddPicture(logoPath).MoveTo(sheet.Cell(1, lastColumn)).WithSize(42, 42);
 
         sheet.Range(1, firstColumn, 1, lastColumn).Merge().Value = "Repostería Patri · BakeSmart";
         sheet.Range(2, firstColumn, 2, lastColumn).Merge().Value = model.Title;
@@ -42,7 +42,7 @@ public sealed class ReportExportService
         title.Style.Font.Bold = true;
         title.Style.Font.FontSize = 18;
         title.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-        if (hasLogo) title.Style.Alignment.Indent = 5;
+        title.Style.Alignment.Indent = 1;
         sheet.Range(2, firstColumn, 2, lastColumn).Style.Font.SetBold().Font.SetFontSize(14).Font.SetFontColor(XLColor.FromHtml(Purple));
         sheet.Range(3, firstColumn, 4, lastColumn).Style.Font.SetFontColor(XLColor.FromHtml("#667085"));
 
@@ -80,7 +80,7 @@ public sealed class ReportExportService
         sheet.Columns().AdjustToContents(1, Math.Max(headerRow + model.Rows.Count, headerRow));
         foreach (var column in sheet.ColumnsUsed())
             column.Width = Math.Clamp(column.Width + 2, 12, 34);
-        sheet.Row(1).Height = 30;
+        sheet.Row(1).Height = 48;
         sheet.Row(headerRow).Height = 24;
         sheet.PageSetup.PageOrientation = XLPageOrientation.Landscape;
         sheet.PageSetup.FitToPages(1, 0);
