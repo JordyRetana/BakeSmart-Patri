@@ -1001,6 +1001,7 @@ public class ApiController : Controller
         if (string.IsNullOrWhiteSpace(accessToken)) return BadRequest(new { message = "PayPal no pudo autenticar la pasarela." });
 
         var total = selected.Sum(order => order.GetProperty("total").GetDecimal());
+        var currency = (_configuration["PayPal:Currency"] ?? "CRC").Trim().ToUpperInvariant();
         var origin = $"{Request.Scheme}://{Request.Host}";
         var payload = new
         {
@@ -1011,7 +1012,7 @@ public class ApiController : Controller
                 {
                     custom_id = $"orders={string.Join(',', ids)};email={email}",
                     description = $"Pedidos BakeSmart #{string.Join(", ", ids)}",
-                    amount = new { currency_code = _configuration["PayPal:Currency"] ?? "CRC", value = total.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) }
+                    amount = new { currency_code = currency, value = FormatPayPalAmount(total, currency) }
                 }
             },
             application_context = new
@@ -1026,7 +1027,12 @@ public class ApiController : Controller
         var client = _httpClientFactory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         var response = await client.PostAsJsonAsync($"{baseUrl}/v2/checkout/orders", payload);
-        if (!response.IsSuccessStatusCode) return BadRequest(new { message = "PayPal no pudo iniciar el cobro." });
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync();
+            var detail = TryGetPayPalErrorDetail(errorBody);
+            return BadRequest(new { message = string.IsNullOrWhiteSpace(detail) ? "PayPal no pudo iniciar el cobro." : $"PayPal rechazó el cobro: {detail}" });
+        }
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var approvalUrl = document.RootElement.GetProperty("links").EnumerateArray()
             .FirstOrDefault(link => link.TryGetProperty("rel", out var rel) && rel.GetString() == "payer-action")
@@ -1197,6 +1203,32 @@ public class ApiController : Controller
         if (!response.IsSuccessStatusCode) return null;
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         return document.RootElement.TryGetProperty("access_token", out var token) ? token.GetString() : null;
+    }
+
+    private static string FormatPayPalAmount(decimal amount, string currency)
+    {
+        // PayPal requiere importes sin decimales para CRC y otras monedas de cero dígitos.
+        var zeroDecimalCurrencies = new[] { "CRC", "CLP", "HUF", "JPY", "TWD" };
+        return zeroDecimalCurrencies.Contains(currency, StringComparer.OrdinalIgnoreCase)
+            ? decimal.Truncate(amount).ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+            : amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static string? TryGetPayPalErrorDetail(string responseBody)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(responseBody);
+            var root = document.RootElement;
+            if (root.TryGetProperty("details", out var details) && details.ValueKind == JsonValueKind.Array && details.GetArrayLength() > 0 &&
+                details[0].TryGetProperty("description", out var description))
+                return description.GetString();
+            return root.TryGetProperty("message", out var message) ? message.GetString() : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     private async Task<bool> ConfirmPayPalOrderAsync(JsonElement order, string? expectedCustomerEmail)

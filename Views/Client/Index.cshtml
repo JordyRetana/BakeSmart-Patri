@@ -901,9 +901,7 @@
         const frequentRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
         const promotionRate = Number(BakeSmartStore.pos.config().activePromotionDiscount || 0);
         const discountRate = Math.max(frequentRate, promotionRate);
-        const createdOrders = [];
-
-        for (const item of orderItems) {
+        const createdOrders = await Promise.all(orderItems.map(async item => {
         const lineProduct = item.product;
         const lineQuantity = Math.max(1, Number(item.quantity || 1));
         const subtotal = Number(item.unitPrice || lineProduct.price) * lineQuantity;
@@ -933,8 +931,8 @@
         customerAddressId: isPickup ? null : (data.customerAddressId ? Number(data.customerAddressId) : null),
         deliveryMethod: data.deliveryMethod
         });
-        createdOrders.push({ ...result, total });
-        }
+        return { ...result, total };
+        }));
 
         const result = createdOrders[0];
         const total = createdOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
