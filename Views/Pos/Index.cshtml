@@ -286,9 +286,9 @@
                 <div id="paymentMethodsPanel" class="payment-methods-panel"></div>
 
                 <form id="paymentMethodForm" class="pos-payment-config-form" hidden="@(!canManagePayments)">
-                    <input class="form-control" name="name" placeholder="Forma de pago" required />
+                    <input class="form-control" name="name" placeholder="Método de pago" required />
                     <input class="form-control" name="commissionRate" type="number" min="0" step="0.01" placeholder="Comisión" required />
-                    <input class="form-control" name="account" placeholder="Cuenta contable" required />
+                    <input class="form-control" name="account" placeholder="Cuenta o referencia" required />
                     <button class="btn btn-outline btn-sm" type="submit">Guardar forma</button>
                 </form>
             </section>
@@ -470,19 +470,44 @@
             }
 
             function renderPaymentMethods() {
-                const methods = getConfig().paymentMethods;
+                const configuredMethods = getConfig().paymentMethods
+                    .filter(method => !String(method.name || '').toLowerCase().includes('smoke'))
+                    .filter(method => String(method.name || '').toLowerCase() !== 'tarjeta');
+                const methods = [
+                    ...configuredMethods,
+                    { id: 'stripe-gateway', name: 'Stripe', active: true, systemGateway: true },
+                    { id: 'paypal-gateway', name: 'PayPal', active: true, systemGateway: true }
+                ];
                 const paymentPanel = document.getElementById('paymentMethodsPanel');
                 const paymentSelect = document.getElementById('posPaymentMethod');
                 const paymentSelectDesktop = document.getElementById('posPaymentMethodDesktop');
 
+                const paymentLabels = {
+                    'Stripe': 'Tarjeta segura (Stripe)',
+                    'PayPal': 'PayPal',
+                    'SINPE': 'SINPE Móvil',
+                    'Efectivo': 'Efectivo',
+                    'Transferencia': 'Transferencia bancaria',
+                    'Pendiente': 'Pago pendiente'
+                };
+                const paymentDetails = {
+                    'Stripe': 'Cobro en línea procesado por Stripe',
+                    'PayPal': 'Cobro en línea procesado por PayPal',
+                    'SINPE': 'Pago por SINPE Móvil; se confirma al validarlo',
+                    'Efectivo': 'Cobro directo en caja',
+                    'Transferencia': 'Transferencia bancaria; se confirma al validarla',
+                    'Pendiente': 'Se cobrará al momento de la entrega'
+                };
                 paymentPanel.innerHTML = methods.map(method => `
                     <div class="payment-method-card">
                         <div class="payment-method-row payment-method-row-between">
                                 <div>
-                                    <div class="payment-method-name">${method.name}</div>
-                                    <div class="payment-method-account">Cuenta: ${method.account} · Comisión: ${Number(method.commissionRate || 0).toFixed(2)}</div>
+                                    <div class="payment-method-name">${paymentLabels[method.name] || method.name}</div>
+                                    <div class="payment-method-account">${paymentDetails[method.name] || `Referencia: ${method.account}`} · ${method.systemGateway ? 'Pasarela configurada' : `Comisión: ${Number(method.commissionRate || 0).toFixed(2)}`}</div>
                                 </div>
-                            ${permissions.canManagePayments
+                            ${method.systemGateway
+                                ? `<span class="badge badge-success">Disponible</span>`
+                                : permissions.canManagePayments
                                 ? `<button class="badge ${method.active ? 'badge-success' : 'badge-warning'}" type="button" onclick="togglePaymentMethod(${method.id})">${method.active ? 'Activo' : 'Inactivo'}</button>`
                                 : `<span class="badge ${method.active ? 'badge-success' : 'badge-warning'}">${method.active ? 'Activo' : 'Inactivo'}</span>`}
                         </div>
@@ -490,7 +515,7 @@
                 `).join('');
 
                 const activeMethods = methods
-                    .filter(method => method.active)
+                    .filter(method => method.active && !method.systemGateway)
                     .map(method => `<option value="${method.name}">${method.name}</option>`)
                     .join('');
 
