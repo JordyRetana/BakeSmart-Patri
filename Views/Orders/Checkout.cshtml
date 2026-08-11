@@ -94,7 +94,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch(`/api/orders/${order.id}/pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method }) });
                 if (!response.ok) { const result = await response.json().catch(() => ({})); throw new Error(result.message || 'No se pudo registrar el cobro.'); }
             }
-            window.location.assign(`/Orders/Details/${order.id}`);
+            const returnUrl = '@(User.IsInRole("Cliente") ? "/Orders/Details/" : "/Orders")';
+            window.location.assign(returnUrl + ('@(User.IsInRole("Cliente") ? "1" : "")' ? order.id : ''));
         } catch (error) { status.textContent = error.message || 'No fue posible completar el cobro.'; button.disabled = false; }
     });
 });

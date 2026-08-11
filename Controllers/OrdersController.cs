@@ -152,6 +152,7 @@ namespace BakeSmartPatri.Controllers
 
         public async Task<IActionResult> Details(int id)
         {
+            if (!User.IsInRole("Cliente")) return RedirectToAction(nameof(Index));
             var order = await FindOrderAsync(id);
             ViewData["OrderJson"] = order.ValueKind == JsonValueKind.Undefined ? "null" : order.GetRawText();
             return View();
@@ -180,17 +181,41 @@ namespace BakeSmartPatri.Controllers
             return ordersJson.EnumerateArray().FirstOrDefault(row => row.TryGetProperty("id", out var value) && value.GetInt32() == id);
         }
 
-        [Authorize(Policy = "StaffOrAdmin")]
-        public IActionResult Edit(int id) => View();
+        public async Task<IActionResult> Edit(int id)
+        {
+            if (!User.IsInRole("Cliente")) return RedirectToAction(nameof(Index));
+            var order = await FindOrderAsync(id);
+            if (order.ValueKind == JsonValueKind.Undefined) return RedirectToAction(nameof(Details), new { id });
+            var status = order.TryGetProperty("estado", out var value) ? value.GetString() ?? string.Empty : string.Empty;
+            if (IsLockedForCustomer(status))
+            {
+                TempData["ToastError"] = "Este pedido ya está en producción o en entrega; ya no puede modificarse.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            ViewData["OrderJson"] = order.GetRawText();
+            return View();
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "StaffOrAdmin")]
-        public IActionResult Edit(int id, string? estado, DateTime? entrega, string? notas)
+        public async Task<IActionResult> Edit(int id, DateTime? entrega, string? notas)
         {
-            TempData["Toast"] = "Editar pedidos debe completarse desde el flujo del sistema.";
+            if (!User.IsInRole("Cliente")) return RedirectToAction(nameof(Index));
+            var order = await FindOrderAsync(id);
+            if (order.ValueKind == JsonValueKind.Undefined) return RedirectToAction(nameof(Details), new { id });
+            var status = order.TryGetProperty("estado", out var value) ? value.GetString() ?? string.Empty : string.Empty;
+            if (IsLockedForCustomer(status))
+            {
+                TempData["ToastError"] = "Este pedido ya está en producción o en entrega; ya no puede modificarse.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            await _sqlStore.UpdateCustomerOrderAsync(id, entrega, notas, User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value);
+            TempData["ToastSuccess"] = "Pedido actualizado correctamente.";
             return RedirectToAction(nameof(Details), new { id });
         }
+
+        private static bool IsLockedForCustomer(string status) => new[] { "produccion", "listo", "camino", "entregado" }
+            .Any(token => status.Contains(token, StringComparison.OrdinalIgnoreCase));
 
         [HttpGet]
         public async Task<IActionResult> Data()

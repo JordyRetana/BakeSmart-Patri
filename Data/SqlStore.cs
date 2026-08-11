@@ -3610,6 +3610,15 @@ public sealed class SqlStore
         return new { rows, activeUsers };
     }
 
+    public async Task UpdateCustomerOrderAsync(int orderId, DateTime? deliveryDate, string? notes, string? userEmail = null)
+    {
+        var sql = UseMySql
+            ? "UPDATE Pedidos SET DeliveryDate = COALESCE(@DeliveryDate, DeliveryDate), Notes = COALESCE(NULLIF(@Notes, ''), Notes) WHERE OrderId = @OrderId;"
+            : "UPDATE dbo.Pedidos SET DeliveryDate = COALESCE(@DeliveryDate, DeliveryDate), Notes = COALESCE(NULLIF(@Notes, N''), Notes) WHERE OrderId = @OrderId;";
+        await ExecuteAsync(sql, new SqlParameter("@OrderId", orderId), new SqlParameter("@DeliveryDate", (object?)deliveryDate ?? DBNull.Value), new SqlParameter("@Notes", (object?)notes?.Trim() ?? DBNull.Value));
+        await AddAuditLogAsync("EDITAR_PEDIDO_CLIENTE", $"Pedido #{orderId} actualizado por el cliente", userEmail);
+    }
+
     private async Task<object> PromotionsReportAsync(DateTime? start, DateTime? end)
     {
         var rows = await PromotionsAsync();
