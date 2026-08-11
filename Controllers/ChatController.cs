@@ -98,7 +98,44 @@ public class ChatController : ControllerBase
             .GetProperty("content")
             .GetString();
 
-        return Ok(new { reply });
+        var products = await GetChatProductsAsync(req.Message);
+        var navigation = ResolveNavigation(req.Message);
+        var cartOffer = ResolveCartOffer(req.Message, products);
+        return Ok(new { reply, products, navigation, cartOffer });
+    }
+
+    private async Task<IReadOnlyList<object>> GetChatProductsAsync(string message)
+    {
+        var normalized = message.ToLowerInvariant();
+        if (!new[] { "producto", "productos", "catalogo", "catálogo", "precio", "que tienen", "que hay", "brownie", "queque", "cupcake", "galleta" }.Any(normalized.Contains)) return Array.Empty<object>();
+        var terms = normalized.Split(new[] { ' ', ',', '.', '?', '¿', '!', '¡' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(term => term.Length >= 4 && term is not "producto" and not "productos" and not "precio" and not "catalogo" and not "catálogo")
+            .ToArray();
+        var list = (await _sqlStore.CatalogProductsAsync()).Where(product => product.IsActive && product.Stock > 0);
+        if (terms.Length > 0)
+        {
+            var matches = list.Where(product => terms.Any(term => product.Name.Contains(term, StringComparison.OrdinalIgnoreCase) || product.Category.Contains(term, StringComparison.OrdinalIgnoreCase))).Take(8).ToArray();
+            if (matches.Length > 0) list = matches;
+        }
+        return list.Take(8).Select(product => (object)new { id = product.Id, name = product.Name, price = product.UnitPrice, stock = product.Stock, category = product.Category }).ToArray();
+    }
+
+    private static object? ResolveNavigation(string message)
+    {
+        var value = message.ToLowerInvariant();
+        if (value.Contains("iniciar sesión") || value.Contains("iniciar sesion") || value.Contains("login")) return new { label = "Ir a iniciar sesión", url = "/Account/Login" };
+        if (value.Contains("catalogo") || value.Contains("catálogo") || value.Contains("productos")) return new { label = "Ver productos", url = "/Catalog" };
+        if (value.Contains("carrito")) return new { label = "Ver carrito", url = "/Catalog/Cart" };
+        if (value.Contains("crear pedido") || value.Contains("pedido personalizado")) return new { label = "Crear pedido", url = "/Orders/Create" };
+        return null;
+    }
+
+    private static object? ResolveCartOffer(string message, IReadOnlyList<object> products)
+    {
+        var quantityMatch = System.Text.RegularExpressions.Regex.Match(message, @"\b(\d+)\b");
+        if (!quantityMatch.Success || products.Count == 0) return null;
+        var product = products[0];
+        return product;
     }
 
     private async Task<string> BuildDatabaseContextAsync()

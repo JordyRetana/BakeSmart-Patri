@@ -755,6 +755,13 @@
         bottom: 20px;
         }
 
+        .chat-products { align-self:stretch; background:#fff; border:1px solid #eadff1; border-radius:12px; padding:10px; font-size:12px; color:#29344d; }
+        .chat-products-scroll { max-height:170px; overflow:auto; margin-top:7px; }
+        .chat-products table { width:100%; border-collapse:collapse; font-size:11px; }
+        .chat-products th,.chat-products td { padding:7px 4px; text-align:left; border-bottom:1px solid #f0eaf4; }
+        .chat-products button,.chat-action-link { border:0; border-radius:8px; padding:6px 8px; background:linear-gradient(90deg,#7c3aed,#c44587); color:#fff; font-weight:800; cursor:pointer; text-decoration:none; }
+        .chat-action-link { align-self:flex-start; margin-top:4px; font-size:12px; }
+
         body[data-page="/catalog"] #chat-widget {
         right: auto;
         left: 20px;
@@ -816,6 +823,7 @@
         const sendBtn = document.getElementById('chat-send');
         const historyKey = 'bakesmart:richie-history';
         let history = [];
+        let requestedQuantity = 1;
 
         try {
         const saved = JSON.parse(localStorage.getItem(historyKey) || '[]');
@@ -843,6 +851,19 @@
         return div;
         }
 
+        const money = value => `₡${Number(value || 0).toLocaleString('es-CR')}`;
+        function addProductTable(products) {
+        if (!Array.isArray(products) || !products.length) return;
+        const card = document.createElement('div'); card.className = 'chat-products';
+        const rows = products.map(p => `<tr><td>${String(p.name || '').replace(/[&<>"']/g, '')}</td><td>${money(p.price)}</td><td><button data-chat-add="${Number(p.id)}" data-name="${String(p.name || '').replace(/"/g,'') }" data-price="${Number(p.price)}">Agregar</button></td></tr>`).join('');
+        card.innerHTML = `<strong>Productos disponibles</strong><div class="chat-products-scroll"><table><thead><tr><th>Producto</th><th>Precio</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+        card.addEventListener('click', event => { const button = event.target.closest('[data-chat-add]'); if (!button) return; const product = { id:Number(button.dataset.chatAdd), name:button.dataset.name, price:Number(button.dataset.price) }; const qty=Math.max(1,requestedQuantity); const answer = window.confirm(`${qty} × ${product.name} serían ${money(product.price * qty)}. ¿Deseas agregarlos al carrito?`); if (!answer) return; const email=(document.body.dataset.userEmail||'').trim().toLowerCase(); const key=`bakesmart:catalog-cart:${email||'guest'}`; let cart=[]; try{cart=JSON.parse(localStorage.getItem(key)||'[]')}catch{} const item=cart.find(x=>Number(x.id)===product.id&&!x.isCombo); if(item)item.quantity=Number(item.quantity||0)+qty;else cart.push({...product,quantity:qty}); localStorage.setItem(key,JSON.stringify(cart)); addMsg('bot', `${qty} × ${product.name} se agregaron al carrito. Te llevo para revisarlo.`); setTimeout(()=>window.location.assign('/Catalog/Cart'),500); });
+        box.appendChild(card); box.scrollTop = box.scrollHeight;
+        }
+        function addNavigation(action) {
+        if (!action?.url || !action?.label) return; const link=document.createElement('a'); link.className='chat-action-link'; link.href=action.url; link.textContent=action.label; box.appendChild(link); box.scrollTop=box.scrollHeight;
+        }
+
         function isAffirmative(value) {
         return /^(si|sí|dale|ok|okay|claro|continuar|quiero|por favor|sipi)\b/i.test(value.trim());
         }
@@ -856,6 +877,7 @@
         const msg = input.value.trim();
         if (!msg) return;
         input.value = '';
+        requestedQuantity = Number((msg.match(/\b(\d+)\b/) || [])[1] || 1);
         addMsg('user', msg);
 
         if (isAffirmative(msg) && lastAssistantAskedForLogin()) {
@@ -881,6 +903,8 @@
         history.push({ role: 'user', content: msg }, { role: 'assistant', content: data.reply });
         saveHistory();
         addMsg('bot', data.reply);
+        addProductTable(data.products);
+        addNavigation(data.navigation);
         } catch (err) {
         typingEl.remove();
         addMsg('bot', 'Uy, se me cayo un poquito de merengue 🍰 Proba de nuevo en un momento.');

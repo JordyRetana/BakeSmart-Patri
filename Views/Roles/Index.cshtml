@@ -1,137 +1,16 @@
-@{
-    Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Roles";
-}
-
-@section Styles {
-    <link rel="stylesheet" href="~/css/pages/roles-index.css" asp-append-version="true" />
-}
-
-<div class="page-shell roles-page">
-    <header class="roles-hero">
-        <div>
-            <span class="roles-eyebrow">Seguridad</span>
-            <h1><i class="fas fa-shield-halved"></i> Roles y permisos</h1>
-            <p>Resumen claro de accesos por perfil, sin listas infinitas ni tarjetas vacías.</p>
-        </div>
-        <a class="btn btn-outline" href="/Users"><i class="fas fa-arrow-left"></i> Usuarios</a>
-    </header>
-
-    <section class="roles-layout">
-        <aside class="roles-list" id="rolesGrid"></aside>
-        <article class="card roles-detail-card">
-            <div class="roles-matrix-head">
-                <div>
-                    <span class="roles-eyebrow">Detalle</span>
-                    <h2 id="roleDetailTitle">Seleccione un rol</h2>
-                </div>
-                <span class="badge badge-info" id="rolesFeatureCount">0 permisos</span>
-            </div>
-            <div id="roleDetailPermissions" class="role-permissions-large"></div>
-        </article>
-    </section>
-
-    <article class="card roles-matrix-card">
-        <div class="roles-matrix-head">
-            <div>
-                <span class="roles-eyebrow">Matriz</span>
-                <h2>Funcionalidades por rol</h2>
-            </div>
-        </div>
-        <div class="table-container">
-            <table class="table roles-matrix-table">
-                <thead id="rolesMatrixHead"></thead>
-                <tbody id="rolesMatrix"></tbody>
-            </table>
-        </div>
-    </article>
-</div>
-
-@section Scripts {
-<script>
-(() => {
-    const clean = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-    let roles = [];
-    let selectedRole = null;
-
-    function displayDescription(value) {
-        return String(value || 'Acceso del sistema')
-            .replace(/Operacion/g, 'Operación')
-            .replace(/operacion/g, 'operación')
-            .replace(/Produccion/g, 'Producción')
-            .replace(/produccion/g, 'producción');
-    }
-
-    function fallbackPermissions(name) {
-        const normalized = String(name || '').toLowerCase();
-        if (normalized.includes('admin')) return ['Dashboard','Pedidos','Producción','Inventario','Punto de venta','Reportes','Bitácora','Configuración','Usuarios','Roles','Contabilidad','Marketing','Catálogo','Perfil'];
-        if (normalized.includes('super')) return ['Dashboard','Pedidos','Producción','Inventario','Punto de venta','Reportes','Bitácora','Contabilidad','Marketing','Perfil'];
-        if (normalized.includes('caj')) return ['Dashboard','Pedidos','Punto de venta','Catálogo','Perfil'];
-        if (normalized.includes('repost')) return ['Dashboard','Producción','Inventario','Pedidos','Perfil'];
-        if (normalized.includes('cliente')) return ['Catálogo','Pedido rápido','Mis pedidos','Seguimiento','Perfil'];
-        if (normalized.includes('staff')) return ['Dashboard','Pedidos','Producción','Inventario','Punto de venta','Bitácora','Configuración','Catálogo','Perfil'];
-        return ['Perfil'];
-    }
-
-    function normalizeRole(role) {
-        const permissions = Array.isArray(role.permissions) && role.permissions.length
-            ? role.permissions
-            : fallbackPermissions(role.name);
-        return { ...role, permissions };
-    }
-
-    function selectRole(name) {
-        selectedRole = roles.find(r => r.name === name) || roles[0];
-        renderRoles();
-        renderDetail();
-    }
-
-    function renderRoles() {
-        document.getElementById('rolesGrid').innerHTML = roles.map(r => `
-            <button type="button" class="role-card ${selectedRole?.name === r.name ? 'role-card--active' : ''}" onclick="selectRole('${clean(r.name)}')">
-                <span><i class="fas fa-user-shield"></i></span>
-                <div>
-                    <strong>${clean(r.name)}</strong>
-                    <small>${clean(displayDescription(r.description))}</small>
-                </div>
-                <b>${r.permissions.length}</b>
-            </button>
-        `).join('');
-    }
-
-    function renderDetail() {
-        if (!selectedRole) return;
-        document.getElementById('roleDetailTitle').textContent = selectedRole.name;
-        document.getElementById('rolesFeatureCount').textContent = `${selectedRole.permissions.length} permisos`;
-        document.getElementById('roleDetailPermissions').innerHTML = selectedRole.permissions
-            .map(p => `<span><i class="fas fa-check"></i>${clean(p)}</span>`)
-            .join('');
-    }
-
-    function renderMatrix() {
-        const features = [...new Set(roles.flatMap(r => r.permissions))].sort();
-        document.getElementById('rolesMatrixHead').innerHTML = `
-            <tr><th>Funcionalidad</th>${roles.map(r => `<th>${clean(r.name)}</th>`).join('')}</tr>`;
-        document.getElementById('rolesMatrix').innerHTML = features.map(feature => `
-            <tr>
-                <td><strong>${clean(feature)}</strong></td>
-                ${roles.map(r => `<td>${r.permissions.includes(feature) ? '<i class="fas fa-check"></i>' : '<i class="fas fa-minus"></i>'}</td>`).join('')}
-            </tr>
-        `).join('');
-    }
-
-    window.selectRole = selectRole;
-
-    async function init() {
-        await BakeSmartStore.refresh();
-        roles = BakeSmartStore.roles.list().map(normalizeRole);
-        selectedRole = roles[0] || null;
-        renderRoles();
-        renderDetail();
-        renderMatrix();
-    }
-
-    init().catch(error => app.toast.error(error.message));
-})();
-</script>
-}
+@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Roles"; }
+@section Styles { <link rel="stylesheet" href="~/css/pages/roles-index.css" asp-append-version="true" /> }
+<main class="page-shell roles-page">
+ <header class="roles-hero"><div><span class="roles-eyebrow">Seguridad</span><h1><i class="fas fa-shield-halved"></i> Roles y permisos</h1><p>Resumen claro de accesos por perfil, sin listas infinitas ni tarjetas vacías.</p></div><a class="btn btn-outline" href="/Users"><i class="fas fa-arrow-left"></i> Usuarios</a></header>
+ <section class="roles-layout"><aside class="roles-list" id="rolesGrid"></aside><article class="card roles-detail-card"><div class="roles-matrix-head"><div><span class="roles-eyebrow">Detalle</span><h2 id="roleDetailTitle">Seleccione un rol</h2></div><span class="badge badge-info" id="rolesFeatureCount">0 permisos</span></div><div id="roleDetailPermissions" class="role-permissions-large"></div></article></section>
+ <article class="card roles-matrix-card"><div class="roles-matrix-head"><div><span class="roles-eyebrow">Matriz</span><h2>Funcionalidades por rol</h2></div></div><div class="table-container"><table class="table roles-matrix-table"><thead id="rolesMatrixHead"></thead><tbody id="rolesMatrix"></tbody></table></div></article>
+</main>
+@section Scripts { <script>
+(()=>{const clean=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));let roles=[],selectedRole=null;
+const fallback=n=>{const x=String(n||'').toLowerCase();if(x.includes('admin'))return ['Dashboard','Pedidos','Producción','Inventario','Punto de venta','Reportes','Bitácora','Configuración','Usuarios','Roles','Contabilidad','Marketing','Catálogo','Perfil'];if(x.includes('super'))return ['Dashboard','Pedidos','Producción','Inventario','Punto de venta','Reportes','Bitácora','Contabilidad','Marketing','Perfil'];if(x.includes('caj'))return ['Dashboard','Pedidos','Punto de venta','Catálogo','Perfil'];if(x.includes('repost'))return ['Dashboard','Producción','Inventario','Pedidos','Perfil'];if(x.includes('cliente'))return ['Catálogo','Pedido rápido','Mis pedidos','Seguimiento','Perfil'];return ['Perfil'];};
+function selectRole(name){selectedRole=roles.find(r=>r.name===name)||roles[0];renderRoles();renderDetail()}window.selectRole=selectRole;
+function renderRoles(){rolesGrid.innerHTML=roles.map(r=>`<button type="button" class="role-card ${selectedRole?.name===r.name?'role-card--active':''}" onclick="selectRole('${clean(r.name)}')"><span><i class="fas fa-user-shield"></i></span><div><strong>${clean(r.name)}</strong><small>${clean(String(r.description||'Acceso del sistema').replace(/Operacion/g,'Operación').replace(/Produccion/g,'Producción'))}</small></div><b>${r.permissions.length}</b></button>`).join('')}
+function renderDetail(){if(!selectedRole)return;roleDetailTitle.textContent=selectedRole.name;rolesFeatureCount.textContent=`${selectedRole.permissions.length} permisos`;roleDetailPermissions.innerHTML=selectedRole.permissions.map(p=>`<span><i class="fas fa-check"></i>${clean(p)}</span>`).join('')}
+function renderMatrix(){const features=[...new Set(roles.flatMap(r=>r.permissions))].sort();rolesMatrixHead.innerHTML=`<tr><th>Funcionalidad</th>${roles.map(r=>`<th>${clean(r.name)}</th>`).join('')}</tr>`;rolesMatrix.innerHTML=features.map(f=>`<tr><td><strong>${clean(f)}</strong></td>${roles.map(r=>`<td>${r.permissions.includes(f)?'<i class="fas fa-check"></i>':'<i class="fas fa-minus"></i>'}</td>`).join('')}</tr>`).join('')}
+async function init(){await BakeSmartStore.refresh();roles=BakeSmartStore.roles.list().map(r=>({...r,permissions:Array.isArray(r.permissions)&&r.permissions.length?r.permissions:fallback(r.name)}));selectedRole=roles[0]||null;renderRoles();renderDetail();renderMatrix()}init().catch(e=>app.toast.error(e.message));})();
+</script> }
