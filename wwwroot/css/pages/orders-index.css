@@ -411,3 +411,6 @@
 .orders-delivered-card summary span { display: flex; align-items: center; gap: .65rem; }
 .orders-delivered-card > p { margin: 0; padding: 0 1.25rem 1rem; }
 .orders-delivered-list { padding: 0 1.25rem 1.25rem; max-height: 420px; overflow: auto; }
+.orders-customization-block { border-left: 4px solid #b44394; background: linear-gradient(90deg, #fff8fc, #f8f5ff); }
+.orders-customization-block span { color: #a1377e !important; }
+body.dark .orders-customization-block { background: linear-gradient(90deg, #322130, #251f33); }
