@@ -28,7 +28,7 @@
     </section>
 </main>
 <script>
-    const catalogCombos = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(combo => new { id = combo.Id, name = combo.Name, items = combo.Items.Select(item => new { productId = item.ProductId, quantity = item.Quantity, name = item.Name, unitPrice = item.UnitPrice }) })));
+    const catalogCombos = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(combo => new { id = combo.Id, name = combo.Name, specialPrice = combo.SpecialPrice, imageUrl = combo.ImageUrl, items = combo.Items.Select(item => new { productId = item.ProductId, quantity = item.Quantity, name = item.Name, unitPrice = item.UnitPrice }) })));
     function addCatalogCombo(comboId) {
         const combo = catalogCombos.find(row => Number(row.id) === Number(comboId));
         if (!combo) return;
@@ -36,12 +36,21 @@
         const key = `bakesmart:catalog-cart:${email || 'guest'}`;
         let cart = [];
         try { cart = JSON.parse(localStorage.getItem(key) || '[]'); } catch { cart = []; }
-        (combo.items || []).forEach(item => {
-            const itemId = Number(item.productId);
-            const existing = cart.find(row => Number(row.id) === itemId);
-            if (existing) existing.quantity = Number(existing.quantity || 0) + Number(item.quantity || 1);
-            else cart.push({ id: itemId, name: item.name, price: Number(item.unitPrice || 0), quantity: Number(item.quantity || 1), comboName: combo.name });
-        });
+        const existing = cart.find(row => row?.isCombo && Number(row.comboId) === Number(combo.id));
+        if (existing) {
+            existing.quantity = Number(existing.quantity || 0) + 1;
+        } else {
+            cart.push({
+                id: `combo-${combo.id}`,
+                comboId: Number(combo.id),
+                isCombo: true,
+                name: combo.name,
+                price: Number(combo.specialPrice || 0),
+                quantity: 1,
+                imageUrl: combo.imageUrl || null,
+                items: (combo.items || []).map(item => ({ productId: Number(item.productId), quantity: Number(item.quantity || 1), name: item.name }))
+            });
+        }
         localStorage.setItem(key, JSON.stringify(cart));
         window.location.href = '/Catalog/Cart';
     }

@@ -225,8 +225,10 @@
     function loadCart() {
         try {
             cart = JSON.parse(localStorage.getItem(cartStorageKey()) || '[]')
-                .map(item => ({ id: Number(item.id), name: String(item.name || 'Producto'), price: Number(item.price || 0), quantity: Math.max(1, Number(item.quantity || 1)) }))
-                .filter(item => item.id > 0 && item.price >= 0);
+                .map(item => item?.isCombo && Number(item.comboId) > 0
+                    ? { id: `combo-${Number(item.comboId)}`, comboId: Number(item.comboId), isCombo: true, name: String(item.name || 'Combo'), price: Number(item.price || 0), quantity: Math.max(1, Number(item.quantity || 1)), imageUrl: item.imageUrl || null, items: Array.isArray(item.items) ? item.items : [] }
+                    : { id: Number(item.id), name: String(item.name || 'Producto'), price: Number(item.price || 0), quantity: Math.max(1, Number(item.quantity || 1)) })
+                .filter(item => (item.isCombo || Number(item.id) > 0) && item.price >= 0);
         } catch {
             cart = [];
         }
@@ -333,7 +335,7 @@
     }
 
     function addToCart(productId, name, price) {
-        const existingItem = cart.find(item => item.id === productId);
+        const existingItem = cart.find(item => !item.isCombo && Number(item.id) === Number(productId));
         if (existingItem) {
             existingItem.quantity++;
         } else {
@@ -346,7 +348,7 @@
     }
 
     function removeFromCart(productId) {
-        cart = cart.filter(item => item.id !== productId);
+        cart = cart.filter(item => String(item.id) !== String(productId));
         saveCart();
         updateCartDisplay();
     }
@@ -426,7 +428,7 @@
                 </div>
                 <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0;">
                     <span style="font-weight:700;white-space:nowrap;">₡${(item.price * item.quantity).toLocaleString('es-CR')}</span>
-                    <button class="btn btn-ghost btn-sm" onclick="removeFromCart(${item.id})" style="color:var(--danger);width:36px;height:36px;padding:0!important;border-radius:50%!important;">
+                    <button class="btn btn-ghost btn-sm" onclick="removeFromCart('${item.id}')" style="color:var(--danger);width:36px;height:36px;padding:0!important;border-radius:50%!important;">
                         <i class="fas fa-trash-can"></i>
                     </button>
                 </div>

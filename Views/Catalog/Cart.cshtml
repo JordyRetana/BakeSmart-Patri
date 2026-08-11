@@ -60,10 +60,12 @@
         const guestKey = keyFor('guest');
         const merged = new Map();
         (email ? [guestKey, userKey] : [guestKey]).flatMap(readItems).forEach(item => {
-            const id = Number(item?.id);
+            const isCombo = item?.isCombo === true && Number(item?.comboId) > 0;
+            const id = isCombo ? `combo-${Number(item.comboId)}` : Number(item?.id);
             if (!id) return;
+            const normalized = isCombo ? { ...item, id, isCombo: true, comboId: Number(item.comboId), quantity: Math.max(1, Number(item.quantity || 1)), price: Number(item.price || 0), items: Array.isArray(item.items) ? item.items : [] } : item;
             const previous = merged.get(id);
-            merged.set(id, previous ? { ...item, quantity: Number(previous.quantity || 0) + Number(item.quantity || 0) } : item);
+            merged.set(id, previous ? { ...normalized, quantity: Number(previous.quantity || 0) + Number(normalized.quantity || 0) } : normalized);
         });
         const result = [...merged.values()];
         if (email && result.length) {
@@ -74,7 +76,9 @@
     }
     function save() { localStorage.setItem(activeKey, JSON.stringify(items)); render(); }
     function render() {
-        const valid = items.map(item => ({ ...item, product: productById.get(Number(item.id)) })).filter(item => item.product);
+        const valid = items.map(item => item.isCombo
+            ? { ...item, product: { name: item.name || 'Combo', code: `COMBO-${item.comboId}`, imageUrl: item.imageUrl || '/img/products/producto-sin-imagen.svg' } }
+            : { ...item, product: productById.get(Number(item.id)) }).filter(item => item.product);
         const lines = document.getElementById('cartLines');
         const empty = document.getElementById('cartEmpty');
         empty.hidden = valid.length > 0;
@@ -87,13 +91,17 @@
         document.getElementById('cartCheckout').innerHTML = authenticated
             ? '<i class="fas fa-arrow-right"></i> Continuar al pedido'
             : '<i class="fas fa-right-to-bracket"></i> Iniciar sesión para continuar';
-        lines.innerHTML = valid.map(item => `<article class="catalog-cart-line"><img src="${clean(item.product.imageUrl || '/img/products/producto-sin-imagen.svg')}" alt=""><div class="catalog-cart-line__info"><strong title="${clean(item.product.name)}">${clean(item.product.name)}</strong><small>${clean(item.comboName ? `${item.comboName} · ` : '')}${clean(item.product.code || 'Producto')} · ${money(item.price || item.product.price)}</small></div><div class="catalog-cart-line__actions"><div class="catalog-cart-line__quantity"><button data-quantity="${item.id}" data-change="-1" aria-label="Restar">−</button><strong>${item.quantity}</strong><button data-quantity="${item.id}" data-change="1" aria-label="Sumar">+</button></div><button class="btn btn-ghost btn-sm" data-remove="${item.id}" aria-label="Quitar"><i class="fas fa-trash"></i></button></div></article>`).join('');
+        lines.innerHTML = valid.map(item => {
+            const composition = item.isCombo ? (item.items || []).map(component => `${Number(component.quantity || 1)}× ${clean(component.name || 'Producto')}`).join(' · ') : '';
+            const detail = item.isCombo ? `Combo · ${composition}` : clean(item.product.code || 'Producto');
+            return `<article class="catalog-cart-line"><img src="${clean(item.product.imageUrl || '/img/products/producto-sin-imagen.svg')}" alt=""><div class="catalog-cart-line__info"><strong title="${clean(item.product.name)}">${item.isCombo ? '<i class="fas fa-box-open"></i> ' : ''}${clean(item.product.name)}</strong><small>${detail} · ${money(item.price || item.product.price)}</small></div><div class="catalog-cart-line__actions"><div class="catalog-cart-line__quantity"><button data-quantity="${item.id}" data-change="-1" aria-label="Restar">−</button><strong>${item.quantity}</strong><button data-quantity="${item.id}" data-change="1" aria-label="Sumar">+</button></div><button class="btn btn-ghost btn-sm" data-remove="${item.id}" aria-label="Quitar"><i class="fas fa-trash"></i></button></div></article>`;
+        }).join('');
     }
     document.getElementById('cartLines').addEventListener('click', event => {
         const quantity = event.target.closest('[data-quantity]');
         const remove = event.target.closest('[data-remove]');
-        if (quantity) { const item = items.find(row => Number(row.id) === Number(quantity.dataset.quantity)); if (!item) return; item.quantity = Math.max(1, Number(item.quantity || 1) + Number(quantity.dataset.change)); save(); }
-        if (remove) { items = items.filter(item => Number(item.id) !== Number(remove.dataset.remove)); save(); }
+        if (quantity) { const item = items.find(row => String(row.id) === String(quantity.dataset.quantity)); if (!item) return; item.quantity = Math.max(1, Number(item.quantity || 1) + Number(quantity.dataset.change)); save(); }
+        if (remove) { items = items.filter(item => String(item.id) !== String(remove.dataset.remove)); save(); }
     });
     document.getElementById('cartCheckout').addEventListener('click', () => {
         if (!items.length) return;

@@ -337,8 +337,10 @@
 
         function normalizeCartItems(rawItems) {
         return (Array.isArray(rawItems) ? rawItems : [])
-        .map(item => ({ id: Number(item.id), name: String(item.name || 'Producto'), price: Number(item.price || 0), quantity: Math.max(1, Number(item.quantity || 1)) }))
-        .filter(item => item.id > 0 && item.quantity > 0);
+        .map(item => item?.isCombo && Number(item.comboId) > 0
+        ? { id: `combo-${Number(item.comboId)}`, comboId: Number(item.comboId), isCombo: true, name: String(item.name || 'Combo'), price: Number(item.price || 0), quantity: Math.max(1, Number(item.quantity || 1)), items: Array.isArray(item.items) ? item.items : [] }
+        : { id: Number(item.id), name: String(item.name || 'Producto'), price: Number(item.price || 0), quantity: Math.max(1, Number(item.quantity || 1)) })
+        .filter(item => (item.isCombo || item.id > 0) && item.quantity > 0);
         }
 
         function readCatalogCart() {
@@ -348,8 +350,9 @@
         const itemsById = new Map();
         [guestKey, userKey].forEach(key => {
         normalizeCartItems(JSON.parse(localStorage.getItem(key) || '[]')).forEach(item => {
-        const existing = itemsById.get(item.id);
-        itemsById.set(item.id, existing ? { ...item, quantity: existing.quantity + item.quantity } : item);
+        const itemKey = item.isCombo ? `combo-${item.comboId}` : `product-${item.id}`;
+        const existing = itemsById.get(itemKey);
+        itemsById.set(itemKey, existing ? { ...item, quantity: existing.quantity + item.quantity } : item);
         });
         });
         const items = [...itemsById.values()];
@@ -432,6 +435,25 @@
         const existing = selectedProducts.get(Number(product.id));
         selectedProducts.set(Number(product.id), { product, quantity: existing?.quantity || 1 });
         selectedProduct = product;
+        }
+
+        function expandCatalogCartForOrder(rawItems) {
+        return rawItems.flatMap(item => {
+        if (!item.isCombo) return [{ ...item, product: products.find(row => Number(row.id) === Number(item.id)) }];
+        const components = (item.items || []).map(component => ({
+        product: products.find(row => Number(row.id) === Number(component.productId)),
+        quantity: Math.max(1, Number(component.quantity || 1)) * Math.max(1, Number(item.quantity || 1))
+        })).filter(component => component.product);
+        const regularTotal = components.reduce((sum, component) => sum + Number(component.product.price || 0) * component.quantity, 0);
+        return components.map(component => ({
+        product: component.product,
+        quantity: component.quantity,
+        unitPrice: regularTotal > 0
+        ? (Number(item.price || 0) * (Number(component.product.price || 0) * component.quantity / regularTotal)) / component.quantity
+        : Number(item.price || 0) / Math.max(1, components.reduce((sum, row) => sum + row.quantity, 0)),
+        comboName: item.name
+        }));
+        });
         }
 
         productInput.value = [...selectedProducts.keys()].join(',');
@@ -592,10 +614,10 @@
         if (parameters.get('cart') !== 'checkout') return;
 
         const availableIds = new Set(availableProducts().map(product => Number(product.id)));
-        cartCheckoutItems = readCatalogCart()
-        .filter(item => availableIds.has(Number(item.id)))
+        cartCheckoutItems = expandCatalogCartForOrder(readCatalogCart())
+        .filter(item => item.product && availableIds.has(Number(item.product.id)))
         .map(item => {
-        const product = products.find(row => Number(row.id) === Number(item.id));
+        const product = item.product;
         return {
         ...item,
         product,
@@ -925,8 +947,7 @@
         total,
         deliveryDate: data.deliveryDate,
         address: isPickup ? null : data.address,
-        notes: orderItems.length > 1 ? `${data.notes || ''}
-        Pedido generado desde carrito (${lineProduct.name}).`.trim() : (data.notes || null),
+        notes: `${data.notes || ''}${item.comboName ? `\nCombo: ${item.comboName}.` : ''}${orderItems.length > 1 ? `\nPedido generado desde carrito (${lineProduct.name}).` : ''}`.trim() || null,
         paymentMethod: data.paymentMethod,
         destinationLatitude: isPickup ? null : Number(data.destinationLatitude),
         destinationLongitude: isPickup ? null : Number(data.destinationLongitude),
