@@ -38,6 +38,10 @@ namespace BakeSmartPatri.Controllers
 
         public IActionResult About() => View();
 
+        public IActionResult Terms() => View();
+
+        public IActionResult Privacy() => View();
+
         public async Task<IActionResult> Contact()
         {
             try

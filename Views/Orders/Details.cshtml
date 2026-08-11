@@ -2,6 +2,7 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Detalle de pedido";
     var orderId = ViewContext.RouteData.Values["id"]?.ToString() ?? "";
+    var paymentToStart = Context.Request.Query["pay"].ToString();
 }
 
 <div class="page-shell order-details-page">
@@ -47,6 +48,7 @@
                 <div class="muted" style="margin-top:8px;font-weight:700;line-height:1.6;">@(User.IsInRole("Cliente") ? "Consulta el avance y la ubicación de tu entrega." : "Actualiza estado, fecha y notas desde editar.")</div>
                 <div style="margin-top:12px;">
                     <a class="btn btn-secondary" href="@(User.IsInRole("Cliente") ? $"/Client/Track?id={orderId}" : "/Production")">@(User.IsInRole("Cliente") ? "Ver seguimiento" : "Ver producción")</a>
+                    <button type="button" class="btn btn-primary" id="securePaymentButton" hidden></button>
                 </div>
             </div>
         </div>
@@ -56,6 +58,7 @@
 <script>
     window.addEventListener('DOMContentLoaded', () => {
         const orderId = Number('@orderId');
+        const paymentToStart = '@paymentToStart';
         const money = value => `₡${Number(value || 0).toLocaleString('es-CR')}`;
 
         window.BakeSmartStore.refresh().then(() => {
@@ -71,10 +74,36 @@
             document.getElementById('orderDelivery').textContent = order.entrega || order.deliveryDate || '-';
             document.getElementById('orderTotal').textContent = money(order.total);
             document.getElementById('orderProducts').textContent = order.producto || order.products || 'Sin detalle';
+            if (paymentToStart) openSecurePayment(paymentToStart);
         }).catch(error => {
             document.getElementById('orderSubtitle').textContent = error.message;
         });
     });
+
+    async function openSecurePayment(method) {
+        const isPayPal = String(method).toLowerCase().includes('paypal');
+        const button = document.getElementById('securePaymentButton');
+        button.hidden = false;
+        button.innerHTML = isPayPal ? '<i class="fab fa-paypal"></i> Pagar con PayPal' : '<i class="fas fa-credit-card"></i> Pagar con tarjeta';
+        const begin = async () => {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abriendo pago seguro…';
+            try {
+                const response = await fetch(isPayPal ? '/api/payments/paypal/checkout' : '/api/payments/stripe/checkout', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderIds: [Number('@orderId')] })
+                });
+                const result = await response.json();
+                if (!response.ok || !result.url) throw new Error(result.message || 'No se pudo iniciar el pago seguro.');
+                window.location.assign(result.url);
+            } catch (error) {
+                app.toast.error(error.message || 'No se pudo iniciar el pago seguro.');
+                button.disabled = false;
+                button.innerHTML = isPayPal ? '<i class="fab fa-paypal"></i> Reintentar PayPal' : '<i class="fas fa-credit-card"></i> Reintentar tarjeta';
+            }
+        };
+        button.addEventListener('click', begin);
+        await begin();
+    }
 </script>
 
 @section Styles {

@@ -20,7 +20,7 @@
             <i class="fas fa-plus-circle" style="color:var(--primary);"></i>
             Nuevo pedido
         </h1>
-        <p class="text-muted">Completa los datos para crear un nuevo pedido.</p>
+        <p class="text-muted">Diseña un encargo, confirma la entrega y continúa al cobro seguro elegido.</p>
     </div>
 
     <form method="post" action="/Orders/Create" id="orderForm">
@@ -31,28 +31,38 @@
             <div class="grid grid-2" style="gap: clamp(0.75rem, 1.2vw, 1.25rem);">
                 <div class="input-group">
                     <label class="input-label"><i class="fas fa-user"></i> Nombre completo *</label>
-                    <input type="text" class="input" name="cliente" required placeholder="Nombre del cliente">
+                    <input id="orderCustomerName" type="text" class="input" name="cliente" required placeholder="Nombre del cliente">
                 </div>
                 <div class="input-group">
                     <label class="input-label"><i class="fas fa-phone"></i> Telefono *</label>
-                    <input type="tel" class="input" name="telefono" required placeholder="+506 8888-8888">
+                    <input id="orderCustomerPhone" type="tel" class="input" name="telefono" required placeholder="+506 8888-8888">
                 </div>
                 <div class="input-group">
                     <label class="input-label"><i class="fas fa-envelope"></i> Email *</label>
-                    <input type="email" class="input" name="email" required placeholder="cliente@email.com">
+                    <input id="orderCustomerEmail" type="email" class="input" name="email" required placeholder="cliente@email.com">
                 </div>
                 <div class="input-group">
                     <label class="input-label"><i class="fas fa-id-card"></i> Cedula / Pasaporte</label>
-                    <input type="text" class="input" name="identificacion" placeholder="Identificacion">
+                    <input id="orderCustomerIdentification" type="text" class="input" name="identificacion" placeholder="Identificacion">
                 </div>
             </div>
         </div>
 
         <div class="card" style="margin-bottom:1.5rem;">
-            <h3>Detalles del pedido</h3>
+            <h3>Diseña tu encargo</h3>
+            <p class="text-muted order-section-copy">El tipo de encargo activa los detalles de pastelería. La base disponible se usa para calcular el precio real del pedido.</p>
             <div class="grid grid-2">
                 <div class="input-group">
-                    <label class="input-label"><i class="fas fa-cake-candles"></i> Producto *</label>
+                    <label class="input-label"><i class="fas fa-cake-candles"></i> Tipo de pedido *</label>
+                    <select class="input" name="tipoPedido" required id="orderType">
+                        <option value="Queque de chocolate personalizado">Queque de chocolate personalizado</option>
+                        <option value="Queque de zanahoria personalizado">Queque de zanahoria personalizado</option>
+                        <option value="Pastel de cumpleaños personalizado">Pastel de cumpleaños personalizado</option>
+                        <option value="Pedido especial de repostería">Pedido especial de repostería</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label class="input-label"><i class="fas fa-box-open"></i> Base disponible para cotización *</label>
                     <select class="input" name="productoId" required id="productSelect">
                         <option value="">Seleccionar producto</option>
                         @foreach (var product in Model.Products)
@@ -66,8 +76,8 @@
                 </div>
 
                 <div class="input-group">
-                    <label class="input-label"><i class="fas fa-weight-scale"></i> Tamano / Porciones</label>
-                    <input type="text" class="input" name="tamano" placeholder="Indicar tamano o porciones">
+                    <label class="input-label"><i class="fas fa-users"></i> Tamaño / porciones</label>
+                    <input type="text" class="input" name="tamano" placeholder="Ej. 20 porciones, 24 cm">
                 </div>
 
                 <div class="input-group">
@@ -83,11 +93,11 @@
         </div>
 
         <div class="card" style="margin-bottom:1.5rem;">
-            <h3>Personalizacion</h3>
+            <h3>Personalización del queque</h3>
             <div class="grid grid-2">
                 <div class="input-group">
-                    <label class="input-label"><i class="fas fa-paint-brush"></i> Sabor / Variante</label>
-                    <input type="text" class="input" name="sabor" placeholder="Detalle solicitado por el cliente">
+                    <label class="input-label"><i class="fas fa-paint-brush"></i> Sabor / relleno</label>
+                    <input type="text" class="input" name="sabor" placeholder="Chocolate, vainilla, dulce de leche...">
                 </div>
                 <div class="input-group">
                     <label class="input-label"><i class="fas fa-palette"></i> Color de decoracion</label>
@@ -115,8 +125,8 @@
                     </select>
                 </div>
                 <div class="input-group">
-                    <label class="input-label"><i class="fas fa-credit-card"></i> Metodo de pago</label>
-                    <select class="input" name="metodoPago">
+                    <label class="input-label"><i class="fas fa-credit-card"></i> Método de pago</label>
+                    <select class="input" name="metodoPago" id="paymentMethod">
                         @foreach (var method in Model.PaymentMethods)
                         {
                             <option value="@method">@method</option>
@@ -124,6 +134,7 @@
                     </select>
                 </div>
             </div>
+            <p class="text-muted order-payment-note" id="paymentNote"><i class="fas fa-shield-halved"></i> Tarjeta segura (Stripe) y PayPal abren la pasarela oficial después de crear el pedido.</p>
 
             <div id="deliveryMapBlock" style="margin-top:1rem;">
                 <div class="input-group" style="margin-bottom:1rem;">
@@ -159,7 +170,7 @@
 
         <div style="display:flex;gap:1rem;justify-content:flex-end;flex-wrap:wrap;">
             <a href="/Orders" class="btn btn-outline btn-lg"><i class="fas fa-times"></i> Cancelar</a>
-            <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-save"></i> Guardar pedido</button>
+            <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-lock"></i> Crear pedido y continuar</button>
         </div>
     </form>
 </div>
@@ -173,6 +184,14 @@
         await BakeSmartStore.refresh();
         const config = BakeSmartStore.pos.config();
         try { orderCustomerProfile = await BakeSmartStore.loadProfile(); } catch (_) { orderCustomerProfile = null; }
+
+        if (orderCustomerProfile) {
+            document.getElementById('orderCustomerName').value = `${orderCustomerProfile.firstName || ''} ${orderCustomerProfile.lastName || ''}`.trim();
+            document.getElementById('orderCustomerPhone').value = orderCustomerProfile.phone || '';
+            document.getElementById('orderCustomerEmail').value = orderCustomerProfile.email || '';
+            document.getElementById('orderCustomerIdentification').value = orderCustomerProfile.identification || orderCustomerProfile.idNumber || '';
+            ['orderCustomerName', 'orderCustomerPhone', 'orderCustomerEmail'].forEach(id => document.getElementById(id).readOnly = true);
+        }
 
         orderMapPicker = await BakeSmartMapPicker.create('orderMapPicker', {
             address: '',
@@ -238,6 +257,14 @@
     }
 
     document.getElementById('productSelect').addEventListener('change', updateSummary);
+    document.getElementById('paymentMethod').addEventListener('change', event => {
+        const method = String(event.target.value || '').toLowerCase();
+        document.getElementById('paymentNote').innerHTML = method.includes('paypal')
+            ? '<i class="fab fa-paypal"></i> Serás redirigido a PayPal para autorizar el cobro seguro.'
+            : method.includes('tarjeta') || method.includes('stripe')
+                ? '<i class="fas fa-credit-card"></i> Serás redirigido a Stripe Checkout para pagar con tarjeta.'
+                : '<i class="fas fa-receipt"></i> El pago se registrará con el método seleccionado al confirmar el pedido.';
+    });
     document.getElementById('metodoEntrega').addEventListener('change', () => {
         updateSummary();
         toggleDeliveryMode();

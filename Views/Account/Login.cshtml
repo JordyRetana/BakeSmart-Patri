@@ -40,6 +40,7 @@
 
             <form method="post" action="/Account/Login" class="login-form" id="loginForm">
                 @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@(ViewData["ReturnUrl"]?.ToString() ?? "")" />
                 <div class="input-group">
                     <label class="input-label" for="loginEmail"><i class="fas fa-envelope"></i> Correo electrónico</label>
                     <input id="loginEmail" type="email" class="input" name="email" placeholder="tu@correo.com" required autocomplete="username" />
@@ -57,7 +58,7 @@
                 </div>
                 <button type="submit" class="btn btn-primary btn-block btn-lg login-submit-btn" id="loginSubmitBtn"><i class="fas fa-right-to-bracket"></i> Iniciar sesión</button>
                 <div class="login-divider"><span>o</span></div>
-                <a href="/Account/Register" class="btn btn-outline btn-block login-create-btn"><i class="fas fa-user-plus"></i> Crear cuenta de cliente</a>
+                <a asp-controller="Account" asp-action="Register" asp-route-returnUrl="@(ViewData["ReturnUrl"]?.ToString())" class="btn btn-outline btn-block login-create-btn"><i class="fas fa-user-plus"></i> Crear cuenta de cliente</a>
             </form>
 
             <div class="login-security-note"><i class="fas fa-shield-halved"></i><span><strong>Conexión protegida.</strong> Tus credenciales se validan de forma segura.</span></div>

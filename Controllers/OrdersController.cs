@@ -34,7 +34,9 @@ namespace BakeSmartPatri.Controllers
             int? productoId, DateTime? entrega, string? metodoPago,
             string? direccion, string? notas, string? metodoEntrega,
             string? latitudEntrega, string? longitudEntrega,
-            string? referenciaEntrega, int? customerAddressId)
+            string? referenciaEntrega, int? customerAddressId,
+            string? tipoPedido, string? tamano, string? hora, string? sabor,
+            string? color, string? mensaje)
         {
             var parsedLatitude = ParseCoordinate(latitudEntrega);
             var parsedLongitude = ParseCoordinate(longitudEntrega);
@@ -104,7 +106,7 @@ namespace BakeSmartPatri.Controllers
                     Total: total,
                     DeliveryDate: entrega.Value,
                     Address: direccion?.Trim(),
-                    Notes: notas?.Trim(),
+                    Notes: BuildOrderNotes(tipoPedido, tamano, hora, sabor, color, mensaje, notas),
                     PaymentMethod: metodoPago?.Trim() ?? "Pendiente",
                     DestinationLatitude: parsedLatitude,
                     DestinationLongitude: parsedLongitude,
@@ -115,7 +117,9 @@ namespace BakeSmartPatri.Controllers
 
                 var orderId = await _sqlStore.CreateOrderAsync(input, User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value);
                 TempData["ToastSuccess"] = $"Pedido #{orderId} creado correctamente.";
-                return RedirectToAction(nameof(Details), new { id = orderId });
+                var onlinePayment = string.Equals(metodoPago?.Trim(), "Tarjeta", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(metodoPago?.Trim(), "PayPal", StringComparison.OrdinalIgnoreCase);
+                return RedirectToAction(nameof(Details), new { id = orderId, pay = onlinePayment ? metodoPago : null });
             }
             catch (Exception ex)
             {
@@ -130,6 +134,19 @@ namespace BakeSmartPatri.Controllers
             if (decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var invariant)) return invariant;
             if (decimal.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out var localized)) return localized;
             return null;
+        }
+
+        private static string? BuildOrderNotes(string? tipoPedido, string? tamano, string? hora, string? sabor, string? color, string? mensaje, string? notes)
+        {
+            var parts = new[]
+            {
+                ("Tipo de encargo", tipoPedido), ("Tamaño / porciones", tamano), ("Hora solicitada", hora),
+                ("Sabor", sabor), ("Color de decoración", color), ("Mensaje", mensaje), ("Notas", notes)
+            }
+            .Where(item => !string.IsNullOrWhiteSpace(item.Item2))
+            .Select(item => $"{item.Item1}: {item.Item2!.Trim()}");
+            var result = string.Join(" | ", parts);
+            return string.IsNullOrWhiteSpace(result) ? null : result;
         }
 
         public IActionResult Details(int id) => View();
