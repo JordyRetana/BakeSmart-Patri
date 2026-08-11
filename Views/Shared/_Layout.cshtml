@@ -945,7 +945,9 @@
 
                 localStorage.setItem(key, JSON.stringify(cart));
                 card.remove();
-                addMsg('bot', `${qty} × ${product.name} se agregaron al carrito. ¿Quieres agregar algo mas?`);
+                const cartQuantity = cart.reduce((total, cartItem) => total + Number(cartItem.quantity || 0), 0);
+                const cartTotal = cart.reduce((total, cartItem) => total + Number(cartItem.price || 0) * Number(cartItem.quantity || 0), 0);
+                addMsg('bot', `${qty} × ${product.name} se agregaron. Carrito actual: ${cartQuantity} producto(s) por ${money(cartTotal)}.`);
                 askToContinueShopping(products);
             };
 
@@ -953,7 +955,7 @@
                 title: 'Agregar al carrito',
                 message: `${qty} × ${product.name} serían ${money(product.price * qty)}. ¿Deseas agregarlos al carrito?`,
                 confirmText: 'Agregar al carrito',
-                cancelText: 'Seguir viendo',
+                cancelText: 'Cancelar',
                 onConfirm: addToCart
             });
         });
@@ -976,6 +978,14 @@
         return /\b(login|iniciar\s+sesi[oó]n|inicie\s+sesi[oó]n|entrar\s+a\s+mi\s+cuenta|acceder\s+a\s+mi\s+cuenta)\b/i.test(value);
         }
 
+        function offerLogin() {
+        addMsg('bot', 'Claro. Cuando estés listo, usa este botón para iniciar sesión y continuar.');
+        addNavigation({
+        label: 'Ir a iniciar sesión',
+        url: `/Account/Login?ReturnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`
+        });
+        }
+
         async function send() {
         const msg = input.value.trim();
         if (!msg) return;
@@ -986,20 +996,14 @@
         if (requestsLogin(msg)) {
         history.push({ role: 'user', content: msg });
         saveHistory();
-        addMsg('bot', 'Claro, te llevo al inicio de sesión para continuar.');
-        window.setTimeout(() => {
-        window.location.href = `/Account/Login?ReturnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
-        }, 450);
+        offerLogin();
         return;
         }
 
         if (isAffirmative(msg) && lastAssistantAskedForLogin()) {
         history.push({ role: 'user', content: msg });
         saveHistory();
-        addMsg('bot', 'Perfecto, te llevo al inicio de sesión para continuar.');
-        window.setTimeout(() => {
-        window.location.href = `/Account/Login?ReturnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
-        }, 450);
+        offerLogin();
         return;
         }
         const typingEl = addMsg('typing', 'Richie esta decorando la respuesta... 🍰');
