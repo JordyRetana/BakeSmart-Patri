@@ -15,12 +15,11 @@
     {
         <div class="alert alert-success" role="status">@successMessage</div>
     }
-    <div style="margin-bottom:2rem;">
-        <h1 style="margin:0;display:flex;align-items:center;gap:.5rem;">
-            <i class="fas fa-plus-circle" style="color:var(--primary);"></i>
-            Nuevo pedido
-        </h1>
-        <p class="text-muted">Diseña un encargo, confirma la entrega y continúa al cobro seguro elegido.</p>
+    <div class="order-create-hero">
+        <span class="order-create-eyebrow"><i class="fas fa-sparkles"></i> PEDIDO PERSONALIZADO</span>
+        <h1><i class="fas fa-cake-candles"></i> Crea un pedido a medida</h1>
+        <p>Elige el tipo de encargo, personalízalo y confirma la entrega. El pago se realiza con el método que prefieras.</p>
+        <div class="order-create-steps"><span><b>1</b> Diseño</span><span><b>2</b> Entrega</span><span><b>3</b> Pago</span></div>
     </div>
 
     <form method="post" action="/Orders/Create" id="orderForm">
@@ -57,7 +56,14 @@
                     <select class="input" name="tipoPedido" required id="orderType">
                         <option value="Queque de chocolate personalizado">Queque de chocolate personalizado</option>
                         <option value="Queque de zanahoria personalizado">Queque de zanahoria personalizado</option>
+                        <option value="Queque red velvet personalizado">Queque red velvet personalizado</option>
+                        <option value="Queque de vainilla personalizado">Queque de vainilla personalizado</option>
+                        <option value="Queque de tres leches personalizado">Queque de tres leches personalizado</option>
                         <option value="Pastel de cumpleaños personalizado">Pastel de cumpleaños personalizado</option>
+                        <option value="Pastel temático infantil">Pastel temático infantil</option>
+                        <option value="Pastel de boda o aniversario">Pastel de boda o aniversario</option>
+                        <option value="Cupcakes personalizados">Cupcakes personalizados</option>
+                        <option value="Mesa dulce para evento">Mesa dulce para evento</option>
                         <option value="Pedido especial de repostería">Pedido especial de repostería</option>
                     </select>
                 </div>
@@ -127,10 +133,12 @@
                 <div class="input-group">
                     <label class="input-label"><i class="fas fa-credit-card"></i> Método de pago</label>
                     <select class="input" name="metodoPago" id="paymentMethod">
-                        @foreach (var method in Model.PaymentMethods)
-                        {
-                            <option value="@method">@method</option>
-                        }
+                        <option value="Tarjeta">Tarjeta segura — Stripe</option>
+                        <option value="PayPal">PayPal</option>
+                        <option value="SINPE">SINPE Móvil</option>
+                        <option value="Transferencia">Transferencia bancaria</option>
+                        <option value="Efectivo">Efectivo al retirar</option>
+                        <option value="Pendiente">Pago pendiente</option>
                     </select>
                 </div>
             </div>
