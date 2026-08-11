@@ -149,6 +149,7 @@ public sealed class SqlStore
                 oc.Name AS Channel,
                 ps.Name AS PaymentStatus,
                 pm.Name AS PaymentMethod,
+                o.Notes,
                 COALESCE(ca.AddressLine, o.DestinationLabel) AS Address,
                 o.DestinationLatitude,
                 o.DestinationLongitude,
@@ -169,7 +170,7 @@ public sealed class SqlStore
             INNER JOIN dbo.DetallePedido oi ON oi.OrderId = o.OrderId
             INNER JOIN dbo.Productos p ON p.ProductId = oi.ProductId
             WHERE (@CustomerEmail IS NULL OR c.Email = @CustomerEmail)
-            GROUP BY o.OrderId, c.FullName, c.Email, os.Name, o.DeliveryDate, o.Total, oc.Name, ps.Name, pm.Name,
+            GROUP BY o.OrderId, c.FullName, c.Email, os.Name, o.DeliveryDate, o.Total, oc.Name, ps.Name, pm.Name, o.Notes,
                      ca.AddressLine, o.DestinationLabel, o.DestinationLatitude, o.DestinationLongitude,
                      o.CurrentLatitude, o.CurrentLongitude, o.TrackingStep, o.CreatedAt
             ORDER BY o.CreatedAt DESC;
@@ -5129,6 +5130,7 @@ public sealed class SqlStore
             createdAt = reader.GetDateTime("CreatedAt").ToString("o"),
             customerName = reader.GetString("CustomerName"),
             paymentMethod = reader.GetString("PaymentMethod"),
+            notes = reader.GetNullableString("Notes"),
             comboSummary = reader.GetString("ComboSummary"),
             total = reader.GetDecimal("Total"),
             hasCreditNote = reader.GetBoolean("HasCreditNote")

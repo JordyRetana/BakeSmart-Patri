@@ -166,6 +166,7 @@
             quantity: Number(o.quantity || 1),
             unitPrice: Number(o.unitPrice || 0),
             producto: o.producto || '',
+            notes: o.notes || '',
             address: o.address || '',
             createdAt: o.createdAt || o.entrega || new Date().toISOString()
         };
@@ -299,6 +300,8 @@
                 <span>Productos</span>
                 <strong>${clean(order.producto || 'Sin detalle')}</strong>
             </div>
+
+            ${order.notes ? `<div class="orders-detail-block orders-customization-block"><span><i class="fas fa-wand-magic-sparkles"></i> Personalización solicitada</span><strong>${clean(order.notes)}</strong></div>` : ''}
 
             <div class="orders-detail-block">
                 <span>Dirección de entrega</span>
