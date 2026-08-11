@@ -628,8 +628,8 @@
         bottom: 90px;
         right: 20px;
         z-index: 999999;
-        width: 320px;
-        max-width: 90vw;
+        width: clamp(360px, 26vw, 480px);
+        max-width: calc(100vw - 32px);
         isolation: isolate;
         background: #fff;
         border-radius: 16px;
@@ -675,7 +675,7 @@
         }
 
         #chat-box {
-        height: 360px;
+        height: clamp(390px, 52vh, 620px);
         overflow-y: auto;
         padding: 12px;
         background: #f7f5f8;
@@ -688,7 +688,7 @@
         max-width: 80%;
         padding: 8px 12px;
         border-radius: 14px;
-        font-size: 13.5px;
+        font-size: 15px;
         line-height: 1.4;
         }
 
@@ -724,7 +724,7 @@
         flex: 1;
         border: none;
         padding: 12px;
-        font-size: 13.5px;
+        font-size: 15px;
         outline: none;
         }
 
@@ -761,6 +761,13 @@
         .chat-products th,.chat-products td { padding:7px 4px; text-align:left; border-bottom:1px solid #f0eaf4; }
         .chat-products button,.chat-action-link { border:0; border-radius:8px; padding:6px 8px; background:linear-gradient(90deg,#7c3aed,#c44587); color:#fff; font-weight:800; cursor:pointer; text-decoration:none; }
         .chat-action-link { align-self:flex-start; margin-top:4px; font-size:12px; }
+
+        @@media (max-width: 700px) {
+        #chat-widget { width:calc(100vw - 20px); max-width:none; bottom:78px; right:10px; left:10px; }
+        #chat-box { height:min(56vh,480px); padding:10px; }
+        .msg { max-width:92%; font-size:14px; }
+        .chat-products { font-size:12px; }
+        }
 
         body[data-page="/catalog"] #chat-widget {
         right: auto;

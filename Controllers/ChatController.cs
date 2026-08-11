@@ -101,7 +101,8 @@ public class ChatController : ControllerBase
         var products = await GetChatProductsAsync(req.Message);
         var navigation = ResolveNavigation(req.Message);
         var cartOffer = ResolveCartOffer(req.Message, products);
-        return Ok(new { reply, products, navigation, cartOffer });
+        var conciseReply = products.Count > 0 ? "Aquí tienes los productos disponibles. Puedes desplazarte en la tabla y agregar el que prefieras." : reply;
+        return Ok(new { reply = conciseReply, products, navigation, cartOffer });
     }
 
     private async Task<IReadOnlyList<object>> GetChatProductsAsync(string message)
