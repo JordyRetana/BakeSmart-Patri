@@ -3,21 +3,18 @@
     min-width: 0;
 }
 
-.roles-page {
-    display: grid;
-    gap: 1rem;
-}
+.roles-page { display:grid; gap:1.25rem; max-width:1280px; }
 
 .roles-hero {
     display: flex;
     justify-content: space-between;
     gap: 1rem;
     align-items: center;
-    padding: 1.15rem;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--bg-card);
-    box-shadow: var(--shadow-sm);
+    padding: 1.5rem;
+    border: 1px solid #e5dff0;
+    border-radius: 20px;
+    background: linear-gradient(115deg,#eef6ff,#fff5fa);
+    box-shadow: 0 14px 34px rgba(77,45,113,.08);
 }
 
 .roles-eyebrow {
@@ -50,14 +47,14 @@
 .roles-layout {
     display: grid;
     grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
-    gap: 1rem;
+    gap: 1.25rem;
     align-items: start;
 }
 
 .roles-list {
     display: grid;
     gap: .65rem;
-    max-height: min(60vh, 620px);
+    max-height: min(64vh, 680px);
     overflow: auto;
 }
 
@@ -67,11 +64,11 @@
     gap: .8rem;
     align-items: center;
     width: 100%;
-    padding: .85rem;
+    padding: 1rem;
     text-align: left;
     color: var(--text);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 14px;
     background: var(--bg-card);
     cursor: pointer;
 }
