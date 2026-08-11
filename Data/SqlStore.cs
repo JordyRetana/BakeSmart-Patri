@@ -143,6 +143,7 @@ public sealed class SqlStore
                 o.OrderId,
                 c.FullName AS CustomerName,
                 c.Email AS CustomerEmail,
+                c.Phone AS CustomerPhone,
                 os.Name AS OrderStatus,
                 o.DeliveryDate,
                 o.Total,
@@ -170,7 +171,7 @@ public sealed class SqlStore
             INNER JOIN dbo.DetallePedido oi ON oi.OrderId = o.OrderId
             INNER JOIN dbo.Productos p ON p.ProductId = oi.ProductId
             WHERE (@CustomerEmail IS NULL OR c.Email = @CustomerEmail)
-            GROUP BY o.OrderId, c.FullName, c.Email, os.Name, o.DeliveryDate, o.Total, oc.Name, ps.Name, pm.Name, o.Notes,
+            GROUP BY o.OrderId, c.FullName, c.Email, c.Phone, os.Name, o.DeliveryDate, o.Total, oc.Name, ps.Name, pm.Name, o.Notes,
                      ca.AddressLine, o.DestinationLabel, o.DestinationLatitude, o.DestinationLongitude,
                      o.CurrentLatitude, o.CurrentLongitude, o.TrackingStep, o.CreatedAt
             ORDER BY o.CreatedAt DESC;
@@ -192,6 +193,7 @@ public sealed class SqlStore
             id = reader.GetInt32("OrderId"),
             cliente = reader.GetString("CustomerName"),
             customerEmail = reader.GetString("CustomerEmail"),
+            customerPhone = reader.GetNullableString("CustomerPhone") ?? string.Empty,
             producto = reader.GetString("Products"),
             productId = reader.GetInt32("FirstProductId"),
             quantity = reader.GetDecimal("FirstQuantity"),

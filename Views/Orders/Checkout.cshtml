@@ -1,0 +1,101 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Cobrar pedido";
+    var orderJson = ViewData["OrderJson"]?.ToString() ?? "null";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/order-checkout.css" asp-append-version="true" />
+}
+
+<main class="order-checkout page-shell" id="orderCheckout">
+    <header class="order-checkout-hero">
+        <div>
+            <span class="eyebrow"><i class="fas fa-receipt"></i> Cobro de pedido</span>
+            <h1 id="checkoutTitle">Finalizar pedido</h1>
+            <p>Revise los datos del cliente y elija una forma segura de completar el cobro.</p>
+        </div>
+        <a class="btn btn-secondary" href="/Orders"><i class="fas fa-arrow-left"></i> Volver a pedidos</a>
+    </header>
+
+    <div class="order-checkout-grid">
+        <section class="checkout-panel checkout-summary">
+            <span class="eyebrow">Resumen</span>
+            <h2 id="productName">Pedido</h2>
+            <div id="customDetails" class="custom-details" hidden></div>
+            <div class="checkout-meta"><span><i class="fas fa-calendar"></i> Entrega</span><strong id="deliveryDate">—</strong></div>
+            <div class="checkout-meta"><span><i class="fas fa-box"></i> Cantidad</span><strong id="quantity">—</strong></div>
+            <div class="checkout-total"><span>Total a cobrar</span><strong id="total">₡0</strong></div>
+        </section>
+
+        <section class="checkout-panel checkout-customer">
+            <span class="eyebrow">Cliente</span>
+            <h2>Datos confirmados</h2>
+            <dl>
+                <div><dt>Nombre</dt><dd id="customerName">—</dd></div>
+                <div><dt>Correo</dt><dd id="customerEmail">—</dd></div>
+                <div><dt>Teléfono</dt><dd id="customerPhone">—</dd></div>
+            </dl>
+            <p class="checkout-note"><i class="fas fa-circle-check"></i> Los datos provienen del perfil guardado del cliente.</p>
+        </section>
+
+        <section class="checkout-panel checkout-payment">
+            <span class="eyebrow">Forma de pago</span>
+            <h2>¿Cómo desea cobrar?</h2>
+            <div class="payment-options" id="paymentOptions">
+                <button type="button" class="payment-option selected" data-method="Pendiente"><i class="fas fa-clock"></i><span><b>Pago pendiente</b><small>Se cobra al entregar</small></span></button>
+                <button type="button" class="payment-option" data-method="Efectivo"><i class="fas fa-money-bill-wave"></i><span><b>Efectivo</b><small>Cobro directo en caja</small></span></button>
+                <button type="button" class="payment-option" data-method="SINPE"><i class="fas fa-mobile-screen"></i><span><b>SINPE Móvil</b><small>Confirmación manual</small></span></button>
+                <button type="button" class="payment-option" data-method="Tarjeta"><i class="fas fa-credit-card"></i><span><b>Tarjeta segura</b><small>Procesada por Stripe</small></span></button>
+                <button type="button" class="payment-option" data-method="PayPal"><i class="fab fa-paypal"></i><span><b>PayPal</b><small>Pago protegido en línea</small></span></button>
+            </div>
+            <button type="button" class="btn btn-primary checkout-submit" id="confirmPayment"><i class="fas fa-lock"></i> Confirmar forma de pago</button>
+            <p class="checkout-status" id="checkoutStatus" aria-live="polite"></p>
+        </section>
+    </div>
+</main>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+    const order = @Html.Raw(orderJson);
+    const money = value => `₡${Number(value || 0).toLocaleString('es-CR')}`;
+    let method = String(order.paymentMethod || 'Pendiente');
+    const byId = id => document.getElementById(id);
+    byId('checkoutTitle').textContent = `Cobro del pedido #${order.id}`;
+    byId('productName').textContent = order.producto || 'Pedido';
+    byId('deliveryDate').textContent = order.entrega || 'Por definir';
+    byId('quantity').textContent = `${Number(order.quantity || 1)} unidad(es)`;
+    byId('total').textContent = money(order.total);
+    byId('customerName').textContent = order.cliente || 'Cliente';
+    byId('customerEmail').textContent = order.customerEmail || 'Sin correo';
+    byId('customerPhone').textContent = order.customerPhone || 'Sin teléfono registrado';
+    if (order.isCustomOrder && order.notes) {
+        byId('customDetails').hidden = false;
+        byId('customDetails').innerHTML = `<i class="fas fa-wand-magic-sparkles"></i><span><b>Pedido personalizado</b>${String(order.notes).replaceAll(' | ', '<br>')}</span>`;
+    }
+    const selectMethod = next => {
+        method = next;
+        document.querySelectorAll('.payment-option').forEach(option => option.classList.toggle('selected', option.dataset.method === next));
+    };
+    document.querySelectorAll('.payment-option').forEach(option => option.addEventListener('click', () => selectMethod(option.dataset.method)));
+    selectMethod(method.toLowerCase().includes('paypal') ? 'PayPal' : method.toLowerCase().includes('tarjeta') ? 'Tarjeta' : method.toLowerCase().includes('sinpe') ? 'SINPE' : method.toLowerCase().includes('efectivo') ? 'Efectivo' : 'Pendiente');
+    byId('confirmPayment').addEventListener('click', async () => {
+        const button = byId('confirmPayment'); const status = byId('checkoutStatus');
+        button.disabled = true; status.textContent = 'Procesando…';
+        try {
+            if (method === 'Tarjeta' || method === 'PayPal') {
+                const gateway = method === 'Tarjeta' ? 'stripe' : 'paypal';
+                const response = await fetch(`/api/payments/${gateway}/checkout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderIds: [Number(order.id)] }) });
+                const result = await response.json();
+                if (!response.ok || !result.url) throw new Error(result.message || `No se pudo iniciar ${method}.`);
+                window.location.assign(result.url); return;
+            }
+            if (method !== 'Pendiente') {
+                const response = await fetch(`/api/orders/${order.id}/pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method }) });
+                if (!response.ok) { const result = await response.json().catch(() => ({})); throw new Error(result.message || 'No se pudo registrar el cobro.'); }
+            }
+            window.location.assign(`/Orders/Details/${order.id}`);
+        } catch (error) { status.textContent = error.message || 'No fue posible completar el cobro.'; button.disabled = false; }
+    });
+});
+</script>

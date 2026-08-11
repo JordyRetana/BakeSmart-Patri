@@ -152,13 +152,32 @@ namespace BakeSmartPatri.Controllers
 
         public async Task<IActionResult> Details(int id)
         {
+            var order = await FindOrderAsync(id);
+            ViewData["OrderJson"] = order.ValueKind == JsonValueKind.Undefined ? "null" : order.GetRawText();
+            return View();
+        }
+
+        /// <summary>Checkout dedicado para un pedido ya creado; no mezcla el flujo de POS.</summary>
+        public async Task<IActionResult> Checkout(int id)
+        {
+            var order = await FindOrderAsync(id);
+            if (order.ValueKind == JsonValueKind.Undefined)
+            {
+                TempData["ToastError"] = "No se encontro el pedido solicitado.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            ViewData["OrderJson"] = order.GetRawText();
+            return View();
+        }
+
+        private async Task<JsonElement> FindOrderAsync(int id)
+        {
             var email = User.IsInRole("Cliente")
                 ? User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
                 : null;
             var ordersJson = JsonSerializer.SerializeToElement(await _sqlStore.OrdersAsync(email));
-            var order = ordersJson.EnumerateArray().FirstOrDefault(row => row.TryGetProperty("id", out var value) && value.GetInt32() == id);
-            ViewData["OrderJson"] = order.ValueKind == JsonValueKind.Undefined ? "null" : order.GetRawText();
-            return View();
+            return ordersJson.EnumerateArray().FirstOrDefault(row => row.TryGetProperty("id", out var value) && value.GetInt32() == id);
         }
 
         [Authorize(Policy = "StaffOrAdmin")]

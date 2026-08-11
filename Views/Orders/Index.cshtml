@@ -403,28 +403,7 @@
     };
 
     window.chargeOrder = (id) => {
-        const order = orders.find(item => Number(item.id) === Number(id));
-        if (!order) return;
-
-        const cartItem = {
-            productId: Number(order.productId),
-            name: order.producto || 'Pedido',
-            code: `PED-${order.id}`,
-            unitPrice: Number(order.unitPrice || order.total || 0),
-            quantity: Number(order.quantity || 1)
-        };
-
-        sessionStorage.setItem('bakesmart.pos.pendingOrder', JSON.stringify({
-            id: order.id,
-            customerName: order.customerName || '',
-            customerEmail: order.customerEmail || '',
-            customerPhone: order.customerPhone || order.phone || order.telefono || '',
-            paymentMethod: order.paymentMethod || 'Tarjeta',
-            total: Number(order.total || 0),
-            item: cartItem
-        }));
-        sessionStorage.setItem('bakesmart.pos.cart', JSON.stringify([cartItem]));
-        window.location.assign('/Pos/Cart?orderId=' + encodeURIComponent(order.id));
+        window.location.assign('/Orders/Checkout/' + encodeURIComponent(id));
     };
 
     window.deleteOrder = (id) => {
