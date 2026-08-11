@@ -414,3 +414,4 @@
 .orders-customization-block { border-left: 4px solid #b44394; background: linear-gradient(90deg, #fff8fc, #f8f5ff); }
 .orders-customization-block span { color: #a1377e !important; }
 body.dark .orders-customization-block { background: linear-gradient(90deg, #322130, #251f33); }
+.orders-custom-tag,.production-custom-tag { display:inline-flex; align-items:center; gap:.35rem; width:fit-content; margin-top:.38rem; padding:.26rem .55rem; border-radius:999px; background:#f8e8f4; color:#a1377e; font-size:.68rem; font-weight:800; }
