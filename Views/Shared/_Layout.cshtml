@@ -864,7 +864,39 @@
         const card = document.createElement('div'); card.className = 'chat-products';
         const rows = products.map(p => `<tr><td>${String(p.name || '').replace(/[&<>"']/g, '')}</td><td>${money(p.price)}</td><td><button data-chat-add="${Number(p.id)}" data-name="${String(p.name || '').replace(/"/g,'') }" data-price="${Number(p.price)}">Agregar</button></td></tr>`).join('');
         card.innerHTML = `<strong>Productos disponibles</strong><div class="chat-products-scroll"><table><thead><tr><th>Producto</th><th>Precio</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
-        card.addEventListener('click', event => { const button = event.target.closest('[data-chat-add]'); if (!button) return; const product = { id:Number(button.dataset.chatAdd), name:button.dataset.name, price:Number(button.dataset.price) }; const qty=Math.max(1,requestedQuantity); const answer = window.confirm(`${qty} × ${product.name} serían ${money(product.price * qty)}. ¿Deseas agregarlos al carrito?`); if (!answer) return; const email=(document.body.dataset.userEmail||'').trim().toLowerCase(); const key=`bakesmart:catalog-cart:${email||'guest'}`; let cart=[]; try{cart=JSON.parse(localStorage.getItem(key)||'[]')}catch{} const item=cart.find(x=>Number(x.id)===product.id&&!x.isCombo); if(item)item.quantity=Number(item.quantity||0)+qty;else cart.push({...product,quantity:qty}); localStorage.setItem(key,JSON.stringify(cart)); addMsg('bot', `${qty} × ${product.name} se agregaron al carrito. Te llevo para revisarlo.`); setTimeout(()=>window.location.assign('/Catalog/Cart'),500); });
+        card.addEventListener('click', event => {
+            const button = event.target.closest('[data-chat-add]');
+            if (!button) return;
+
+            const product = {
+                id: Number(button.dataset.chatAdd),
+                name: button.dataset.name,
+                price: Number(button.dataset.price)
+            };
+            const qty = Math.max(1, requestedQuantity);
+            const addToCart = () => {
+                const email = (document.body.dataset.userEmail || '').trim().toLowerCase();
+                const key = `bakesmart:catalog-cart:${email || 'guest'}`;
+                let cart = [];
+                try { cart = JSON.parse(localStorage.getItem(key) || '[]'); } catch { }
+
+                const item = cart.find(x => Number(x.id) === product.id && !x.isCombo);
+                if (item) item.quantity = Number(item.quantity || 0) + qty;
+                else cart.push({ ...product, quantity: qty });
+
+                localStorage.setItem(key, JSON.stringify(cart));
+                addMsg('bot', `${qty} × ${product.name} se agregaron al carrito. Te llevo para revisarlo.`);
+                setTimeout(() => window.location.assign('/Catalog/Cart'), 500);
+            };
+
+            app.modal.create({
+                title: 'Agregar al carrito',
+                message: `${qty} × ${product.name} serían ${money(product.price * qty)}. ¿Deseas agregarlos al carrito?`,
+                confirmText: 'Agregar al carrito',
+                cancelText: 'Seguir viendo',
+                onConfirm: addToCart
+            });
+        });
         box.appendChild(card); box.scrollTop = box.scrollHeight;
         }
         function addNavigation(action) {
