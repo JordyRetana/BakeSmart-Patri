@@ -12,8 +12,21 @@
 
 .order-form-page .order-section-copy { margin: -.35rem 0 1.15rem; }
 .order-form-page .order-payment-note { margin: 1rem 0 0; padding: .8rem 1rem; border-radius: .7rem; background: var(--surface-soft, #f8f5ff); }
-.public-legal-page { display: grid; gap: 1rem; max-width: 900px; }
-.public-legal-page h2 { margin-top: 1.4rem; }
+.order-create-hero { margin: 0 0 1.5rem; padding: clamp(1.25rem,3vw,2.25rem); color:#fff; border-radius:1.25rem; background:linear-gradient(120deg,#713ee5,#b54090 56%,#e26b61); box-shadow:0 18px 38px rgba(103,51,171,.18); }
+.order-create-hero h1 { color:#fff; margin:.4rem 0; font-size:clamp(1.75rem,3vw,2.7rem); }
+.order-create-hero p { max-width:720px; margin:0; color:rgba(255,255,255,.9); font-size:1.04rem; }
+.order-create-eyebrow { font-weight:800; font-size:.78rem; letter-spacing:.08em; }
+.order-create-steps { display:flex; flex-wrap:wrap; gap:.6rem 1rem; margin-top:1.25rem; }
+.order-create-steps span { display:inline-flex; gap:.45rem; align-items:center; font-weight:700; }
+.order-create-steps b { display:grid; place-items:center; width:1.5rem; height:1.5rem; border-radius:50%; color:#6439b7; background:#fff; }
+.public-legal-page { display: grid; gap: 1rem; max-width: 960px; margin: 2rem auto; }
+.public-legal-page > .card:first-child { color:#fff; border:0; padding:clamp(1.5rem,4vw,3rem); background:linear-gradient(120deg,#703ddd,#be438f 58%,#df7066); }
+.public-legal-page > .card:first-child h1 { color:#fff; margin:.35rem 0; font-size:clamp(2rem,4vw,3rem); }
+.public-legal-page > .card:first-child .text-muted { color:rgba(255,255,255,.86) !important; }
+.public-legal-page > .card:last-child { padding:clamp(1.35rem,3vw,2.5rem); }
+.public-legal-page h2 { margin:1.7rem 0 .45rem; color:var(--text); }
+.public-legal-page h2:first-child { margin-top:0; }
+.public-legal-page p { max-width:760px; line-height:1.75; color:var(--text-muted); }
 
 .order-form-page .table-container,
 .order-details-page .table-container {
@@ -45,6 +58,8 @@
     .order-details-page .card {
         padding: 1rem !important;
     }
+
+    .order-create-hero { border-radius: 1rem; }
 }
 
 @media (max-width: 520px) {
