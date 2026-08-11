@@ -167,6 +167,7 @@
             unitPrice: Number(o.unitPrice || 0),
             producto: o.producto || '',
             notes: o.notes || '',
+            isCustomOrder: Boolean(o.isCustomOrder || String(o.notes || '').includes('Tipo de encargo')),
             address: o.address || '',
             createdAt: o.createdAt || o.entrega || new Date().toISOString()
         };
@@ -248,6 +249,7 @@
                         <b>${app.utils.formatCurrency(o.total)}</b>
                     </span>
                     <span class="orders-list-sub">${clean(o.producto || 'Pedido sin detalle')}</span>
+                    ${o.isCustomOrder ? '<span class="orders-custom-tag"><i class="fas fa-wand-magic-sparkles"></i> Personalizado</span>' : ''}
                 </span>
                 <span class="orders-status-badge status-delivered">Entregado</span>
             </button>
@@ -301,7 +303,7 @@
                 <strong>${clean(order.producto || 'Sin detalle')}</strong>
             </div>
 
-            ${order.notes ? `<div class="orders-detail-block orders-customization-block"><span><i class="fas fa-wand-magic-sparkles"></i> Personalización solicitada</span><strong>${clean(order.notes)}</strong></div>` : ''}
+            ${order.isCustomOrder ? `<div class="orders-detail-block orders-customization-block"><span><i class="fas fa-wand-magic-sparkles"></i> Personalización solicitada</span><strong>${clean(order.notes || 'Pedido personalizado: revisar detalles del encargo.')}</strong></div>` : ''}
 
             <div class="orders-detail-block">
                 <span>Dirección de entrega</span>

@@ -3,6 +3,7 @@ using BakeSmartPatri.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
+using System.Text.Json;
 
 namespace BakeSmartPatri.Controllers
 {
@@ -149,7 +150,16 @@ namespace BakeSmartPatri.Controllers
             return string.IsNullOrWhiteSpace(result) ? null : result;
         }
 
-        public IActionResult Details(int id) => View();
+        public async Task<IActionResult> Details(int id)
+        {
+            var email = User.IsInRole("Cliente")
+                ? User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                : null;
+            var ordersJson = JsonSerializer.SerializeToElement(await _sqlStore.OrdersAsync(email));
+            var order = ordersJson.EnumerateArray().FirstOrDefault(row => row.TryGetProperty("id", out var value) && value.GetInt32() == id);
+            ViewData["OrderJson"] = order.ValueKind == JsonValueKind.Undefined ? "null" : order.GetRawText();
+            return View();
+        }
 
         [Authorize(Policy = "StaffOrAdmin")]
         public IActionResult Edit(int id) => View();

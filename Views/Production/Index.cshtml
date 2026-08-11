@@ -130,6 +130,7 @@
                     <span class="badge ${meta.badge}">${displayStatus(status)}</span>
                 </div>
                 <div>${itemOf(order)}</div>
+                ${(order.isCustomOrder || String(order.notes || '').includes('Tipo de encargo')) ? '<span class="production-custom-tag"><i class="fas fa-wand-magic-sparkles"></i> Personalizado</span>' : ''}
                 ${mode !== 'pending' ? `<div class="progress" style="margin:.65rem 0;"><div class="progress-bar" style="width:${meta.progress}%;"></div></div>` : ''}
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:.75rem;margin-top:.65rem;">
                     <span class="text-muted"><i class="fas fa-calendar"></i> ${fmtDate(deliveryOf(order))}</span>
@@ -200,4 +201,5 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/production-index.css" asp-append-version="true" />
+    <style>.production-custom-tag{display:inline-flex;align-items:center;gap:.35rem;margin-top:.5rem;padding:.28rem .55rem;border-radius:999px;background:#f8e8f4;color:#a1377e;font-size:.7rem;font-weight:800}</style>
 }

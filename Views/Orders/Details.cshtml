@@ -3,6 +3,7 @@
     ViewData["Title"] = "Detalle de pedido";
     var orderId = ViewContext.RouteData.Values["id"]?.ToString() ?? "";
     var paymentToStart = Context.Request.Query["pay"].ToString();
+    var orderJson = ViewData["OrderJson"]?.ToString() ?? "null";
 }
 
 <div class="page-shell order-details-page">
@@ -58,11 +59,11 @@
 <script>
     window.addEventListener('DOMContentLoaded', () => {
         const orderId = Number('@orderId');
+        const serverOrder = @Html.Raw(orderJson);
         const paymentToStart = '@paymentToStart';
         const money = value => `₡${Number(value || 0).toLocaleString('es-CR')}`;
 
-        window.BakeSmartStore.refresh().then(() => {
-            const order = window.BakeSmartStore.orders.list().find(row => Number(row.id) === orderId);
+        const renderOrder = order => {
             if (!order) {
                 document.getElementById('orderSubtitle').textContent = 'No se encontro el pedido solicitado.';
                 return;
@@ -75,7 +76,12 @@
             document.getElementById('orderTotal').textContent = money(order.total);
             document.getElementById('orderProducts').textContent = order.producto || order.products || 'Sin detalle';
             if (paymentToStart) openSecurePayment(paymentToStart);
-        }).catch(error => {
+        };
+        if (serverOrder) {
+            renderOrder(serverOrder);
+            return;
+        }
+        window.BakeSmartStore.refresh().then(() => renderOrder(window.BakeSmartStore.orders.list().find(row => Number(row.id) === orderId))).catch(error => {
             document.getElementById('orderSubtitle').textContent = error.message;
         });
     });

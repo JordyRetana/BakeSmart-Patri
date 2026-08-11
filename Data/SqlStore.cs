@@ -185,6 +185,7 @@ public sealed class SqlStore
             var orderStatus = reader.GetString("OrderStatus");
             var storedStep = reader.GetInt32("TrackingStep");
             var currentStep = Math.Max(storedStep, StepForStatus(orderStatus));
+            var notes = reader.GetNullableString("Notes");
 
             return new
             {
@@ -201,6 +202,8 @@ public sealed class SqlStore
             canal = reader.GetString("Channel"),
             paymentStatus = reader.GetString("PaymentStatus"),
             paymentMethod = reader.GetString("PaymentMethod"),
+            notes,
+            isCustomOrder = !string.IsNullOrWhiteSpace(notes) && notes.Contains("Tipo de encargo", StringComparison.OrdinalIgnoreCase),
             address = reader.GetString("Address"),
             destinationLat = reader.GetDecimal("DestinationLatitude"),
             destinationLng = reader.GetDecimal("DestinationLongitude"),
