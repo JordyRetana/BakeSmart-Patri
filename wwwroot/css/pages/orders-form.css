@@ -10,6 +10,11 @@
     max-width: 100%;
 }
 
+.order-form-page .order-section-copy { margin: -.35rem 0 1.15rem; }
+.order-form-page .order-payment-note { margin: 1rem 0 0; padding: .8rem 1rem; border-radius: .7rem; background: var(--surface-soft, #f8f5ff); }
+.public-legal-page { display: grid; gap: 1rem; max-width: 900px; }
+.public-legal-page h2 { margin-top: 1.4rem; }
+
 .order-form-page .table-container,
 .order-details-page .table-container {
     overflow-x: auto;
