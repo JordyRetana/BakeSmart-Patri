@@ -829,32 +829,71 @@
         const input = document.getElementById('chat-input');
         const sendBtn = document.getElementById('chat-send');
         const historyKey = 'bakesmart:richie-history';
+        const transcriptKey = 'bakesmart:richie-transcript';
+        const widgetStateKey = 'bakesmart:richie-widget-open';
         let history = [];
+        let transcript = [];
         let requestedQuantity = 1;
 
+        // Keep the conversation when navigating in this tab, including login.
+        // A full refresh deliberately starts a fresh conversation.
+        const navigation = performance.getEntriesByType('navigation')[0];
+        if (navigation?.type === 'reload') {
+        sessionStorage.removeItem(historyKey);
+        sessionStorage.removeItem(transcriptKey);
+        sessionStorage.removeItem(widgetStateKey);
+        localStorage.removeItem(historyKey);
+        }
+
         try {
-        const saved = JSON.parse(localStorage.getItem(historyKey) || '[]');
+        const saved = JSON.parse(sessionStorage.getItem(historyKey) || '[]');
         history = Array.isArray(saved) ? saved.slice(-10) : [];
         } catch { history = []; }
 
+        try {
+        const savedTranscript = JSON.parse(sessionStorage.getItem(transcriptKey) || '[]');
+        transcript = Array.isArray(savedTranscript) ? savedTranscript.slice(-30) : [];
+        } catch { transcript = []; }
+
         function saveHistory() {
-        localStorage.setItem(historyKey, JSON.stringify(history.slice(-10)));
+        sessionStorage.setItem(historyKey, JSON.stringify(history.slice(-10)));
+        sessionStorage.setItem(transcriptKey, JSON.stringify(transcript.slice(-30)));
         }
+
+        function renderMessage(role, text) {
+        const div = document.createElement('div');
+        div.className = 'msg ' + role;
+        div.textContent = text;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+        return div;
+        }
+
+        function restoreConversation() {
+        transcript.forEach(item => renderMessage(item.role, item.text));
+        if (sessionStorage.getItem(widgetStateKey) === 'true' && transcript.length) {
+        widget.classList.add('open');
+        toggleBtn.setAttribute('aria-expanded', 'true');
+        }
+        }
+
+        restoreConversation();
 
         toggleBtn.addEventListener('click', () => {
         widget.classList.toggle('open');
         toggleBtn.setAttribute('aria-expanded', widget.classList.contains('open') ? 'true' : 'false');
+        sessionStorage.setItem(widgetStateKey, String(widget.classList.contains('open')));
         if (widget.classList.contains('open') && box.children.length === 0) {
         addMsg('bot', 'Hola, soy Richie 🧁 ¿Buscamos algo dulce para hoy?');
         }
         });
 
         function addMsg(role, text) {
-        const div = document.createElement('div');
-        div.className = 'msg ' + role;
-        div.textContent = text;
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
+        const div = renderMessage(role, text);
+        if (role !== 'typing') {
+        transcript.push({ role, text });
+        saveHistory();
+        }
         return div;
         }
 
