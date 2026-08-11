@@ -44,6 +44,10 @@
                 <div style="font-weight:950;">Productos</div>
                 <div id="orderProducts" class="muted" style="margin-top:8px;font-weight:700;line-height:1.6;">-</div>
             </div>
+            <div class="card soft" id="orderCustomizationCard" hidden>
+                <div style="font-weight:950;"><i class="fas fa-wand-magic-sparkles" style="color:var(--secondary);"></i> Personalización solicitada</div>
+                <div id="orderCustomization" class="muted" style="margin-top:8px;font-weight:700;line-height:1.7;white-space:pre-line;"></div>
+            </div>
             <div class="card soft">
                 <div style="font-weight:950;">Acciones</div>
                 <div class="muted" style="margin-top:8px;font-weight:700;line-height:1.6;">@(User.IsInRole("Cliente") ? "Consulta el avance y la ubicación de tu entrega." : "Actualiza estado, fecha y notas desde editar.")</div>
@@ -75,6 +79,10 @@
             document.getElementById('orderDelivery').textContent = order.entrega || order.deliveryDate || '-';
             document.getElementById('orderTotal').textContent = money(order.total);
             document.getElementById('orderProducts').textContent = order.producto || order.products || 'Sin detalle';
+            if (order.isCustomOrder || String(order.notes || '').includes('Tipo de encargo')) {
+                document.getElementById('orderCustomizationCard').hidden = false;
+                document.getElementById('orderCustomization').textContent = String(order.notes || 'Pedido personalizado');
+            }
             if (paymentToStart) openSecurePayment(paymentToStart);
         };
         if (serverOrder) {

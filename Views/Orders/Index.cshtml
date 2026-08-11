@@ -220,6 +220,7 @@
                         <b>${app.utils.formatCurrency(o.total)}</b>
                     </span>
                     <span class="orders-list-sub">${clean(o.producto || 'Pedido sin detalle')}</span>
+                    ${o.isCustomOrder ? '<span class="orders-custom-tag"><i class="fas fa-wand-magic-sparkles"></i> Personalizado</span>' : ''}
                     <span class="orders-list-meta">
                         <small>${clean(o.channel)}</small>
                         <small>${new Date(o.deliveryDate).toLocaleDateString('es-CR')}</small>
