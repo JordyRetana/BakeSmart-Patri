@@ -761,6 +761,9 @@
         .chat-products th,.chat-products td { padding:7px 4px; text-align:left; border-bottom:1px solid #f0eaf4; }
         .chat-products button,.chat-action-link { border:0; border-radius:8px; padding:6px 8px; background:linear-gradient(90deg,#7c3aed,#c44587); color:#fff; font-weight:800; cursor:pointer; text-decoration:none; }
         .chat-action-link { align-self:flex-start; margin-top:4px; font-size:12px; }
+        .chat-cart-actions { display:flex; gap:8px; flex-wrap:wrap; align-self:flex-start; }
+        .chat-cart-actions button { border:0; border-radius:8px; padding:8px 10px; background:linear-gradient(90deg,#7c3aed,#c44587); color:#fff; font-weight:800; cursor:pointer; font-size:12px; }
+        .chat-cart-actions button:last-child { background:#fff; color:#6d3da1; border:1px solid #d9c7ee; }
 
         @@media (max-width: 700px) {
         #chat-widget { width:calc(100vw - 20px); max-width:none; bottom:78px; right:10px; left:10px; }
@@ -898,6 +901,23 @@
         }
 
         const money = value => `₡${Number(value || 0).toLocaleString('es-CR')}`;
+        function askToContinueShopping(products) {
+        const actions = document.createElement('div');
+        actions.className = 'chat-cart-actions';
+        actions.innerHTML = '<button type="button" data-chat-continue>Agregar mas productos</button><button type="button" data-chat-cart>Ver carrito</button>';
+        actions.addEventListener('click', event => {
+        if (event.target.closest('[data-chat-continue]')) {
+        actions.remove();
+        addMsg('bot', 'Claro, aqui tienes nuevamente los productos disponibles.');
+        addProductTable(products);
+        return;
+        }
+        if (event.target.closest('[data-chat-cart]')) window.location.assign('/Catalog/Cart');
+        });
+        box.appendChild(actions);
+        box.scrollTop = box.scrollHeight;
+        }
+
         function addProductTable(products) {
         if (!Array.isArray(products) || !products.length) return;
         const card = document.createElement('div'); card.className = 'chat-products';
@@ -924,8 +944,9 @@
                 else cart.push({ ...product, quantity: qty });
 
                 localStorage.setItem(key, JSON.stringify(cart));
-                addMsg('bot', `${qty} × ${product.name} se agregaron al carrito. Te llevo para revisarlo.`);
-                setTimeout(() => window.location.assign('/Catalog/Cart'), 500);
+                card.remove();
+                addMsg('bot', `${qty} × ${product.name} se agregaron al carrito. ¿Quieres agregar algo mas?`);
+                askToContinueShopping(products);
             };
 
             app.modal.create({
