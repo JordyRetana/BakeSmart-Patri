@@ -637,7 +637,7 @@
                         description: input.description || "",
                         amount: Number(input.amount || 0),
                         account: input.account || "",
-                        method: input.method || "Transferencia"
+                        method: input.method || "Efectivo"
                     })
                 });
                 await api.accounting.refresh();
