@@ -370,6 +370,29 @@
         } catch { }
         }
 
+        function expandCatalogCartForOrder(rawItems) {
+        return (Array.isArray(rawItems) ? rawItems : []).flatMap(item => {
+        if (!item.isCombo) {
+        const product = products.find(row => Number(row.id) === Number(item.id));
+        return product ? [{ ...item, product }] : [];
+        }
+
+        const components = (item.items || []).map(component => ({
+        product: products.find(row => Number(row.id) === Number(component.productId)),
+        quantity: Math.max(1, Number(component.quantity || 1)) * Math.max(1, Number(item.quantity || 1))
+        })).filter(component => component.product);
+        const regularTotal = components.reduce((sum, component) => sum + Number(component.product.price || 0) * component.quantity, 0);
+        return components.map(component => ({
+        product: component.product,
+        quantity: component.quantity,
+        unitPrice: regularTotal > 0
+        ? (Number(item.price || 0) * (Number(component.product.price || 0) * component.quantity / regularTotal)) / component.quantity
+        : Number(item.price || 0) / Math.max(1, components.reduce((sum, row) => sum + row.quantity, 0)),
+        comboName: item.name
+        }));
+        });
+        }
+
         const money = value => app.utils.formatCurrency(Number(value || 0));
         const clean = value => String(value ?? '').replace(/[&<>"']/g, char => ({
         '&': '&amp;',
@@ -432,25 +455,6 @@
         const existing = selectedProducts.get(Number(product.id));
         selectedProducts.set(Number(product.id), { product, quantity: existing?.quantity || 1 });
         selectedProduct = product;
-        }
-
-        function expandCatalogCartForOrder(rawItems) {
-        return rawItems.flatMap(item => {
-        if (!item.isCombo) return [{ ...item, product: products.find(row => Number(row.id) === Number(item.id)) }];
-        const components = (item.items || []).map(component => ({
-        product: products.find(row => Number(row.id) === Number(component.productId)),
-        quantity: Math.max(1, Number(component.quantity || 1)) * Math.max(1, Number(item.quantity || 1))
-        })).filter(component => component.product);
-        const regularTotal = components.reduce((sum, component) => sum + Number(component.product.price || 0) * component.quantity, 0);
-        return components.map(component => ({
-        product: component.product,
-        quantity: component.quantity,
-        unitPrice: regularTotal > 0
-        ? (Number(item.price || 0) * (Number(component.product.price || 0) * component.quantity / regularTotal)) / component.quantity
-        : Number(item.price || 0) / Math.max(1, components.reduce((sum, row) => sum + row.quantity, 0)),
-        comboName: item.name
-        }));
-        });
         }
 
         productInput.value = [...selectedProducts.keys()].join(',');
