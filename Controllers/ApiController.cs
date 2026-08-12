@@ -1111,11 +1111,11 @@ public class ApiController : Controller
         var secret = _configuration["PayPal:Secret"];
         // PayPal v2 puede redirigir sin PayerID; el token aprobado es suficiente para consultar y capturar la orden.
         if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(secret))
-            return Redirect("/Client/Orders?paypal=error");
+            return Redirect("/Client/Orders?paypal=error=missing-context");
 
         const string baseUrl = "https://api-m.paypal.com";
         var accessToken = await GetPayPalAccessTokenAsync(baseUrl, clientId, secret);
-        if (string.IsNullOrWhiteSpace(accessToken)) return Redirect("/Client/Orders?paypal=error");
+        if (string.IsNullOrWhiteSpace(accessToken)) return Redirect("/Client/Orders?paypal=error=authentication");
 
         var client = _httpClientFactory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
@@ -1123,7 +1123,7 @@ public class ApiController : Controller
         if (!approved.IsSuccessStatusCode)
         {
             _logger.LogWarning("PayPal no devolvió el pedido {Token}. Estado: {Status}", token, approved.StatusCode);
-            return Redirect("/Client/Orders?paypal=error");
+            return Redirect("/Client/Orders?paypal=error=order-lookup");
         }
         using var approvalDocument = JsonDocument.Parse(await approved.Content.ReadAsStringAsync());
         var customerEmail = User.IsInRole("Cliente") ? CurrentUserEmail : null;
@@ -1139,24 +1139,24 @@ public class ApiController : Controller
         {
             var alreadyConfirmed = await ConfirmPayPalOrderAsync(approvalDocument.RootElement, customerEmail);
             if (!alreadyConfirmed) _logger.LogWarning("PayPal devolvió el pedido {Token} como completado, pero no superó la validación local.", token);
-            return Redirect(alreadyConfirmed ? "/Client/Orders?paypal=success" : "/Client/Orders?paypal=error");
+            return Redirect(alreadyConfirmed ? "/Client/Orders?paypal=success" : "/Client/Orders?paypal=error=verification");
         }
 
         if (!IsApprovedPayPalOrderForCustomer(approvalDocument.RootElement, customerEmail))
         {
             _logger.LogWarning("PayPal devolvió el pedido {Token} sin aprobación válida. Estado: {Status}", token, paypalStatus);
-            return Redirect("/Client/Orders?paypal=error");
+            return Redirect($"/Client/Orders?paypal=error={Uri.EscapeDataString(paypalStatus ?? "not-approved")}");
         }
         var capture = await client.PostAsync($"{baseUrl}/v2/checkout/orders/{Uri.EscapeDataString(token)}/capture", null);
         if (!capture.IsSuccessStatusCode)
         {
             _logger.LogWarning("PayPal no pudo capturar el pedido {Token}. Estado: {Status}; detalle: {Detail}", token, capture.StatusCode, await capture.Content.ReadAsStringAsync());
-            return Redirect("/Client/Orders?paypal=error");
+            return Redirect("/Client/Orders?paypal=error=capture");
         }
         using var document = JsonDocument.Parse(await capture.Content.ReadAsStringAsync());
         var confirmed = await ConfirmPayPalOrderAsync(document.RootElement, customerEmail);
         if (!confirmed) _logger.LogWarning("PayPal capturó el pedido {Token}, pero el importe o propietario no coincidió.", token);
-        return Redirect(confirmed ? "/Client/Orders?paypal=success" : "/Client/Orders?paypal=error");
+        return Redirect(confirmed ? "/Client/Orders?paypal=success" : "/Client/Orders?paypal=error=verification");
     }
 
     [HttpPost("payments/paypal/webhook")]
