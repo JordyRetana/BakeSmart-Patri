@@ -693,18 +693,36 @@
         });
         }
 
+        function roundMoney(value) {
+        return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+        }
+
+        function calculateOrderTotals(items) {
+        const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
+        // El servidor aplica el beneficio del cliente frecuente al crear el pedido.
+        // No mostramos promociones generales aquí porque no se guardan en este flujo.
+        const frequentRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
+        // Cada artículo se convierte en un pedido independiente en el servidor.
+        // Redondear por línea reproduce exactamente el cálculo persistido y cobrado.
+        const lines = items.map(item => {
+        const subtotal = roundMoney(Number(item.unitPrice || item.product?.price || 0) * Math.max(1, Number(item.quantity || 1)));
+        const discount = roundMoney(subtotal * frequentRate);
+        const tax = roundMoney(Math.max(0, subtotal - discount) * taxRate);
+        return { subtotal, discount, tax, total: roundMoney(subtotal - discount + tax) };
+        });
+        return lines.reduce((totals, line) => ({
+        subtotal: roundMoney(totals.subtotal + line.subtotal),
+        discount: roundMoney(totals.discount + line.discount),
+        tax: roundMoney(totals.tax + line.tax),
+        total: roundMoney(totals.total + line.total)
+        }), { subtotal: 0, discount: 0, tax: 0, total: 0 });
+        }
+
         function updateSummary() {
         const orderItems = cartCheckoutItems.length
         ? cartCheckoutItems.map(item => ({ product: item.product, quantity: item.quantity, unitPrice: item.price }))
         : [...selectedProducts.values()];
-        const subtotal = orderItems.reduce((sum, item) => sum + Number(item.unitPrice || item.product?.price || 0) * Math.max(1, Number(item.quantity || 1)), 0);
-        const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
-        const frequentRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
-        const promotionRate = Number(BakeSmartStore.pos.config().activePromotionDiscount || 0);
-        const discountRate = Math.max(frequentRate, promotionRate);
-        const discount = subtotal * discountRate;
-        const discountedSubtotal = Math.max(0, subtotal - discount);
-        const tax = discountedSubtotal * taxRate;
+        const { subtotal, discount, tax, total } = calculateOrderTotals(orderItems);
 
         document.getElementById('quickSummaryProduct').textContent = orderItems.length === 1
         ? orderItems[0].product?.name || 'Seleccione un producto'
@@ -713,7 +731,7 @@
         document.getElementById('quickDiscountRow').hidden = discount <= 0;
         document.getElementById('quickDiscount').textContent = `-${money(discount)}`;
         document.getElementById('quickTax').textContent = money(tax);
-        document.getElementById('quickTotal').textContent = money(discountedSubtotal + tax);
+        document.getElementById('quickTotal').textContent = money(total);
         }
 
         function normalizeGatewayMethod(method) {
@@ -928,18 +946,10 @@
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando y preparando pago seguro...';
 
-        const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
-        const frequentRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
-        const promotionRate = Number(BakeSmartStore.pos.config().activePromotionDiscount || 0);
-        const discountRate = Math.max(frequentRate, promotionRate);
         const createdOrders = await Promise.all(orderItems.map(async item => {
         const lineProduct = item.product;
         const lineQuantity = Math.max(1, Number(item.quantity || 1));
-        const subtotal = Number(item.unitPrice || lineProduct.price) * lineQuantity;
-        const discount = subtotal * discountRate;
-        const discountedSubtotal = Math.max(0, subtotal - discount);
-        const tax = discountedSubtotal * taxRate;
-        const total = discountedSubtotal + tax;
+        const totals = calculateOrderTotals([{ product: lineProduct, quantity: lineQuantity, unitPrice: item.unitPrice || lineProduct.price }]);
 
         const result = await BakeSmartStore.createOrder({
         customerName: data.customerName,
@@ -948,9 +958,9 @@
         productId: Number(lineProduct.id),
         quantity: lineQuantity,
         unitPrice: Number(item.unitPrice || lineProduct.price),
-        subtotal,
-        tax,
-        total,
+        subtotal: totals.subtotal,
+        tax: totals.tax,
+        total: totals.total,
         deliveryDate: data.deliveryDate,
         address: isPickup ? null : data.address,
         notes: `${data.notes || ''}${item.comboName ? `\nCombo: ${item.comboName}.` : ''}${orderItems.length > 1 ? `\nPedido generado desde carrito (${lineProduct.name}).` : ''}`.trim() || null,
@@ -961,13 +971,16 @@
         customerAddressId: isPickup ? null : (data.customerAddressId ? Number(data.customerAddressId) : null),
         deliveryMethod: data.deliveryMethod
         });
-        return { ...result, total };
+        return { ...result, total: totals.total };
         }));
 
         const result = createdOrders[0];
-        const total = createdOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
-
         await BakeSmartStore.refresh({ force: true });
+        const storedOrders = BakeSmartStore.orders.byClient(userEmail)
+        .filter(order => createdOrders.some(created => Number(created.id) === Number(order.id)));
+        const total = storedOrders.length === createdOrders.length
+        ? storedOrders.reduce((sum, order) => sum + Number(order.total || 0), 0)
+        : createdOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
         products = BakeSmartStore.inventory.list().map(normalizeProduct);
         document.getElementById('clientAvailableProducts').textContent =
         products.filter(item => item.active && isSellableProduct(item)).length;

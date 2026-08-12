@@ -5432,7 +5432,7 @@ public sealed class SqlStore
             }
 
             var stock = await ResolveProductStockMySqlAsync(connection, transaction, input.ProductId, input.Quantity);
-            var subtotal = Math.Round(stock.UnitPrice * input.Quantity, 2);
+            var subtotal = Math.Round(stock.UnitPrice * input.Quantity, 2, MidpointRounding.AwayFromZero);
             var paymentMethodId = await ResolvePaymentMethodMySqlAsync(connection, transaction, input.PaymentMethod);
             var channelId = await ResolveLookupIdMySqlAsync(connection, transaction, "CanalesPedido", "OrderChannelId", "Name", "Web");
             var statusId = await ResolveLookupIdMySqlAsync(connection, transaction, "EstadosPedido", "OrderStatusId", "Name", "Pendiente pago");
@@ -5440,9 +5440,9 @@ public sealed class SqlStore
             var isFrequent = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
                 "SELECT IsFrequent FROM Clientes WHERE CustomerId = @CustomerId;",
                 new SqlParameter("@CustomerId", customerId)) ?? 0) == 1;
-            var discount = isFrequent ? Math.Round(subtotal * config.FrequentDiscountRate, 2) : 0m;
-            var tax = Math.Round((subtotal - discount) * config.IvaRate, 2);
-            var total = subtotal - discount + tax;
+            var discount = isFrequent ? Math.Round(subtotal * config.FrequentDiscountRate, 2, MidpointRounding.AwayFromZero) : 0m;
+            var tax = Math.Round((subtotal - discount) * config.IvaRate, 2, MidpointRounding.AwayFromZero);
+            var total = Math.Round(subtotal - discount + tax, 2, MidpointRounding.AwayFromZero);
 
             const string orderSql = """
                 INSERT INTO Pedidos
