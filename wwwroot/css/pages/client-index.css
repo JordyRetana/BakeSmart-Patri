@@ -511,7 +511,7 @@
 
 .client-order-row {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     gap: 1rem;
     align-items: center;
     min-height: 112px;
@@ -543,6 +543,16 @@
     display: grid;
     justify-items: end;
     gap: .25rem;
+    white-space: nowrap;
+}
+
+.client-order-row__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.client-order-row__actions .btn {
     white-space: nowrap;
 }
 
@@ -845,6 +855,7 @@ html.dark-start .payment-modal__close {
 
     .quick-product__meta,
     .client-order-row__status,
+    .client-order-row__actions,
     .profile-source a {
         grid-column: 2;
         justify-items: start;
