@@ -127,6 +127,10 @@
                 return status === 'Pagado' ? 'badge-success' : 'badge-warning';
             }
 
+            function customerCanModify(order) {
+                return !/producci[oó]n|listo|camino|entregado|cancelado/i.test(String(order.status || ''));
+            }
+
             function itemsLabel(order) {
                 return order.items.map(i => `${i.quantity} x ${i.name}`).join(', ');
             }
@@ -225,6 +229,8 @@
                             <div class="text-muted">${order.address}</div>
                             <div class="client-order-buttons">
                                 ${order.paymentStatus !== 'Pagado' ? `<button class="btn btn-primary btn-sm" onclick="payClientOrder(${order.id})"><i class="fas fa-credit-card"></i> Pagar</button>` : ''}
+                                <a class="btn btn-outline btn-sm" href="/Orders/Details/${order.id}"><i class="fas fa-eye"></i> Detalles</a>
+                                ${customerCanModify(order) ? `<a class="btn btn-outline btn-sm" href="/Orders/Edit/${order.id}"><i class="fas fa-pen"></i> Editar</a><button class="btn btn-outline btn-sm orders-danger" onclick="deleteClientOrder(${order.id})"><i class="fas fa-trash"></i> Eliminar</button>` : ''}
                                 <a class="btn btn-outline btn-sm" href="/Client/Track"><i class="fas fa-route"></i> Ver seguimiento</a>
                             </div>
                         </div>
@@ -245,6 +251,25 @@
                 document.getElementById('ordersPaymentTotal').textContent = app.utils.formatCurrency(selectedOrder.total);
                 paymentModal.hidden = false;
                 syncPaymentFields();
+            };
+
+            window.deleteClientOrder = (id) => {
+                app.modal.create({
+                    title: `Eliminar pedido #${id}`,
+                    message: 'Se eliminará el pedido y se devolverá su inventario. Esta acción no se puede deshacer.',
+                    confirmText: 'Sí, eliminar',
+                    cancelText: 'Conservar pedido',
+                    onConfirm: async () => {
+                        try {
+                            const response = await fetch(`/api/orders/${id}`, { method: 'DELETE' });
+                            const result = await response.json().catch(() => ({}));
+                            if (!response.ok) throw new Error(result.message || 'No se pudo eliminar el pedido.');
+                            await BakeSmartStore.refresh({ force: true });
+                            app.toast.success('Pedido eliminado correctamente.');
+                            render();
+                        } catch (error) { app.toast.error(error.message); }
+                    }
+                });
             };
 
             function syncPaymentFields() {

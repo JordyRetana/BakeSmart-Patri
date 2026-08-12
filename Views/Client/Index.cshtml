@@ -658,6 +658,7 @@
         <span class="badge badge-primary">${clean(order.status || 'Pendiente')}</span>
         <strong>${money(order.total)}</strong>
         </span>
+        <span class="client-order-row__actions"><a class="btn btn-outline btn-sm" href="/Orders/Details/${order.id}"><i class="fas fa-eye"></i> Detalles</a></span>
         </article>
         `).join('') || `
         <div class="client-empty-state">

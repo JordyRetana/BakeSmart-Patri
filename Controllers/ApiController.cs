@@ -142,9 +142,11 @@ public class ApiController : Controller
     }
 
     [HttpDelete("orders/{id:int}")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize(Policy = "AnyUser")]
     public async Task<IActionResult> DeleteOrder(int id)
     {
+        if (User.IsInRole("Cliente") && !await _sqlStore.OrderBelongsToAsync(id, CurrentUserEmail))
+            return Forbid();
         await _sqlStore.DeleteOrderAsync(id, CurrentUserEmail);
         return Ok(new { ok = true });
     }
