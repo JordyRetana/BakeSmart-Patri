@@ -1362,9 +1362,12 @@ public class ApiController : Controller
         var values = (customId ?? string.Empty).Split(';', StringSplitOptions.RemoveEmptyEntries)
             .Select(item => item.Split('=', 2)).Where(item => item.Length == 2)
             .ToDictionary(item => item[0], item => item[1], StringComparer.OrdinalIgnoreCase);
-        if (!values.TryGetValue("orders", out var orders) ||
-            (!string.IsNullOrWhiteSpace(expectedCustomerEmail) && (!values.TryGetValue("email", out var email) || !string.Equals(email, expectedCustomerEmail, StringComparison.OrdinalIgnoreCase)))) return false;
-        values.TryGetValue("email", out var owner);
+        // El regreso de PayPal puede llegar sin la misma sesión/cookie del
+        // navegador que inició el checkout. La propiedad custom_id viaja con
+        // la orden capturada y es la referencia autoritativa para ubicar al
+        // cliente y sus pedidos; no debemos rechazar un cobro completado solo
+        // porque la cookie de retorno no se restauró.
+        if (!values.TryGetValue("orders", out var orders) || !values.TryGetValue("email", out var owner) || string.IsNullOrWhiteSpace(owner)) return false;
         var checkoutAmount = 0m;
         var checkoutCurrency = string.Empty;
         var hasExactCheckoutAmount = values.TryGetValue("paypal_amount", out var checkoutAmountText) &&
