@@ -46,7 +46,6 @@
                 <button type="button" class="payment-option selected" data-method="Pendiente"><i class="fas fa-clock"></i><span><b>Pago pendiente</b><small>Se cobra al entregar</small></span></button>
                 <button type="button" class="payment-option" data-method="Efectivo"><i class="fas fa-money-bill-wave"></i><span><b>Efectivo</b><small>Cobro directo en caja</small></span></button>
                 <button type="button" class="payment-option" data-method="SINPE"><i class="fas fa-mobile-screen"></i><span><b>SINPE Móvil</b><small>Confirmación manual</small></span></button>
-                <button type="button" class="payment-option" data-method="Tarjeta"><i class="fas fa-credit-card"></i><span><b>Tarjeta segura</b><small>Procesada por Stripe</small></span></button>
                 <button type="button" class="payment-option" data-method="PayPal"><i class="fab fa-paypal"></i><span><b>PayPal</b><small>Pago protegido en línea</small></span></button>
             </div>
             <button type="button" class="btn btn-primary checkout-submit" id="confirmPayment"><i class="fas fa-lock"></i> Confirmar forma de pago</button>
@@ -78,14 +77,13 @@ window.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.payment-option').forEach(option => option.classList.toggle('selected', option.dataset.method === next));
     };
     document.querySelectorAll('.payment-option').forEach(option => option.addEventListener('click', () => selectMethod(option.dataset.method)));
-    selectMethod(method.toLowerCase().includes('paypal') ? 'PayPal' : method.toLowerCase().includes('tarjeta') ? 'Tarjeta' : method.toLowerCase().includes('sinpe') ? 'SINPE' : method.toLowerCase().includes('efectivo') ? 'Efectivo' : 'Pendiente');
+    selectMethod(method.toLowerCase().includes('paypal') ? 'PayPal' : method.toLowerCase().includes('sinpe') ? 'SINPE' : method.toLowerCase().includes('efectivo') ? 'Efectivo' : 'Pendiente');
     byId('confirmPayment').addEventListener('click', async () => {
         const button = byId('confirmPayment'); const status = byId('checkoutStatus');
         button.disabled = true; status.textContent = 'Procesando…';
         try {
-            if (method === 'Tarjeta' || method === 'PayPal') {
-                const gateway = method === 'Tarjeta' ? 'stripe' : 'paypal';
-                const response = await fetch(`/api/payments/${gateway}/checkout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderIds: [Number(order.id)] }) });
+            if (method === 'PayPal') {
+                const response = await fetch('/api/payments/paypal/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderIds: [Number(order.id)] }) });
                 const result = await response.json();
                 if (!response.ok || !result.url) throw new Error(result.message || `No se pudo iniciar ${method}.`);
                 window.location.assign(result.url); return;

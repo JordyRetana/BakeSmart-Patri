@@ -143,7 +143,6 @@
                             <label>
                                 <span>Pago</span>
                                 <select class="form-control" name="paymentMethod" id="quickPaymentMethod">
-                                    <option value="Tarjeta">Tarjeta segura — Stripe</option>
                                     <option value="PayPal">PayPal</option>
                                     <option value="SINPE">SINPE Móvil</option>
                                     <option value="Efectivo">Efectivo al retirar</option>
@@ -271,7 +270,6 @@
             <label>
                 <span>Método de pago</span>
                 <select class="form-control" name="method" id="paymentGatewayMethod">
-                    <option value="Tarjeta">Tarjeta segura con Stripe</option>
                     <option value="PayPal">PayPal</option>
                     <option>SINPE</option>
                     <option>Efectivo</option>
@@ -282,7 +280,7 @@
                 <strong>@sinpeBusinessNumber</strong>
                 <small>El pedido queda pendiente hasta que el negocio confirme la transferencia.</small>
             </div>
-            <p class="payment-modal__note" id="paymentGatewayNote">Serás redirigido a Stripe para pagar de forma segura.</p>
+            <p class="payment-modal__note" id="paymentGatewayNote">Serás redirigido a PayPal para autorizar y validar el pago.</p>
             <button class="btn btn-primary quick-submit" type="button" id="paymentConfirmBtn">
                 <i class="fas fa-lock"></i>
                 <span id="paymentConfirmText">Pagar pedido</span>
@@ -489,7 +487,6 @@
         // El pedido web solo expone métodos que realmente tienen flujo de cobro o validación.
         // No heredamos nombres antiguos de la configuración del POS (por ejemplo "Smoke Pay").
         const methods = [
-        ['Tarjeta', 'Tarjeta segura — Stripe'],
         ['PayPal', 'PayPal'],
         ['SINPE', 'SINPE Móvil'],
         ['Efectivo', 'Efectivo al retirar'],
@@ -739,12 +736,12 @@
         if (value.includes('sinpe')) return 'SINPE';
         if (value.includes('efectivo')) return 'Efectivo';
         if (value.includes('paypal')) return 'PayPal';
-        return 'Tarjeta';
+        return 'PayPal';
         }
 
         function shouldOpenGateway(method) {
         const value = String(method || '').toLowerCase();
-        return value.includes('tarjeta') || value.includes('sinpe');
+        return value.includes('sinpe');
         }
 
         function openPaymentGateway(orderId, total, method, mode = 'full', orderIds = [orderId]) {
@@ -779,7 +776,7 @@
         ? 'Confirma únicamente después de hacer la transferencia.'
         : value.includes('efectivo')
         ? 'Pagarás en efectivo al retirar o recibir tu pedido. No se registrará como pagado hasta el cobro.'
-        : 'Serás redirigido a Stripe para pagar de forma segura.';
+        : 'El pedido se registrará con el método seleccionado y se confirmará según corresponda.';
         }
 
         function toggleQuickDelivery() {
@@ -804,17 +801,6 @@
         }
         updateSummary();
         });
-
-        async function startStripeCheckout(orderIds) {
-        const response = await fetch('/api/payments/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderIds })
-        });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok || !result.url) throw new Error(result.message || 'No se pudo iniciar el pago seguro con Stripe.');
-        window.location.assign(result.url);
-        }
 
         async function startPayPalCheckout(orderIds) {
         const response = await fetch('/api/payments/paypal/checkout', {
@@ -896,10 +882,6 @@
         }
         try {
         paymentConfirmBtn.disabled = true;
-        if (String(data.method || '').toLowerCase().includes('tarjeta')) {
-        await startStripeCheckout(pendingPayment.orderIds);
-        return;
-        }
         const isSinpe = String(data.method || '').toLowerCase().includes('sinpe');
         app.toast.success(isSinpe
         ? `Transferencia SINPE reportada para el pedido #${pendingPayment.orderId}. Se confirmará al validarla.`
@@ -996,10 +978,6 @@
         productInput.value = '';
         }
         const selectedPayment = String(data.paymentMethod || '').toLowerCase();
-        if (selectedPayment.includes('tarjeta')) {
-        await startStripeCheckout(createdOrders.map(order => Number(order.id)));
-        return;
-        }
         if (selectedPayment.includes('paypal')) {
         await startPayPalCheckout(createdOrders.map(order => Number(order.id)));
         return;

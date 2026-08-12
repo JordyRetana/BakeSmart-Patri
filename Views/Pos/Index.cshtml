@@ -482,7 +482,6 @@
                     .filter(method => String(method.name || '').toLowerCase() !== 'tarjeta');
                 const methods = [
                     ...configuredMethods,
-                    { id: 'stripe-gateway', name: 'Stripe', active: true, systemGateway: true },
                     { id: 'paypal-gateway', name: 'PayPal', active: true, systemGateway: true }
                 ];
                 const paymentPanel = document.getElementById('paymentMethodsPanel');
@@ -490,7 +489,6 @@
                 const paymentSelectDesktop = document.getElementById('posPaymentMethodDesktop');
 
                 const paymentLabels = {
-                    'Stripe': 'Tarjeta segura (Stripe)',
                     'PayPal': 'PayPal',
                     'SINPE': 'SINPE Móvil',
                     'Efectivo': 'Efectivo',
@@ -498,7 +496,6 @@
                     'Pendiente': 'Pago pendiente'
                 };
                 const paymentDetails = {
-                    'Stripe': 'Cobro en línea procesado por Stripe',
                     'PayPal': 'Cobro en línea procesado por PayPal',
                     'SINPE': 'Pago por SINPE Móvil; se confirma al validarlo',
                     'Efectivo': 'Cobro directo en caja',

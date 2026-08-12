@@ -106,7 +106,6 @@
             <label>
                 <span>Metodo</span>
                 <select class="form-control" name="method" id="posGatewayMethod">
-                    <option>Tarjeta</option>
                     <option>PayPal</option>
                     <option>SINPE</option>
                     <option>Efectivo</option>
@@ -117,15 +116,7 @@
                 <span id="posGatewayReferenceLabel">Referencia o titular</span>
                 <input class="form-control" name="holder" id="posGatewayReference" placeholder="Nombre, SINPE o referencia" required />
             </label>
-            <label class="pos-card-field">
-                <span>Numero de tarjeta</span>
-                <input class="form-control" name="card" inputmode="numeric" maxlength="19" placeholder="4242 4242 4242 4242" />
-            </label>
-            <div class="pos-payment-form__grid pos-card-field">
-                <label><span>Vence</span><input class="form-control" name="expiry" maxlength="5" placeholder="MM/AA" /></label>
-                <label><span>CVV</span><input class="form-control" name="cvv" inputmode="numeric" maxlength="4" placeholder="123" /></label>
-            </div>
-            <p class="pos-payment-modal__note">Simulacion de pasarela: valida datos minimos y registra el cobro en el sistema.</p>
+            <p class="pos-payment-modal__note">PayPal abre su pasarela oficial. SINPE, efectivo y transferencia quedan pendientes de validación del negocio.</p>
             <button class="btn btn-primary pos-submit-btn" type="submit" id="posPaymentConfirmBtn">
                 <i class="fas fa-lock"></i>
                 Aprobar cobro
@@ -183,8 +174,9 @@
                     .filter(method => method.active)
                     .map(method => method.name);
 
-                const fallbackMethods = ['Efectivo', 'SINPE', 'Transferencia', 'Tarjeta', 'PayPal'];
-                const methods = activeMethods.length ? activeMethods : fallbackMethods;
+                const fallbackMethods = ['Efectivo', 'SINPE', 'Transferencia', 'PayPal'];
+                const methods = (activeMethods.length ? activeMethods : fallbackMethods)
+                    .filter(name => !/(stripe|tarjeta)/i.test(String(name)));
                 const options = methods.map(name => `<option value="${name}">${name}</option>`).join('');
                 const checkoutPaymentMethod = document.getElementById('checkoutPaymentMethod');
                 const previousCheckoutMethod = checkoutPaymentMethod.value;
@@ -369,7 +361,7 @@
 
             function shouldShowCardFields(method) {
                 const value = String(method || '').toLowerCase();
-                return value.includes('tarjeta');
+                return false;
             }
 
             function syncGatewayFields() {
@@ -398,9 +390,13 @@
                     gatewayReferenceLabel.textContent = 'Referencia de transferencia';
                     gatewayReference.placeholder = 'Numero de comprobante o banco';
                     gatewayReference.required = true;
+                } else if (method.includes('paypal')) {
+                    gatewayReferenceLabel.textContent = 'Pago protegido';
+                    gatewayReference.placeholder = 'PayPal abrirá su página oficial';
+                    gatewayReference.required = false;
                 } else {
-                    gatewayReferenceLabel.textContent = 'Titular de la tarjeta';
-                    gatewayReference.placeholder = 'Nombre del titular';
+                    gatewayReferenceLabel.textContent = 'Referencia del pago';
+                    gatewayReference.placeholder = 'Referencia o detalle del cobro';
                     gatewayReference.required = true;
                 }
             }
@@ -425,7 +421,8 @@
                 const normalizedMethod = method.includes('sinpe') ? 'SINPE'
                     : method.includes('efectivo') ? 'Efectivo'
                     : method.includes('transfer') ? 'Transferencia'
-                    : 'Tarjeta';
+                    : method.includes('paypal') ? 'PayPal'
+                    : 'Efectivo';
                 gatewayMethod.value = [...gatewayMethod.options].some(option => option.value === normalizedMethod)
                     ? normalizedMethod
                     : selectedMethod;
@@ -479,19 +476,6 @@
             form.customerName.addEventListener('input', renderCart);
             document.getElementById('checkoutPromotion').addEventListener('change', renderCart);
 
-            async function startStripeCheckout(orderIds) {
-                const response = await fetch('/api/payments/stripe/checkout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ orderIds })
-                });
-                const result = await response.json().catch(() => ({}));
-                if (!response.ok || !result.url) {
-                    throw new Error(result.message || 'No fue posible iniciar el pago seguro con tarjeta.');
-                }
-                window.location.assign(result.url);
-            }
-
             async function startPayPalCheckout(orderIds) {
                 const response = await fetch('/api/payments/paypal/checkout', {
                     method: 'POST',
@@ -510,7 +494,7 @@
                     if (!cart.length) throw new Error('Agregue productos al carrito antes de cobrar.');
 
                     if (pendingOrder) {
-                        await store.orders.markPaid(pendingOrder.id, paymentData.method || form.paymentMethod.value || 'Tarjeta');
+                        await store.orders.markPaid(pendingOrder.id, paymentData.method || form.paymentMethod.value || 'Efectivo');
                         sessionStorage.removeItem('bakesmart.pos.pendingOrder');
                     } else {
                         await store.pos.sell({
@@ -572,31 +556,10 @@
                     }
                     return;
                 }
-                if (pendingOrder && shouldShowCardFields(method)) {
-                    try {
-                        paymentConfirmBtn.disabled = true;
-                        paymentConfirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirigiendo a Stripe';
-                        setPaymentStatus('processing', 'Abriendo pago seguro', 'Será redirigido a Stripe para completar el cobro.', 'fa-spinner fa-spin');
-                        await startStripeCheckout([Number(pendingOrder.id)]);
-                    } catch (error) {
-                        app.toast.error(error.message || 'No fue posible iniciar el pago seguro.');
-                        paymentConfirmBtn.disabled = false;
-                        paymentConfirmBtn.innerHTML = '<i class="fas fa-lock"></i> Aprobar cobro';
-                        setPaymentStatus('error', 'No se pudo abrir Stripe', 'Intente nuevamente o seleccione otro método de pago.', 'fa-triangle-exclamation');
-                    }
-                    return;
-                }
                 if (!String(data.holder || '').trim()) {
                     app.toast.error('Complete la referencia del pago.');
                     gatewayReference.focus();
                     return;
-                }
-                if (shouldShowCardFields(data.method)) {
-                    const digits = String(data.card || '').replace(/\D/g, '');
-                    if (digits.length < 12 || !data.expiry || !data.cvv) {
-                        app.toast.error('Complete los datos de tarjeta para aprobar el cobro.');
-                        return;
-                    }
                 }
 
                 try {

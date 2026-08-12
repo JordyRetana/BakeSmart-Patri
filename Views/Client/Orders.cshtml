@@ -90,7 +90,6 @@
             <label>
                 <span>Método de pago</span>
                 <select class="form-control" name="method" id="ordersPaymentMethod">
-                    <option value="Tarjeta">Tarjeta segura con Stripe</option>
                     <option value="PayPal">PayPal</option>
                     <option>SINPE</option>
                     <option>Efectivo</option>
@@ -101,7 +100,7 @@
                 <strong>@sinpeBusinessNumber</strong>
                 <small>El pedido queda pendiente hasta que el negocio confirme la transferencia.</small>
             </div>
-            <p class="payment-modal__note" id="ordersPaymentNote">Los pagos con tarjeta y PayPal se validan directamente con la pasarela segura.</p>
+            <p class="payment-modal__note" id="ordersPaymentNote">Los pagos con PayPal se validan directamente con la pasarela segura.</p>
             <button class="btn btn-primary" type="button" id="ordersPaymentSubmit">
                 <i class="fas fa-lock"></i>
                 Continuar
@@ -281,7 +280,7 @@
                     ? 'Confirma únicamente después de hacer la transferencia.'
                     : value === 'Efectivo'
                     ? 'Pagarás en efectivo al retirar o recibir tu pedido. No se registrará como pagado hasta el cobro.'
-                    : 'Serás redirigido a Stripe para completar y validar el pago.';
+                    : 'El pedido se mantendrá pendiente hasta que se confirme el cobro.';
             }
 
             async function startGatewayCheckout(path) {
@@ -311,10 +310,6 @@
                 const data = Object.fromEntries(new FormData(paymentForm).entries());
                 try {
                     paymentSubmit.disabled = true;
-                    if (data.method === 'Tarjeta') {
-                        await startGatewayCheckout('/api/payments/stripe/checkout');
-                        return;
-                    }
                     if (data.method === 'PayPal') {
                         await startGatewayCheckout('/api/payments/paypal/checkout');
                         return;

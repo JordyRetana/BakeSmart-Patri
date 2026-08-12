@@ -93,17 +93,18 @@
 
     async function openSecurePayment(method) {
         const isPayPal = String(method).toLowerCase().includes('paypal');
+        if (!isPayPal) return;
         const paymentAction = document.getElementById('securePaymentAction');
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'btn btn-primary';
-        button.innerHTML = isPayPal ? '<i class="fab fa-paypal"></i> Pagar con PayPal' : '<i class="fas fa-credit-card"></i> Pagar con tarjeta';
+        button.innerHTML = '<i class="fab fa-paypal"></i> Pagar con PayPal';
         paymentAction.replaceChildren(button);
         const begin = async () => {
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abriendo pago seguro…';
             try {
-                const response = await fetch(isPayPal ? '/api/payments/paypal/checkout' : '/api/payments/stripe/checkout', {
+                const response = await fetch('/api/payments/paypal/checkout', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderIds: [Number('@orderId')] })
                 });
                 const result = await response.json();
@@ -112,7 +113,7 @@
             } catch (error) {
                 app.toast.error(error.message || 'No se pudo iniciar el pago seguro.');
                 button.disabled = false;
-                button.innerHTML = isPayPal ? '<i class="fab fa-paypal"></i> Reintentar PayPal' : '<i class="fas fa-credit-card"></i> Reintentar tarjeta';
+                button.innerHTML = '<i class="fab fa-paypal"></i> Reintentar PayPal';
             }
         };
         button.addEventListener('click', begin);

@@ -919,6 +919,9 @@ public class ApiController : Controller
     [Authorize(Policy = "AnyUser")]
     public async Task<IActionResult> StartStripeCheckout([FromBody] StripeCheckoutRequest? request)
     {
+        if (!_configuration.GetValue<bool>("Payments:StripeEnabled"))
+            return StatusCode(StatusCodes.Status410Gone, new { message = "El pago con Stripe no está disponible. Seleccione PayPal u otro método habilitado." });
+
         var secret = _configuration["Stripe:SecretKey"];
         if (string.IsNullOrWhiteSpace(secret))
             return BadRequest(new { message = "Stripe todavía no está configurado en el servidor." });
@@ -1038,9 +1041,7 @@ public class ApiController : Controller
             .ToArray();
         if (selected.Length != ids.Length) return BadRequest(new { message = "Uno de los pedidos no existe, no pertenece al usuario o ya fue pagado." });
 
-        var baseUrl = string.Equals(_configuration["PayPal:Environment"], "live", StringComparison.OrdinalIgnoreCase)
-            ? "https://api-m.paypal.com"
-            : "https://api-m.sandbox.paypal.com";
+        const string baseUrl = "https://api-m.paypal.com";
         var accessToken = await GetPayPalAccessTokenAsync(baseUrl, clientId, secret);
         if (string.IsNullOrWhiteSpace(accessToken)) return BadRequest(new { message = "PayPal no pudo autenticar la pasarela." });
 
@@ -1108,9 +1109,7 @@ public class ApiController : Controller
         if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(PayerID) || string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(secret))
             return Redirect("/Client/Orders?paypal=error");
 
-        var baseUrl = string.Equals(_configuration["PayPal:Environment"], "live", StringComparison.OrdinalIgnoreCase)
-            ? "https://api-m.paypal.com"
-            : "https://api-m.sandbox.paypal.com";
+        const string baseUrl = "https://api-m.paypal.com";
         var accessToken = await GetPayPalAccessTokenAsync(baseUrl, clientId, secret);
         if (string.IsNullOrWhiteSpace(accessToken)) return Redirect("/Client/Orders?paypal=error");
 
@@ -1145,9 +1144,7 @@ public class ApiController : Controller
         catch (JsonException) { return BadRequest(); }
         using (eventDocument)
         {
-            var baseUrl = string.Equals(_configuration["PayPal:Environment"], "live", StringComparison.OrdinalIgnoreCase)
-                ? "https://api-m.paypal.com"
-                : "https://api-m.sandbox.paypal.com";
+            const string baseUrl = "https://api-m.paypal.com";
             var accessToken = await GetPayPalAccessTokenAsync(baseUrl, clientId, secret);
             if (string.IsNullOrWhiteSpace(accessToken)) return StatusCode(StatusCodes.Status503ServiceUnavailable);
 

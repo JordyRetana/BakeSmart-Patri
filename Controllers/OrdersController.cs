@@ -118,8 +118,7 @@ namespace BakeSmartPatri.Controllers
 
                 var orderId = await _sqlStore.CreateOrderAsync(input, User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value);
                 TempData["ToastSuccess"] = $"Pedido #{orderId} creado correctamente.";
-                var onlinePayment = string.Equals(metodoPago?.Trim(), "Tarjeta", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(metodoPago?.Trim(), "PayPal", StringComparison.OrdinalIgnoreCase);
+                var onlinePayment = string.Equals(metodoPago?.Trim(), "PayPal", StringComparison.OrdinalIgnoreCase);
                 return RedirectToAction(nameof(Details), new { id = orderId, pay = onlinePayment ? metodoPago : null });
             }
             catch (Exception ex)

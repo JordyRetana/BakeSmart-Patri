@@ -133,7 +133,6 @@
                 <div class="input-group">
                     <label class="input-label"><i class="fas fa-credit-card"></i> Método de pago</label>
                     <select class="input" name="metodoPago" id="paymentMethod">
-                        <option value="Tarjeta">Tarjeta segura — Stripe</option>
                         <option value="PayPal">PayPal</option>
                         <option value="SINPE">SINPE Móvil</option>
                         <option value="Transferencia">Transferencia bancaria</option>
@@ -142,7 +141,7 @@
                     </select>
                 </div>
             </div>
-            <p class="text-muted order-payment-note" id="paymentNote"><i class="fas fa-shield-halved"></i> Tarjeta segura (Stripe) y PayPal abren la pasarela oficial después de crear el pedido.</p>
+            <p class="text-muted order-payment-note" id="paymentNote"><i class="fab fa-paypal"></i> PayPal abre su pasarela oficial después de crear el pedido.</p>
 
             <div id="deliveryMapBlock" style="margin-top:1rem;">
                 <div class="input-group" style="margin-bottom:1rem;">
@@ -269,9 +268,7 @@
         const method = String(event.target.value || '').toLowerCase();
         document.getElementById('paymentNote').innerHTML = method.includes('paypal')
             ? '<i class="fab fa-paypal"></i> Serás redirigido a PayPal para autorizar el cobro seguro.'
-            : method.includes('tarjeta') || method.includes('stripe')
-                ? '<i class="fas fa-credit-card"></i> Serás redirigido a Stripe Checkout para pagar con tarjeta.'
-                : '<i class="fas fa-receipt"></i> El pago se registrará con el método seleccionado al confirmar el pedido.';
+            : '<i class="fas fa-receipt"></i> El pago se registrará con el método seleccionado al confirmar el pedido.';
     });
     document.getElementById('metodoEntrega').addEventListener('change', () => {
         updateSummary();
