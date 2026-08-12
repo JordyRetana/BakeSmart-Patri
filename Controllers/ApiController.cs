@@ -1074,7 +1074,10 @@ public class ApiController : Controller
             {
                 new
                 {
-                    custom_id = $"orders={string.Join(',', ids)};email={email}",
+                    // Conservamos el importe exacto que se envía a PayPal. De ese modo la
+                    // confirmación no vuelve a recalcular una conversión distinta después
+                    // de que el proveedor ya aprobó el cobro.
+                    custom_id = $"orders={string.Join(',', ids)};email={email};paypal_amount={FormatPayPalAmount(paypalTotal, currency)};paypal_currency={currency}",
                     description = $"Pedidos BakeSmart #{string.Join(", ", ids)}",
                     amount = new { currency_code = currency, value = FormatPayPalAmount(paypalTotal, currency) }
                 }
@@ -1362,8 +1365,20 @@ public class ApiController : Controller
         if (!values.TryGetValue("orders", out var orders) ||
             (!string.IsNullOrWhiteSpace(expectedCustomerEmail) && (!values.TryGetValue("email", out var email) || !string.Equals(email, expectedCustomerEmail, StringComparison.OrdinalIgnoreCase)))) return false;
         values.TryGetValue("email", out var owner);
-        var expectedTotal = string.IsNullOrWhiteSpace(owner) ? null : await GetExpectedOrderTotalAsync(orders, owner);
-        if (expectedTotal is null || !HasVerifiedPayPalCapture(unit, expectedTotal.Value)) return false;
+        var checkoutAmount = 0m;
+        var checkoutCurrency = string.Empty;
+        var hasExactCheckoutAmount = values.TryGetValue("paypal_amount", out var checkoutAmountText) &&
+            values.TryGetValue("paypal_currency", out checkoutCurrency) &&
+            decimal.TryParse(checkoutAmountText, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out checkoutAmount);
+        if (hasExactCheckoutAmount)
+        {
+            if (!HasVerifiedPayPalCapture(unit, checkoutAmount, checkoutCurrency ?? string.Empty)) return false;
+        }
+        else
+        {
+            var expectedTotal = string.IsNullOrWhiteSpace(owner) ? null : await GetExpectedOrderTotalAsync(orders, owner);
+            if (expectedTotal is null || !HasVerifiedPayPalCapture(unit, expectedTotal.Value)) return false;
+        }
         foreach (var orderId in orders.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(value => int.TryParse(value, out var id) ? id : 0).Where(id => id > 0))
             await _sqlStore.MarkOrderPaidAsync(orderId, "PayPal", owner);
         return true;
@@ -1418,6 +1433,20 @@ public class ApiController : Controller
         return string.Equals(currencyCode.GetString(), currency, StringComparison.OrdinalIgnoreCase) &&
             decimal.TryParse(value.GetString(), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var paidAmount) &&
             Math.Abs(paidAmount - expected) <= 0.01m;
+    }
+
+    private static bool HasVerifiedPayPalCapture(JsonElement unit, decimal expectedAmount, string expectedCurrency)
+    {
+        if (!unit.TryGetProperty("payments", out var payments) || !payments.TryGetProperty("captures", out var captures) || captures.GetArrayLength() == 0 ||
+            !captures[0].TryGetProperty("status", out var captureStatus) || !string.Equals(captureStatus.GetString(), "COMPLETED", StringComparison.OrdinalIgnoreCase)) return false;
+
+        var capture = captures[0];
+        if (!capture.TryGetProperty("amount", out var amount) || amount.ValueKind != JsonValueKind.Object ||
+            !amount.TryGetProperty("currency_code", out var currency) || !amount.TryGetProperty("value", out var value)) return false;
+
+        return string.Equals(currency.GetString(), expectedCurrency, StringComparison.OrdinalIgnoreCase) &&
+            decimal.TryParse(value.GetString(), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var paidAmount) &&
+            Math.Abs(paidAmount - expectedAmount) <= 0.01m;
     }
 
     private static bool IsApprovedPayPalOrderForCustomer(JsonElement order, string? expectedCustomerEmail)
