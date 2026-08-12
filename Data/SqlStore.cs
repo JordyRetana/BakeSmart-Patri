@@ -141,6 +141,7 @@ public sealed class SqlStore
         const string sql = """
             SELECT
                 o.OrderId,
+                o.CreatedAt,
                 c.FullName AS CustomerName,
                 c.Email AS CustomerEmail,
                 c.Phone AS CustomerPhone,
@@ -191,6 +192,7 @@ public sealed class SqlStore
             return new
             {
             id = reader.GetInt32("OrderId"),
+            createdAt = DateTime.SpecifyKind(reader.GetDateTime("CreatedAt"), DateTimeKind.Utc).ToString("O"),
             cliente = reader.GetString("CustomerName"),
             customerEmail = reader.GetString("CustomerEmail"),
             customerPhone = reader.GetNullableString("CustomerPhone") ?? string.Empty,

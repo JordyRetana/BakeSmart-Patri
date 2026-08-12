@@ -179,6 +179,13 @@
                 `;
             }
 
+            function formatOrderCreatedAt(value) {
+                const parsed = new Date(value);
+                return Number.isNaN(parsed.getTime())
+                    ? 'Fecha de creación no disponible'
+                    : parsed.toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'short' });
+            }
+
             function render() {
                 const allOrders = BakeSmartStore.orders.byClient(userEmail);
                 const rows = filteredOrders();
@@ -197,7 +204,7 @@
                         <div class="client-order-top">
                             <div>
                                 <h3 class="client-order-id"><i class="fas fa-receipt"></i> Pedido #${order.id}</h3>
-                                <div class="text-muted">${new Date(order.createdAt).toLocaleString('es-CR')}</div>
+                                <div class="text-muted">${formatOrderCreatedAt(order.createdAt)}</div>
                             </div>
                             <div class="client-order-statuses">
                                 <span class="badge badge-primary">${order.status}</span>

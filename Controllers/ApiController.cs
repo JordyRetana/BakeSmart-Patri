@@ -1106,7 +1106,8 @@ public class ApiController : Controller
     {
         var clientId = _configuration["PayPal:ClientId"];
         var secret = _configuration["PayPal:Secret"];
-        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(PayerID) || string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(secret))
+        // PayPal v2 puede redirigir sin PayerID; el token aprobado es suficiente para consultar y capturar la orden.
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(secret))
             return Redirect("/Client/Orders?paypal=error");
 
         const string baseUrl = "https://api-m.paypal.com";
