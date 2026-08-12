@@ -131,10 +131,32 @@
                     app.toast.success('Pago confirmado por PayPal. El monto fue cobrado y tu pedido ya puede avanzar.');
                 } else if (result === 'cancelled') {
                     app.toast.info('El pago con PayPal fue cancelado. No se realizó ningún cobro.');
+                } else if (result === 'processing' && parameters.get('token')) {
+                    verifyPayPalPayment(parameters.get('token'));
+                    return;
                 } else {
                     app.toast.error('PayPal no confirmó el cobro. No se realizó ningún cargo; intenta nuevamente o usa otro método.');
                 }
 
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            async function verifyPayPalPayment(token) {
+                app.toast.info('Estamos verificando tu pago seguro con PayPal...');
+                for (let attempt = 0; attempt < 15; attempt++) {
+                    try {
+                        const response = await fetch(`/api/payments/paypal/status?token=${encodeURIComponent(token)}`, { credentials: 'same-origin' });
+                        const result = response.ok ? await response.json() : null;
+                        if (result?.confirmed) {
+                            app.toast.success('Pago confirmado por PayPal. El monto fue cobrado y tu pedido ya puede avanzar.');
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                            setTimeout(() => window.location.reload(), 700);
+                            return;
+                        }
+                    } catch (_) { }
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+                app.toast.warning('PayPal aun esta verificando el cobro. Actualiza esta pagina en unos segundos; no hagas otro pago.');
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
 

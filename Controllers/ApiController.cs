@@ -1115,7 +1115,7 @@ public class ApiController : Controller
     }
 
     [HttpGet("payments/paypal/complete")]
-    [Authorize(Policy = "AnyUser")]
+    [AllowAnonymous]
     public async Task<IActionResult> CompletePayPalCheckout(string token, string? PayerID)
     {
         var clientId = _configuration["PayPal:ClientId"];
@@ -1150,7 +1150,7 @@ public class ApiController : Controller
         {
             var alreadyConfirmed = await ConfirmPayPalOrderAsync(approvalDocument.RootElement, customerEmail);
             if (!alreadyConfirmed) _logger.LogWarning("PayPal devolvió el pedido {Token} como completado, pero no superó la validación local.", token);
-            return Redirect(alreadyConfirmed ? "/Client/Orders?paypal=success" : "/Client/Orders?paypal=error=verification");
+            return Redirect(alreadyConfirmed ? "/Client/Orders?paypal=success" : $"/Client/Orders?paypal=processing&token={Uri.EscapeDataString(token)}");
         }
 
         if (!IsApprovedPayPalOrderForCustomer(approvalDocument.RootElement, customerEmail))
@@ -1173,7 +1173,39 @@ public class ApiController : Controller
         using var document = JsonDocument.Parse(await capture.Content.ReadAsStringAsync());
         var confirmed = await ConfirmPayPalOrderAsync(document.RootElement, customerEmail);
         if (!confirmed) _logger.LogWarning("PayPal capturó el pedido {Token}, pero el importe o propietario no coincidió.", token);
-        return Redirect(confirmed ? "/Client/Orders?paypal=success" : "/Client/Orders?paypal=error=verification");
+        return Redirect(confirmed ? "/Client/Orders?paypal=success" : $"/Client/Orders?paypal=processing&token={Uri.EscapeDataString(token)}");
+    }
+
+    // Segundo camino de conciliacion: la pantalla consulta la orden firmada
+    // directamente en PayPal si el retorno perdio la sesion o fue transitorio.
+    [HttpGet("payments/paypal/status")]
+    [AllowAnonymous]
+    public async Task<IActionResult> PayPalPaymentStatus(string token)
+    {
+        var clientId = _configuration["PayPal:ClientId"];
+        var secret = _configuration["PayPal:Secret"];
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(secret))
+            return BadRequest(new { confirmed = false });
+
+        const string baseUrl = "https://api-m.paypal.com";
+        var accessToken = await GetPayPalAccessTokenAsync(baseUrl, clientId, secret);
+        if (string.IsNullOrWhiteSpace(accessToken))
+            return StatusCode(StatusCodes.Status502BadGateway, new { confirmed = false });
+
+        var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        var response = await client.GetAsync($"{baseUrl}/v2/checkout/orders/{Uri.EscapeDataString(token)}");
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("No se pudo consultar el estado PayPal {Token}. Estado: {Status}", token, response.StatusCode);
+            return StatusCode(StatusCodes.Status502BadGateway, new { confirmed = false });
+        }
+
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var status = document.RootElement.TryGetProperty("status", out var statusProperty) ? statusProperty.GetString() : null;
+        var confirmed = string.Equals(status, "COMPLETED", StringComparison.OrdinalIgnoreCase) &&
+            await ConfirmPayPalOrderAsync(document.RootElement, null);
+        return Ok(new { confirmed, status });
     }
 
     [HttpPost("payments/paypal/webhook")]
