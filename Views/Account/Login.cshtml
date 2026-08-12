@@ -58,7 +58,7 @@
                 </div>
                 <button type="submit" class="btn btn-primary btn-block btn-lg login-submit-btn" id="loginSubmitBtn"><i class="fas fa-right-to-bracket"></i> Iniciar sesión</button>
                 <div class="login-divider"><span>o</span></div>
-                <a asp-controller="Account" asp-action="Register" asp-route-returnUrl="@(ViewData["ReturnUrl"]?.ToString())" class="btn btn-outline btn-block login-create-btn"><i class="fas fa-user-plus"></i> Crear cuenta de cliente</a>
+                <button type="button" id="createCustomerAccountBtn" class="btn btn-outline btn-block login-create-btn" data-register-url="/Account/Register?returnUrl=@(Uri.EscapeDataString(ViewData["ReturnUrl"]?.ToString() ?? ""))"><i class="fas fa-user-plus"></i> Crear cuenta de cliente</button>
             </form>
 
             <div class="login-security-note"><i class="fas fa-shield-halved"></i><span><strong>Conexión protegida.</strong> Tus credenciales se validan de forma segura.</span></div>
@@ -80,6 +80,11 @@
 
     const form = document.getElementById('loginForm');
     const button = document.getElementById('loginSubmitBtn');
+    const createAccountButton = document.getElementById('createCustomerAccountBtn');
+    createAccountButton?.addEventListener('click', () => {
+        const target = createAccountButton.dataset.registerUrl || '/Account/Register';
+        window.location.assign(target);
+    });
     if (!form || !button) return;
     form.addEventListener('submit', () => {
         button.disabled = true;
