@@ -1004,13 +1004,16 @@ public class ApiController : Controller
         if (!response.IsSuccessStatusCode) return Redirect("/Client/Orders?stripe=error");
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var session = document.RootElement;
-        var paid = session.TryGetProperty("payment_status", out var paymentStatus) && paymentStatus.GetString() == "paid";
         var metadata = session.TryGetProperty("metadata", out var meta) ? meta : default;
         var owner = metadata.ValueKind == JsonValueKind.Object && metadata.TryGetProperty("email", out var ownerEmail) ? ownerEmail.GetString() : null;
         var orders = metadata.ValueKind == JsonValueKind.Object && metadata.TryGetProperty("orders", out var orderIds) ? orderIds.GetString() : null;
-        if (!paid || string.IsNullOrWhiteSpace(orders) || (User.IsInRole("Cliente") && !string.Equals(owner, CurrentUserEmail, StringComparison.OrdinalIgnoreCase)))
+        var expectedTotal = string.IsNullOrWhiteSpace(orders) || string.IsNullOrWhiteSpace(owner)
+            ? null
+            : await GetExpectedOrderTotalAsync(orders, owner);
+        if (expectedTotal is null || !HasVerifiedStripePayment(session, expectedTotal.Value) ||
+            (User.IsInRole("Cliente") && !string.Equals(owner, CurrentUserEmail, StringComparison.OrdinalIgnoreCase)))
             return Redirect("/Client/Orders?stripe=error");
-        foreach (var orderId in orders.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(value => int.TryParse(value, out var id) ? id : 0).Where(id => id > 0))
+        foreach (var orderId in orders!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(value => int.TryParse(value, out var id) ? id : 0).Where(id => id > 0))
             await _sqlStore.MarkOrderPaidAsync(orderId, "Tarjeta", CurrentUserEmail);
         return Redirect("/Client/Orders?stripe=success");
     }
@@ -1098,11 +1101,11 @@ public class ApiController : Controller
 
     [HttpGet("payments/paypal/complete")]
     [Authorize(Policy = "AnyUser")]
-    public async Task<IActionResult> CompletePayPalCheckout(string token)
+    public async Task<IActionResult> CompletePayPalCheckout(string token, string? PayerID)
     {
         var clientId = _configuration["PayPal:ClientId"];
         var secret = _configuration["PayPal:Secret"];
-        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(secret))
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(PayerID) || string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(secret))
             return Redirect("/Client/Orders?paypal=error");
 
         var baseUrl = string.Equals(_configuration["PayPal:Environment"], "live", StringComparison.OrdinalIgnoreCase)
@@ -1113,6 +1116,11 @@ public class ApiController : Controller
 
         var client = _httpClientFactory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        var approved = await client.GetAsync($"{baseUrl}/v2/checkout/orders/{Uri.EscapeDataString(token)}");
+        if (!approved.IsSuccessStatusCode) return Redirect("/Client/Orders?paypal=error");
+        using var approvalDocument = JsonDocument.Parse(await approved.Content.ReadAsStringAsync());
+        if (!IsApprovedPayPalOrderForCustomer(approvalDocument.RootElement, User.IsInRole("Cliente") ? CurrentUserEmail : null))
+            return Redirect("/Client/Orders?paypal=error");
         var capture = await client.PostAsync($"{baseUrl}/v2/checkout/orders/{Uri.EscapeDataString(token)}/capture", null);
         if (!capture.IsSuccessStatusCode) return Redirect("/Client/Orders?paypal=error");
         using var document = JsonDocument.Parse(await capture.Content.ReadAsStringAsync());
@@ -1190,14 +1198,17 @@ public class ApiController : Controller
         var root = document.RootElement;
         if (!root.TryGetProperty("type", out var type) || type.GetString() != "checkout.session.completed") return Ok();
         if (!root.TryGetProperty("data", out var data) || !data.TryGetProperty("object", out var session)) return BadRequest();
-        if (!session.TryGetProperty("payment_status", out var paymentStatus) || paymentStatus.GetString() != "paid") return Ok();
+        if (!HasVerifiedStripePayment(session, null)) return Ok();
 
         var metadata = session.TryGetProperty("metadata", out var value) ? value : default;
         var orders = metadata.ValueKind == JsonValueKind.Object && metadata.TryGetProperty("orders", out var orderIds) ? orderIds.GetString() : null;
         var owner = metadata.ValueKind == JsonValueKind.Object && metadata.TryGetProperty("email", out var ownerEmail) ? ownerEmail.GetString() : null;
-        if (string.IsNullOrWhiteSpace(orders)) return BadRequest();
+        var expectedTotal = string.IsNullOrWhiteSpace(orders) || string.IsNullOrWhiteSpace(owner)
+            ? null
+            : await GetExpectedOrderTotalAsync(orders, owner);
+        if (expectedTotal is null || !HasVerifiedStripePayment(session, expectedTotal.Value)) return BadRequest();
 
-        foreach (var orderId in orders.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(value => int.TryParse(value, out var id) ? id : 0).Where(id => id > 0))
+        foreach (var orderId in orders!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(value => int.TryParse(value, out var id) ? id : 0).Where(id => id > 0))
             await _sqlStore.MarkOrderPaidAsync(orderId, "Tarjeta", owner);
         return Ok();
     }
@@ -1308,9 +1319,63 @@ public class ApiController : Controller
         if (!values.TryGetValue("orders", out var orders) ||
             (!string.IsNullOrWhiteSpace(expectedCustomerEmail) && (!values.TryGetValue("email", out var email) || !string.Equals(email, expectedCustomerEmail, StringComparison.OrdinalIgnoreCase)))) return false;
         values.TryGetValue("email", out var owner);
+        var expectedTotal = string.IsNullOrWhiteSpace(owner) ? null : await GetExpectedOrderTotalAsync(orders, owner);
+        if (expectedTotal is null || !HasVerifiedPayPalCapture(unit, expectedTotal.Value)) return false;
         foreach (var orderId in orders.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(value => int.TryParse(value, out var id) ? id : 0).Where(id => id > 0))
             await _sqlStore.MarkOrderPaidAsync(orderId, "PayPal", owner);
         return true;
+    }
+
+    private async Task<decimal?> GetExpectedOrderTotalAsync(string rawOrderIds, string customerEmail)
+    {
+        var ids = rawOrderIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(value => int.TryParse(value, out var id) ? id : 0)
+            .Where(id => id > 0).Distinct().ToArray();
+        if (ids.Length == 0 || string.IsNullOrWhiteSpace(customerEmail)) return null;
+
+        var allOrders = JsonSerializer.SerializeToElement(await _sqlStore.OrdersAsync(customerEmail));
+        var selected = allOrders.EnumerateArray()
+            .Where(order => order.TryGetProperty("id", out var id) && ids.Contains(id.GetInt32()))
+            .ToArray();
+        return selected.Length == ids.Length
+            ? selected.Sum(order => order.GetProperty("total").GetDecimal())
+            : null;
+    }
+
+    private static bool HasVerifiedStripePayment(JsonElement session, decimal? expectedTotal)
+    {
+        var complete = session.TryGetProperty("status", out var status) && string.Equals(status.GetString(), "complete", StringComparison.OrdinalIgnoreCase);
+        var paid = session.TryGetProperty("payment_status", out var paymentStatus) && string.Equals(paymentStatus.GetString(), "paid", StringComparison.OrdinalIgnoreCase);
+        var paymentMode = session.TryGetProperty("mode", out var mode) && string.Equals(mode.GetString(), "payment", StringComparison.OrdinalIgnoreCase);
+        if (!complete || !paid || !paymentMode) return false;
+        if (expectedTotal is null) return true;
+        return session.TryGetProperty("amount_total", out var amount) && amount.TryGetInt64(out var totalInCents) &&
+            totalInCents == decimal.ToInt64(decimal.Round(expectedTotal.Value * 100m, 0, MidpointRounding.AwayFromZero));
+    }
+
+    private bool HasVerifiedPayPalCapture(JsonElement unit, decimal expectedTotal)
+    {
+        if (!unit.TryGetProperty("payments", out var payments) || !payments.TryGetProperty("captures", out var captures) || captures.GetArrayLength() == 0 ||
+            !captures[0].TryGetProperty("status", out var captureStatus) || !string.Equals(captureStatus.GetString(), "COMPLETED", StringComparison.OrdinalIgnoreCase) ||
+            !unit.TryGetProperty("amount", out var amount) || !amount.TryGetProperty("currency_code", out var currencyCode) || !amount.TryGetProperty("value", out var value)) return false;
+
+        var configuredCurrency = (_configuration["PayPal:Currency"] ?? "USD").ToUpperInvariant();
+        var currency = configuredCurrency == "CRC" ? "USD" : configuredCurrency;
+        var rate = decimal.TryParse(_configuration["PayPal:UsdExchangeRate"], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var configuredRate) && configuredRate > 0 ? configuredRate : 520m;
+        var expected = currency == "USD" ? decimal.Round(expectedTotal / rate, 2, MidpointRounding.AwayFromZero) : expectedTotal;
+        return string.Equals(currencyCode.GetString(), currency, StringComparison.OrdinalIgnoreCase) &&
+            decimal.TryParse(value.GetString(), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var paidAmount) &&
+            Math.Abs(paidAmount - expected) <= 0.01m;
+    }
+
+    private static bool IsApprovedPayPalOrderForCustomer(JsonElement order, string? expectedCustomerEmail)
+    {
+        if (!order.TryGetProperty("status", out var status) || !string.Equals(status.GetString(), "APPROVED", StringComparison.OrdinalIgnoreCase) ||
+            !order.TryGetProperty("purchase_units", out var units) || units.GetArrayLength() == 0) return false;
+        if (string.IsNullOrWhiteSpace(expectedCustomerEmail)) return true;
+        var customId = units[0].TryGetProperty("custom_id", out var custom) ? custom.GetString() : null;
+        return (customId ?? string.Empty).Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Select(item => item.Split('=', 2)).Any(item => item.Length == 2 && string.Equals(item[0], "email", StringComparison.OrdinalIgnoreCase) && string.Equals(item[1], expectedCustomerEmail, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsValidEmail(string email)

@@ -143,11 +143,11 @@
                             <label>
                                 <span>Pago</span>
                                 <select class="form-control" name="paymentMethod" id="quickPaymentMethod">
-                                    <option value="Pago en linea">Pagar ahora</option>
-                                    <option value="Pendiente">Pagar en tienda</option>
-                                    <option value="SINPE">SINPE</option>
-                                    <option value="Tarjeta">Tarjeta</option>
+                                    <option value="Tarjeta">Tarjeta segura — Stripe</option>
                                     <option value="PayPal">PayPal</option>
+                                    <option value="SINPE">SINPE Móvil</option>
+                                    <option value="Efectivo">Efectivo al retirar</option>
+                                    <option value="Pendiente">Pago pendiente</option>
                                 </select>
                             </label>
                         </div>
@@ -486,12 +486,17 @@
         }
 
         function fillPaymentMethods() {
-        const methods = (BakeSmartStore.pos.config().paymentMethods || []).filter(method => method.active);
-        const names = new Set(['Pago en linea', 'Pendiente', 'Tarjeta', 'PayPal', 'SINPE']);
-        methods.forEach(method => names.add(method.name));
-
-        document.getElementById('quickPaymentMethod').innerHTML = [...names]
-        .map(name => `<option value="${clean(name)}">${clean(name === 'Pago en linea' ? 'Pagar ahora' : name === 'Pendiente' ? 'Pagar en tienda' : name)}</option>`)
+        // El pedido web solo expone métodos que realmente tienen flujo de cobro o validación.
+        // No heredamos nombres antiguos de la configuración del POS (por ejemplo "Smoke Pay").
+        const methods = [
+        ['Tarjeta', 'Tarjeta segura — Stripe'],
+        ['PayPal', 'PayPal'],
+        ['SINPE', 'SINPE Móvil'],
+        ['Efectivo', 'Efectivo al retirar'],
+        ['Pendiente', 'Pago pendiente']
+        ];
+        document.getElementById('quickPaymentMethod').innerHTML = methods
+        .map(([value, label]) => `<option value="${value}">${label}</option>`)
         .join('');
         }
 
@@ -721,7 +726,7 @@
 
         function shouldOpenGateway(method) {
         const value = String(method || '').toLowerCase();
-        return value.includes('linea') || value.includes('tarjeta') || value.includes('sinpe');
+        return value.includes('tarjeta') || value.includes('sinpe');
         }
 
         function openPaymentGateway(orderId, total, method, mode = 'full', orderIds = [orderId]) {
