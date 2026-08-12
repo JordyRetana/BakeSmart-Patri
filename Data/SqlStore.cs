@@ -5446,7 +5446,7 @@ public sealed class SqlStore
 
             var stock = await ResolveProductStockMySqlAsync(connection, transaction, input.ProductId, input.Quantity);
             var subtotal = Math.Round(stock.UnitPrice * input.Quantity, 2, MidpointRounding.AwayFromZero);
-            var paymentMethodId = await ResolvePaymentMethodMySqlAsync(connection, transaction, input.PaymentMethod);
+            var paymentMethodId = await ResolvePaymentMethodMySqlAsync(connection, transaction, input.PaymentMethod, fallbackToCash: false);
             var channelId = await ResolveLookupIdMySqlAsync(connection, transaction, "CanalesPedido", "OrderChannelId", "Name", "Web");
             var statusId = await ResolveLookupIdMySqlAsync(connection, transaction, "EstadosPedido", "OrderStatusId", "Name", "Pendiente pago");
             var paymentStatusId = await ResolveLookupIdMySqlAsync(connection, transaction, "EstadosPago", "PaymentStatusId", "Name", "Pendiente");
@@ -5709,7 +5709,7 @@ public sealed class SqlStore
             new SqlParameter("@Phone", (object?)phone?.Trim() ?? DBNull.Value)));
     }
 
-    private async Task<int> ResolvePaymentMethodMySqlAsync(DbConnection connection, DbTransaction transaction, string? method)
+    private async Task<int> ResolvePaymentMethodMySqlAsync(DbConnection connection, DbTransaction transaction, string? method, bool fallbackToCash = true)
     {
         var requested = string.IsNullOrWhiteSpace(method) ? "Efectivo" : method.Trim();
         var id = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
@@ -5717,6 +5717,9 @@ public sealed class SqlStore
             new SqlParameter("@Name", requested)) ?? 0);
         if (id > 0)
             return id;
+
+        if (!fallbackToCash)
+            throw new InvalidOperationException($"La forma de pago '{requested}' no está habilitada. Intente de nuevo con una opción disponible.");
 
         return Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
             "SELECT PaymentMethodId FROM MetodosPago WHERE Name = 'Efectivo' LIMIT 1;") ?? 0);

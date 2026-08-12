@@ -139,7 +139,15 @@ public class ApiController : Controller
         {
             if (!await _sqlStore.OrderBelongsToAsync(id, CurrentUserEmail)) return Forbid();
         }
-        await _sqlStore.MarkOrderPaidAsync(id, string.IsNullOrWhiteSpace(request.Method) ? "Efectivo" : request.Method, CurrentUserEmail);
+        var method = string.IsNullOrWhiteSpace(request.Method) ? "Efectivo" : request.Method.Trim();
+        if (string.Equals(method, "PayPal", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new { message = "PayPal se confirma automáticamente al recibir la captura aprobada." });
+
+        if (!string.Equals(method, "Efectivo", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(method, "SINPE", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new { message = "La forma de pago seleccionada no está disponible." });
+
+        await _sqlStore.MarkOrderPaidAsync(id, method, CurrentUserEmail);
         return Ok(new { ok = true });
     }
 
