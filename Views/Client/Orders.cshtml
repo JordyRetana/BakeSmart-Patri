@@ -122,6 +122,22 @@
             const paymentSubmit = document.getElementById('ordersPaymentSubmit');
             let selectedOrder = null;
 
+            function showPayPalReturnMessage() {
+                const parameters = new URLSearchParams(window.location.search);
+                const result = parameters.get('paypal');
+                if (!result) return;
+
+                if (result === 'success') {
+                    app.toast.success('Pago confirmado por PayPal. El monto fue cobrado y tu pedido ya puede avanzar.');
+                } else if (result === 'cancelled') {
+                    app.toast.info('El pago con PayPal fue cancelado. No se realizó ningún cobro.');
+                } else {
+                    app.toast.error('PayPal no confirmó el cobro. No se realizó ningún cargo; intenta nuevamente o usa otro método.');
+                }
+
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
             function badgeForPayment(status) {
                 return status === 'Pagado' ? 'badge-success' : 'badge-warning';
             }
@@ -341,7 +357,10 @@
 
             search.addEventListener('input', render);
             statusFilter.addEventListener('change', render);
-            BakeSmartStore.refresh().then(render).catch(error => app.toast.error(error.message));
+            BakeSmartStore.refresh().then(() => {
+                render();
+                showPayPalReturnMessage();
+            }).catch(error => app.toast.error(error.message));
         })();
     </script>
 }

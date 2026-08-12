@@ -20,8 +20,9 @@ public class ApiController : Controller
     private readonly ReportExportService _reportExportService;
     private readonly IEmailService _emailService;
     private readonly IConfiguration _configuration;
+    private readonly ILogger<ApiController> _logger;
 
-    public ApiController(SqlStore sqlStore, IHttpClientFactory httpClientFactory, IWebHostEnvironment environment, ReportExportService reportExportService, IEmailService emailService, IConfiguration configuration)
+    public ApiController(SqlStore sqlStore, IHttpClientFactory httpClientFactory, IWebHostEnvironment environment, ReportExportService reportExportService, IEmailService emailService, IConfiguration configuration, ILogger<ApiController> logger)
     {
         _sqlStore = sqlStore;
         _httpClientFactory = httpClientFactory;
@@ -29,6 +30,7 @@ public class ApiController : Controller
         _reportExportService = reportExportService;
         _emailService = emailService;
         _configuration = configuration;
+        _logger = logger;
     }
 
     private string? CurrentUserEmail =>
@@ -1084,6 +1086,7 @@ public class ApiController : Controller
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync();
+            _logger.LogWarning("PayPal rechazó crear el cobro para los pedidos {Orders}. Estado: {Status}; detalle: {Detail}", string.Join(',', ids), response.StatusCode, errorBody);
             var detail = TryGetPayPalErrorDetail(errorBody);
             return BadRequest(new { message = string.IsNullOrWhiteSpace(detail) ? "PayPal no pudo iniciar el cobro." : $"PayPal rechazó el cobro: {detail}" });
         }
@@ -1117,7 +1120,11 @@ public class ApiController : Controller
         var client = _httpClientFactory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         var approved = await client.GetAsync($"{baseUrl}/v2/checkout/orders/{Uri.EscapeDataString(token)}");
-        if (!approved.IsSuccessStatusCode) return Redirect("/Client/Orders?paypal=error");
+        if (!approved.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("PayPal no devolvió el pedido {Token}. Estado: {Status}", token, approved.StatusCode);
+            return Redirect("/Client/Orders?paypal=error");
+        }
         using var approvalDocument = JsonDocument.Parse(await approved.Content.ReadAsStringAsync());
         var customerEmail = User.IsInRole("Cliente") ? CurrentUserEmail : null;
         var paypalStatus = approvalDocument.RootElement.TryGetProperty("status", out var status)
@@ -1131,15 +1138,24 @@ public class ApiController : Controller
         if (string.Equals(paypalStatus, "COMPLETED", StringComparison.OrdinalIgnoreCase))
         {
             var alreadyConfirmed = await ConfirmPayPalOrderAsync(approvalDocument.RootElement, customerEmail);
+            if (!alreadyConfirmed) _logger.LogWarning("PayPal devolvió el pedido {Token} como completado, pero no superó la validación local.", token);
             return Redirect(alreadyConfirmed ? "/Client/Orders?paypal=success" : "/Client/Orders?paypal=error");
         }
 
         if (!IsApprovedPayPalOrderForCustomer(approvalDocument.RootElement, customerEmail))
+        {
+            _logger.LogWarning("PayPal devolvió el pedido {Token} sin aprobación válida. Estado: {Status}", token, paypalStatus);
             return Redirect("/Client/Orders?paypal=error");
+        }
         var capture = await client.PostAsync($"{baseUrl}/v2/checkout/orders/{Uri.EscapeDataString(token)}/capture", null);
-        if (!capture.IsSuccessStatusCode) return Redirect("/Client/Orders?paypal=error");
+        if (!capture.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("PayPal no pudo capturar el pedido {Token}. Estado: {Status}; detalle: {Detail}", token, capture.StatusCode, await capture.Content.ReadAsStringAsync());
+            return Redirect("/Client/Orders?paypal=error");
+        }
         using var document = JsonDocument.Parse(await capture.Content.ReadAsStringAsync());
         var confirmed = await ConfirmPayPalOrderAsync(document.RootElement, customerEmail);
+        if (!confirmed) _logger.LogWarning("PayPal capturó el pedido {Token}, pero el importe o propietario no coincidió.", token);
         return Redirect(confirmed ? "/Client/Orders?paypal=success" : "/Client/Orders?paypal=error");
     }
 
