@@ -1119,12 +1119,27 @@ public class ApiController : Controller
         var approved = await client.GetAsync($"{baseUrl}/v2/checkout/orders/{Uri.EscapeDataString(token)}");
         if (!approved.IsSuccessStatusCode) return Redirect("/Client/Orders?paypal=error");
         using var approvalDocument = JsonDocument.Parse(await approved.Content.ReadAsStringAsync());
-        if (!IsApprovedPayPalOrderForCustomer(approvalDocument.RootElement, User.IsInRole("Cliente") ? CurrentUserEmail : null))
+        var customerEmail = User.IsInRole("Cliente") ? CurrentUserEmail : null;
+        var paypalStatus = approvalDocument.RootElement.TryGetProperty("status", out var status)
+            ? status.GetString()
+            : null;
+
+        // Según el método usado por PayPal, el regreso puede llegar con la orden
+        // aprobada (hay que capturarla) o ya completada (solo hay que validarla).
+        // Ambos caminos verifican propietario, importe y captura antes de cambiar
+        // cualquier pedido a pagado.
+        if (string.Equals(paypalStatus, "COMPLETED", StringComparison.OrdinalIgnoreCase))
+        {
+            var alreadyConfirmed = await ConfirmPayPalOrderAsync(approvalDocument.RootElement, customerEmail);
+            return Redirect(alreadyConfirmed ? "/Client/Orders?paypal=success" : "/Client/Orders?paypal=error");
+        }
+
+        if (!IsApprovedPayPalOrderForCustomer(approvalDocument.RootElement, customerEmail))
             return Redirect("/Client/Orders?paypal=error");
         var capture = await client.PostAsync($"{baseUrl}/v2/checkout/orders/{Uri.EscapeDataString(token)}/capture", null);
         if (!capture.IsSuccessStatusCode) return Redirect("/Client/Orders?paypal=error");
         using var document = JsonDocument.Parse(await capture.Content.ReadAsStringAsync());
-        var confirmed = await ConfirmPayPalOrderAsync(document.RootElement, User.IsInRole("Cliente") ? CurrentUserEmail : null);
+        var confirmed = await ConfirmPayPalOrderAsync(document.RootElement, customerEmail);
         return Redirect(confirmed ? "/Client/Orders?paypal=success" : "/Client/Orders?paypal=error");
     }
 
