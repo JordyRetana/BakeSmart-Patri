@@ -1147,7 +1147,13 @@ public class ApiController : Controller
             _logger.LogWarning("PayPal devolvió el pedido {Token} sin aprobación válida. Estado: {Status}", token, paypalStatus);
             return Redirect($"/Client/Orders?paypal=error={Uri.EscapeDataString(paypalStatus ?? "not-approved")}");
         }
-        var capture = await client.PostAsync($"{baseUrl}/v2/checkout/orders/{Uri.EscapeDataString(token)}/capture", null);
+        // PayPal requiere Content-Type application/json en /capture. Enviar null produce
+        // HTTP 415 ("The request payload is not supported") en las cuentas Live.
+        using var captureRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/v2/checkout/orders/{Uri.EscapeDataString(token)}/capture")
+        {
+            Content = JsonContent.Create(new { })
+        };
+        var capture = await client.SendAsync(captureRequest);
         if (!capture.IsSuccessStatusCode)
         {
             _logger.LogWarning("PayPal no pudo capturar el pedido {Token}. Estado: {Status}; detalle: {Detail}", token, capture.StatusCode, await capture.Content.ReadAsStringAsync());
