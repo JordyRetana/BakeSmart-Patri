@@ -147,8 +147,19 @@ public class ApiController : Controller
     {
         if (User.IsInRole("Cliente") && !await _sqlStore.OrderBelongsToAsync(id, CurrentUserEmail))
             return Forbid();
-        await _sqlStore.DeleteOrderAsync(id, CurrentUserEmail);
-        return Ok(new { ok = true });
+        try
+        {
+            await _sqlStore.DeleteOrderAsync(id, CurrentUserEmail);
+            return Ok(new { ok = true });
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "No se pudo eliminar el pedido. Inténtelo de nuevo." });
+        }
     }
 
     [HttpGet("inventory")]
@@ -923,6 +934,10 @@ public class ApiController : Controller
             .ToArray();
         if (selected.Length != ids.Length) return BadRequest(new { message = "Uno de los pedidos no existe, no pertenece al usuario o ya fue pagado." });
 
+        var totalToCharge = selected.Sum(order => order.GetProperty("total").GetDecimal());
+        if (totalToCharge < 300m)
+            return BadRequest(new { message = "Stripe no procesa cobros tan bajos. Para una prueba use un pedido de al menos ₡300." });
+
         var origin = $"{Request.Scheme}://{Request.Host}";
         var form = new List<KeyValuePair<string, string>>
         {
@@ -948,9 +963,33 @@ public class ApiController : Controller
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{secret}:")));
         var response = await client.PostAsync("https://api.stripe.com/v1/checkout/sessions", new FormUrlEncodedContent(form));
         var json = await response.Content.ReadAsStringAsync();
-        if (!response.IsSuccessStatusCode) return BadRequest(new { message = "Stripe no pudo iniciar el cobro." });
+        if (!response.IsSuccessStatusCode)
+        {
+            var detail = GetStripeErrorMessage(json);
+            return BadRequest(new { message = string.IsNullOrWhiteSpace(detail) ? "Stripe no pudo iniciar el cobro." : $"Stripe rechazó el cobro: {detail}" });
+        }
         using var document = JsonDocument.Parse(json);
         return Ok(new { url = document.RootElement.GetProperty("url").GetString() });
+    }
+
+    private static string? GetStripeErrorMessage(string json)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (!document.RootElement.TryGetProperty("error", out var error)) return null;
+            var message = error.TryGetProperty("message", out var value) ? value.GetString() : null;
+            if (string.IsNullOrWhiteSpace(message)) return null;
+            if (message.Contains("minimum", StringComparison.OrdinalIgnoreCase) || message.Contains("too small", StringComparison.OrdinalIgnoreCase))
+                return "el monto es menor al mínimo permitido por Stripe. Use al menos ₡300 para una prueba.";
+            if (message.Contains("account", StringComparison.OrdinalIgnoreCase) && message.Contains("activate", StringComparison.OrdinalIgnoreCase))
+                return "la cuenta de Stripe aún debe completarse para recibir pagos.";
+            return message;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     [HttpGet("payments/stripe/complete")]

@@ -50,7 +50,7 @@
                 <div class="muted" style="margin-top:8px;font-weight:700;line-height:1.6;">@(User.IsInRole("Cliente") ? "Consulta el avance y la ubicación de tu entrega." : "Actualiza estado, fecha y notas desde editar.")</div>
                 <div style="margin-top:12px;">
                     <a class="btn btn-secondary" href="@(User.IsInRole("Cliente") ? $"/Client/Track?id={orderId}" : "/Production")">@(User.IsInRole("Cliente") ? "Ver seguimiento" : "Ver producción")</a>
-                    <button type="button" class="btn btn-primary" id="securePaymentButton" hidden></button>
+                    <span id="securePaymentAction"></span>
                 </div>
             </div>
         </div>
@@ -93,9 +93,12 @@
 
     async function openSecurePayment(method) {
         const isPayPal = String(method).toLowerCase().includes('paypal');
-        const button = document.getElementById('securePaymentButton');
-        button.hidden = false;
+        const paymentAction = document.getElementById('securePaymentAction');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-primary';
         button.innerHTML = isPayPal ? '<i class="fab fa-paypal"></i> Pagar con PayPal' : '<i class="fas fa-credit-card"></i> Pagar con tarjeta';
+        paymentAction.replaceChildren(button);
         const begin = async () => {
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abriendo pago seguro…';
