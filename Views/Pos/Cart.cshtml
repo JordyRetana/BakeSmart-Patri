@@ -109,14 +109,13 @@
                     <option>PayPal</option>
                     <option>SINPE</option>
                     <option>Efectivo</option>
-                    <option>Transferencia</option>
                 </select>
             </label>
             <label>
                 <span id="posGatewayReferenceLabel">Referencia o titular</span>
                 <input class="form-control" name="holder" id="posGatewayReference" placeholder="Nombre, SINPE o referencia" required />
             </label>
-            <p class="pos-payment-modal__note">PayPal abre su pasarela oficial. SINPE, efectivo y transferencia quedan pendientes de validación del negocio.</p>
+            <p class="pos-payment-modal__note">PayPal abre su pasarela oficial. SINPE y efectivo se registran para validación del negocio.</p>
             <button class="btn btn-primary pos-submit-btn" type="submit" id="posPaymentConfirmBtn">
                 <i class="fas fa-lock"></i>
                 Aprobar cobro
@@ -174,9 +173,9 @@
                     .filter(method => method.active)
                     .map(method => method.name);
 
-                const fallbackMethods = ['Efectivo', 'SINPE', 'Transferencia', 'PayPal'];
+                const fallbackMethods = ['Efectivo', 'SINPE', 'PayPal'];
                 const methods = (activeMethods.length ? activeMethods : fallbackMethods)
-                    .filter(name => !/(stripe|tarjeta)/i.test(String(name)));
+                    .filter(name => /^(efectivo|sinpe|paypal)$/i.test(String(name)));
                 const options = methods.map(name => `<option value="${name}">${name}</option>`).join('');
                 const checkoutPaymentMethod = document.getElementById('checkoutPaymentMethod');
                 const previousCheckoutMethod = checkoutPaymentMethod.value;
@@ -386,10 +385,6 @@
                     gatewayReferenceLabel.textContent = 'Referencia SINPE';
                     gatewayReference.placeholder = 'Telefono o comprobante SINPE';
                     gatewayReference.required = true;
-                } else if (method.includes('transfer')) {
-                    gatewayReferenceLabel.textContent = 'Referencia de transferencia';
-                    gatewayReference.placeholder = 'Numero de comprobante o banco';
-                    gatewayReference.required = true;
                 } else if (method.includes('paypal')) {
                     gatewayReferenceLabel.textContent = 'Pago protegido';
                     gatewayReference.placeholder = 'PayPal abrirá su página oficial';
@@ -420,7 +415,6 @@
                 const method = String(selectedMethod).toLowerCase();
                 const normalizedMethod = method.includes('sinpe') ? 'SINPE'
                     : method.includes('efectivo') ? 'Efectivo'
-                    : method.includes('transfer') ? 'Transferencia'
                     : method.includes('paypal') ? 'PayPal'
                     : 'Efectivo';
                 gatewayMethod.value = [...gatewayMethod.options].some(option => option.value === normalizedMethod)

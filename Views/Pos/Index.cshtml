@@ -404,9 +404,8 @@
                             <div class="pos-close-summary">
                                 <div><span>Saldo inicial</span><strong>${money(session.openingAmount)}</strong></div>
                                 <div><span>Ventas en efectivo</span><strong>${money(session.cashSales)}</strong></div>
-                                <div><span>Tarjeta</span><strong>${money(session.cardSales)}</strong></div>
                                 <div><span>SINPE</span><strong>${money(session.sinpeSales)}</strong></div>
-                                <div><span>Transferencias</span><strong>${money(session.transferSales)}</strong></div>
+                                <div><span>PayPal</span><strong>${money(session.payPalSales || 0)}</strong></div>
                                 <div class="pos-close-summary__total"><span>Efectivo esperado</span><strong>${money(session.expectedCash)}</strong></div>
                             </div>
                             <div class="session-inline-actions">
@@ -478,8 +477,7 @@
 
             function renderPaymentMethods() {
                 const configuredMethods = getConfig().paymentMethods
-                    .filter(method => !String(method.name || '').toLowerCase().includes('smoke'))
-                    .filter(method => String(method.name || '').toLowerCase() !== 'tarjeta');
+                    .filter(method => /^(efectivo|sinpe)$/i.test(String(method.name || '')));
                 const methods = [
                     ...configuredMethods,
                     { id: 'paypal-gateway', name: 'PayPal', active: true, systemGateway: true }
@@ -491,16 +489,12 @@
                 const paymentLabels = {
                     'PayPal': 'PayPal',
                     'SINPE': 'SINPE Móvil',
-                    'Efectivo': 'Efectivo',
-                    'Transferencia': 'Transferencia bancaria',
-                    'Pendiente': 'Pago pendiente'
+                    'Efectivo': 'Efectivo'
                 };
                 const paymentDetails = {
                     'PayPal': 'Cobro en línea procesado por PayPal',
                     'SINPE': 'Pago por SINPE Móvil; se confirma al validarlo',
-                    'Efectivo': 'Cobro directo en caja',
-                    'Transferencia': 'Transferencia bancaria; se confirma al validarla',
-                    'Pendiente': 'Se cobrará al momento de la entrega'
+                    'Efectivo': 'Cobro directo en caja'
                 };
                 paymentPanel.innerHTML = methods.map(method => `
                     <div class="payment-method-card">

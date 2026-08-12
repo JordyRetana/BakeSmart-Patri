@@ -681,7 +681,11 @@ public sealed class SqlStore
             ORDER BY PaymentMethodId;
             """;
 
-        return await QueryAsync(sql, reader => reader.GetString("Name"));
+        return (await QueryAsync(sql, reader => reader.GetString("Name")))
+            .Where(name => name.Equals("Efectivo", StringComparison.OrdinalIgnoreCase)
+                        || name.Equals("SINPE", StringComparison.OrdinalIgnoreCase)
+                        || name.Equals("PayPal", StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     public async Task<object> DashboardAsync()
@@ -1623,7 +1627,7 @@ public sealed class SqlStore
             ORDER BY Name;
             """;
 
-        return await QueryAsync(sql, reader => new
+        var methods = await QueryAsync(sql, reader => new
         {
             id = reader.GetInt32("PaymentMethodId"),
             name = reader.GetString("Name"),
@@ -1631,6 +1635,13 @@ public sealed class SqlStore
             active = reader.GetBoolean("IsActive"),
             account = reader.GetString("Name")
         });
+
+        return methods
+            .Where(method => method.name.Equals("Efectivo", StringComparison.OrdinalIgnoreCase)
+                          || method.name.Equals("SINPE", StringComparison.OrdinalIgnoreCase)
+                          || method.name.Equals("PayPal", StringComparison.OrdinalIgnoreCase))
+            .Cast<object>()
+            .ToList();
     }
 
     public async Task<int> SavePaymentMethodAsync(PaymentMethodInput input, string? userEmail = null)
