@@ -1391,8 +1391,17 @@ public class ApiController : Controller
     private bool HasVerifiedPayPalCapture(JsonElement unit, decimal expectedTotal)
     {
         if (!unit.TryGetProperty("payments", out var payments) || !payments.TryGetProperty("captures", out var captures) || captures.GetArrayLength() == 0 ||
-            !captures[0].TryGetProperty("status", out var captureStatus) || !string.Equals(captureStatus.GetString(), "COMPLETED", StringComparison.OrdinalIgnoreCase) ||
-            !unit.TryGetProperty("amount", out var amount) || !amount.TryGetProperty("currency_code", out var currencyCode) || !amount.TryGetProperty("value", out var value)) return false;
+            !captures[0].TryGetProperty("status", out var captureStatus) || !string.Equals(captureStatus.GetString(), "COMPLETED", StringComparison.OrdinalIgnoreCase)) return false;
+
+        // La respuesta de captura Live trae el importe confirmado dentro de
+        // payments.captures[].amount. Algunas respuestas no repiten amount en
+        // purchase_units[], por lo que validar solo ese campo dejaba cobros
+        // reales sin conciliar localmente.
+        var capture = captures[0];
+        var amount = capture.TryGetProperty("amount", out var capturedAmount)
+            ? capturedAmount
+            : unit.TryGetProperty("amount", out var unitAmount) ? unitAmount : default;
+        if (amount.ValueKind != JsonValueKind.Object || !amount.TryGetProperty("currency_code", out var currencyCode) || !amount.TryGetProperty("value", out var value)) return false;
 
         var configuredCurrency = (_configuration["PayPal:Currency"] ?? "USD").ToUpperInvariant();
         var currency = configuredCurrency == "CRC" ? "USD" : configuredCurrency;
