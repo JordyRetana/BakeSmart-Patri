@@ -173,8 +173,7 @@
                     .filter(method => method.active)
                     .map(method => method.name);
 
-                const fallbackMethods = ['Efectivo', 'SINPE', 'PayPal'];
-                const methods = (activeMethods.length ? activeMethods : fallbackMethods)
+                const methods = [...new Set([...activeMethods, 'PayPal'])]
                     .filter(name => /^(efectivo|sinpe|paypal)$/i.test(String(name)));
                 const options = methods.map(name => `<option value="${name}">${name}</option>`).join('');
                 const checkoutPaymentMethod = document.getElementById('checkoutPaymentMethod');
