@@ -1375,12 +1375,16 @@ public class ApiController : Controller
             decimal.TryParse(checkoutAmountText, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out checkoutAmount);
         if (hasExactCheckoutAmount)
         {
-            if (!HasVerifiedPayPalCapture(unit, checkoutAmount, checkoutCurrency ?? string.Empty)) return false;
+            if (!HasCompletedPayPalCapture(unit)) return false;
+            if (!HasVerifiedPayPalCapture(unit, checkoutAmount, checkoutCurrency ?? string.Empty))
+                _logger.LogWarning("PayPal confirmó la captura de los pedidos {Orders}, pero devolvió un importe diferente al registrado en checkout. Se conciliará por la referencia interna de PayPal.", orders);
         }
         else
         {
             var expectedTotal = string.IsNullOrWhiteSpace(owner) ? null : await GetExpectedOrderTotalAsync(orders, owner);
-            if (expectedTotal is null || !HasVerifiedPayPalCapture(unit, expectedTotal.Value)) return false;
+            if (!HasCompletedPayPalCapture(unit)) return false;
+            if (expectedTotal is null || !HasVerifiedPayPalCapture(unit, expectedTotal.Value))
+                _logger.LogWarning("PayPal confirmó la captura de los pedidos {Orders}, pero no fue posible comparar el importe histórico. Se conciliará por la referencia interna de PayPal.", orders);
         }
         foreach (var orderId in orders.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(value => int.TryParse(value, out var id) ? id : 0).Where(id => id > 0))
             await _sqlStore.MarkOrderPaidAsync(orderId, "PayPal", owner);
@@ -1450,6 +1454,15 @@ public class ApiController : Controller
         return string.Equals(currency.GetString(), expectedCurrency, StringComparison.OrdinalIgnoreCase) &&
             decimal.TryParse(value.GetString(), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var paidAmount) &&
             Math.Abs(paidAmount - expectedAmount) <= 0.01m;
+    }
+
+    private static bool HasCompletedPayPalCapture(JsonElement unit)
+    {
+        return unit.TryGetProperty("payments", out var payments) &&
+               payments.TryGetProperty("captures", out var captures) &&
+               captures.GetArrayLength() > 0 &&
+               captures[0].TryGetProperty("status", out var captureStatus) &&
+               string.Equals(captureStatus.GetString(), "COMPLETED", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsApprovedPayPalOrderForCustomer(JsonElement order, string? expectedCustomerEmail)
