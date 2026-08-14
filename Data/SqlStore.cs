@@ -5090,6 +5090,7 @@ public sealed class SqlStore
                 v.Total,
                 pm.Name AS PaymentMethod,
                 c.FullName AS CustomerName,
+                COALESCE(o.Notes, '') AS Notes,
                 COALESCE(cs.CashSessionId, 0) AS CashSessionId,
                 COALESCE((SELECT GROUP_CONCAT(CONCAT(cb.Name, ' x', FORMAT(vc.Quantity, 0)) SEPARATOR ' Â· ')
                           FROM VentaCombos vc INNER JOIN Combos cb ON cb.ComboId = vc.ComboId
@@ -5129,6 +5130,7 @@ public sealed class SqlStore
                 v.Total,
                 pm.Name AS PaymentMethod,
                 c.FullName AS CustomerName,
+                COALESCE(o.Notes, N'') AS Notes,
                 COALESCE(cs.CashSessionId, 0) AS CashSessionId,
                 COALESCE((SELECT STRING_AGG(CONCAT(cb.Name, N' x', CONVERT(int, vc.Quantity)), N' Â· ')
                           FROM dbo.VentaCombos vc INNER JOIN dbo.Combos cb ON cb.ComboId = vc.ComboId
