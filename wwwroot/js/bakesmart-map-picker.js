@@ -67,10 +67,47 @@
         return response.json();
     }
 
-    async function geoReverse(lat, lng) {
-        const response = await fetch(`/api/geo/reverse?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`);
+    async function geoReverse(lat, lng, signal) {
+        const response = await fetch(`/api/geo/reverse?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`, { signal });
         if (!response.ok) throw new Error('No se pudo obtener la direccion del punto seleccionado.');
         return response.json();
+    }
+
+    function getAccuratePosition({ timeout = 18000, targetAccuracy = 80 } = {}) {
+        return new Promise((resolve, reject) => {
+            let bestPosition = null;
+            let watchId = null;
+            let settled = false;
+
+            const finish = (callback, value) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+                callback(value);
+            };
+
+            const timer = setTimeout(() => {
+                if (bestPosition) finish(resolve, bestPosition);
+                else finish(reject, { code: 3, message: 'Tiempo de ubicacion agotado.' });
+            }, timeout);
+
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const accuracy = Number(position.coords.accuracy);
+                    const bestAccuracy = Number(bestPosition?.coords?.accuracy);
+                    if (!bestPosition || !Number.isFinite(bestAccuracy) || accuracy < bestAccuracy) {
+                        bestPosition = position;
+                    }
+                    if (Number.isFinite(accuracy) && accuracy <= targetAccuracy) finish(resolve, position);
+                },
+                (error) => {
+                    if (bestPosition && error?.code !== 1) finish(resolve, bestPosition);
+                    else finish(reject, error);
+                },
+                { enableHighAccuracy: true, timeout, maximumAge: 0 }
+            );
+        });
     }
 
     class MapPicker {
@@ -81,6 +118,8 @@
             this.map = null;
             this.marker = null;
             this.disabled = false;
+            this.reverseRequest = null;
+            this.reverseRequestId = 0;
             this.values = {
                 label: options.label || '',
                 address: options.address || '',
@@ -190,6 +229,8 @@
         }
 
         setValues({ label, address, lat, lng } = {}) {
+            this.reverseRequest?.abort();
+            this.reverseRequestId++;
             if (label !== undefined) this.values.label = label;
             if (address !== undefined) this.values.address = address;
             if (lat !== undefined) this.values.lat = lat;
@@ -255,9 +296,7 @@
             const { lat, lng } = this.marker.getLatLng();
             this.values.lat = Number(lat.toFixed(6));
             this.values.lng = Number(lng.toFixed(6));
-            if (!String(this.values.address || '').trim()) {
-                this.values.address = `Ubicacion seleccionada (${this.values.lat.toFixed(6)}, ${this.values.lng.toFixed(6)})`;
-            }
+            this.values.address = `Ubicacion seleccionada (${this.values.lat.toFixed(6)}, ${this.values.lng.toFixed(6)})`;
             this.syncInputs();
             this.clearError();
             // Persist coordinates immediately. Reverse geocoding can take a moment and
@@ -265,11 +304,19 @@
             this.emitChange();
 
             if (updateAddress) {
+                this.reverseRequest?.abort();
+                this.reverseRequest = new AbortController();
+                const requestId = ++this.reverseRequestId;
                 try {
-                    const result = await geoReverse(this.values.lat, this.values.lng);
+                    const result = await geoReverse(this.values.lat, this.values.lng, this.reverseRequest.signal);
+                    if (requestId !== this.reverseRequestId) return;
                     this.values.address = result.displayName || this.values.address;
                     this.syncInputs();
-                } catch (_) { /* keep previous address */ }
+                } catch (error) {
+                    if (error?.name !== 'AbortError') {
+                        this.showError('Se guardaron las coordenadas exactas, pero no fue posible obtener el nombre de la direccion.');
+                    }
+                }
             }
 
             this.emitChange();
@@ -324,7 +371,7 @@
             this.emitChange();
         }
 
-        locateUser() {
+        async locateUser() {
             if (!navigator.geolocation) {
                 const message = 'Este navegador no permite obtener la ubicación actual. Selecciona el punto manualmente en el mapa.';
                 this.showError(message);
@@ -338,38 +385,43 @@
                 locateButton.disabled = true;
                 locateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando ubicación';
             }
-            this.showError('');
-            navigator.geolocation.getCurrentPosition(
-                async (position) => {
-                    this.values.lat = Number(position.coords.latitude.toFixed(6));
-                    this.values.lng = Number(position.coords.longitude.toFixed(6));
-                    this.values.address = '';
-                    this.setValues(this.values);
-                    await this.handleMarkerMoved();
-                    window.app?.toast?.success?.('Ubicación actualizada con la posición de este dispositivo.');
-                    if (locateButton) {
-                        locateButton.disabled = false;
-                        locateButton.innerHTML = originalContent;
-                    }
-                },
-                (error) => {
-                    const message = error?.code === error.PERMISSION_DENIED
-                        ? 'No se concedió permiso para usar la ubicación. Selecciona un punto manualmente en el mapa.'
-                        : error?.code === error.TIMEOUT
-                            ? 'La ubicación tardó demasiado. Intenta de nuevo o selecciona un punto en el mapa.'
-                            : 'No se pudo obtener la ubicación actual. Selecciona un punto manualmente en el mapa.';
+            this.clearError();
+
+            try {
+                const position = await getAccuratePosition();
+                const accuracy = Number(position.coords.accuracy);
+                if (Number.isFinite(accuracy) && accuracy > 1000) {
+                    const message = `El dispositivo solo dio una ubicación aproximada (margen de ${Math.round(accuracy)} m). Activa la ubicación precisa o selecciona el punto en el mapa.`;
                     this.showError(message);
                     window.app?.toast?.warning?.(message);
-                    if (locateButton) {
-                        locateButton.disabled = false;
-                        locateButton.innerHTML = originalContent;
-                    }
-                },
-                { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
-            );
+                    return;
+                }
+
+                this.values.lat = Number(position.coords.latitude.toFixed(6));
+                this.values.lng = Number(position.coords.longitude.toFixed(6));
+                this.values.address = '';
+                this.setValues(this.values);
+                await this.handleMarkerMoved();
+                const accuracyText = Number.isFinite(accuracy) ? ` (precisión aproximada: ${Math.round(accuracy)} m)` : '';
+                window.app?.toast?.success?.(`Ubicación actualizada con la posición de este dispositivo${accuracyText}.`);
+            } catch (error) {
+                const message = error?.code === error?.PERMISSION_DENIED || error?.code === 1
+                    ? 'No se concedió permiso para usar la ubicación. Selecciona el punto manualmente en el mapa.'
+                    : error?.code === error?.TIMEOUT || error?.code === 3
+                        ? 'La ubicación tardó demasiado. Intenta de nuevo o selecciona un punto en el mapa.'
+                        : 'No se pudo obtener la ubicación actual. Selecciona un punto manualmente en el mapa.';
+                this.showError(message);
+                window.app?.toast?.warning?.(message);
+            } finally {
+                if (locateButton) {
+                    locateButton.disabled = false;
+                    locateButton.innerHTML = originalContent;
+                }
+            }
         }
 
         destroy() {
+            this.reverseRequest?.abort();
             if (this.map) {
                 this.map.remove();
                 this.map = null;
