@@ -427,10 +427,11 @@
 
     .settings-block-card {
         border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 1rem;
+        border-radius: 18px;
+        padding: 1.15rem;
         background: var(--surface);
         box-shadow: var(--shadow-sm);
+        overflow: hidden;
     }
 
     .settings-block-card header {
@@ -456,14 +457,116 @@
 
     .settings-block-layout {
         display: grid;
-        grid-template-columns: 260px minmax(0, 1fr);
-        gap: 1rem;
+        grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
+        gap: 1.2rem;
+    }
+
+    .settings-block-image {
+        min-width: 0;
+    }
+
+    .settings-block-image > img {
+        box-shadow: 0 10px 28px rgba(43, 28, 76, .1);
+    }
+
+    .settings-block-media-actions {
+        display: flex;
+        gap: .65rem;
+        margin-top: .75rem;
+    }
+
+    .settings-block-media-actions .btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .settings-image-library {
+        position: relative;
+        margin-top: .65rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--primary) 3%, var(--surface));
+    }
+
+    .settings-image-library > summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .6rem;
+        min-height: 44px;
+        padding: .65rem .8rem;
+        color: var(--text);
+        font-size: .82rem;
+        font-weight: 800;
+        cursor: pointer;
+        list-style: none;
+    }
+
+    .settings-image-library > summary::-webkit-details-marker { display: none; }
+    .settings-image-library > summary::after {
+        content: '\f078';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        color: var(--primary);
+        transition: transform .18s ease;
+    }
+    .settings-image-library[open] > summary::after { transform: rotate(180deg); }
+
+    .settings-image-gallery {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: .5rem;
+        max-height: 236px;
+        overflow: auto;
+        padding: 0 .7rem .7rem;
+        scrollbar-width: thin;
+    }
+
+    .settings-image-choice {
+        position: relative;
+        min-width: 0;
+        aspect-ratio: 1 / .82;
+        padding: 0;
+        overflow: hidden;
+        border: 2px solid transparent;
+        border-radius: 10px;
+        background: var(--surface-muted);
+        cursor: pointer;
+    }
+
+    .settings-image-choice img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .settings-image-choice.active {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
+    }
+
+    .settings-image-choice.active::after {
+        content: '\f00c';
+        position: absolute;
+        right: 5px;
+        bottom: 5px;
+        display: grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: #fff;
+        font-family: 'Font Awesome 6 Free';
+        font-size: .68rem;
+        font-weight: 900;
     }
 
     .settings-block-fields {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 1rem;
+        gap: .9rem 1rem;
+        align-content: start;
     }
 
     .settings-block-fields .wide {
@@ -472,7 +575,7 @@
 
     .settings-icon-picker {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(46px, 1fr));
+        grid-template-columns: repeat(8, minmax(38px, 1fr));
         gap: .45rem;
     }
 
@@ -549,6 +652,14 @@
 
         .settings-image-actions {
             grid-template-columns: 1fr;
+        }
+
+        .settings-block-card header {
+            align-items: flex-start;
+        }
+
+        .settings-icon-picker {
+            grid-template-columns: repeat(5, minmax(40px, 1fr));
         }
     }
 </style>
@@ -654,6 +765,25 @@
                 ].join('');
             }
 
+            function renderImagePicker(selected = '') {
+                const images = [...new Set(['/img/products/producto-sin-imagen.svg', ...(catalogOptions.images || []), selected].filter(Boolean))];
+                return `
+                    <details class="settings-image-library">
+                        <summary><span><i class="fas fa-images"></i> Elegir de la galer&iacute;a</span></summary>
+                        <div class="settings-image-gallery">
+                            ${images.map((url, index) => `
+                                <button type="button"
+                                        class="settings-image-choice ${url === selected ? 'active' : ''}"
+                                        data-action="select-image"
+                                        data-url="${escapeAttr(url)}"
+                                        title="Imagen ${index + 1}">
+                                    <img src="${escapeAttr(url)}" alt="Imagen ${index + 1}" loading="lazy" onerror="this.src='/img/products/producto-sin-imagen.svg';" />
+                                </button>
+                            `).join('')}
+                        </div>
+                    </details>`;
+            }
+
             function renderLinkOptions(selected = '') {
                 const options = [
                     { value: '/Catalog', label: 'Catálogo completo' },
@@ -697,13 +827,13 @@
                         <div class="settings-block-layout">
                             <div class="settings-block-image">
                                 <img src="${escapeAttr(item.imageUrl || '/img/products/producto-sin-imagen.svg')}" alt="Vista previa" onerror="this.src='/img/products/producto-sin-imagen.svg';" />
-                                <div class="settings-image-actions" style="margin-top:.75rem;">
+                                <div class="settings-block-media-actions">
                                     <label class="btn btn-outline btn-sm">
-                                        <i class="fas fa-upload"></i> Subir
+                                        <i class="fas fa-upload"></i> Subir nueva
                                         <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-action="upload-image" hidden />
                                     </label>
-                                    <select class="form-control" data-action="select-image">${renderImageOptions(item.imageUrl)}</select>
                                 </div>
+                                ${renderImagePicker(item.imageUrl)}
                             </div>
                             <div class="settings-block-fields">
                                 <div>
@@ -778,11 +908,6 @@
                         return;
                     }
 
-                    if (event.target.dataset.action === 'select-image') {
-                        context.item.imageUrl = event.target.value;
-                        context.card.querySelector('.settings-block-image img').src = context.item.imageUrl || '/img/products/producto-sin-imagen.svg';
-                    }
-
                     if (event.target.dataset.action === 'select-link') {
                         context.item.linkUrl = event.target.value;
                     }
@@ -829,6 +954,15 @@
                         context.card.querySelectorAll('.settings-icon-option').forEach(button => button.classList.remove('active'));
                         iconButton.classList.add('active');
                         context.card.querySelector('header i').className = `fas ${context.item.icon}`;
+                        return;
+                    }
+
+                    const imageButton = event.target.closest('[data-action="select-image"]');
+                    if (imageButton) {
+                        context.item.imageUrl = imageButton.dataset.url || '';
+                        context.card.querySelector('.settings-block-image > img').src = context.item.imageUrl || '/img/products/producto-sin-imagen.svg';
+                        context.card.querySelectorAll('.settings-image-choice').forEach(button => button.classList.toggle('active', button === imageButton));
+                        imageButton.closest('details')?.removeAttribute('open');
                     }
                 });
             });
