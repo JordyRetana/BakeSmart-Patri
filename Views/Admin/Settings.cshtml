@@ -144,7 +144,9 @@
             </div>
             <p class="text-muted">Estos bloques alimentan la sección de ventajas del pedido.</p>
             <div id="benefitBlocksEditor" class="settings-block-editor"></div>
-            <button type="button" class="btn btn-outline" id="addBenefitBlock"><i class="fas fa-plus"></i> Agregar beneficio</button>
+            <div class="settings-editor-actions">
+                <button type="button" class="btn btn-outline" id="addBenefitBlock"><i class="fas fa-plus"></i> Agregar beneficio</button>
+            </div>
         </section>
 
         <section class="settings-module-panel" data-settings-panel="delivery">
@@ -425,6 +427,15 @@
         margin-bottom: 1rem;
     }
 
+    .settings-editor-actions {
+        display: flex;
+        align-items: center;
+        padding: .25rem 0 .75rem;
+        background: var(--surface);
+        position: relative;
+        z-index: 1;
+    }
+
     .settings-block-card {
         border: 1px solid var(--border);
         border-radius: 18px;
@@ -598,8 +609,8 @@
         display: flex;
         gap: 1rem;
         justify-content: flex-end;
-        position: sticky;
-        bottom: 1rem;
+        position: static;
+        margin-top: 1.25rem;
         background: var(--surface);
         padding: 1rem;
         border: 1px solid var(--border);
@@ -766,7 +777,7 @@
             }
 
             function renderImagePicker(selected = '') {
-                const images = [...new Set(['/img/products/producto-sin-imagen.svg', ...(catalogOptions.images || []), selected].filter(Boolean))];
+                const images = [...new Set(['/img/products/producto-sin-imagen.svg', ...(catalogOptions.images || [])].filter(Boolean))];
                 return `
                     <details class="settings-image-library">
                         <summary><span><i class="fas fa-images"></i> Elegir de la galer&iacute;a</span></summary>

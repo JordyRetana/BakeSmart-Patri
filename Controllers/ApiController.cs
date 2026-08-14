@@ -295,13 +295,40 @@ public class ApiController : Controller
                 .Select(path => "/" + Path.GetRelativePath(_environment.WebRootPath, path).Replace("\\", "/"))
             : Enumerable.Empty<string>();
 
-        var imageOptions = products
+        var imageCandidates = products
             .Select(product => product.ImageUrl)
             .Concat(staticImages)
             .Where(url => !string.IsNullOrWhiteSpace(url))
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(url => url)
-            .ToList();
+            .OrderBy(url => url);
+
+        // Distinct URLs can still point to byte-for-byte duplicate uploads. Keep one
+        // visual copy so the settings gallery remains useful and compact.
+        var imageOptions = new List<string>();
+        var imageSignatures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var url in imageCandidates)
+        {
+            var signature = url;
+            try
+            {
+                var relativeUrl = url.Split('?', '#')[0].TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+                var webRoot = Path.GetFullPath(_environment.WebRootPath);
+                var localPath = Path.GetFullPath(Path.Combine(webRoot, relativeUrl));
+                if (localPath.StartsWith(webRoot, StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(localPath))
+                {
+                    using var stream = System.IO.File.OpenRead(localPath);
+                    signature = Convert.ToHexString(SHA256.HashData(stream));
+                }
+            }
+            catch
+            {
+                // A remote or temporarily unavailable image is still a valid option;
+                // its normalized URL becomes the fallback identity.
+            }
+
+            if (imageSignatures.Add(signature))
+                imageOptions.Add(url);
+        }
 
         return Json(new
         {
