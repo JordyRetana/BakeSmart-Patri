@@ -273,12 +273,18 @@
 
         showError(message) {
             this.errorBox.textContent = message;
+            this.errorBox.classList.remove('is-notice');
             this.errorBox.classList.add('is-visible');
+        }
+
+        showNotice(message) {
+            this.errorBox.textContent = message;
+            this.errorBox.classList.add('is-visible', 'is-notice');
         }
 
         clearError() {
             this.errorBox.textContent = '';
-            this.errorBox.classList.remove('is-visible');
+            this.errorBox.classList.remove('is-visible', 'is-notice');
         }
 
         syncInputs() {
@@ -391,9 +397,11 @@
                 const position = await getAccuratePosition();
                 const accuracy = Number(position.coords.accuracy);
                 if (Number.isFinite(accuracy) && accuracy > 1000) {
-                    const message = `El dispositivo solo dio una ubicación aproximada (margen de ${Math.round(accuracy)} m). Activa la ubicación precisa o selecciona el punto en el mapa.`;
-                    this.showError(message);
-                    window.app?.toast?.warning?.(message);
+                    const accuracyLabel = accuracy >= 10000
+                        ? `${Math.round(accuracy / 1000)} km`
+                        : `${Math.round(accuracy)} m`;
+                    const message = `No cambiamos tu dirección porque este dispositivo compartió una ubicación aproximada (${accuracyLabel} de margen). La ubicación guardada se conserva; activa la ubicación precisa o ajusta el marcador en el mapa.`;
+                    this.showNotice(message);
                     return;
                 }
 
