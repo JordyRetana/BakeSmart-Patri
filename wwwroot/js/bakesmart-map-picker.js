@@ -326,18 +326,46 @@
 
         locateUser() {
             if (!navigator.geolocation) {
-                this.showError('Tu navegador no permite obtener la ubicacion actual.');
+                const message = 'Este navegador no permite obtener la ubicación actual. Selecciona el punto manualmente en el mapa.';
+                this.showError(message);
+                window.app?.toast?.warning?.(message);
                 return;
             }
 
+            const locateButton = this.container.querySelector('.map-picker-locate-btn');
+            const originalContent = locateButton?.innerHTML;
+            if (locateButton) {
+                locateButton.disabled = true;
+                locateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando ubicación';
+            }
+            this.showError('');
             navigator.geolocation.getCurrentPosition(
                 async (position) => {
                     this.values.lat = Number(position.coords.latitude.toFixed(6));
                     this.values.lng = Number(position.coords.longitude.toFixed(6));
+                    this.values.address = '';
                     this.setValues(this.values);
                     await this.handleMarkerMoved();
+                    window.app?.toast?.success?.('Ubicación actualizada con la posición de este dispositivo.');
+                    if (locateButton) {
+                        locateButton.disabled = false;
+                        locateButton.innerHTML = originalContent;
+                    }
                 },
-                () => this.showError('No se pudo obtener tu ubicacion. Selecciona un punto en el mapa.')
+                (error) => {
+                    const message = error?.code === error.PERMISSION_DENIED
+                        ? 'No se concedió permiso para usar la ubicación. Selecciona un punto manualmente en el mapa.'
+                        : error?.code === error.TIMEOUT
+                            ? 'La ubicación tardó demasiado. Intenta de nuevo o selecciona un punto en el mapa.'
+                            : 'No se pudo obtener la ubicación actual. Selecciona un punto manualmente en el mapa.';
+                    this.showError(message);
+                    window.app?.toast?.warning?.(message);
+                    if (locateButton) {
+                        locateButton.disabled = false;
+                        locateButton.innerHTML = originalContent;
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
             );
         }
 
