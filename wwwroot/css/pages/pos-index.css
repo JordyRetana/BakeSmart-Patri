@@ -39,6 +39,8 @@
 .hr { height:1px; margin:1rem 0; background:#eee8f1; }
 .payment-methods-panel { display:grid; gap:.55rem; padding:0 !important; border:0 !important; box-shadow:none !important; }
 .payment-method-card { padding:.7rem !important; border:1px solid #e9e2ee !important; border-radius:8px !important; background:#fff !important; }
+.payment-method-card--disabled { opacity:.74; background:#f8f6fb !important; cursor:not-allowed; }
+.payment-method-card--disabled .payment-method-actions { pointer-events:none; }
 .payment-method-row { display:flex; align-items:center; gap:.5rem; }
 .payment-method-row-between { justify-content:space-between; }
 .payment-method-name { color:#25293b; font-size:.76rem; font-weight:850; }

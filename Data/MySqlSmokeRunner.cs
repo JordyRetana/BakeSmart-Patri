@@ -69,30 +69,6 @@ internal static class MySqlSmokeRunner
             }
         }
 
-        if (string.Equals(Environment.GetEnvironmentVariable("BAKESMART_WRITE_SMOKE"), "true", StringComparison.OrdinalIgnoreCase))
-        {
-            var cashId = await store.OpenCashSessionAsync(1000m, "cajero@demo.com");
-            Console.WriteLine($"OK open-cash #{cashId}");
-
-            var product = (await store.CatalogProductsAsync()).First(p => p.Stock >= 1);
-            var orderId = await store.RegisterSaleAsync(new SqlStore.SaleInput(
-                "Cliente Smoke",
-                $"smoke-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}@local",
-                "60000000",
-                "Efectivo",
-                product.UnitPrice,
-                0,
-                Math.Round(product.UnitPrice * 0.13m, 2),
-                Math.Round(product.UnitPrice * 1.13m, 2),
-                "Prueba tecnica Aiven",
-                new[] { new SqlStore.SaleItemInput(product.Id, 1, product.UnitPrice) }),
-                "cajero@demo.com");
-            Console.WriteLine($"OK register-sale order=#{orderId}");
-
-            await store.CloseCashSessionAsync(cashId, 1000m, "cajero@demo.com");
-            Console.WriteLine($"OK close-cash #{cashId}");
-        }
-
         return 0;
     }
 }

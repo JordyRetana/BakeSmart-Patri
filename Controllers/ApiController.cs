@@ -801,6 +801,11 @@ public class ApiController : Controller
             if (request.Items is null || request.Items.Count == 0)
                 return BadRequest(new { message = "Debe incluir al menos un producto." });
 
+            var paymentMethod = request.PaymentMethod?.Trim() ?? string.Empty;
+            if (!string.Equals(paymentMethod, "Efectivo", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(paymentMethod, "SINPE", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { message = "En Punto de Venta solo se permiten efectivo o SINPE Móvil. El datáfono estará disponible próximamente." });
+
             var orderId = await _sqlStore.RegisterSaleAsync(request, CurrentUserEmail);
             return Ok(new { ok = true, id = orderId });
         }

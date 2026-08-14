@@ -323,7 +323,6 @@
                                 : nextActionLabel(order)
                                     ? `<a class="btn btn-primary" href="/Production" data-full-reload><i class="fas fa-kitchen-set"></i> ${clean(nextActionLabel(order))}</a>`
                                     : ''}
-                <a class="btn btn-outline" href="/Client/Track?id=${order.id}" data-full-reload><i class="fas fa-route"></i> Ver seguimiento</a>
                 <button class="btn btn-ghost orders-danger" onclick="deleteOrder(${order.id})">
                     <i class="fas fa-trash-can"></i> Eliminar pedido
                 </button>

@@ -361,7 +361,6 @@
             function renderSummary() {
                 const session = resolveActiveSession();
                 const products = getProducts();
-                const methods = getConfig().paymentMethods.filter(x => x.active);
                 document.querySelectorAll('.pos-promotion-select').forEach(select => {
                     const form = select.closest('form');
                     const email = form?.querySelector('[name="customerEmail"]')?.value?.trim().toLowerCase();
@@ -405,7 +404,6 @@
                                 <div><span>Saldo inicial</span><strong>${money(session.openingAmount)}</strong></div>
                                 <div><span>Ventas en efectivo</span><strong>${money(session.cashSales)}</strong></div>
                                 <div><span>SINPE</span><strong>${money(session.sinpeSales)}</strong></div>
-                                <div><span>PayPal</span><strong>${money(session.payPalSales || 0)}</strong></div>
                                 <div class="pos-close-summary__total"><span>Efectivo esperado</span><strong>${money(session.expectedCash)}</strong></div>
                             </div>
                             <div class="session-inline-actions">
@@ -476,23 +474,21 @@
             }
 
             function renderPaymentMethods() {
-                const configuredMethods = getConfig().paymentMethods
-                    .filter(method => /^(efectivo|sinpe)$/i.test(String(method.name || '')));
+                // The counter must not inherit old or web-only gateway settings.
+                // It can record only the two methods handled at the register.
                 const methods = [
-                    ...configuredMethods,
-                    { id: 'paypal-gateway', name: 'PayPal', active: true, systemGateway: true }
+                    { name: 'Efectivo', active: true },
+                    { name: 'SINPE', active: true }
                 ];
                 const paymentPanel = document.getElementById('paymentMethodsPanel');
                 const paymentSelect = document.getElementById('posPaymentMethod');
                 const paymentSelectDesktop = document.getElementById('posPaymentMethodDesktop');
 
                 const paymentLabels = {
-                    'PayPal': 'PayPal',
                     'SINPE': 'SINPE Móvil',
                     'Efectivo': 'Efectivo'
                 };
                 const paymentDetails = {
-                    'PayPal': 'Cobro en línea procesado por PayPal',
                     'SINPE': 'Pago por SINPE Móvil; se confirma al validarlo',
                     'Efectivo': 'Cobro directo en caja'
                 };
@@ -501,19 +497,21 @@
                         <div class="payment-method-row payment-method-row-between">
                                 <div>
                                     <div class="payment-method-name">${paymentLabels[method.name] || method.name}</div>
-                                    <div class="payment-method-account">${paymentDetails[method.name] || `Referencia: ${method.account}`} · ${method.systemGateway ? 'Pasarela configurada' : `Comisión: ${Number(method.commissionRate || 0).toFixed(2)}`}</div>
+                                    <div class="payment-method-account">${paymentDetails[method.name]}</div>
                                 </div>
-                            ${method.systemGateway
-                                ? `<span class="badge badge-success">Disponible</span>`
-                                : permissions.canManagePayments
-                                ? `<button class="badge ${method.active ? 'badge-success' : 'badge-warning'}" type="button" onclick="togglePaymentMethod(${method.id})">${method.active ? 'Activo' : 'Inactivo'}</button>`
-                                : `<span class="badge ${method.active ? 'badge-success' : 'badge-warning'}">${method.active ? 'Activo' : 'Inactivo'}</span>`}
+                            <span class="badge badge-success">Disponible</span>
                         </div>
                     </div>
-                `).join('');
+                `).join('') + `
+                    <div class="payment-method-card payment-method-card--disabled" aria-disabled="true">
+                        <div class="payment-method-row payment-method-row-between">
+                            <div><div class="payment-method-name"><i class="fas fa-credit-card"></i> Datáfono</div><div class="payment-method-account">Pago con datáfono: próximamente disponible</div></div>
+                            <span class="badge badge-warning">Próximamente</span>
+                        </div>
+                    </div>`;
 
                 const activeMethods = methods
-                    .filter(method => method.active && !method.systemGateway)
+                    .filter(method => method.active)
                     .map(method => `<option value="${method.name}">${method.name}</option>`)
                     .join('');
 

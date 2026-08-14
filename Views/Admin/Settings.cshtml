@@ -808,8 +808,18 @@
                     if (!context) return;
 
                     if (event.target.closest('[data-action="remove"]')) {
-                        content[context.type].splice(Number(context.card.dataset.index), 1);
-                        renderEditor(context.type);
+                        const label = context.item?.title || `este ${editors[context.type].label}`;
+                        app.modal.create({
+                            title: 'Eliminar elemento',
+                            message: `¿Desea eliminar “${label}”? Esta acción se aplicará al guardar la configuración.`,
+                            confirmText: 'Sí, eliminar',
+                            cancelText: 'Conservar',
+                            onConfirm: () => {
+                                content[context.type].splice(Number(context.card.dataset.index), 1);
+                                renderEditor(context.type);
+                                app.toast.info('Elemento eliminado. Guarde la configuración para publicar el cambio.');
+                            }
+                        });
                         return;
                     }
 

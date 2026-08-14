@@ -106,7 +106,6 @@
             <label>
                 <span>Metodo</span>
                 <select class="form-control" name="method" id="posGatewayMethod">
-                    <option>PayPal</option>
                     <option>SINPE</option>
                     <option>Efectivo</option>
                 </select>
@@ -115,7 +114,11 @@
                 <span id="posGatewayReferenceLabel">Referencia o titular</span>
                 <input class="form-control" name="holder" id="posGatewayReference" placeholder="Nombre, SINPE o referencia" required />
             </label>
-            <p class="pos-payment-modal__note">PayPal abre su pasarela oficial. SINPE y efectivo se registran para validación del negocio.</p>
+            <p class="pos-payment-modal__note">SINPE y efectivo se registran para validación del negocio.</p>
+            <div class="pos-payment-status" aria-disabled="true">
+                <span class="pos-payment-status__icon"><i class="fas fa-credit-card"></i></span>
+                <div><strong>Pago con datáfono: próximamente disponible</strong><small>Esta terminal no registra ni aprueba cobros todavía.</small></div>
+            </div>
             <button class="btn btn-primary pos-submit-btn" type="submit" id="posPaymentConfirmBtn">
                 <i class="fas fa-lock"></i>
                 Aprobar cobro
@@ -169,12 +172,7 @@
             }
 
             function renderPayments() {
-                const activeMethods = store.pos.config().paymentMethods
-                    .filter(method => method.active)
-                    .map(method => method.name);
-
-                const methods = [...new Set([...activeMethods, 'PayPal'])]
-                    .filter(name => /^(efectivo|sinpe|paypal)$/i.test(String(name)));
+                const methods = ['Efectivo', 'SINPE'];
                 const options = methods.map(name => `<option value="${name}">${name}</option>`).join('');
                 const checkoutPaymentMethod = document.getElementById('checkoutPaymentMethod');
                 const previousCheckoutMethod = checkoutPaymentMethod.value;
@@ -384,10 +382,6 @@
                     gatewayReferenceLabel.textContent = 'Referencia SINPE';
                     gatewayReference.placeholder = 'Telefono o comprobante SINPE';
                     gatewayReference.required = true;
-                } else if (method.includes('paypal')) {
-                    gatewayReferenceLabel.textContent = 'Pago protegido';
-                    gatewayReference.placeholder = 'PayPal abrirá su página oficial';
-                    gatewayReference.required = false;
                 } else {
                     gatewayReferenceLabel.textContent = 'Referencia del pago';
                     gatewayReference.placeholder = 'Referencia o detalle del cobro';
@@ -414,7 +408,6 @@
                 const method = String(selectedMethod).toLowerCase();
                 const normalizedMethod = method.includes('sinpe') ? 'SINPE'
                     : method.includes('efectivo') ? 'Efectivo'
-                    : method.includes('paypal') ? 'PayPal'
                     : 'Efectivo';
                 gatewayMethod.value = [...gatewayMethod.options].some(option => option.value === normalizedMethod)
                     ? normalizedMethod
@@ -468,17 +461,6 @@
             form.customerEmail.addEventListener('input', renderCart);
             form.customerName.addEventListener('input', renderCart);
             document.getElementById('checkoutPromotion').addEventListener('change', renderCart);
-
-            async function startPayPalCheckout(orderIds) {
-                const response = await fetch('/api/payments/paypal/checkout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ orderIds })
-                });
-                const result = await response.json().catch(() => ({}));
-                if (!response.ok || !result.url) throw new Error(result.message || 'No fue posible iniciar el pago seguro con PayPal.');
-                window.location.assign(result.url);
-            }
 
             async function completeCheckout(paymentData) {
                 try {
@@ -534,19 +516,6 @@
                 data.method = method;
                 if (!method) {
                     app.toast.error('Seleccione un metodo de pago.');
-                    return;
-                }
-                if (pendingOrder && method.toLowerCase().includes('paypal')) {
-                    try {
-                        paymentConfirmBtn.disabled = true;
-                        paymentConfirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirigiendo a PayPal';
-                        setPaymentStatus('processing', 'Abriendo pago seguro', 'Será redirigido a PayPal para completar el cobro.', 'fa-spinner fa-spin');
-                        await startPayPalCheckout([Number(pendingOrder.id)]);
-                    } catch (error) {
-                        app.toast.error(error.message || 'No fue posible iniciar el pago seguro.');
-                        paymentConfirmBtn.disabled = false;
-                        paymentConfirmBtn.innerHTML = '<i class="fas fa-lock"></i> Aprobar cobro';
-                    }
                     return;
                 }
                 if (!String(data.holder || '').trim()) {

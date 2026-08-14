@@ -873,6 +873,15 @@
         }
 
         function restoreConversation() {
+        // Never render stale technical content that may have been left by an older
+        // chatbot build in this tab's session storage.
+        const isSafeTranscriptItem = item => {
+        const text = String(item?.text || '');
+        return text.length <= 1400 && !/(box\.appendChild|function\s+addNavigation|const\s+typingEl|<script|<\/script)/i.test(text);
+        };
+        transcript = transcript.filter(isSafeTranscriptItem);
+        history = history.filter(item => !/(box\.appendChild|function\s+addNavigation|const\s+typingEl|<script|<\/script)/i.test(String(item?.content || '')));
+        saveHistory();
         transcript.forEach(item => renderMessage(item.role, item.text));
         if (sessionStorage.getItem(widgetStateKey) === 'true' && transcript.length) {
         widget.classList.add('open');
