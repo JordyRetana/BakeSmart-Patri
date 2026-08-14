@@ -831,9 +831,21 @@
         const box = document.getElementById('chat-box');
         const input = document.getElementById('chat-input');
         const sendBtn = document.getElementById('chat-send');
-        const historyKey = 'bakesmart:richie-history';
-        const transcriptKey = 'bakesmart:richie-transcript';
-        const widgetStateKey = 'bakesmart:richie-widget-open';
+        const historyKey = 'bakesmart:richie-history-v2';
+        const transcriptKey = 'bakesmart:richie-transcript-v2';
+        const widgetStateKey = 'bakesmart:richie-widget-open-v2';
+        const legacyKeys = ['bakesmart:richie-history', 'bakesmart:richie-transcript', 'bakesmart:richie-widget-open'];
+        legacyKeys.forEach(key => {
+        sessionStorage.removeItem(key);
+        localStorage.removeItem(key);
+        });
+        const isUnsafeTechnicalText = value => {
+        const text = String(value || '');
+        return text.length > 1400 || /(?:<!doctype|<\/?html|<\/?head|<\/?body|<\/?script|box\.appendChild|function\s+addNavigation|const\s+typingEl|window\.location\.pathname)/i.test(text);
+        };
+        const safeChatText = value => isUnsafeTechnicalText(value)
+        ? 'Richie no pudo procesar esa respuesta. Intenta nuevamente en un momento.'
+        : String(value || '');
         let history = [];
         let transcript = [];
         let requestedQuantity = 1;
@@ -866,7 +878,7 @@
         function renderMessage(role, text) {
         const div = document.createElement('div');
         div.className = 'msg ' + role;
-        div.textContent = text;
+        div.textContent = safeChatText(text);
         box.appendChild(div);
         box.scrollTop = box.scrollHeight;
         return div;
@@ -875,12 +887,9 @@
         function restoreConversation() {
         // Never render stale technical content that may have been left by an older
         // chatbot build in this tab's session storage.
-        const isSafeTranscriptItem = item => {
-        const text = String(item?.text || '');
-        return text.length <= 1400 && !/(box\.appendChild|function\s+addNavigation|const\s+typingEl|<script|<\/script)/i.test(text);
-        };
+        const isSafeTranscriptItem = item => !isUnsafeTechnicalText(item?.text);
         transcript = transcript.filter(isSafeTranscriptItem);
-        history = history.filter(item => !/(box\.appendChild|function\s+addNavigation|const\s+typingEl|<script|<\/script)/i.test(String(item?.content || '')));
+        history = history.filter(item => !isUnsafeTechnicalText(item?.content));
         saveHistory();
         transcript.forEach(item => renderMessage(item.role, item.text));
         if (sessionStorage.getItem(widgetStateKey) === 'true' && transcript.length) {
@@ -901,9 +910,10 @@
         });
 
         function addMsg(role, text) {
-        const div = renderMessage(role, text);
+        const normalizedText = safeChatText(text);
+        const div = renderMessage(role, normalizedText);
         if (role !== 'typing') {
-        transcript.push({ role, text });
+        transcript.push({ role, text: normalizedText });
         saveHistory();
         }
         return div;
@@ -1023,12 +1033,15 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: msg, history, page: window.location.pathname })
         });
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) throw new Error('Respuesta no válida del asistente.');
         const data = await res.json();
         typingEl.remove();
         if (!res.ok) throw new Error(data.message || 'Richie no pudo responder.');
-        history.push({ role: 'user', content: msg }, { role: 'assistant', content: data.reply });
+        const reply = safeChatText(data.reply);
+        history.push({ role: 'user', content: msg }, { role: 'assistant', content: reply });
         saveHistory();
-        addMsg('bot', data.reply);
+        addMsg('bot', reply);
         addProductTable(data.products);
         addNavigation(data.navigation);
         } catch (err) {

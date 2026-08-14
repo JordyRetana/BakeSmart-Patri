@@ -323,6 +323,10 @@
             const checkoutForm = document.getElementById('posCheckoutForm');
             const cart = [];
             const fmt = app.utils.formatCurrency;
+            const methods = [
+                { name: 'Efectivo', active: true },
+                { name: 'SINPE', active: true }
+            ];
             let recentSales = [];
             const permissions = {
                 canManagePayments: @canManagePayments.ToString().ToLowerInvariant(),
@@ -476,10 +480,6 @@
             function renderPaymentMethods() {
                 // The counter must not inherit old or web-only gateway settings.
                 // It can record only the two methods handled at the register.
-                const methods = [
-                    { name: 'Efectivo', active: true },
-                    { name: 'SINPE', active: true }
-                ];
                 const paymentPanel = document.getElementById('paymentMethodsPanel');
                 const paymentSelect = document.getElementById('posPaymentMethod');
                 const paymentSelectDesktop = document.getElementById('posPaymentMethodDesktop');
@@ -548,7 +548,7 @@
 
             function renderProducts() {
                 const products = getProducts();
-                const combos = store.combos.list().filter(combo => combo.active);
+                const combos = store.combos.list().filter(combo => combo.active && Array.isArray(combo.items) && combo.items.length);
                 const productsGrid = document.getElementById('posProductsGrid');
                 const tableBody = document.getElementById('posProductsTable');
                 const combosGrid = document.getElementById('posCombosGrid');
