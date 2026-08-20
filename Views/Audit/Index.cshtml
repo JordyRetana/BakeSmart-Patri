@@ -54,7 +54,7 @@
             </div>
             <div class="audit-table-wrap">
                 <table>
-                    <thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Accion</th><th>Detalle</th></tr></thead>
+                    <thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr></thead>
                     <tbody id="auditRows"></tbody>
                 </table>
             </div>
@@ -72,12 +72,36 @@
     const period = document.getElementById('auditPeriod');
     const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[char]));
     const label = value => String(value || 'SISTEMA').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+    const friendlyAction = (typeValue, detailValue) => {
+        const action = String(typeValue || 'SISTEMA').toUpperCase();
+        const detail = String(detailValue || '');
+        if (/\/Account\/Logout/i.test(detail)) return 'Cierre de sesión';
+        if (/\/Account\/Login/i.test(detail) || action === 'LOGIN') return 'Inicio de sesión';
+        if (/\/api\/payments\/paypal\/checkout/i.test(detail)) return 'Pago con PayPal';
+        if (/\/api\/orders(?:\/?$|\?)/i.test(detail)) return 'Creación de pedido';
+        if (/\/api\/orders\/\d+\/advance-delivery/i.test(detail)) return 'Avance de entrega';
+        if (/\/api\/production\/\d+\/advance/i.test(detail)) return 'Avance de producción';
+        if (action === 'OPERACION_API' || action === 'OPERACIÓN_API') return 'Operación del sistema';
+        return label(typeValue);
+    };
     const friendlyDetail = value => {
         const detail = String(value || '');
+        if (/^POST \/Account\/Logout$/i.test(detail)) return 'El usuario cerró su sesión de forma segura.';
+        if (/^POST \/Account\/Login$/i.test(detail)) return 'Se procesó el inicio de sesión del usuario.';
+        if (/^POST \/api\/payments\/paypal\/checkout$/i.test(detail)) return 'Se inició la validación segura de un pago con PayPal.';
+        if (/^POST \/api\/orders\/?$/i.test(detail)) return 'Se registró un nuevo pedido en el sistema.';
         const production = detail.match(/^POST \/api\/production\/(\d+)\/advance$/i);
         if (production) return `El pedido #${production[1]} avanzó al siguiente estado de producción.`;
         const delivery = detail.match(/^POST \/api\/orders\/(\d+)\/advance-delivery$/i);
         if (delivery) return `El pedido #${delivery[1]} avanzó en el proceso de entrega.`;
+        const apiCall = detail.match(/^(GET|POST|PUT|PATCH|DELETE) \/api\/(.+)$/i);
+        if (apiCall) {
+            const operation = ({ GET:'Se consultó', POST:'Se registró', PUT:'Se actualizó', PATCH:'Se actualizó', DELETE:'Se eliminó' })[apiCall[1].toUpperCase()];
+            const resource = apiCall[2].split(/[/?]/).filter(Boolean).filter(part => !/^\d+$/.test(part)).join(' ').replaceAll('-', ' ');
+            return `${operation} información de ${resource || 'la aplicación'}.`;
+        }
+        const internalCall = detail.match(/^(GET|POST|PUT|PATCH|DELETE) \/(.+)$/i);
+        if (internalCall) return 'Se realizó una operación interna de la aplicación.';
         return detail;
     };
 
@@ -112,7 +136,7 @@
             return `<tr>
                 <td><strong>${date.toLocaleDateString('es-CR')}</strong><span>${date.toLocaleTimeString('es-CR', { hour:'2-digit', minute:'2-digit' })}</span></td>
                 <td><div class="audit-user"><b>${esc(item.userName)}</b><small>${esc(item.userEmail)}</small></div></td>
-                <td><span class="audit-action"><i class="fas ${categoryIcon(item.type)}"></i>${esc(label(item.type))}</span></td>
+                <td><span class="audit-action"><i class="fas ${categoryIcon(`${item.type} ${item.detail}`)}"></i>${esc(friendlyAction(item.type, item.detail))}</span></td>
                 <td>${esc(friendlyDetail(item.detail))}</td>
             </tr>`;
         }).join('') || '<tr><td colspan="4"><div class="audit-empty"><i class="fas fa-magnifying-glass"></i><strong>No hay movimientos para estos filtros</strong><span>Prueba otra busqueda o periodo.</span></div></td></tr>';
@@ -124,7 +148,7 @@
         if (!response.ok) throw new Error('No fue posible cargar la bitacora.');
         logs = await response.json();
         const types = [...new Set(logs.map(item => item.type).filter(Boolean))].sort();
-        type.innerHTML = '<option value="">Todos los tipos</option>' + types.map(value => `<option value="${esc(value)}">${esc(label(value))}</option>`).join('');
+        type.innerHTML = '<option value="">Todos los tipos</option>' + types.map(value => `<option value="${esc(value)}">${esc(friendlyAction(value, ''))}</option>`).join('');
         const today = new Date().toDateString();
         document.getElementById('auditTotal').textContent = logs.length;
         document.getElementById('auditUsers').textContent = new Set(logs.map(item => item.userEmail)).size;
