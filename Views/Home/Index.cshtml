@@ -6,6 +6,7 @@
     var isAdmin = User?.IsInRole("Admin") ?? false;
     var isStaff = User?.IsInRole("Staff") ?? false;
     var isClient = User?.IsInRole("Cliente") ?? false;
+    var showStorefront = !isAuth || string.Equals(Context.Request.Query["vista"], "tienda", StringComparison.OrdinalIgnoreCase);
     var culture = new System.Globalization.CultureInfo("es-CR");
     var products = Model.Products
         .Where(product => product.IsActive)
@@ -60,7 +61,7 @@
     }
 }
 
-@if (!isAuth)
+@if (showStorefront)
 {
     <div class="storefront-page">
         <section class="storefront-hero">
@@ -283,7 +284,7 @@ else
 }
 
 @section Scripts {
-    @if (!isAuth)
+    @if (showStorefront)
     {
         <script>
         (() => {
