@@ -1,0 +1,55 @@
+/* Ajustes compartidos para mantener retículas amplias, legibles y sin superposición. */
+body[data-page="/home/about"] .story-page,
+body[data-page="/home/contact"] .contact-page {
+    width: min(1540px, calc(100% - 2rem));
+    max-width: none;
+}
+
+body[data-page="/home/about"] .story-hero,
+body[data-page="/home/contact"] .contact-hero {
+    width: 100%;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+}
+
+.story-hero > *,
+.contact-hero > *,
+.contact-layout > *,
+.contact-details > a > span,
+.contact-details > div > span {
+    min-width: 0;
+}
+
+.story-hero h1,
+.contact-hero h1,
+.contact-details strong {
+    overflow-wrap: anywhere;
+}
+
+body[data-page="/home/contact"] .contact-layout {
+    grid-template-columns: minmax(340px, .8fr) minmax(0, 1.2fr);
+}
+
+body[data-page="/home/contact"] .contact-details > a,
+body[data-page="/home/contact"] .contact-details > div {
+    grid-template-columns: 40px minmax(0, 1fr) 24px;
+}
+
+@media (max-width: 1100px) {
+    body[data-page="/home/about"] .story-hero,
+    body[data-page="/home/contact"] .contact-hero,
+    body[data-page="/home/contact"] .contact-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .story-hero h1,
+    .contact-hero h1 {
+        font-size: clamp(2.4rem, 8vw, 4.8rem);
+    }
+}
+
+@media (max-width: 600px) {
+    body[data-page="/home/about"] .story-page,
+    body[data-page="/home/contact"] .contact-page {
+        width: calc(100% - 1rem);
+    }
+}

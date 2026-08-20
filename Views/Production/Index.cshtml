@@ -14,7 +14,7 @@
         </div>
         <span class="badge badge-info">
             <i class="fas fa-calendar-day"></i>
-            @DateTime.Now.ToString("dddd, dd MMM", new System.Globalization.CultureInfo("es-ES"))
+            @BusinessClock.Now.ToString("dddd, dd MMM", new System.Globalization.CultureInfo("es-CR"))
         </span>
     </div>
 
@@ -80,7 +80,7 @@
                     <i class="fas fa-clock" style="color:var(--primary);"></i>
                     Programacion del dia
                 </h3>
-                <span class="badge badge-info">@DateTime.Now.ToString("dd/MM/yyyy")</span>
+                <span class="badge badge-info">@BusinessClock.Now.ToString("dd/MM/yyyy")</span>
             </div>
             <div id="productionSchedule" style="display:flex;flex-direction:column;gap:1rem;">
                 <div class="text-muted">Cargando programacion...</div>

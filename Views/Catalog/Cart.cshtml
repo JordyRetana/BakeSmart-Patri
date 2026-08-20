@@ -74,7 +74,11 @@
         }
         return result;
     }
-    function save() { localStorage.setItem(activeKey, JSON.stringify(items)); render(); }
+    function notifyCartChanged() {
+        const count = items.reduce((total, item) => total + Math.max(1, Number(item?.quantity || 1)), 0);
+        window.dispatchEvent(new CustomEvent('bakesmart:cart-updated', { detail: { count } }));
+    }
+    function save() { localStorage.setItem(activeKey, JSON.stringify(items)); render(); notifyCartChanged(); }
     function render() {
         const valid = items.map(item => item.isCombo
             ? { ...item, product: { name: item.name || 'Combo', code: `COMBO-${item.comboId}`, imageUrl: item.imageUrl || '/img/products/producto-sin-imagen.svg' } }
@@ -108,7 +112,7 @@
         if (!authenticated) { window.location.href = `/Account/Login?ReturnUrl=${encodeURIComponent('/Catalog/Cart')}`; return; }
         window.location.href = '/Client?cart=checkout';
     });
-    items = read(); render();
+    items = read(); render(); notifyCartChanged();
 })();
 </script>
 }

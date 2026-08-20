@@ -79,6 +79,7 @@
     <link rel="stylesheet" href="~/css/global/icon-fallbacks.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
     <link rel="stylesheet" href="~/css/final-polish.css?v=20260810-popular-text-v4" />
+    <link rel="stylesheet" href="~/css/pages/ui-fixes.css" asp-append-version="true" />
     <style>
         
         @@keyframes slideIn {
@@ -224,7 +225,7 @@
                         <a href="/Account/Login"><i class="far fa-user"></i><span>Mi cuenta</span></a>
                         <a href="/Catalog/Favorites"><i class="far fa-heart"></i><span>Favoritos</span></a>
                     }
-                    <a href="/Catalog/Cart" data-store-cart-link><i class="fas fa-cart-shopping"></i><span>Carrito</span></a>
+                    <a href="/Catalog/Cart" data-store-cart-link class="storefront-cart-link"><i class="fas fa-cart-shopping"></i><span>Carrito</span><b data-store-cart-count hidden>0</b></a>
                     <button class="storefront-theme theme-toggle" type="button" onclick="window.app.theme.toggle()" aria-label="Cambiar tema"><i class="fas fa-moon"></i></button>
                 </div>
             </div>
@@ -963,6 +964,9 @@
                 else cart.push({ ...product, quantity: qty });
 
                 localStorage.setItem(key, JSON.stringify(cart));
+                window.dispatchEvent(new CustomEvent('bakesmart:cart-updated', {
+                    detail: { count: cart.reduce((total, row) => total + Math.max(1, Number(row?.quantity || 1)), 0) }
+                }));
                 card.remove();
                 const cartQuantity = cart.reduce((total, cartItem) => total + Number(cartItem.quantity || 0), 0);
                 const cartTotal = cart.reduce((total, cartItem) => total + Number(cartItem.price || 0) * Number(cartItem.quantity || 0), 0);
@@ -1052,6 +1056,30 @@
 
         sendBtn.addEventListener('click', send);
         input.addEventListener('keypress', e => { if (e.key === 'Enter') send(); });
+        })();
+    </script>
+    <script>
+        (() => {
+            const email = (document.body.dataset.userEmail || '').trim().toLowerCase() || 'guest';
+            const storageKey = `bakesmart:catalog-cart:${email}`;
+            const countItems = () => {
+                try {
+                    const items = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                    return Array.isArray(items)
+                        ? items.reduce((total, item) => total + Math.max(1, Number(item?.quantity || 1)), 0)
+                        : 0;
+                } catch { return 0; }
+            };
+            const renderCount = explicitCount => {
+                const count = Number.isFinite(Number(explicitCount)) ? Number(explicitCount) : countItems();
+                document.querySelectorAll('[data-store-cart-count]').forEach(badge => {
+                    badge.textContent = String(count);
+                    badge.hidden = count <= 0;
+                });
+            };
+            window.addEventListener('bakesmart:cart-updated', event => renderCount(event.detail?.count));
+            window.addEventListener('storage', event => { if (event.key === storageKey) renderCount(); });
+            renderCount();
         })();
     </script>
 </body>

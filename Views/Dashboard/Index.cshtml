@@ -21,7 +21,7 @@
     var roleSubtitle = isAdmin ? "Una lectura completa de ventas, pedidos, inventario y operación." : isCashier ? "Controla caja, pedidos y cobros desde un espacio enfocado." : isBaker ? "Organiza la producción y anticipa necesidades de inventario." : isSupervisor ? "Supervisa el rendimiento de cada área y toma decisiones con datos." : "Coordina pedidos y el trabajo diario desde un solo lugar.";
     var roleIcon = isAdmin ? "fa-crown" : isCashier ? "fa-cash-register" : isBaker ? "fa-cake-candles" : isSupervisor ? "fa-chart-line" : "fa-store";
     var displayName = User?.FindFirst("FullName")?.Value ?? User?.Identity?.Name ?? roleLabel;
-    var todayLabel = DateTime.Now.ToString("dddd, dd 'de' MMMM", new System.Globalization.CultureInfo("es-CR"));
+    var todayLabel = BusinessClock.Now.ToString("dddd, dd 'de' MMMM", new System.Globalization.CultureInfo("es-CR"));
 }
 
 @section Styles {

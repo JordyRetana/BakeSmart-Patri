@@ -51,6 +51,51 @@
     margin: 0 auto 2rem;
 }
 
+/* Mantiene el encabezado, buscador y catálogo dentro de la misma retícula. */
+body[data-page="/catalog"] .catalog-page-header,
+body[data-page="/catalog"] .catalog-page-content {
+    width: min(1480px, calc(100% - 2rem)) !important;
+    max-width: none !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+body[data-page="/catalog"] .catalog-page-header {
+    margin-top: 1.5rem !important;
+    margin-bottom: 1rem !important;
+}
+
+body[data-page="/catalog"] .catalog-page-content {
+    padding: 0 !important;
+}
+
+body[data-page="/catalog"] .catalog-toolbar {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 0 1.25rem !important;
+    padding: 1rem !important;
+}
+
+.storefront-cart-link { position: relative; }
+
+.storefront-cart-link [data-store-cart-count] {
+    position: absolute;
+    top: -.35rem;
+    right: -.45rem;
+    min-width: 1.35rem;
+    height: 1.35rem;
+    padding: 0 .3rem;
+    display: inline-grid;
+    place-items: center;
+    border: 2px solid var(--surface, #fff);
+    border-radius: 999px;
+    background: var(--secondary, #c83c86);
+    color: #fff;
+    font-size: .68rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
 .catalog-search-row {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) 56px auto;
@@ -470,6 +515,11 @@ body.catalog-sidebar-open {
 }
 
 @media (max-width: 520px) {
+    body[data-page="/catalog"] .catalog-page-header,
+    body[data-page="/catalog"] .catalog-page-content {
+        width: calc(100% - 1rem);
+    }
+
     .catalog-categories-sidebar {
         width: 100vw;
     }

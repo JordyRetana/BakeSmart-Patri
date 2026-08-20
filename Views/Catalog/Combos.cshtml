@@ -52,6 +52,9 @@
             });
         }
         localStorage.setItem(key, JSON.stringify(cart));
+        window.dispatchEvent(new CustomEvent('bakesmart:cart-updated', {
+            detail: { count: cart.reduce((total, row) => total + Math.max(1, Number(row?.quantity || 1)), 0) }
+        }));
         window.location.href = '/Catalog/Cart';
     }
 </script>

@@ -213,6 +213,8 @@
     .settings-admin-page {
         display: grid;
         gap: 1rem;
+        width: 100%;
+        max-width: none;
     }
 
     .settings-admin-header {
@@ -241,7 +243,7 @@
 
     .settings-module-tabs {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
         gap: .75rem;
         padding: .75rem;
         border: 1px solid var(--border);
@@ -271,8 +273,13 @@
     }
 
     .settings-page-card {
-        max-width: 1220px;
+        width: 100%;
+        max-width: none;
         padding: 1.5rem;
+    }
+
+    .settings-module-panel[data-settings-panel="general"] > .settings-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .settings-module-panel {
@@ -648,6 +655,10 @@
 
         .settings-hero-editor,
         .settings-block-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .settings-module-panel[data-settings-panel="general"] > .settings-grid {
             grid-template-columns: 1fr;
         }
     }

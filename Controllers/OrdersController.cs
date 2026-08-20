@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace BakeSmartPatri.Controllers
 {
-    [Authorize(Policy = "AnyUser")]
+    [Authorize]
     public class OrdersController : Controller
     {
         private readonly SqlStore _sqlStore;

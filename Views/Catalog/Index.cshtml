@@ -5,7 +5,7 @@
     var culture = new System.Globalization.CultureInfo("es-CR");
 }
 
-<div class="page-header" style="margin: 2rem 0 2.5rem 1.5rem;">
+<div class="page-header catalog-page-header">
     <div>
         <div style="display: flex; align-items: center; gap: 0.75rem;">
             <div style="width: 5px; height: 50px; background: var(--gradient-primary); border-radius: 5px;"></div>
@@ -23,12 +23,12 @@
     <div style="display: flex; gap: 1rem; margin-right: 1.5rem;">
         <span class="badge badge-primary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
             <i class="fas fa-box-open"></i>
-            @DateTime.Now.ToString("dddd, dd MMM", new System.Globalization.CultureInfo("es-ES"))
+            @BusinessClock.Now.ToString("dddd, dd MMM", new System.Globalization.CultureInfo("es-CR"))
         </span>
     </div>
 </div>
 
-<div style="padding: 0 1.5rem;">
+<div class="catalog-page-content">
     <div class="catalog-toolbar">
         <div class="catalog-search-row" style="display: flex; gap: 0.5rem;">
             <div class="catalog-search-field" style="flex: 1; position: relative;">
@@ -444,6 +444,11 @@
         if (cartTotalDesktop) cartTotalDesktop.textContent = `₡${total.toLocaleString('es-CR')}`;
         cartItems.innerHTML = cartHtml;
         if (cartItemsDesktop) cartItemsDesktop.innerHTML = cartHtml;
+        document.querySelectorAll('[data-store-cart-count]').forEach(element => {
+            element.textContent = count;
+            element.hidden = count === 0;
+        });
+        window.dispatchEvent(new CustomEvent('bakesmart:cart-updated', { detail: { count } }));
 
         shouldAutoOpenCart = false;
     }

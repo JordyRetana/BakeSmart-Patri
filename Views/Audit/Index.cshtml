@@ -72,6 +72,14 @@
     const period = document.getElementById('auditPeriod');
     const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[char]));
     const label = value => String(value || 'SISTEMA').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+    const friendlyDetail = value => {
+        const detail = String(value || '');
+        const production = detail.match(/^POST \/api\/production\/(\d+)\/advance$/i);
+        if (production) return `El pedido #${production[1]} avanzó al siguiente estado de producción.`;
+        const delivery = detail.match(/^POST \/api\/orders\/(\d+)\/advance-delivery$/i);
+        if (delivery) return `El pedido #${delivery[1]} avanzó en el proceso de entrega.`;
+        return detail;
+    };
 
     function categoryIcon(value) {
         const item = String(value || '');
@@ -105,7 +113,7 @@
                 <td><strong>${date.toLocaleDateString('es-CR')}</strong><span>${date.toLocaleTimeString('es-CR', { hour:'2-digit', minute:'2-digit' })}</span></td>
                 <td><div class="audit-user"><b>${esc(item.userName)}</b><small>${esc(item.userEmail)}</small></div></td>
                 <td><span class="audit-action"><i class="fas ${categoryIcon(item.type)}"></i>${esc(label(item.type))}</span></td>
-                <td>${esc(item.detail)}</td>
+                <td>${esc(friendlyDetail(item.detail))}</td>
             </tr>`;
         }).join('') || '<tr><td colspan="4"><div class="audit-empty"><i class="fas fa-magnifying-glass"></i><strong>No hay movimientos para estos filtros</strong><span>Prueba otra busqueda o periodo.</span></div></td></tr>';
     }

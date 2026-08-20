@@ -88,7 +88,7 @@
 
                 <div class="input-group">
                     <label class="input-label"><i class="fas fa-calendar"></i> Fecha de entrega *</label>
-                    <input type="date" class="input" name="entrega" required min="@DateTime.Now.ToString("yyyy-MM-dd")">
+                    <input type="date" class="input" name="entrega" required min="@BusinessClock.Now.ToString("yyyy-MM-dd")">
                 </div>
 
                 <div class="input-group">
