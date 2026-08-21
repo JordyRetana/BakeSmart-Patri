@@ -1134,6 +1134,10 @@ public class ApiController : Controller
             return BadRequest(new { message = string.IsNullOrWhiteSpace(detail) ? "PayPal no pudo iniciar el cobro." : $"PayPal rechazó el cobro: {detail}" });
         }
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var providerOrderId = document.RootElement.TryGetProperty("id", out var providerId) ? providerId.GetString() : null;
+        if (string.IsNullOrWhiteSpace(providerOrderId))
+            return BadRequest(new { message = "PayPal no devolvió una referencia válida para el cobro." });
+        await _sqlStore.SavePayPalCheckoutAsync(providerOrderId, ids, email, paypalTotal, currency);
         var approvalLink = document.RootElement.GetProperty("links").EnumerateArray()
             .FirstOrDefault(link => link.TryGetProperty("rel", out var rel) &&
                 (string.Equals(rel.GetString(), "payer-action", StringComparison.OrdinalIgnoreCase) ||
@@ -1286,9 +1290,11 @@ public class ApiController : Controller
             var paypalOrderId = orderId.GetString();
             if (string.IsNullOrWhiteSpace(paypalOrderId)) return BadRequest();
             var orderResponse = await client.GetAsync($"{baseUrl}/v2/checkout/orders/{Uri.EscapeDataString(paypalOrderId)}");
-            if (!orderResponse.IsSuccessStatusCode) return BadRequest();
+            if (!orderResponse.IsSuccessStatusCode)
+                return await ConfirmPayPalCaptureEventAsync(resource, paypalOrderId) ? Ok() : StatusCode(StatusCodes.Status503ServiceUnavailable);
             using var orderDocument = JsonDocument.Parse(await orderResponse.Content.ReadAsStringAsync());
-            return await ConfirmPayPalOrderAsync(orderDocument.RootElement, null) ? Ok() : BadRequest();
+            if (await ConfirmPayPalOrderAsync(orderDocument.RootElement, null)) return Ok();
+            return await ConfirmPayPalCaptureEventAsync(resource, paypalOrderId) ? Ok() : BadRequest();
         }
     }
 
@@ -1422,6 +1428,7 @@ public class ApiController : Controller
         if (!order.TryGetProperty("status", out var paymentStatus) || paymentStatus.GetString() != "COMPLETED" ||
             !order.TryGetProperty("purchase_units", out var units) || units.GetArrayLength() == 0) return false;
         var unit = units[0];
+        var providerOrderId = order.TryGetProperty("id", out var providerId) ? providerId.GetString() : null;
         var customId = unit.TryGetProperty("custom_id", out var custom) ? custom.GetString() : null;
         var values = (customId ?? string.Empty).Split(';', StringSplitOptions.RemoveEmptyEntries)
             .Select(item => item.Split('=', 2)).Where(item => item.Length == 2)
@@ -1431,7 +1438,10 @@ public class ApiController : Controller
         // la orden capturada y es la referencia autoritativa para ubicar al
         // cliente y sus pedidos; no debemos rechazar un cobro completado solo
         // porque la cookie de retorno no se restauró.
-        if (!values.TryGetValue("orders", out var orders) || !values.TryGetValue("email", out var owner) || string.IsNullOrWhiteSpace(owner)) return false;
+        var reference = string.IsNullOrWhiteSpace(providerOrderId) ? null : await _sqlStore.GetPayPalCheckoutAsync(providerOrderId);
+        var orders = values.TryGetValue("orders", out var customOrders) ? customOrders : reference?.OrderIds;
+        var owner = values.TryGetValue("email", out var customOwner) ? customOwner : reference?.CustomerEmail;
+        if (string.IsNullOrWhiteSpace(orders) || string.IsNullOrWhiteSpace(owner)) return false;
         var checkoutAmount = 0m;
         var checkoutCurrency = string.Empty;
         var hasExactCheckoutAmount = values.TryGetValue("paypal_amount", out var checkoutAmountText) &&
@@ -1452,6 +1462,26 @@ public class ApiController : Controller
         }
         foreach (var orderId in orders.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(value => int.TryParse(value, out var id) ? id : 0).Where(id => id > 0))
             await _sqlStore.MarkOrderPaidAsync(orderId, "PayPal", owner);
+        if (!string.IsNullOrWhiteSpace(providerOrderId))
+            await _sqlStore.MarkPayPalCheckoutConfirmedAsync(providerOrderId);
+        return true;
+    }
+
+    private async Task<bool> ConfirmPayPalCaptureEventAsync(JsonElement resource, string providerOrderId)
+    {
+        if (!resource.TryGetProperty("status", out var status) ||
+            !string.Equals(status.GetString(), "COMPLETED", StringComparison.OrdinalIgnoreCase)) return false;
+        var reference = await _sqlStore.GetPayPalCheckoutAsync(providerOrderId);
+        if (reference is null || !resource.TryGetProperty("amount", out var amount) ||
+            !amount.TryGetProperty("currency_code", out var currency) || !amount.TryGetProperty("value", out var value) ||
+            !string.Equals(currency.GetString(), reference.Value.Currency, StringComparison.OrdinalIgnoreCase) ||
+            !decimal.TryParse(value.GetString(), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var paidAmount) ||
+            Math.Abs(paidAmount - reference.Value.ExpectedAmount) > 0.01m) return false;
+
+        foreach (var orderId in reference.Value.OrderIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(value => int.TryParse(value, out var id) ? id : 0).Where(id => id > 0))
+            await _sqlStore.MarkOrderPaidAsync(orderId, "PayPal", reference.Value.CustomerEmail);
+        await _sqlStore.MarkPayPalCheckoutConfirmedAsync(providerOrderId);
         return true;
     }
 
