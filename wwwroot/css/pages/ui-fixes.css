@@ -53,3 +53,48 @@ body[data-page="/home/contact"] .contact-details > div {
         width: calc(100% - 1rem);
     }
 }
+
+/* Storefront: one stable responsive header and account menu. */
+.storefront-cart-link { position:relative !important; }
+.storefront-cart-link [data-store-cart-count] { position:absolute !important; top:-.35rem !important; right:-.4rem !important; min-width:1.25rem !important; height:1.25rem !important; display:grid !important; place-items:center !important; padding:0 .25rem !important; border:2px solid var(--surface) !important; border-radius:999px !important; color:#fff !important; background:var(--primary) !important; font-size:.65rem !important; line-height:1 !important; }
+.storefront-cart-link [data-store-cart-count][hidden] { display:none !important; }
+
+body.dark .storefront-header,body.dark .storefront-main,body.dark .storefront-nav { border-color:#3b3547 !important; background:#211e2b !important; }
+body.dark .storefront-search,body.dark .storefront-tools>a,body.dark .storefront-theme,body.dark .storefront-account__toggle { border-color:#453d59 !important; color:#f7f3fb !important; background:#181622 !important; }
+body.dark .storefront-search input,body.dark .storefront-brand span,body.dark .storefront-nav a { color:#f7f3fb !important; }
+body.dark .storefront-account__menu { border-color:#453d59 !important; color:#f7f3fb !important; background:#211e2b !important; }
+
+@media (max-width: 760px) {
+    .storefront-promo { min-height:32px; padding:.45rem .75rem; font-size:.7rem; text-align:center; }
+    .storefront-main { position:relative !important; width:100% !important; min-height:auto !important; display:grid !important; grid-template-columns:minmax(0,1fr) auto !important; gap:.65rem !important; padding:.65rem .75rem !important; }
+    .storefront-brand { min-width:0 !important; gap:.5rem !important; }
+    .storefront-brand img { width:42px !important; height:42px !important; flex:0 0 42px !important; }
+    .storefront-brand span { min-width:0 !important; font-size:clamp(.9rem,4.5vw,1.12rem) !important; overflow:hidden !important; text-overflow:ellipsis !important; white-space:nowrap !important; }
+    .storefront-tools { min-width:0 !important; display:flex !important; align-items:center !important; justify-content:flex-end !important; gap:.35rem !important; }
+    .storefront-tools>a,.storefront-tools>button,.storefront-account__toggle { width:42px !important; min-width:42px !important; height:42px !important; min-height:42px !important; padding:0 !important; display:grid !important; place-items:center !important; border-radius:50% !important; }
+    .storefront-tools>a>span { display:none !important; }
+    .storefront-tools .storefront-account { position:static !important; }
+    .storefront-tools .storefront-account .user-profile { width:42px !important; min-width:42px !important; max-width:42px !important; height:42px !important; min-height:42px !important; padding:3px !important; }
+    .storefront-tools .storefront-account .user-avatar { width:34px !important; height:34px !important; }
+    .storefront-tools .storefront-account .user-dropdown { position:absolute !important; top:calc(.65rem + 42px + .65rem) !important; right:.75rem !important; left:.75rem !important; width:auto !important; max-width:none !important; max-height:calc(100dvh - 112px) !important; padding:.75rem !important; overflow:auto !important; border-radius:16px !important; z-index:9200 !important; }
+    .storefront-account__menu .user-dropdown-head { display:grid !important; grid-template-columns:44px minmax(0,1fr) !important; align-items:center !important; gap:.75rem !important; padding:.65rem !important; }
+    .storefront-account__menu .user-dropdown-head>span:last-child { min-width:0 !important; }
+    .storefront-account__menu .user-dropdown-head strong,.storefront-account__menu .user-dropdown-head small { display:block !important; overflow:hidden !important; text-overflow:ellipsis !important; white-space:nowrap !important; }
+    .storefront-account__menu .user-dropdown-item { width:100% !important; min-height:46px !important; display:grid !important; grid-template-columns:34px minmax(0,1fr) !important; align-items:center !important; gap:.7rem !important; padding:.6rem .7rem !important; }
+    .storefront-account__menu .user-dropdown-item i { position:static !important; width:34px !important; height:34px !important; display:grid !important; place-items:center !important; margin:0 !important; }
+    .storefront-account__menu .user-dropdown-item span { display:block !important; min-width:0 !important; text-align:left !important; white-space:normal !important; }
+    .storefront-account__menu .user-dropdown-form { width:100% !important; }
+    .storefront-search { grid-column:1/-1 !important; grid-row:2 !important; width:100% !important; height:44px !important; margin:0 !important; }
+    .storefront-nav { overflow:hidden !important; }
+    .storefront-nav-inner { width:100% !important; display:flex !important; gap:1rem !important; padding:0 .75rem !important; overflow-x:auto !important; scrollbar-width:none !important; }
+    .storefront-nav-inner::-webkit-scrollbar { display:none !important; }
+    .storefront-category-link,.storefront-nav-links a { flex:0 0 auto !important; min-height:46px !important; display:flex !important; align-items:center !important; white-space:nowrap !important; }
+    .storefront-nav-links { display:flex !important; gap:1.1rem !important; }
+}
+
+@media (max-width: 430px) {
+    .storefront-brand span { max-width:132px !important; }
+    .storefront-tools { gap:.25rem !important; }
+    .storefront-tools>a,.storefront-tools>button,.storefront-account__toggle { width:39px !important; min-width:39px !important; height:39px !important; min-height:39px !important; }
+    .storefront-tools .storefront-account .user-profile { width:39px !important; min-width:39px !important; max-width:39px !important; height:39px !important; min-height:39px !important; }
+}
