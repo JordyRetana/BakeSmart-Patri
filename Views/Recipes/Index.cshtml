@@ -1,0 +1,88 @@
+@{
+    ViewData["Title"] = "Recetas y materiales";
+    var canReview = User.IsInRole("Admin") || User.IsInRole("Supervisor") || User.IsInRole("EncargadoRecetas");
+}
+
+<main class="recipe-page page-shell">
+    <header class="recipe-hero">
+        <div>
+            <span class="recipe-eyebrow"><i class="fas fa-book-open"></i> Control de producción</span>
+            <h1>Recetas y materiales</h1>
+            <p>Defina qué consume cada producto. Solo las recetas aprobadas pueden pasar a producción.</p>
+        </div>
+        <div class="recipe-summary" aria-label="Resumen de recetas">
+            <span><strong id="recipeApproved">0</strong>Aprobadas</span>
+            <span><strong id="recipeReview">0</strong>En revisión</span>
+            <span><strong id="recipeMissing">0</strong>Sin receta</span>
+        </div>
+    </header>
+
+    <section class="recipe-workspace">
+        <aside class="card recipe-products">
+            <div class="recipe-section-head">
+                <div><small>Productos comestibles</small><h2>Seleccione un producto</h2></div>
+            </div>
+            <label class="recipe-search"><i class="fas fa-search"></i><input id="recipeSearch" type="search" placeholder="Buscar por nombre o código"></label>
+            <div id="recipeProductList" class="recipe-product-list"><p class="text-muted">Cargando productos…</p></div>
+        </aside>
+
+        <article class="card recipe-editor">
+            <div id="recipeEmpty" class="recipe-empty">
+                <i class="fas fa-mortar-pestle"></i><h2>Seleccione un producto</h2><p>Aquí podrá definir y validar su receta.</p>
+            </div>
+            <form id="recipeForm" hidden>
+                <div class="recipe-section-head recipe-editor-head">
+                    <div><small id="recipeCode">PRODUCTO</small><h2 id="recipeName">Receta</h2></div>
+                    <span id="recipeStatus" class="recipe-status">Sin receta</span>
+                </div>
+                <input id="recipeProductId" type="hidden">
+                <div class="recipe-fields">
+                    <label>Rendimiento<input id="recipeYield" type="number" min="0.0001" step="0.0001" required></label>
+                    <label>Unidad<select id="recipeUnit"><option>unidad</option><option>porción</option><option>kg</option><option>g</option><option>litro</option><option>ml</option></select></label>
+                    <label>Merma (%)<input id="recipeWaste" type="number" min="0" max="100" step="0.1" value="0"></label>
+                </div>
+                <label class="recipe-notes">Indicaciones<textarea id="recipeNotes" rows="2" placeholder="Temperatura, tiempo, montaje u observaciones importantes"></textarea></label>
+                <div class="recipe-ingredients-head"><div><small>Composición</small><h3>Ingredientes y cantidades</h3></div><button class="btn btn-outline btn-sm" id="addIngredient" type="button"><i class="fas fa-plus"></i> Agregar ingrediente</button></div>
+                <div id="ingredientRows" class="ingredient-rows"></div>
+                <div class="recipe-actions">
+                    <button class="btn btn-primary" type="submit"><i class="fas fa-paper-plane"></i> Guardar y enviar a revisión</button>
+                    @if (canReview)
+                    {
+                        <button class="btn btn-outline" id="rejectRecipe" type="button"><i class="fas fa-rotate-left"></i> Solicitar cambios</button>
+                        <button class="btn btn-success" id="approveRecipe" type="button"><i class="fas fa-check"></i> Aprobar receta</button>
+                    }
+                </div>
+            </form>
+        </article>
+    </section>
+</main>
+
+@section Styles {
+<style>
+.recipe-page{padding-block:1.5rem 3rem}.recipe-hero{display:flex;justify-content:space-between;gap:2rem;align-items:center;padding:2rem;border:1px solid var(--border);border-radius:24px;background:linear-gradient(125deg,#e8f5ff 0%,#f5efff 52%,#fff0f5 100%);margin-bottom:1.25rem}.recipe-hero h1{margin:.3rem 0;font-size:clamp(2rem,4vw,3.2rem);color:var(--text)}.recipe-hero p{margin:0;color:var(--text-muted);max-width:700px}.recipe-eyebrow,.recipe-section-head small{color:var(--primary);font-weight:800;text-transform:uppercase;letter-spacing:.06em}.recipe-summary{display:grid;grid-template-columns:repeat(3,minmax(90px,1fr));gap:.65rem}.recipe-summary span{display:flex;flex-direction:column;align-items:center;padding:1rem;border-radius:16px;background:rgba(255,255,255,.78);border:1px solid var(--border);font-size:.75rem;color:var(--text-muted)}.recipe-summary strong{font-size:1.65rem;color:var(--text)}.recipe-workspace{display:grid;grid-template-columns:minmax(280px,360px) minmax(0,1fr);gap:1.25rem;align-items:start}.recipe-products,.recipe-editor{padding:1.25rem}.recipe-section-head{display:flex;justify-content:space-between;align-items:center;gap:1rem}.recipe-section-head h2,.recipe-ingredients-head h3{margin:.2rem 0}.recipe-search{display:flex;gap:.7rem;align-items:center;padding:.75rem 1rem;border:1px solid var(--border);border-radius:14px;margin:1rem 0;background:var(--surface)}.recipe-search input{border:0;outline:0;background:transparent;color:var(--text);width:100%}.recipe-product-list{display:flex;flex-direction:column;gap:.6rem;max-height:64vh;overflow:auto}.recipe-product{display:grid;grid-template-columns:1fr auto;gap:.4rem;text-align:left;width:100%;padding:.85rem;border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);cursor:pointer}.recipe-product:hover,.recipe-product.active{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 8%,var(--surface))}.recipe-product small{grid-column:1/-1;color:var(--text-muted)}.recipe-product b{font-size:.76rem;border-radius:999px;padding:.2rem .5rem;background:var(--surface-alt)}.recipe-empty{min-height:420px;display:grid;place-content:center;text-align:center;color:var(--text-muted)}.recipe-empty i{font-size:3rem;color:var(--primary)}.recipe-editor-head{border-bottom:1px solid var(--border);padding-bottom:1rem}.recipe-status{padding:.4rem .7rem;border-radius:999px;background:var(--surface-alt);font-weight:800}.recipe-fields{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:1.25rem 0}.recipe-fields label,.recipe-notes{display:grid;gap:.4rem;font-weight:700}.recipe-fields input,.recipe-fields select,.recipe-notes textarea,.ingredient-row input,.ingredient-row select{width:100%;padding:.75rem;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text)}.recipe-ingredients-head{display:flex;justify-content:space-between;align-items:center;margin:1.4rem 0 .8rem}.ingredient-rows{display:grid;gap:.65rem}.ingredient-row{display:grid;grid-template-columns:minmax(180px,2fr) minmax(90px,.65fr) minmax(90px,.65fr) auto;gap:.65rem;align-items:center;padding:.7rem;border:1px solid var(--border);border-radius:14px}.ingredient-stock{font-size:.76rem;color:var(--text-muted)}.ingredient-remove{width:42px;height:42px;border:0;border-radius:10px;background:#fff0f2;color:#c23854;cursor:pointer}.recipe-actions{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:flex-end;border-top:1px solid var(--border);padding-top:1rem;margin-top:1.25rem}.btn-success{background:#2e9d68;color:white}.dark-theme .recipe-hero{background:linear-gradient(125deg,#17263a,#272044 52%,#3a2032)}
+@@media(max-width:900px){.recipe-hero{align-items:stretch;flex-direction:column}.recipe-workspace{grid-template-columns:1fr}.recipe-product-list{max-height:300px}.recipe-fields{grid-template-columns:1fr 1fr}.ingredient-row{grid-template-columns:1fr 1fr}.ingredient-row select:first-child{grid-column:1/-1}}@@media(max-width:540px){.recipe-page{padding-inline:.65rem}.recipe-hero{padding:1.2rem}.recipe-summary{grid-template-columns:repeat(3,1fr)}.recipe-fields,.ingredient-row{grid-template-columns:1fr}.ingredient-row select:first-child{grid-column:auto}.recipe-actions .btn{width:100%}}
+</style>
+}
+
+@section Scripts {
+<script>
+(() => {
+    let products = [], options = [], selected = null;
+    const $ = id => document.getElementById(id);
+    const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const notify = (type, message) => window.app?.toast?.[type]?.(message) ?? alert(message);
+    async function json(url, init) { const response = await fetch(url, init); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || 'No se pudo completar la operación.'); return data; }
+    function updateSummary(){ $('recipeApproved').textContent=products.filter(x=>x.status==='Aprobada').length; $('recipeReview').textContent=products.filter(x=>x.status==='En revision').length; $('recipeMissing').textContent=products.filter(x=>x.status==='Sin receta'||x.status==='Pendiente').length; }
+    function renderProducts(){ const q=$('recipeSearch').value.trim().toLowerCase(); const rows=products.filter(x=>`${x.name} ${x.code}`.toLowerCase().includes(q)); $('recipeProductList').innerHTML=rows.map(x=>`<button class="recipe-product ${selected===x.productId?'active':''}" data-id="${x.productId}"><strong>${esc(x.name)}</strong><b>${esc(x.status)}</b><small>${esc(x.code)} · ${x.ingredientCount} ingrediente(s)</small></button>`).join('')||'<p class="text-muted">No hay coincidencias.</p>'; $('recipeProductList').querySelectorAll('button').forEach(b=>b.onclick=()=>openRecipe(Number(b.dataset.id))); updateSummary(); }
+    function optionMarkup(value){return `<option value="">Seleccione materia prima</option>`+options.map(x=>`<option value="${x.productId}" data-unit="${esc(x.unit)}" ${Number(value)===x.productId?'selected':''}>${esc(x.name)} · ${esc(x.stock)} ${esc(x.unit)}</option>`).join('')}
+    function addRow(item={}){ const row=document.createElement('div'); row.className='ingredient-row'; row.innerHTML=`<div><select class="ingredient-product" required>${optionMarkup(item.productId)}</select><span class="ingredient-stock"></span></div><input class="ingredient-quantity" type="number" min="0.0001" step="0.0001" value="${item.quantity??1}" aria-label="Cantidad" required><select class="ingredient-unit"><option>${esc(item.unit||'unidad')}</option><option>kg</option><option>g</option><option>litro</option><option>ml</option><option>unidad</option></select><button class="ingredient-remove" type="button" aria-label="Quitar"><i class="fas fa-trash"></i></button>`; const product=row.querySelector('.ingredient-product'), unit=row.querySelector('.ingredient-unit'), stock=row.querySelector('.ingredient-stock'); const sync=()=>{const opt=product.selectedOptions[0]; if(opt?.dataset.unit){unit.value=opt.dataset.unit;stock.textContent=`Disponible: ${options.find(x=>x.productId===Number(product.value))?.stock??0} ${opt.dataset.unit}`}}; product.onchange=sync; row.querySelector('.ingredient-remove').onclick=()=>row.remove(); $('ingredientRows').appendChild(row); sync(); }
+    async function openRecipe(id){ selected=id; renderProducts(); const data=await json(`/api/recipes/${id}`); const r=data.recipe; $('recipeEmpty').hidden=true; $('recipeForm').hidden=false; $('recipeProductId').value=r.productId; $('recipeCode').textContent=r.code; $('recipeName').textContent=r.name; $('recipeStatus').textContent=r.status; $('recipeYield').value=r.yieldQuantity; $('recipeUnit').value=r.yieldUnit; $('recipeWaste').value=r.wastePercent; $('recipeNotes').value=r.notes||''; $('ingredientRows').innerHTML=''; data.ingredients.forEach(addRow); if(!data.ingredients.length)addRow(); }
+    async function load(){ [products,options]=await Promise.all([json('/api/recipes'),json('/api/recipes/ingredients')]); renderProducts(); }
+    $('recipeSearch').oninput=renderProducts; $('addIngredient').onclick=()=>addRow();
+    $('recipeForm').onsubmit=async event=>{event.preventDefault();const ingredients=[...document.querySelectorAll('.ingredient-row')].map(row=>({productId:Number(row.querySelector('.ingredient-product').value),quantity:Number(row.querySelector('.ingredient-quantity').value),unit:row.querySelector('.ingredient-unit').value,optional:false}));await json('/api/recipes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:Number($('recipeProductId').value),yieldQuantity:Number($('recipeYield').value),yieldUnit:$('recipeUnit').value,wastePercent:Number($('recipeWaste').value),notes:$('recipeNotes').value,ingredients})});notify('success','Receta enviada a revisión.');await load();await openRecipe(selected)};
+    async function review(approved){await json(`/api/recipes/${selected}/review`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({approved})});notify('success',approved?'Receta aprobada.':'Se solicitaron cambios.');await load();await openRecipe(selected)}
+    if($('approveRecipe'))$('approveRecipe').onclick=()=>review(true); if($('rejectRecipe'))$('rejectRecipe').onclick=()=>review(false);
+    load().catch(error=>notify('error',error.message));
+})();
+</script>
+}

@@ -115,6 +115,30 @@
     const customerOf = order => order.cliente || order.customerName || '-';
     const deliveryOf = order => order.entrega || order.deliveryDate || new Date().toISOString();
     const itemOf = order => order.producto || order.products || 'Pedido personalizado';
+    const materialReadiness = new Map();
+
+    const materialPanel = orderId => {
+        const readiness = materialReadiness.get(Number(orderId));
+        if (!readiness) return '<div class="production-material-state is-loading"><i class="fas fa-spinner fa-spin"></i> Validando receta y materiales...</div>';
+        const missingRecipes = readiness.missingRecipes || [];
+        const materials = readiness.materials || [];
+        if (missingRecipes.length > 0) {
+            const missing = missingRecipes.map(escapeHtml).join(', ');
+            return `<div class="production-material-state is-danger"><i class="fas fa-triangle-exclamation"></i><span><strong>Falta receta aprobada</strong><small>${missing} debe tener una receta revisada antes de producir.</small></span><a href="/Recipes">Abrir recetas</a></div>`;
+        }
+        if (!readiness.canStart) {
+            const shortages = materials
+                .filter(item => Number(item.availableQuantity || 0) < Number(item.requiredQuantity || 0))
+                .map(item => {
+                    const shortage = Math.max(0, Number(item.requiredQuantity || 0) - Number(item.availableQuantity || 0));
+                    return `${escapeHtml(item.name)}: faltan ${shortage.toFixed(2).replace(/\.00$/, '')} ${escapeHtml(item.unit)}`;
+                })
+                .join(' · ');
+            return `<div class="production-material-state is-warning"><i class="fas fa-boxes-stacked"></i><span><strong>Material insuficiente</strong><small>${shortages || 'Revise el inventario disponible.'}</small></span><a href="/Inventory">Ver inventario</a></div>`;
+        }
+        const count = materials.length;
+        return `<div class="production-material-state is-ready"><i class="fas fa-circle-check"></i><span><strong>Materiales listos</strong><small>${count} ingrediente${count === 1 ? '' : 's'} validados para iniciar.</small></span></div>`;
+    };
 
     function ticket(order, mode) {
         const status = statusOf(order);
@@ -131,6 +155,7 @@
                 </div>
                 <div>${itemOf(order)}</div>
                 ${(order.isCustomOrder || String(order.notes || '').includes('Tipo de encargo')) ? '<span class="production-custom-tag"><i class="fas fa-wand-magic-sparkles"></i> Personalizado</span>' : ''}
+                ${status !== 'Listo' ? materialPanel(order.id) : ''}
                 ${mode !== 'pending' ? `<div class="progress" style="margin:.65rem 0;"><div class="progress-bar" style="width:${meta.progress}%;"></div></div>` : ''}
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:.75rem;margin-top:.65rem;">
                     <span class="text-muted"><i class="fas fa-calendar"></i> ${fmtDate(deliveryOf(order))}</span>
@@ -149,7 +174,16 @@
             </div>`;
     }
 
-    function renderProduction() {
+    async function loadMaterialReadiness(orders) {
+        await Promise.all(orders.map(async order => {
+            try {
+                const response = await fetch(`/api/production/${order.id}/materials`, { headers: { Accept: 'application/json' } });
+                if (response.ok) materialReadiness.set(Number(order.id), await response.json());
+            } catch { /* El servidor conserva la validacion obligatoria al avanzar. */ }
+        }));
+    }
+
+    async function renderProduction() {
         const orders = store.orders.list();
         const productionOrders = orders.filter(o => ['Pendiente produccion', 'Pendiente producción', 'En produccion', 'En producción', 'Listo'].includes(statusOf(o)));
         const pending = productionOrders.filter(o => ['Pendiente produccion', 'Pendiente producción'].includes(statusOf(o)));
@@ -169,6 +203,8 @@
         setText('prodActiveBadge', active.length);
         setText('prodDoneBadge', done.length);
 
+        await loadMaterialReadiness([...pending, ...active]);
+
         document.getElementById('prodPendingList').innerHTML = pending.map(o => ticket(o, 'pending')).join('') || '<div class="text-muted">No hay pedidos pendientes.</div>';
         document.getElementById('prodActiveList').innerHTML = active.map(o => ticket(o, 'active')).join('') || '<div class="text-muted">No hay pedidos en producción.</div>';
         document.getElementById('prodDoneList').innerHTML = done.map(o => ticket(o, 'done')).join('') || '<div class="text-muted">No hay pedidos completados.</div>';
@@ -187,19 +223,23 @@
                 updatedOrder.estado = result.status;
                 updatedOrder.status = result.status;
             }
-            renderProduction();
+            await renderProduction();
             await store.refresh({ keys: ['orders'], force: true });
-            renderProduction();
+            await renderProduction();
             app.toast.success(`Pedido #${orderId} actualizado.`);
         }).catch(error => app.toast.error(error.message));
     };
 
-    store.refresh({ keys: ['orders'], force: true }).then(renderProduction).catch(error => app.toast.error(error.message));
+    store.refresh({ keys: ['orders'], force: true }).then(() => renderProduction()).catch(error => app.toast.error(error.message));
 })();
 </script>
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/production-index.css" asp-append-version="true" />
-    <style>.production-custom-tag{display:inline-flex;align-items:center;gap:.35rem;margin-top:.5rem;padding:.28rem .55rem;border-radius:999px;background:#f8e8f4;color:#a1377e;font-size:.7rem;font-weight:800}</style>
+    <style>
+        .production-custom-tag{display:inline-flex;align-items:center;gap:.35rem;margin-top:.5rem;padding:.28rem .55rem;border-radius:999px;background:#f8e8f4;color:#a1377e;font-size:.7rem;font-weight:800}
+        .production-material-state{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:.55rem;margin-top:.7rem;padding:.65rem .75rem;border:1px solid;border-radius:.8rem;font-size:.76rem}.production-material-state span{display:grid;gap:.1rem}.production-material-state small{line-height:1.35}.production-material-state a{font-weight:800;white-space:nowrap}.production-material-state.is-loading{color:var(--text-muted);border-color:var(--border);background:var(--surface-soft)}.production-material-state.is-danger{color:#9f2d4f;border-color:#efbfd0;background:#fff2f7}.production-material-state.is-warning{color:#825812;border-color:#efd79c;background:#fff9e8}.production-material-state.is-ready{color:#25704c;border-color:#bde2cd;background:#effbf4}.production-material-state.is-danger a,.production-material-state.is-warning a{color:inherit}
+        @@media(max-width:640px){.production-material-state{grid-template-columns:auto minmax(0,1fr)}.production-material-state a{grid-column:2}}
+    </style>
 }

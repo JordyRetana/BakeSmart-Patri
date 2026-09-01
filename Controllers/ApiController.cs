@@ -117,7 +117,7 @@ public class ApiController : Controller
     }
 
     [HttpPost("production/{id:int}/advance")]
-    [Authorize(Roles = "Admin,Staff,Repostero,Supervisor")]
+    [Authorize(Roles = "Admin,Staff,Repostero,Supervisor,EncargadoRecetas")]
     public async Task<IActionResult> AdvanceProduction(int id)
     {
         try
@@ -129,6 +129,54 @@ public class ApiController : Controller
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    [HttpGet("production/{id:int}/materials")]
+    [Authorize(Policy = "StaffOrAdmin")]
+    public async Task<IActionResult> ProductionMaterials(int id)
+    {
+        try { return Json(await _sqlStore.ProductionMaterialReadinessAsync(id)); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    [HttpGet("recipes")]
+    [Authorize(Roles = "Admin,Repostero,Supervisor,EncargadoRecetas")]
+    public async Task<IActionResult> Recipes() => Json(await _sqlStore.RecipesAsync());
+
+    [HttpGet("recipes/ingredients")]
+    [Authorize(Roles = "Admin,Repostero,Supervisor,EncargadoRecetas")]
+    public async Task<IActionResult> RecipeIngredients() => Json(await _sqlStore.RecipeIngredientOptionsAsync());
+
+    [HttpGet("recipes/{productId:int}")]
+    [Authorize(Roles = "Admin,Repostero,Supervisor,EncargadoRecetas")]
+    public async Task<IActionResult> Recipe(int productId)
+    {
+        try { return Json(await _sqlStore.RecipeAsync(productId)); }
+        catch (InvalidOperationException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    [HttpPost("recipes")]
+    [Authorize(Roles = "Admin,Repostero,Supervisor,EncargadoRecetas")]
+    public async Task<IActionResult> SaveRecipe([FromBody] SqlStore.RecipeInput request)
+    {
+        try
+        {
+            await _sqlStore.SaveRecipeAsync(request, CurrentUserEmail);
+            return Ok(new { ok = true, status = "En revision" });
+        }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    [HttpPost("recipes/{productId:int}/review")]
+    [Authorize(Roles = "Admin,Supervisor,EncargadoRecetas")]
+    public async Task<IActionResult> ReviewRecipe(int productId, [FromBody] ReviewRecipeRequest request)
+    {
+        try
+        {
+            await _sqlStore.ReviewRecipeAsync(productId, request.Approved, CurrentUserEmail);
+            return Ok(new { ok = true, status = request.Approved ? "Aprobada" : "Pendiente" });
+        }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     [HttpPost("orders/{id:int}/pay")]
@@ -1364,6 +1412,7 @@ public class ApiController : Controller
 
     public sealed record UpdateOrderStatusRequest(string Status);
     public sealed record MarkPaidRequest(string Method);
+    public sealed record ReviewRecipeRequest(bool Approved);
     public sealed record OpenCashSessionRequest(decimal Amount);
     public sealed record CloseCashSessionRequest(int Id, decimal DeclaredAmount);
     public sealed record AccountingCloseRequest(string? Type);

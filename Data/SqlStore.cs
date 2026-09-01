@@ -11,7 +11,7 @@ using BakeSmartPatri.Models;
 
 namespace BakeSmartPatri.Data;
 
-public sealed class SqlStore
+public sealed partial class SqlStore
 {
     private const int ConnectTimeoutSeconds = 8;
     private const int CommandTimeoutSeconds = 10;
@@ -1486,6 +1486,9 @@ public sealed class SqlStore
                 INSERT INTO Roles (RoleName, Description, IsSystemRole)
                 SELECT 'Supervisor', 'Seguimiento operativo, reportes y control de tienda', 1
                 WHERE NOT EXISTS (SELECT 1 FROM Roles WHERE RoleName = 'Supervisor');
+                INSERT INTO Roles (RoleName, Description, IsSystemRole)
+                SELECT 'EncargadoRecetas', 'Validacion de recetas, materiales y disponibilidad de produccion', 1
+                WHERE NOT EXISTS (SELECT 1 FROM Roles WHERE RoleName = 'EncargadoRecetas');
                 """);
 
             const string mySql = """
@@ -1520,6 +1523,10 @@ public sealed class SqlStore
             IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'Supervisor')
                 INSERT INTO dbo.Roles (RoleName, Description, IsSystemRole)
                 VALUES (N'Supervisor', N'Seguimiento operativo, reportes y control de tienda', 1);
+
+            IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'EncargadoRecetas')
+                INSERT INTO dbo.Roles (RoleName, Description, IsSystemRole)
+                VALUES (N'EncargadoRecetas', N'Validacion de recetas, materiales y disponibilidad de produccion', 1);
 
             SELECT RoleId, RoleName, Description, IsSystemRole
             FROM dbo.Roles
@@ -1576,6 +1583,9 @@ public sealed class SqlStore
         if (normalized.Contains("repost"))
             return new[] { "Dashboard", "ProducciÃ³n", "Inventario", "Pedidos", "Perfil" };
 
+        if (normalized.Contains("encargadorecetas"))
+            return new[] { "Dashboard", "Recetas", "ProducciÃ³n", "Inventario", "Pedidos", "Perfil" };
+
         if (normalized.Contains("cliente"))
             return new[] { "CatÃ¡logo", "Pedido rÃ¡pido", "Mis pedidos", "Seguimiento", "Perfil" };
 
@@ -1604,6 +1614,10 @@ public sealed class SqlStore
             "Repostero" => new[]
             {
                 "Dashboard", "ProducciÃ³n", "Inventario", "Pedidos", "Perfil"
+            },
+            "EncargadoRecetas" => new[]
+            {
+                "Dashboard", "Recetas", "ProducciÃ³n", "Inventario", "Pedidos", "Perfil"
             },
             "Cliente" => new[]
             {
@@ -2372,6 +2386,10 @@ public sealed class SqlStore
         if (normalized != "CONFIRMADO")
             throw new InvalidOperationException($"El pedido no puede enviarse a Produccion desde el estado '{state.Value.OrderStatus}'.");
 
+        var readiness = await ProductionMaterialReadinessAsync(orderId);
+        if (readiness.MissingRecipes.Count > 0)
+            throw new InvalidOperationException($"No se puede enviar a Produccion: falta validar la receta de {string.Join(", ", readiness.MissingRecipes)}.");
+
         try { await EnsureOrderStatusAsync("Pendiente produccion"); }
         catch (Exception ex) { throw new InvalidOperationException($"No se pudo preparar el estado de Produccion: {ex.GetBaseException().Message}", ex); }
         try { await UpdateOrderStatusAsync(orderId, "Pendiente produccion", userEmail); }
@@ -2393,6 +2411,9 @@ public sealed class SqlStore
             "LISTO" => throw new InvalidOperationException("El pedido ya esta listo para entrega."),
             _ => throw new InvalidOperationException("Este pedido no pertenece a la cola de Produccion.")
         };
+
+        if (normalized == "PENDIENTE PRODUCCION")
+            await ReserveProductionMaterialsAsync(orderId, userEmail);
 
         await EnsureOrderStatusAsync(next);
         await UpdateOrderStatusAsync(orderId, next, userEmail);

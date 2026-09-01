@@ -9,7 +9,8 @@
     var isCashier = User?.IsInRole("Cajero") ?? false;
     var isBaker = User?.IsInRole("Repostero") ?? false;
     var isSupervisor = User?.IsInRole("Supervisor") ?? false;
-    var isOperational = isAdmin || isStaff || isCashier || isBaker || isSupervisor;
+    var isRecipeManager = User?.IsInRole("EncargadoRecetas") ?? false;
+    var isOperational = isAdmin || isStaff || isCashier || isBaker || isSupervisor || isRecipeManager;
     var userEmail = User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
         ?? User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
         ?? string.Empty;
@@ -21,6 +22,7 @@
         : isCashier ? "Cajero"
         : isBaker ? "Repostero"
         : isSupervisor ? "Supervisor"
+        : isRecipeManager ? "Encargado de recetas"
         : "Cliente";
     string userProfileIcon = isClient ? "fa-user" : "fa-user-tie";
 
@@ -403,6 +405,12 @@
                                 <a class="user-dropdown-item" href="/Catalog/Favorites" role="menuitem">
                                     <i class="fas fa-heart"></i>
                                     <span>Favoritos</span>
+                                </a>
+                            }
+                            @if (isAdmin || isSupervisor || isBaker || isRecipeManager)
+                            {
+                                <a class="dropdown-item" href="/Recipes">
+                                    <i class="fas fa-book-open" style="width: 20px; margin-right: 0.5rem;"></i> Recetas
                                 </a>
                             }
 
