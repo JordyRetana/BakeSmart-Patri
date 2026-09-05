@@ -2441,6 +2441,22 @@ public sealed partial class SqlStore
         return next;
     }
 
+    public async Task UpdateOrderCurrentLocationAsync(int orderId, decimal latitude, decimal longitude, string? userEmail = null)
+    {
+        if (!HasValidCoordinates(latitude, longitude))
+            throw new InvalidOperationException("La ubicación reportada no es válida.");
+
+        if (await OrderWorkflowStateAsync(orderId) is null)
+            throw new InvalidOperationException("El pedido no existe.");
+
+        var table = UseMySql ? "Pedidos" : "dbo.Pedidos";
+        await ExecuteAsync($"UPDATE {table} SET CurrentLatitude = @Latitude, CurrentLongitude = @Longitude WHERE OrderId = @OrderId;",
+            new SqlParameter("@Latitude", latitude),
+            new SqlParameter("@Longitude", longitude),
+            new SqlParameter("@OrderId", orderId));
+        try { await AddAuditLogAsync("UBICACION_ENTREGA", $"Ubicación real registrada para pedido #{orderId}", userEmail); } catch { }
+    }
+
     private async Task<(string OrderStatus, string PaymentStatus)?> OrderWorkflowStateAsync(int orderId)
     {
         const string sql = """
@@ -5004,7 +5020,7 @@ public sealed partial class SqlStore
             VALUES
                 (@CustomerId, @ResolvedAddressId, @WebChannelId, @PendingStatusId, @PendingPaymentId, @CashMethodId,
                  @Notes, @Subtotal, @EffectiveDiscount, @EffectiveTax, @EffectiveTotal, @DeliveryDate,
-                 @OriginLat, @OriginLng,
+                 NULL, NULL,
                  @DestLat, @DestLng, @DestLabel, N'Costa Rica',
                  CASE WHEN @DeliveryMethod = N'retiro' THEN N'pickup' ELSE N'ground' END, @OriginName);
 
@@ -5657,7 +5673,7 @@ public sealed partial class SqlStore
                 VALUES
                     (@CustomerId, @CustomerAddressId, @ChannelId, @StatusId, @PaymentStatusId, @PaymentMethodId,
                      @Notes, @Subtotal, @Discount, @Tax, @Total, @DeliveryDate,
-                     @OriginLat, @OriginLng, @DestLat, @DestLng, @DestLabel,
+                     NULL, NULL, @DestLat, @DestLng, @DestLabel,
                      'Costa Rica', @RouteMode, 0, @OriginName, UTC_TIMESTAMP());
                 SELECT LAST_INSERT_ID();
                 """;

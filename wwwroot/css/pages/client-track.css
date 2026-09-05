@@ -1,4 +1,4 @@
-.track-page {
+    .track-page {
         display: flex;
         flex-direction: column;
         gap: 1rem;
@@ -48,6 +48,27 @@
     .track-kpis {
         gap: 1rem;
         margin-bottom: 0;
+    }
+
+    .track-header {
+        padding: clamp(1.1rem, 2.2vw, 1.75rem) !important;
+        border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+        border-radius: 26px;
+        background: linear-gradient(125deg, color-mix(in srgb, var(--primary-light) 62%, var(--bg-card)), var(--bg-card) 55%, color-mix(in srgb, #ec4899 8%, var(--bg-card)));
+        box-shadow: 0 18px 44px rgba(50, 30, 70, .08);
+    }
+
+    .track-title { font-size: clamp(1.45rem, 3vw, 2.25rem); }
+    .track-toolbar { align-items: center; }
+    .track-toolbar .btn { min-height: 48px; white-space: nowrap; }
+    .track-select { min-height: 48px; border-radius: 14px; }
+
+    body.dark .track-header,
+    body.dark .track-live-strip,
+    body.dark .track-map-card,
+    body.dark .track-side-stack > .card {
+        border-color: rgba(167, 139, 250, .22) !important;
+        background: linear-gradient(145deg, #201c2c, #15121e) !important;
     }
 
     .track-live-strip {

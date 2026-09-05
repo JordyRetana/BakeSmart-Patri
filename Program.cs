@@ -185,6 +185,12 @@ builder.Services.AddAntiforgery(o =>
         ? CookieSecurePolicy.SameAsRequest
         : CookieSecurePolicy.Always;
 });
+builder.Services.AddHttpClient("Osrm", client =>
+{
+    client.BaseAddress = new Uri("https://router.project-osrm.org/");
+    client.Timeout = TimeSpan.FromSeconds(12);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("BakeSmartPatri/1.0 (contact@bakesmart.com)");
+});
 
 var app = builder.Build();
 

@@ -103,16 +103,54 @@ public class ApiController : Controller
 
     [HttpPost("orders/{id:int}/advance-delivery")]
     [Authorize(Policy = "StaffOrAdmin")]
-    public async Task<IActionResult> AdvanceOrderDelivery(int id)
+    public async Task<IActionResult> AdvanceOrderDelivery(int id, [FromBody] DeliveryAdvanceRequest? request)
     {
         try
         {
+            if (request?.Latitude is not null || request?.Longitude is not null)
+            {
+                if (!SqlStore.HasValidCoordinates(request.Latitude, request.Longitude))
+                    return BadRequest(new { message = "La ubicación reportada no es válida." });
+                await _sqlStore.UpdateOrderCurrentLocationAsync(id, request.Latitude!.Value, request.Longitude!.Value, CurrentUserEmail);
+            }
             var status = await _sqlStore.AdvanceOrderDeliveryAsync(id, CurrentUserEmail);
-            return Ok(new { ok = true, status });
+            return Ok(new { ok = true, status, locationRecorded = request?.Latitude is not null });
         }
         catch (InvalidOperationException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("geo/route")]
+    [Authorize(Policy = "AnyUser")]
+    public async Task<IActionResult> RoadRoute(decimal startLat, decimal startLng, decimal endLat, decimal endLng)
+    {
+        if (!SqlStore.HasValidCoordinates(startLat, startLng) || !SqlStore.HasValidCoordinates(endLat, endLng))
+            return BadRequest(new { message = "Las coordenadas de la ruta no son válidas." });
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("Osrm");
+            var url = $"route/v1/driving/{startLng.ToString(System.Globalization.CultureInfo.InvariantCulture)},{startLat.ToString(System.Globalization.CultureInfo.InvariantCulture)};{endLng.ToString(System.Globalization.CultureInfo.InvariantCulture)},{endLat.ToString(System.Globalization.CultureInfo.InvariantCulture)}?overview=full&geometries=geojson&steps=false";
+            using var response = await client.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            var route = document.RootElement.GetProperty("routes")[0];
+            var points = route.GetProperty("geometry").GetProperty("coordinates").EnumerateArray()
+                .Select(point => new[] { point[1].GetDouble(), point[0].GetDouble() })
+                .ToArray();
+            return Ok(new
+            {
+                points,
+                distanceMeters = route.GetProperty("distance").GetDouble(),
+                durationSeconds = route.GetProperty("duration").GetDouble()
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No fue posible calcular la ruta vial entre las coordenadas registradas.");
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "El servicio de rutas no está disponible temporalmente." });
         }
     }
 
@@ -1411,6 +1449,7 @@ public class ApiController : Controller
     }
 
     public sealed record UpdateOrderStatusRequest(string Status);
+    public sealed record DeliveryAdvanceRequest(decimal? Latitude, decimal? Longitude);
     public sealed record MarkPaidRequest(string Method);
     public sealed record ReviewRecipeRequest(bool Approved);
     public sealed record OpenCashSessionRequest(decimal Amount);

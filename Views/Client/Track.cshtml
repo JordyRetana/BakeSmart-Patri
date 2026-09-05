@@ -1,6 +1,6 @@
 ﻿
 @section Styles {
-    <link rel="stylesheet" href="~/css/pages/client-track.css?v=20260805-live-route" />
+    <link rel="stylesheet" href="~/css/pages/client-track.css?v=20260905-real-route" />
 }
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -21,8 +21,8 @@
         </div>
 
         <div class="track-toolbar">
+            <a class="btn btn-outline" href="/Client/Orders"><i class="fas fa-arrow-left"></i> Mis pedidos</a>
             <select id="trackOrderSelect" class="form-control track-select"></select>
-            <select id="trackPresetSelect" class="form-control track-select-secondary"></select>
         </div>
     </div>
 
@@ -58,14 +58,13 @@
         <div class="card track-map-card">
             <div class="track-map-header">
                 <div>
-                    <h3 class="track-section-title">Trayectoria visual</h3>
+                    <h3 class="track-section-title">Ruta de entrega</h3>
                     <div id="trackMeta" class="text-muted track-map-meta">Calculando ruta...</div>
                 </div>
 
                 <div class="map-legend">
                     <span><i class="fas fa-store"></i> Origen</span>
-                    <span><i class="fas fa-motorcycle"></i> Entrega local</span>
-                    <span><i class="fas fa-plane"></i> Ruta internacional</span>
+                    <span><i class="fas fa-motorcycle"></i> Última ubicación real</span>
                     <span><i class="fas fa-location-dot"></i> Destino</span>
                 </div>
             </div>
@@ -105,22 +104,14 @@
         lat: 9.9281,
         lng: -84.0907
     };
-    const presetSelect = document.getElementById('trackPresetSelect');
     const orderSelect = document.getElementById('trackOrderSelect');
     const userEmail = document.body.dataset.userEmail || '';
     let origin = sanitizeLocation(BakeSmartStore.geo.origin(), defaultOrigin);
 
-    const presetOptions = [
-        { id: 'auto', name: 'Destino real del pedido', country: '-' },
-        ...BakeSmartStore.geo.presets().map(p => ({ id: p.id, name: p.name, country: p.country }))
-    ];
-
     let map;
     let markers = [];
     let layers = [];
-    let animationTimer = null;
     let activeOrderId = null;
-    let activeAnimatedMarker = null;
     let pageInitialized = false;
 
     function isValidCoordinate(lat, lng) {
@@ -143,6 +134,12 @@
     function canShowLiveRoute(order) {
         const status = normalizeStatus(order.status || order.estado || order.deliveryStatus);
         return status.includes('camino') || status.includes('entregad') || status.includes('finaliz');
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, character => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        })[character]);
     }
 
     function isDelivered(order) {
@@ -268,97 +265,24 @@
         markers = [];
         layers = [];
 
-        if (animationTimer) {
-            clearInterval(animationTimer);
-            animationTimer = null;
-        }
-
-        if (activeAnimatedMarker) {
-            activeAnimatedMarker.remove();
-            activeAnimatedMarker = null;
-        }
     }
 
-    function interpolate(start, end, t) {
-        return [
-            start[0] + ((end[0] - start[0]) * t),
-            start[1] + ((end[1] - start[1]) * t)
-        ];
-    }
-
-    function curveBetween(start, end, isInternational, bendDirection = 1) {
-        const steps = isInternational ? 64 : 26;
-        const dx = end[1] - start[1];
-        const dy = end[0] - start[0];
-        const distance = Math.sqrt((dx * dx) + (dy * dy)) || 0.001;
-
-        const mid = [
-            (start[0] + end[0]) / 2,
-            (start[1] + end[1]) / 2
-        ];
-
-        const perpendicular = [-(dx / distance), dy / distance];
-        const bend = isInternational
-            ? Math.min(Math.max(distance * 0.16, 0.18), 0.55)
-            : Math.min(Math.max(distance * 0.06, 0.01), 0.035);
-
-        const control = [
-            mid[0] + (perpendicular[0] * bend * bendDirection),
-            mid[1] + (perpendicular[1] * bend * bendDirection)
-        ];
-
-        const points = [];
-        for (let i = 0; i <= steps; i++) {
-            const t = i / steps;
-            const lat = ((1 - t) * (1 - t) * start[0]) + (2 * (1 - t) * t * control[0]) + (t * t * end[0]);
-            const lng = ((1 - t) * (1 - t) * start[1]) + (2 * (1 - t) * t * control[1]) + (t * t * end[1]);
-            points.push([lat, lng]);
-        }
-
-        return points;
-    }
-
-    function buildLocalRoute(start, end, progressStep) {
-        const operationPoint = interpolate(start, end, 0.45);
-        operationPoint[0] += 0.012;
-        operationPoint[1] -= 0.01;
-
-        const firstLeg = curveBetween(start, operationPoint, false, -1);
-        const secondLeg = curveBetween(operationPoint, end, false, 1);
-        const combined = [...firstLeg, ...secondLeg.slice(1)];
-
-        const normalized = Math.min(Math.max((progressStep || 0) / 4, 0.12), 0.94);
-        const courierIndex = Math.min(combined.length - 1, Math.max(0, Math.round(normalized * (combined.length - 1))));
-
-        return {
-            operationPoint,
-            firstLeg,
-            secondLeg,
-            combined,
-            courierLatLng: combined[courierIndex]
-        };
-    }
-
-    function currentPointForOrder(order, fallbackPoint) {
+    function currentPointForOrder(order) {
         const tracking = order.tracking || {};
         const currentLat = Number(tracking.currentLat);
         const currentLng = Number(tracking.currentLng);
         if (isValidCoordinate(currentLat, currentLng) && !(currentLat === 0 && currentLng === 0)) {
             return [currentLat, currentLng];
         }
-        return fallbackPoint;
+        return null;
     }
 
-    function animateMarker(points, icon) {
-        if (!points.length) return;
-
-        activeAnimatedMarker = L.marker(points[0], { icon }).addTo(map);
-
-        let index = 0;
-        animationTimer = setInterval(() => {
-            index = (index + 1) % points.length;
-            activeAnimatedMarker.setLatLng(points[index]);
-        }, 180);
+    async function roadRoute(start, end) {
+        const query = new URLSearchParams({ startLat: start[0], startLng: start[1], endLat: end[0], endLng: end[1] });
+        const response = await fetch(`/api/geo/route?${query}`);
+        if (!response.ok) return null;
+        const route = await response.json();
+        return Array.isArray(route.points) && route.points.length > 1 ? route : null;
     }
 
     function renderLiveStatus(order, hasLiveRoute) {
@@ -372,32 +296,24 @@
         document.getElementById('trackLiveEyebrow').textContent = live ? 'Entrega en movimiento' : 'Actualización del pedido';
         document.getElementById('trackLiveTitle').textContent = live ? 'Tu pedido va en camino' : isDelivered(order) ? 'Pedido entregado' : order.status;
         document.getElementById('trackLiveDetail').textContent = live
-            ? 'El marcador animado muestra el avance estimado hacia tu dirección.'
+            ? 'El mapa muestra la ruta vial y únicamente la última ubicación real reportada.'
             : isDelivered(order) ? 'La entrega llegó a su destino.' : 'La ruta se activará cuando el pedido salga para entrega.';
         document.getElementById('trackProgressValue').textContent = `${progress}%`;
         document.getElementById('trackProgressBar').style.width = `${progress}%`;
         page.classList.toggle('track-page--live', live);
     }
 
-    function activePreset(order) {
-        const presetId = presetSelect.value;
+    function exactDestination(order) {
         const tracking = order.tracking || {};
-        const destinationFallback = {
-            ...origin,
+        const lat = Number(tracking.destinationLat);
+        const lng = Number(tracking.destinationLng);
+        if (!isValidCoordinate(lat, lng) || (lat === 0 && lng === 0)) return null;
+        return {
             name: order.address || 'Destino del pedido',
             label: order.address || 'Destino del pedido',
-            country: 'Costa Rica'
+            country: tracking.destinationCountry || 'Costa Rica',
+            city: '', lat, lng
         };
-
-        if (!presetId || presetId === 'auto') {
-            return sanitizeLocation(BakeSmartStore.geo.resolveDestination(order.address, {
-                lat: tracking.destinationLat,
-                lng: tracking.destinationLng
-            }), destinationFallback);
-        }
-
-        const preset = BakeSmartStore.geo.presets().find(p => p.id === presetId);
-        return sanitizeLocation(BakeSmartStore.geo.resolveDestination(preset?.name || order.address, preset || {}), destinationFallback);
     }
 
     function renderTimeline(order, destination, hasLiveRoute) {
@@ -431,7 +347,7 @@
                 <div class="timeline-item timeline-${state}">
                     <div class="timeline-dot"><i class="fas ${icon}"></i></div>
                     <div class="timeline-content">
-                        <div class="timeline-title">${step}</div>
+                        <div class="timeline-title">${escapeHtml(step)}</div>
                         <div class="text-muted">${detail}</div>
                     </div>
                 </div>
@@ -441,13 +357,13 @@
 
     function renderTrackingSummary(order, destination, routeType) {
         document.getElementById('trackingSummary').innerHTML = `
-            <div class="summary-row"><span>Origen</span><strong>${origin.name}</strong></div>
-            <div class="summary-row"><span>Cliente</span><strong>${order.customerName}</strong></div>
-            <div class="summary-row"><span>Direccion</span><strong>${order.address}</strong></div>
-            <div class="summary-row"><span>Modalidad</span><strong>${routeType}</strong></div>
+            <div class="summary-row"><span>Origen</span><strong>${escapeHtml(origin.name)}</strong></div>
+            <div class="summary-row"><span>Cliente</span><strong>${escapeHtml(order.customerName)}</strong></div>
+            <div class="summary-row"><span>Dirección</span><strong>${escapeHtml(order.address)}</strong></div>
+            <div class="summary-row"><span>Modalidad</span><strong>${escapeHtml(routeType)}</strong></div>
             <div class="summary-row"><span>Entrega</span><strong>${new Date(order.deliveryDate).toLocaleDateString('es-CR')}</strong></div>
-            <div class="summary-row"><span>Productos</span><strong>${(order.items || []).map(i => `${i.quantity} x ${i.name}`).join(', ') || 'Sin detalle'}</strong></div>
-            <div class="summary-row"><span>Pago</span><strong>${order.paymentStatus} (${order.paymentMethod || 'Pendiente'})</strong></div>
+            <div class="summary-row"><span>Productos</span><strong>${escapeHtml((order.items || []).map(i => `${i.quantity} x ${i.name}`).join(', ') || 'Sin detalle')}</strong></div>
+            <div class="summary-row"><span>Pago</span><strong>${escapeHtml(order.paymentStatus)} (${escapeHtml(order.paymentMethod || 'Pendiente')})</strong></div>
         `;
     }
 
@@ -507,115 +423,56 @@
         requestAnimationFrame(() => mapInstance.invalidateSize(true));
     }
 
-    function renderOrder(orderId) {
+    async function renderOrder(orderId) {
         const orders = getOrders();
         const order = orders.find(x => Number(x.id) === Number(orderId)) || orders[0];
         if (!order) return;
 
         activeOrderId = order.id;
 
-        const destination = activePreset(order);
-        const isInternational = destination.country !== 'Costa Rica';
+        const destination = exactDestination(order);
+        const safeDestination = destination || { name: order.address || 'Dirección pendiente', country: 'Costa Rica' };
+        const isInternational = safeDestination.country !== 'Costa Rica';
         const hasLiveRoute = canShowLiveRoute(order);
         const routeType = hasLiveRoute ? (isInternational ? 'Trayectoria aerea' : 'Trayecto local') : 'Ruta pendiente';
         document.getElementById('trackOrderId').textContent = `#${order.id}`;
         document.getElementById('trackStatus').textContent = order.status;
         document.getElementById('trackRouteType').textContent = routeType;
-        document.getElementById('trackMeta').textContent = `${origin.city}, ${origin.country} -> ${destination.name}, ${destination.country}`;
+        document.getElementById('trackMeta').textContent = `${origin.city}, ${origin.country} → ${safeDestination.name}, ${safeDestination.country}`;
 
         clearVisuals();
-        renderTimeline(order, destination, hasLiveRoute);
-        renderTrackingSummary(order, destination, routeType);
+        renderTimeline(order, safeDestination, hasLiveRoute);
+        renderTrackingSummary(order, safeDestination, routeType);
         renderLiveStatus(order, hasLiveRoute);
 
         const mapInstance = ensureMap();
         const startLatLng = [origin.lat, origin.lng];
-        const destinationLatLng = [destination.lat, destination.lng];
-        if (!mapInstance || !isValidCoordinate(startLatLng[0], startLatLng[1]) || !isValidCoordinate(destinationLatLng[0], destinationLatLng[1])) {
-            renderMapFallback(order, destination, routeType);
+        if (!destination) {
+            document.getElementById('trackMeta').textContent = 'Este pedido no tiene coordenadas verificadas. La dirección debe corregirse antes de mostrar una ruta.';
+            document.getElementById('deliveryMap').innerHTML = '<div class="track-empty-state"><i class="fas fa-map-location-dot"></i><strong>Ubicación exacta pendiente</strong><span>No mostraremos pines aproximados ni ubicaciones inventadas. Actualice la dirección del pedido para habilitar el mapa.</span></div>';
             return;
         }
+        const destinationLatLng = [destination.lat, destination.lng];
+        if (!mapInstance || !isValidCoordinate(startLatLng[0], startLatLng[1])) return;
 
         const icons = getIcons();
 
-        if (!hasLiveRoute) {
-            renderWaitingMap(order, destination, routeType, mapInstance, icons);
-            return;
-        }
-
-        const flightPath = curveBetween(startLatLng, destinationLatLng, true, -1);
-        const localRoute = buildLocalRoute(startLatLng, destinationLatLng, order.tracking?.currentStep || 0);
-        const delivered = isDelivered(order);
-
         const originMarker = L.marker(startLatLng, { icon: icons.origin }).addTo(mapInstance).bindPopup(`${origin.name}<br>${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)}`);
         const destinationMarker = L.marker(destinationLatLng, { icon: icons.destination }).addTo(mapInstance).bindPopup(`${destination.name}<br>${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)}`);
-
         markers.push(originMarker, destinationMarker);
-
-        if (isInternational) {
-            const routeShadow = L.polyline(flightPath, {
-                color: '#7c3aed',
-                weight: 10,
-                opacity: .16,
-                smoothFactor: 1.4
-            }).addTo(mapInstance);
-
-            const route = L.polyline(flightPath, {
-                color: '#6d28d9',
-                weight: 4,
-                dashArray: '10 14',
-                opacity: .95,
-                smoothFactor: 1.4
-            }).addTo(mapInstance);
-
-            layers.push(routeShadow, route);
-            const activePoint = delivered
-                ? destinationLatLng
-                : currentPointForOrder(order, flightPath[Math.floor(flightPath.length * .72)]);
-            if (delivered) {
-                const routeMarker = L.marker(activePoint, { icon: icons.plane }).addTo(mapInstance).bindPopup('Pedido entregado');
-                markers.push(routeMarker);
-            } else {
-                animateMarker(flightPath, icons.plane);
-            }
-        } else {
-            const operationMarker = L.marker(localRoute.operationPoint, {
-                icon: icons.courier
-            }).addTo(mapInstance).bindPopup('Operacion local');
-
-            const firstLeg = L.polyline(localRoute.firstLeg, {
-                color: '#f59e0b',
-                weight: 4,
-                opacity: .82,
-                dashArray: '6 10',
-                smoothFactor: 1.2
-            }).addTo(mapInstance);
-
-            const secondLeg = L.polyline(localRoute.secondLeg, {
-                color: '#10b981',
-                weight: 4,
-                opacity: .95,
-                smoothFactor: 1.2
-            }).addTo(mapInstance);
-
-            markers.push(operationMarker);
-            layers.push(firstLeg, secondLeg);
-            const activePoint = delivered
-                ? destinationLatLng
-                : currentPointForOrder(order, localRoute.courierLatLng);
-            if (delivered) {
-                const courierMarker = L.marker(activePoint, { icon: icons.courier }).addTo(mapInstance).bindPopup('Pedido entregado');
-                markers.push(courierMarker);
-            } else {
-                animateMarker(localRoute.combined, icons.courier);
-            }
+        const calculatedRoute = await roadRoute(startLatLng, destinationLatLng);
+        if (Number(activeOrderId) !== Number(order.id)) return;
+        const routePoints = calculatedRoute?.points || [startLatLng, destinationLatLng];
+        const route = L.polyline(routePoints, { color: '#7c3aed', weight: 5, opacity: .88, dashArray: calculatedRoute ? null : '8 10' }).addTo(mapInstance);
+        layers.push(route);
+        const currentPoint = currentPointForOrder(order);
+        if (hasLiveRoute && currentPoint) {
+            const courierMarker = L.marker(currentPoint, { icon: icons.courier }).addTo(mapInstance).bindPopup('Última ubicación real reportada');
+            markers.push(courierMarker);
         }
-
-        const fitPoints = isInternational
-            ? [startLatLng, destinationLatLng, ...flightPath]
-            : localRoute.combined;
-
-        mapInstance.fitBounds(L.latLngBounds(fitPoints), { padding: [48, 48] });
+        const distance = calculatedRoute ? `${(calculatedRoute.distanceMeters / 1000).toFixed(1)} km` : 'distancia no disponible';
+        document.getElementById('trackMeta').textContent = `${calculatedRoute ? 'Ruta vial calculada' : 'Conexión directa de referencia'} · ${distance} · ${currentPoint ? 'ubicación real reportada' : 'sin ubicación en vivo'}`;
+        mapInstance.fitBounds(L.latLngBounds(routePoints), { padding: [48, 48] });
 
         requestAnimationFrame(() => {
             mapInstance.invalidateSize(true);
@@ -631,10 +488,6 @@
         if (!orders.length) {
             orderSelect.innerHTML = '<option>Sin pedidos</option>';
             orderSelect.disabled = true;
-            presetSelect.innerHTML = presetOptions.map(p =>
-                `<option value="${p.id}">${p.name}${p.country && p.country !== '-' ? ` - ${p.country}` : ''}</option>`
-            ).join('');
-            presetSelect.disabled = true;
             document.getElementById('trackOrderId').textContent = '-';
             document.getElementById('trackStatus').textContent = 'Sin actividad';
             document.getElementById('trackRouteType').textContent = '-';
@@ -660,18 +513,13 @@
         }
 
         orderSelect.innerHTML = orders.map(o =>
-            `<option value="${o.id}">#${o.id} - ${o.customerName} - ${o.status}</option>`
-        ).join('');
-
-        presetSelect.innerHTML = presetOptions.map(p =>
-            `<option value="${p.id}">${p.name}${p.country && p.country !== '-' ? ` - ${p.country}` : ''}</option>`
+            `<option value="${Number(o.id)}">#${Number(o.id)} - ${escapeHtml(o.customerName)} - ${escapeHtml(o.status)}</option>`
         ).join('');
 
         renderOrder(orders[0]?.id);
     }
 
     orderSelect.addEventListener('change', () => renderOrder(orderSelect.value));
-    presetSelect.addEventListener('change', () => renderOrder(orderSelect.value));
 
     async function initializePage() {
         if (pageInitialized) return;

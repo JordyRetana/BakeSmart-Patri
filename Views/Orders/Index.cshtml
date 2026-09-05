@@ -349,7 +349,24 @@
 
     window.advanceDelivery = async id => {
         try {
-            const response = await fetch(`/api/orders/${id}/advance-delivery`, { method: 'POST' });
+            let location = {};
+            if (navigator.geolocation) {
+                try {
+                    const position = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true,
+                        timeout: 8000,
+                        maximumAge: 30000
+                    }));
+                    location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+                } catch {
+                    app.toast.info('Se avanzará el pedido sin ubicación en vivo. Puede habilitar la ubicación precisa para registrar el recorrido.');
+                }
+            }
+            const response = await fetch(`/api/orders/${id}/advance-delivery`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(location)
+            });
             const result = await response.json().catch(() => null);
             if (!response.ok) throw new Error(result?.message || 'No se pudo avanzar la entrega.');
             await loadOrders();
