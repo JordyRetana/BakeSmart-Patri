@@ -1,0 +1,166 @@
+/* Cross-application quality pass: coherent themes, responsive shells and lighter motion. */
+:root {
+    color-scheme: light;
+    --surface-raised: #fff;
+    --surface-soft: #f8f7fb;
+    --surface-muted: #f1eef7;
+    --text-strong: #202638;
+    --focus-ring: 0 0 0 3px color-mix(in srgb, var(--primary) 26%, transparent);
+}
+
+html.dark-start,
+body.dark {
+    color-scheme: dark;
+    --surface-raised: #211e2b;
+    --surface-soft: #191724;
+    --surface-muted: #292431;
+    --text-strong: #f8fafc;
+}
+
+html { scroll-behavior: smooth; }
+body { min-width: 0; }
+img, svg, video, canvas { max-width: 100%; }
+button, input, select, textarea { font: inherit; }
+:where(a, button, input, select, textarea):focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    box-shadow: var(--focus-ring);
+}
+
+/* Authentication pages use the same theme tokens as the application. */
+.login-form-panel,
+.password-card,
+.password-card .login-form {
+    background: var(--surface-raised) !important;
+    color: var(--text) !important;
+}
+.login-form-heading h2,
+.login-form .input-label,
+.password-card .login-title,
+.password-card .input-label { color: var(--text-strong) !important; }
+.login-form-heading p,
+.login-remember,
+.password-card .login-subtitle { color: var(--text-light) !important; }
+.login-form .input,
+.password-field .input,
+.password-card .input {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+.login-form .input::placeholder,
+.password-card .input::placeholder { color: var(--text-muted) !important; }
+.login-divider::before,
+.login-divider::after { background: var(--border) !important; }
+.login-security-note {
+    background: var(--surface-soft) !important;
+    color: var(--text-light) !important;
+    border: 1px solid var(--border);
+}
+body.dark .login-alert {
+    background: rgba(127, 29, 29, .34) !important;
+    border-color: #b91c1c !important;
+    color: #fecaca !important;
+}
+
+/* Normalize common panels that previously stayed white in night mode. */
+body.dark :where(
+    .panel, .form-card, .content-card, .settings-card, .profile-card,
+    .favorites-card, .recipe-card, .recipe-workspace, .recipe-editor,
+    .audit-kpis article, .audit-filters, .audit-table-card,
+    .checkout-panel, .public-info-card, .legal-card
+) {
+    background: var(--surface-raised) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+body.dark :where(.panel, .form-card, .content-card, .settings-card, .profile-card, .recipe-card, .checkout-panel) :where(h1,h2,h3,h4,label,strong) {
+    color: var(--text-strong) !important;
+}
+body.dark :where(.panel, .form-card, .content-card, .settings-card, .profile-card, .recipe-card, .checkout-panel) :where(p,small,span.help-text,dt) {
+    color: var(--text-light) !important;
+}
+body.dark :where(input, textarea, select, .bs-select__button, .search-input) {
+    background-color: #111827 !important;
+    color: #f8fafc !important;
+    border-color: #475569 !important;
+}
+body.dark :where(.bs-select__menu, .dropdown-menu, .user-dropdown) {
+    background: #1f2937 !important;
+    color: #f8fafc !important;
+    border-color: #475569 !important;
+}
+
+/* Fluid application shells and predictable grids. */
+:where(.container, .workspace-shell, .page-shell, [class$="-page"]) { min-width: 0; }
+:where(.card, .panel, [class$="-card"], [class$="-panel"]) { min-width: 0; }
+.app-main { width: 100%; min-width: 0; }
+.table-container, .table-responsive, [class$="-table-wrap"] {
+    max-width: 100%;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Less paint work and no decorative motion on constrained/touch devices. */
+@media (hover: none), (pointer: coarse) {
+    .cursor-glow, .bg-particles, .bg-floating-icons { display: none !important; }
+    .navbar-logo:hover, .navbar-logo:focus-within { transform: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+    }
+}
+
+@media (max-width: 860px) {
+    .container { width: 100%; padding-inline: .85rem; }
+    .section { padding-block: 2rem; }
+    .page-header { padding: 1.15rem !important; }
+    .page-header h1 { font-size: clamp(1.65rem, 8vw, 2.35rem) !important; line-height: 1.08 !important; }
+    .storefront-main {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
+        gap: .65rem !important;
+    }
+    .storefront-brand { min-width: 0; }
+    .storefront-brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .storefront-search { grid-column: 1 / -1; grid-row: 2; width: 100% !important; }
+    .storefront-tools { min-width: 0; gap: .3rem !important; }
+    .storefront-tools > a, .storefront-tools > button,
+    .storefront-account__toggle { min-width: 42px; min-height: 42px; }
+    .storefront-tools > a > span { display: none; }
+    .storefront-cart-link b { position: absolute; inset: -5px -5px auto auto; }
+    .storefront-account__menu, .user-dropdown {
+        right: .25rem !important;
+        left: auto !important;
+        width: min(320px, calc(100vw - 1rem)) !important;
+        max-width: calc(100vw - 1rem) !important;
+    }
+    :where(.grid-2,.grid-3,.grid-4,.grid-5,.grid-6) { grid-template-columns: 1fr !important; }
+    :where(.btn-row,.form-actions,.page-actions,.hero-actions) { flex-wrap: wrap; }
+}
+
+@media (max-width: 600px) {
+    .login-page-shell { min-height: auto !important; }
+    .login-card { min-height: 0 !important; border-radius: 14px !important; }
+    .login-hero { min-height: 300px !important; padding: 1.5rem 1rem !important; }
+    .login-hero h1 { font-size: clamp(2rem, 11vw, 2.8rem) !important; }
+    .login-feature-row { grid-template-columns: repeat(3, minmax(0,1fr)) !important; gap: .4rem; margin-top: 1.25rem; }
+    .login-feature-row span { font-size: .68rem; }
+    .login-feature-row i { width: 38px; height: 38px; }
+    .login-form-panel { margin: 0 .5rem .5rem !important; padding: 1.25rem !important; }
+    .login-form-heading h2 { font-size: 2rem !important; }
+    .login-options { gap: .65rem; }
+    .btn { max-width: 100%; }
+    .footer-content { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 380px) {
+    .storefront-brand span { display: none; }
+    .storefront-tools > a, .storefront-tools > button,
+    .storefront-account__toggle { min-width: 38px !important; width: 38px !important; height: 38px !important; padding: .35rem !important; }
+}

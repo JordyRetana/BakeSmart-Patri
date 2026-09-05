@@ -76,9 +76,11 @@
         },
 
         load() {
-            const saved = localStorage.getItem(this.key);
+            let saved = null;
+            try { saved = localStorage.getItem(this.key); } catch (_) { }
+            const useDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-            if (saved === 'dark') {
+            if (useDark) {
                 document.body.classList.add('dark');
                 document.documentElement.classList.add('dark-start');
                 this.updateIcon('dark');
@@ -93,7 +95,7 @@
             document.body.classList.toggle('dark');
             const isDark = document.body.classList.contains('dark');
             document.documentElement.classList.toggle('dark-start', isDark);
-            localStorage.setItem(this.key, isDark ? 'dark' : 'light');
+            try { localStorage.setItem(this.key, isDark ? 'dark' : 'light'); } catch (_) { }
             this.updateIcon(isDark ? 'dark' : 'light');
 
             app.toast.show(
@@ -114,7 +116,9 @@
 
         setupSystemListener() {
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-                this.load();
+                let saved = null;
+                try { saved = localStorage.getItem(this.key); } catch (_) { }
+                if (!saved) this.load();
             });
         }
     };

@@ -3,6 +3,7 @@ using BakeSmartPatri.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Globalization;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
@@ -47,7 +48,8 @@ namespace BakeSmartPatri.Controllers
         }
 
         [HttpPost]
-        [IgnoreAntiforgeryToken]
+        [ValidateAntiForgeryToken]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> Login(string email, string password, string? returnUrl = null)
         {
             email = (email ?? "").Trim().ToLowerInvariant();
@@ -82,7 +84,8 @@ namespace BakeSmartPatri.Controllers
         }
 
         [HttpPost]
-        [IgnoreAntiforgeryToken]
+        [ValidateAntiForgeryToken]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> Register(string firstName, string lastName, string email, string? phone, string? addressLine, string password, string confirmPassword, string? returnUrl = null)
         {
             firstName = (firstName ?? "").Trim();
@@ -149,7 +152,7 @@ namespace BakeSmartPatri.Controllers
         }
 
         [HttpPost]
-        [IgnoreAntiforgeryToken]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
@@ -273,7 +276,8 @@ namespace BakeSmartPatri.Controllers
         }
 
         [HttpPost]
-        [IgnoreAntiforgeryToken]
+        [ValidateAntiForgeryToken]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> ForgotPassword(string email)
         {
             email = (email ?? "").Trim().ToLowerInvariant();
