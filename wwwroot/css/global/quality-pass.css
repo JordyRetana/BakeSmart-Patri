@@ -8,6 +8,39 @@
     --focus-ring: 0 0 0 3px color-mix(in srgb, var(--primary) 26%, transparent);
 }
 
+/* Dark surfaces must remain continuous: no black/white bands around navigation or login. */
+body.dark .storefront-tools > a {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+body.dark .storefront-tools > a:hover,
+body.dark .storefront-tools > a:focus-visible {
+    background: rgba(255, 255, 255, .08) !important;
+    border-color: rgba(196, 181, 253, .24) !important;
+}
+
+body.dark .login-card {
+    overflow: hidden !important;
+    border-color: rgba(148, 163, 184, .28) !important;
+    background: #111827 !important;
+    box-shadow: 0 28px 70px rgba(0, 0, 0, .38) !important;
+}
+
+body.dark .login-form-panel {
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+@media (max-width: 760px) {
+    body.dark .login-form-panel {
+        border-radius: 0 0 14px 14px !important;
+    }
+}
+
 html.dark-start,
 body.dark {
     color-scheme: dark;
