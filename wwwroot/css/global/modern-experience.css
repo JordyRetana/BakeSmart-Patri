@@ -1,0 +1,290 @@
+/* BakeSmart Patri — global modern experience layer.
+   Keeps every workflow intact while giving public and operational views one visual language. */
+:root {
+    --mx-bg: #f7f5fa;
+    --mx-surface: rgba(255, 255, 255, .94);
+    --mx-surface-solid: #fff;
+    --mx-soft: #f2edfa;
+    --mx-text: #202536;
+    --mx-muted: #6f7484;
+    --mx-line: rgba(68, 48, 89, .12);
+    --mx-purple: #7438df;
+    --mx-pink: #c83c86;
+    --mx-coral: #e96868;
+    --mx-success: #0f9f70;
+    --mx-radius-sm: 13px;
+    --mx-radius: 20px;
+    --mx-radius-lg: 30px;
+    --mx-shadow-sm: 0 10px 30px rgba(47, 30, 65, .07);
+    --mx-shadow: 0 22px 65px rgba(47, 30, 65, .11);
+    --mx-gradient: linear-gradient(135deg, var(--mx-purple), var(--mx-pink) 62%, var(--mx-coral));
+}
+
+body.app-body {
+    color: var(--mx-text);
+    background:
+        radial-gradient(circle at 10% 0, rgba(124, 58, 237, .055), transparent 25rem),
+        radial-gradient(circle at 92% 16%, rgba(236, 72, 153, .045), transparent 28rem),
+        var(--mx-bg) !important;
+}
+
+.app-main { isolation: isolate; }
+.page-shell { padding-block: clamp(1rem, 2vw, 2rem) 3rem !important; }
+
+/* Navigation */
+.storefront-header,
+.navbar {
+    border-bottom: 1px solid rgba(124, 58, 237, .13) !important;
+    background: rgba(255, 255, 255, .88) !important;
+    box-shadow: 0 14px 42px rgba(43, 27, 59, .07) !important;
+    backdrop-filter: blur(22px) saturate(145%);
+}
+
+.storefront-main,
+.navbar-container { min-height: 76px !important; }
+.storefront-brand,
+.navbar-brand { transition: transform .2s ease; }
+.storefront-brand:hover,
+.navbar-brand:hover { transform: translateY(-1px); }
+
+.storefront-search,
+.navbar-menu {
+    border-color: var(--mx-line) !important;
+    border-radius: 16px !important;
+    background: rgba(248, 246, 251, .9) !important;
+}
+
+.storefront-nav a,
+.navbar-link,
+.dropdown-toggle {
+    border-radius: 11px !important;
+    transition: color .18s ease, background .18s ease, transform .18s ease !important;
+}
+
+.storefront-nav a:hover,
+.navbar-link:hover,
+.dropdown-toggle:hover { transform: translateY(-1px) !important; }
+
+.user-profile,
+.storefront-account__toggle,
+.theme-toggle,
+.storefront-theme {
+    border-color: var(--mx-line) !important;
+    background: var(--mx-surface-solid) !important;
+    box-shadow: var(--mx-shadow-sm) !important;
+}
+
+.dropdown-menu,
+.user-dropdown,
+.storefront-account__menu {
+    overflow: hidden;
+    padding: .55rem !important;
+    border-color: var(--mx-line) !important;
+    border-radius: 20px !important;
+    background: var(--mx-surface-solid) !important;
+    box-shadow: var(--mx-shadow) !important;
+}
+
+.dropdown-item,
+.user-dropdown-item { min-height: 43px; border-radius: 12px !important; }
+
+/* Every page gets a recognisable editorial header. */
+.page-header,
+[class$="-header"]:is(.dashboard-header,.orders-header,.inventory-header,.production-header,.accounting-header,.marketing-header,.client-dashboard-header,.client-orders-header,.client-profile-header,.settings-header,.reports-header,.audit-header) {
+    position: relative;
+    overflow: hidden;
+    min-height: 154px !important;
+    padding: clamp(1.35rem, 3vw, 2rem) !important;
+    border: 1px solid rgba(124, 58, 237, .14) !important;
+    border-radius: var(--mx-radius-lg) !important;
+    background:
+        radial-gradient(circle at 90% 10%, rgba(236, 72, 153, .15), transparent 28%),
+        linear-gradient(125deg, #e8f5ff, #f3edff 55%, #fff0f6) !important;
+    box-shadow: var(--mx-shadow-sm) !important;
+}
+
+.page-header::after {
+    content: "";
+    position: absolute;
+    width: 210px;
+    height: 210px;
+    right: -85px;
+    bottom: -140px;
+    border: 32px solid rgba(255,255,255,.28);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.page-header h1 { font-size: clamp(1.75rem, 3vw, 2.55rem) !important; letter-spacing: -.04em; }
+.page-header p { max-width: 760px; font-size: .95rem !important; line-height: 1.65; }
+
+/* Surfaces */
+:where(.card,.panel,.form-card,.content-card,.settings-card,.profile-card,.recipe-card,.checkout-panel,
+.dashboard-section,.orders-section,.inventory-section,.accounting-section,.marketing-section,
+[class$="-card"],[class$="-panel"]) {
+    border-color: var(--mx-line) !important;
+    border-radius: var(--mx-radius) !important;
+    background: var(--mx-surface) !important;
+    box-shadow: var(--mx-shadow-sm) !important;
+}
+
+:where(.card,[class$="-card"]):not(.login-card):not(.product-card) {
+    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+@media (hover:hover) {
+    :where(.card,[class$="-card"]):not(.login-card):not(.track-map-card):not(.modal):hover {
+        border-color: rgba(124, 58, 237, .24) !important;
+        box-shadow: 0 20px 50px rgba(47, 30, 65, .12) !important;
+        transform: translateY(-2px);
+    }
+}
+
+.metric-card,
+.stat-card,
+.stats-card,
+.kpi-card,
+[class*="kpi-card"] {
+    min-height: 108px;
+    padding: 1.15rem !important;
+    border-radius: 20px !important;
+}
+
+.metric-card::before,
+.stat-card::before,
+.stats-card::before,
+.kpi-card::before { width: 5px !important; border-radius: 999px; }
+
+/* Controls */
+.btn,
+button:not(.leaflet-control-zoom-in):not(.leaflet-control-zoom-out) {
+    min-height: 44px;
+    border-radius: 13px !important;
+    transition: transform .18s ease, box-shadow .18s ease, filter .18s ease !important;
+}
+
+.btn-primary { background: var(--mx-gradient) !important; box-shadow: 0 12px 25px rgba(124, 58, 237, .19) !important; }
+.btn-primary:hover { filter: saturate(1.08) brightness(.98); box-shadow: 0 17px 34px rgba(124, 58, 237, .27) !important; }
+.btn-outline { border-color: rgba(124, 58, 237, .24) !important; background: var(--mx-surface-solid) !important; }
+
+:where(input:not([type="checkbox"]):not([type="radio"]),select,textarea,.input,.form-control,.bs-select__button) {
+    min-height: 48px !important;
+    border: 1px solid rgba(77, 55, 96, .17) !important;
+    border-radius: 14px !important;
+    background: var(--mx-surface-solid) !important;
+    color: var(--mx-text) !important;
+    transition: border-color .18s ease, box-shadow .18s ease, background .18s ease !important;
+}
+
+:where(input,select,textarea,.input,.form-control,.bs-select__button):focus {
+    border-color: rgba(124, 58, 237, .7) !important;
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, .11) !important;
+}
+
+.badge { padding: .42rem .7rem !important; border-radius: 999px !important; }
+
+/* Data-heavy modules */
+:where(.table-container,.table-responsive,[class*="table-wrap"],.smart-table-shell) {
+    border-color: var(--mx-line) !important;
+    border-radius: 20px !important;
+    background: var(--mx-surface-solid) !important;
+    box-shadow: var(--mx-shadow-sm) !important;
+}
+
+thead { background: linear-gradient(90deg, #f2ecff, #fff1f7) !important; }
+th { height: 54px; letter-spacing: .045em !important; }
+td { height: 60px; }
+tbody tr { transition: background .15s ease; }
+
+:where(.filters,.filter-bar,.catalog-toolbar,.inventory-filters,.orders-filters,.report-filters,.marketing-filters,.smart-table-toolbar) {
+    border-color: var(--mx-line) !important;
+    border-radius: 18px !important;
+    background: var(--mx-surface) !important;
+    box-shadow: var(--mx-shadow-sm) !important;
+}
+
+.empty-state,
+[class*="empty-state"] {
+    border-radius: 20px !important;
+    background: linear-gradient(145deg, #fbf9fd, #f5f0fb) !important;
+}
+
+/* Public catalog and product experiences. */
+.hero,
+.catalog-hero,
+.about-hero,
+.contact-hero {
+    border-radius: clamp(22px, 3vw, 36px) !important;
+    box-shadow: var(--mx-shadow) !important;
+}
+
+.product-card {
+    overflow: hidden;
+    border-color: var(--mx-line) !important;
+    border-radius: 22px !important;
+    background: var(--mx-surface-solid) !important;
+    box-shadow: var(--mx-shadow-sm) !important;
+    transition: transform .24s ease, box-shadow .24s ease !important;
+}
+
+@media (hover:hover) {
+    .product-card:hover { transform: translateY(-6px) !important; box-shadow: 0 26px 58px rgba(47,30,65,.16) !important; }
+    .product-card:hover img { transform: scale(1.035); }
+}
+.product-card img { transition: transform .45s ease !important; }
+
+/* Dark mode is token-driven, not a collection of isolated black blocks. */
+body.dark {
+    --mx-bg: #111019;
+    --mx-surface: rgba(31, 28, 41, .94);
+    --mx-surface-solid: #1f1c29;
+    --mx-soft: #292433;
+    --mx-text: #f7f4fb;
+    --mx-muted: #b8b1c1;
+    --mx-line: rgba(196, 181, 253, .16);
+    background:
+        radial-gradient(circle at 8% 0, rgba(124, 58, 237, .12), transparent 28rem),
+        radial-gradient(circle at 92% 15%, rgba(200, 60, 134, .09), transparent 30rem),
+        var(--mx-bg) !important;
+    color: var(--mx-text) !important;
+}
+
+body.dark .storefront-header,
+body.dark .navbar { background: rgba(24, 21, 32, .9) !important; border-color: var(--mx-line) !important; }
+body.dark .storefront-search,
+body.dark .navbar-menu { background: rgba(42, 37, 51, .86) !important; border-color: var(--mx-line) !important; }
+body.dark :where(.user-profile,.storefront-account__toggle,.theme-toggle,.storefront-theme) { background: #26212f !important; border-color: var(--mx-line) !important; color: var(--mx-text) !important; }
+body.dark :where(.dropdown-menu,.user-dropdown,.storefront-account__menu) { background: #211d2a !important; border-color: var(--mx-line) !important; }
+body.dark .page-header { background: radial-gradient(circle at 90% 10%, rgba(217,70,143,.17), transparent 29%), linear-gradient(125deg,#222c3a,#2b2237 58%,#34212d) !important; border-color: var(--mx-line) !important; }
+body.dark :where(.card,.panel,.form-card,.content-card,.settings-card,.profile-card,.recipe-card,.checkout-panel,[class$="-card"],[class$="-panel"]) { background: var(--mx-surface) !important; border-color: var(--mx-line) !important; color: var(--mx-text) !important; }
+body.dark :where(input:not([type="checkbox"]):not([type="radio"]),select,textarea,.input,.form-control,.bs-select__button) { background: #15131d !important; color: var(--mx-text) !important; border-color: rgba(196,181,253,.22) !important; }
+body.dark :where(.table-container,.table-responsive,[class*="table-wrap"],.smart-table-shell),
+body.dark table { background: #1f1c29 !important; border-color: var(--mx-line) !important; color: var(--mx-text) !important; }
+body.dark thead { background: linear-gradient(90deg,#30263f,#362631) !important; }
+body.dark tbody tr:hover { background: rgba(124,58,237,.09) !important; }
+body.dark .empty-state,
+body.dark [class*="empty-state"] { background: linear-gradient(145deg,#201c29,#18151f) !important; border-color: var(--mx-line) !important; }
+body.dark .product-card { background: #211e2b !important; }
+
+/* Responsive rhythm for every module. */
+@media (max-width: 980px) {
+    .page-shell { width: min(100% - 1.25rem, 1480px) !important; }
+    :where(.grid-4,.grid-5,.grid-6) { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+    .page-header { min-height: 130px !important; }
+}
+
+@media (max-width: 720px) {
+    body.app-body { background: var(--mx-bg) !important; }
+    .page-shell { width: calc(100% - .8rem) !important; padding-top: .6rem !important; }
+    .page-header { width: 100% !important; margin: .6rem 0 1rem !important; padding: 1.15rem !important; border-radius: 21px !important; }
+    .page-header h1 { font-size: clamp(1.45rem, 7vw, 2rem) !important; }
+    :where(.grid-2,.grid-3,.grid-4,.grid-5,.grid-6) { grid-template-columns: 1fr !important; }
+    :where(.card,.panel,[class$="-card"],[class$="-panel"]) { border-radius: 17px !important; }
+    :where(.filters,.filter-bar,.catalog-toolbar,.inventory-filters,.orders-filters,.report-filters,.marketing-filters,.smart-table-toolbar) { width: 100% !important; padding: .75rem !important; border-radius: 16px !important; }
+    .btn { min-height: 46px; }
+    .footer-content { grid-template-columns: 1fr !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: .01ms !important; }
+}
