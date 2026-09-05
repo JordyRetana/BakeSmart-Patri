@@ -6,25 +6,14 @@
 }
 
 <div class="page-header catalog-page-header">
-    <div>
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <div style="width: 5px; height: 50px; background: var(--gradient-primary); border-radius: 5px;"></div>
-            <div>
-                <h1 style="margin: 0; font-size: 2.5rem; display: flex; align-items: center; gap: 0.75rem;">
-                    <i class="fas fa-book-open" style="color: var(--primary);"></i>
-                    Nuestro catálogo
-                </h1>
-                <p class="text-muted" style="margin-top: 0.5rem; font-size: 1rem; max-width: 600px;">
-                    Descubre nuestra selección de productos artesanales, preparados con los mejores ingredientes y mucho amor
-                </p>
-            </div>
-        </div>
+    <div class="catalog-hero-copy">
+        <span class="catalog-eyebrow"><i class="fas fa-sparkles"></i> Repostería para celebrar</span>
+        <h1>Encuentra algo <strong>delicioso</strong> para hoy</h1>
+        <p>Explora productos artesanales, filtra por categoría y arma tu pedido en pocos pasos.</p>
     </div>
-    <div style="display: flex; gap: 1rem; margin-right: 1.5rem;">
-        <span class="badge badge-primary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
-            <i class="fas fa-box-open"></i>
-            @BusinessClock.Now.ToString("dddd, dd MMM", new System.Globalization.CultureInfo("es-CR"))
-        </span>
+    <div class="catalog-hero-summary">
+        <span><i class="fas fa-cookie-bite"></i><strong>@Model.Products.Count</strong><small>creaciones disponibles</small></span>
+        <span><i class="fas fa-calendar-day"></i><strong>@BusinessClock.Now.ToString("dd MMM", new System.Globalization.CultureInfo("es-CR"))</strong><small>catálogo actualizado</small></span>
     </div>
 </div>
 
@@ -49,34 +38,34 @@
         </div>
     </div>
 
-    <div class="grid grid-3" id="productsGrid" style="gap: clamp(1rem, 1.8vw, 2rem);">
+    <div class="catalog-products-grid" id="productsGrid">
         @foreach (var product in Model.Products)
         {
             <div class="card product-card" data-id="@product.Id" data-category="@product.Category" data-price="@product.UnitPrice" data-name="@product.Name">
-                <div style="position: relative;">
+                <div class="catalog-product-media">
                     <img src="@product.ImageUrl"
                          alt="@product.AltText"
                          onerror="this.src='/img/products/producto-sin-imagen.svg';"
-                         style="width: 100%; height: 250px; object-fit: cover; border-radius: var(--radius);">
-                    <span class="badge badge-primary" style="position: absolute; top: 1rem; right: 1rem;">@product.Category</span>
-                    <button class="btn btn-ghost btn-sm favorite-btn" style="position: absolute; top: 1rem; left: 1rem; background: white; border-radius: 50%; width: 40px; height: 40px;" onclick="toggleFavorite(this)">
+                         class="catalog-product-image">
+                    <span class="badge badge-primary catalog-product-category">@product.Category</span>
+                    <button class="btn btn-ghost btn-sm favorite-btn catalog-favorite-button" onclick="toggleFavorite(this)" aria-label="Agregar @product.Name a favoritos">
                         <i class="far fa-heart"></i>
                     </button>
                 </div>
 
-                <div style="margin-top: 1rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; gap: .75rem;">
-                        <h3 style="margin: 0; font-size: clamp(1.05rem, 1.4vw, 1.25rem); line-height: 1.25;">@product.Name</h3>
-                        <div style="display: flex; gap: 0.25rem; color: #fbbf24; flex-shrink: 0;">
+                <div class="catalog-product-content">
+                    <div class="catalog-product-topline">
+                        <h3>@product.Name</h3>
+                        <div class="catalog-product-rating" aria-label="5 estrellas">
                             <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
                         </div>
                     </div>
 
-                    <p class="text-muted" style="margin-bottom: 1rem;">
+                    <p class="catalog-product-description">
                         @product.Description
                     </p>
 
-                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                    <div class="catalog-product-meta">
                         <span class="badge"><i class="fas fa-barcode"></i> @product.Code</span>
                         <span class="badge"><i class="fas fa-box"></i> @product.Stock.ToString("0.##") @product.Unit</span>
                         @if (!string.IsNullOrWhiteSpace(product.Subcategory))
@@ -85,9 +74,9 @@
                         }
                     </div>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
-                        <span style="font-weight: 700; font-size: 1.5rem; color: var(--primary);">@product.UnitPrice.ToString("C0", culture)</span>
-                        <div style="display: flex; gap: 0.5rem;">
+                    <div class="catalog-product-footer">
+                        <span class="catalog-product-price"><small>Desde</small>@product.UnitPrice.ToString("C0", culture)</span>
+                        <div class="catalog-product-actions">
                             <a href="/Catalog/Details/@product.Id" class="btn btn-outline btn-sm" title="Ver detalles">
                                 <i class="fas fa-eye"></i>
                             </a>

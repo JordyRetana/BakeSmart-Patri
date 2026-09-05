@@ -695,14 +695,14 @@ public sealed partial class SqlStore
         var sql = UseMySql
             ? """
             SELECT
-                (SELECT COUNT(*) FROM Pedidos WHERE DATE(CreatedAt) = DATE(UTC_TIMESTAMP())) AS OrdersToday,
+                (SELECT COUNT(*) FROM Pedidos WHERE DATE(DATE_SUB(CreatedAt, INTERVAL 6 HOUR)) = DATE(DATE_SUB(UTC_TIMESTAMP(), INTERVAL 6 HOUR))) AS OrdersToday,
                 (
                     SELECT COUNT(*)
                     FROM Pedidos o
                     INNER JOIN EstadosPedido os ON os.OrderStatusId = o.OrderStatusId
                     WHERE os.Name IN ('Confirmado', 'En produccion', 'Listo')
                 ) AS InProduction,
-                (SELECT COALESCE(SUM(Total), 0) FROM Ventas WHERE DATE(CreatedAt) = DATE(UTC_TIMESTAMP())) AS SalesToday,
+                (SELECT COALESCE(SUM(Total), 0) FROM Ventas WHERE DATE(DATE_SUB(CreatedAt, INTERVAL 6 HOUR)) = DATE(DATE_SUB(UTC_TIMESTAMP(), INTERVAL 6 HOUR))) AS SalesToday,
                 (
                     SELECT COUNT(*)
                     FROM Productos p
@@ -717,14 +717,14 @@ public sealed partial class SqlStore
             """
             : """
             SELECT
-                (SELECT COUNT(*) FROM dbo.Pedidos WHERE CAST(CreatedAt AS date) = CAST(GETDATE() AS date)) AS OrdersToday,
+                (SELECT COUNT(*) FROM dbo.Pedidos WHERE CAST(DATEADD(hour, -6, CreatedAt) AS date) = CAST(DATEADD(hour, -6, SYSUTCDATETIME()) AS date)) AS OrdersToday,
                 (
                     SELECT COUNT(*)
                     FROM dbo.Pedidos o
                     INNER JOIN dbo.EstadosPedido os ON os.OrderStatusId = o.OrderStatusId
                     WHERE os.Name IN (N'Confirmado', N'En produccion', N'Listo')
                 ) AS InProduction,
-                (SELECT COALESCE(SUM(Total), 0) FROM dbo.Ventas WHERE CAST(CreatedAt AS date) = CAST(GETDATE() AS date)) AS SalesToday,
+                (SELECT COALESCE(SUM(Total), 0) FROM dbo.Ventas WHERE CAST(DATEADD(hour, -6, CreatedAt) AS date) = CAST(DATEADD(hour, -6, SYSUTCDATETIME()) AS date)) AS SalesToday,
                 (
                     SELECT COUNT(*)
                     FROM dbo.Productos p
