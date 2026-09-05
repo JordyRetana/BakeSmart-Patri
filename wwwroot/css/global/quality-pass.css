@@ -21,6 +21,31 @@ body.dark .storefront-tools > a:focus-visible {
     border-color: rgba(196, 181, 253, .24) !important;
 }
 
+body.dark .storefront-account__toggle,
+body.dark .storefront-tools .storefront-account .user-profile {
+    color: #f8fafc !important;
+    border-color: rgba(167, 139, 250, .32) !important;
+    background: rgba(30, 26, 42, .94) !important;
+    box-shadow: none !important;
+}
+
+body.dark .storefront-account__toggle .user-name,
+body.dark .storefront-account__toggle .user-role {
+    color: #f8fafc !important;
+}
+
+body.dark .client-action,
+body.dark .client-dashboard-page .card {
+    color: #f8fafc !important;
+    border-color: rgba(167, 139, 250, .2) !important;
+    background: #211e2b !important;
+}
+
+body.dark .client-action__icon {
+    color: #c4b5fd !important;
+    background: rgba(124, 58, 237, .2) !important;
+}
+
 body.dark .login-card {
     overflow: hidden !important;
     border-color: rgba(148, 163, 184, .28) !important;

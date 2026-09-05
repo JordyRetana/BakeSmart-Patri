@@ -9,8 +9,10 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 
 <div class="page-shell track-page track-page--loading" id="trackPage">
-    <div class="page-header track-header">
+    <section class="track-hero">
+    <div class="track-header">
         <div>
+            <span class="track-eyebrow"><i class="fas fa-satellite-dish"></i> Seguimiento en línea</span>
             <h1 class="track-title">
                 <i class="fas fa-route"></i>
                 Seguimiento inteligente del pedido
@@ -26,7 +28,7 @@
         </div>
     </div>
 
-    <section class="track-live-strip" aria-label="Estado actual de la entrega">
+    <div class="track-live-strip" aria-label="Estado actual de la entrega">
         <div class="track-live-icon"><i id="trackLiveIcon" class="fas fa-clock"></i></div>
         <div class="track-live-copy">
             <span id="trackLiveEyebrow">Actualización del pedido</span>
@@ -37,21 +39,22 @@
             <div class="track-live-progress__meta"><span>Progreso</span><strong id="trackProgressValue">0%</strong></div>
             <div class="track-live-progress__rail"><span id="trackProgressBar"></span></div>
         </div>
+    </div>
     </section>
 
     <div class="grid grid-3 track-kpis">
-        <div class="card metric-card">
-            <div class="text-muted">Pedido</div>
+        <div class="card metric-card track-metric"><span class="track-metric__icon"><i class="fas fa-receipt"></i></span><div>
+            <div class="text-muted">Pedido seleccionado</div>
             <h2 id="trackOrderId"></h2>
-        </div>
-        <div class="card metric-card">
-            <div class="text-muted">Estado</div>
+        </div></div>
+        <div class="card metric-card track-metric"><span class="track-metric__icon"><i class="fas fa-box"></i></span><div>
+            <div class="text-muted">Estado actual</div>
             <h2 id="trackStatus"></h2>
-        </div>
-        <div class="card metric-card">
-            <div class="text-muted">Tipo de ruta</div>
+        </div></div>
+        <div class="card metric-card track-metric"><span class="track-metric__icon"><i class="fas fa-location-arrow"></i></span><div>
+            <div class="text-muted">Información logística</div>
             <h2 id="trackRouteType"></h2>
-        </div>
+        </div></div>
     </div>
 
     <div class="track-layout">
@@ -249,10 +252,9 @@
             preferCanvas: true
         }).setView([origin.lat, origin.lng], 10);
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            subdomains: 'abcd',
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
-            attribution: '&copy; OpenStreetMap &copy; CARTO'
+            attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
         return map;
@@ -470,8 +472,12 @@
             const courierMarker = L.marker(currentPoint, { icon: icons.courier }).addTo(mapInstance).bindPopup('Última ubicación real reportada');
             markers.push(courierMarker);
         }
-        const distance = calculatedRoute ? `${(calculatedRoute.distanceMeters / 1000).toFixed(1)} km` : 'distancia no disponible';
-        document.getElementById('trackMeta').textContent = `${calculatedRoute ? 'Ruta vial calculada' : 'Conexión directa de referencia'} · ${distance} · ${currentPoint ? 'ubicación real reportada' : 'sin ubicación en vivo'}`;
+        const routeDistance = calculatedRoute?.distanceMeters || 0;
+        const distance = calculatedRoute ? (routeDistance < 100 ? 'mismo punto de entrega' : `${(routeDistance / 1000).toFixed(1)} km`) : 'distancia no disponible';
+        const locationLabel = currentPoint
+            ? (Math.abs(currentPoint[0] - origin.lat) < .00008 && Math.abs(currentPoint[1] - origin.lng) < .00008 ? 'salida registrada en el negocio' : 'última ubicación real reportada')
+            : 'sin ubicación en vivo';
+        document.getElementById('trackMeta').textContent = `${calculatedRoute ? 'Ruta vial verificada' : 'Referencia entre coordenadas'} · ${distance} · ${locationLabel}`;
         mapInstance.fitBounds(L.latLngBounds(routePoints), { padding: [48, 48] });
 
         requestAnimationFrame(() => {
