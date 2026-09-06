@@ -148,6 +148,125 @@ body.global-categories-open {
     }
 }
 
+/* Selector global de categorías: compacto, visual y adaptable. */
+.global-categories-backdrop {
+    background: rgba(19, 16, 31, .58);
+    backdrop-filter: blur(7px) saturate(.8);
+}
+
+.global-categories-sidebar {
+    width: min(540px, 100vw);
+    border-left: 0;
+    background: color-mix(in srgb, var(--bg-card) 96%, var(--primary-light));
+    box-shadow: -32px 0 90px rgba(24, 16, 39, .28);
+}
+
+.global-categories-sidebar__header {
+    align-items: center;
+    padding: 1.35rem 1.4rem 1.2rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--primary) 14%, var(--border));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--primary-light) 42%, var(--bg-card)), var(--bg-card) 58%, color-mix(in srgb, var(--secondary) 8%, var(--bg-card)));
+}
+
+.global-categories-sidebar__header span {
+    color: var(--primary-dark);
+    letter-spacing: .09em;
+}
+
+.global-categories-sidebar__header h2 {
+    margin-top: .3rem;
+    font-size: clamp(1.4rem, 3vw, 1.8rem);
+    letter-spacing: -.035em;
+}
+
+.global-categories-close {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border-radius: 14px;
+    background: var(--bg-card);
+    box-shadow: 0 8px 22px rgba(45, 30, 65, .08);
+    transition: transform .18s ease, border-color .18s ease;
+}
+
+.global-categories-close:hover {
+    border-color: color-mix(in srgb, var(--primary) 48%, var(--border));
+    transform: rotate(4deg) scale(1.04);
+}
+
+.global-categories-sidebar__body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .75rem;
+    padding: 1.15rem 1.25rem 1.5rem;
+}
+
+.global-category-option {
+    position: relative;
+    min-width: 0;
+    min-height: 112px;
+    padding: .9rem;
+    grid-template-columns: 42px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: .2rem .7rem;
+    align-content: center;
+    border-radius: 18px;
+    background: var(--bg-card);
+    box-shadow: 0 10px 26px rgba(44, 29, 61, .055);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.global-category-option:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 32px rgba(44, 29, 61, .11);
+}
+
+.global-category-option--active {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--primary-light) 62%, var(--bg-card)), var(--bg-card));
+    box-shadow: inset 3px 0 0 var(--primary), 0 12px 28px rgba(92, 52, 142, .1);
+}
+
+.global-category-option span {
+    grid-row: 1 / 3;
+    width: 42px;
+    height: 42px;
+    border: 0;
+    border-radius: 13px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 16%, var(--bg-card)), color-mix(in srgb, var(--secondary) 10%, var(--bg-card)));
+}
+
+.global-category-option strong {
+    min-width: 0;
+    align-self: end;
+    font-size: .9rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.global-category-option small {
+    width: max-content;
+    margin: .15rem 0 0;
+    padding: .22rem .48rem;
+    align-self: start;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--primary-light) 45%, var(--bg));
+    font-size: .66rem;
+    font-weight: 750;
+}
+
+@media (max-width: 520px) {
+    .global-categories-sidebar__header { padding: 1.1rem 1rem; }
+    .global-categories-sidebar__body { gap: .6rem; padding: .85rem; }
+    .global-category-option { min-height: 102px; padding: .72rem; grid-template-columns: 36px minmax(0, 1fr); gap: .18rem .55rem; border-radius: 15px; }
+    .global-category-option span { width: 36px; height: 36px; border-radius: 11px; }
+    .global-category-option strong { font-size: .8rem; }
+    .global-category-option small { font-size: .61rem; }
+}
+
+@media (max-width: 350px) {
+    .global-categories-sidebar__body { grid-template-columns: 1fr; }
+    .global-category-option { min-height: 78px; }
+}
+
 /* Critical admin page layout fallback. Keeps Users/Roles styled if page CSS is cached or overridden. */
 body[data-page="/users"] .users-page,
 body[data-page="/roles"] .roles-page {
