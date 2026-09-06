@@ -1,7 +1,7 @@
 /* Página de inicio: composición editorial aislada. */
 body[data-page="/"] .storefront-hero{width:100%;max-width:none;margin:0;border-radius:0;box-shadow:none}
 body[data-page="/"] .storefront-section{padding:clamp(4rem,7vw,7rem) 0}
-body[data-page="/"] .storefront-section>.container{width:min(1240px,calc(100% - 2.5rem))}
+body[data-page="/"] .storefront-section>.container{width:min(var(--page-shell-max),calc(100% - (var(--page-shell-gutter) * 2)))}
 body[data-page="/"] .storefront-heading{display:flex;max-width:900px;margin:0 auto 3rem;align-items:center;flex-direction:column;gap:.7rem;text-align:center}
 body[data-page="/"] .storefront-heading:before{content:"SELECCIÓN BAKESMART";color:#aa3d92;font-size:.7rem;font-weight:900;letter-spacing:.18em}
 body[data-page="/"] .storefront-heading>span{display:none}body[data-page="/"] .storefront-heading h2{margin:0;font-size:clamp(2.2rem,4vw,4rem);line-height:.96;letter-spacing:-.055em}
