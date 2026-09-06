@@ -26,6 +26,7 @@
 
 @section Styles {
     <link rel="stylesheet" href="/css/pages/dashboard-index.css?v=dashboard-fast-20260719-1" />
+    <link rel="stylesheet" href="~/css/pages/dashboard-refresh.css" asp-append-version="true" />
 }
 
 <main class="dashboard-page dashboard-role-@roleKey">
@@ -40,20 +41,6 @@
             @if (canReports) { <a class="btn btn-outline" href="/Reports"><i class="fas fa-chart-column"></i> Reportes</a> }
             @if (canAudit) { <a class="btn btn-outline" href="/Audit"><i class="fas fa-clock-rotate-left"></i> Bitácora</a> }
         </div>
-        <aside class="dashboard-welcome-card" aria-label="Resumen de la sesión">
-            <div class="dashboard-welcome-user">
-                <span><i class="fas @roleIcon"></i></span>
-                <div><small>Sesión activa</small><strong>@displayName</strong></div>
-            </div>
-            <div class="dashboard-welcome-meta">
-                <div><i class="fas fa-calendar-day"></i><span>@todayLabel</span></div>
-                <div><i class="fas fa-signal"></i><span>Información operativa en vivo</span></div>
-            </div>
-            <div class="dashboard-welcome-actions">
-                <a href="/"><i class="fas fa-store"></i> Ver tienda</a>
-                <a href="/Account/Profile"><i class="fas fa-user-gear"></i> Mi perfil</a>
-            </div>
-        </aside>
     </header>
 
     <section class="dashboard-kpis" aria-label="Indicadores principales">
