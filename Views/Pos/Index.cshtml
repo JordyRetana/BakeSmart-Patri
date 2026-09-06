@@ -31,7 +31,7 @@
     var currentUserEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
 }
 
-<div class="page-shell pos-page @(isCashierView ? "pos-page--cashier" : "")">
+<div class="page-shell pos-page @(isCashierView ? "pos-page--cashier" : "")" data-pos-workspace="sale">
     @if (TempData["CashLogoutBlocked"] is string logoutMessage)
     {
         <div class="alert alert-warning pos-logout-warning" role="alert">
@@ -77,6 +77,21 @@
             <h2 id="posMethodsCount"></h2>
         </div>
     </div>
+
+    <nav class="pos-workspace-tabs" aria-label="Áreas del punto de venta">
+        <button type="button" class="pos-workspace-tab active" data-pos-tab="sale" aria-selected="true">
+            <i class="fas fa-basket-shopping"></i><span><strong>Venta</strong><small>Productos y carrito</small></span>
+        </button>
+        <button type="button" class="pos-workspace-tab" data-pos-tab="cash" aria-selected="false">
+            <i class="fas fa-cash-register"></i><span><strong>Caja</strong><small>Apertura y turnos</small></span>
+        </button>
+        @if (canManagePayments || canManageCreditNotes)
+        {
+            <button type="button" class="pos-workspace-tab" data-pos-tab="admin" aria-selected="false">
+                <i class="fas fa-sliders"></i><span><strong>Administración</strong><small>Pagos y devoluciones</small></span>
+            </button>
+        }
+    </nav>
 
     <div class="pos-layout">
         <section class="card pos-main-card">
@@ -319,6 +334,21 @@
 @section Scripts {
     <script>
         (() => {
+            const posPage = document.querySelector('.pos-page');
+            const allowedTabs = [...document.querySelectorAll('[data-pos-tab]')].map(button => button.dataset.posTab);
+            const selectWorkspace = requestedTab => {
+                const tab = allowedTabs.includes(requestedTab) ? requestedTab : 'sale';
+                posPage.dataset.posWorkspace = tab;
+                document.querySelectorAll('[data-pos-tab]').forEach(button => {
+                    const active = button.dataset.posTab === tab;
+                    button.classList.toggle('active', active);
+                    button.setAttribute('aria-selected', String(active));
+                });
+                try { sessionStorage.setItem('bakesmart:pos-workspace', tab); } catch (_) { }
+            };
+            document.querySelectorAll('[data-pos-tab]').forEach(button => button.addEventListener('click', () => selectWorkspace(button.dataset.posTab)));
+            try { selectWorkspace(sessionStorage.getItem('bakesmart:pos-workspace') || 'sale'); } catch (_) { selectWorkspace('sale'); }
+
             const store = BakeSmartStore;
             const searchInput = document.getElementById('posSearch');
             const checkoutForm = document.getElementById('posCheckoutForm');

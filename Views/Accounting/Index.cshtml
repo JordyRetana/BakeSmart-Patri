@@ -6,7 +6,7 @@
     ViewData["Title"] = "Contabilidad";
 }
 
-<div class="page-shell accounting-page">
+<div class="page-shell accounting-page" data-accounting-workspace="operations">
     <div class="page-header accounting-header">
         <div>
             <h1 class="accounting-title">
@@ -52,6 +52,12 @@
             </div>
         </div>
     </div>
+
+    <nav class="accounting-workspace-tabs" aria-label="Áreas de contabilidad">
+        <button type="button" class="accounting-workspace-tab active" data-accounting-tab="operations" aria-selected="true"><i class="fas fa-pen-to-square"></i><span><strong>Movimientos</strong><small>Gastos, devoluciones y proveedores</small></span></button>
+        <button type="button" class="accounting-workspace-tab" data-accounting-tab="close" aria-selected="false"><i class="fas fa-scale-balanced"></i><span><strong>Conciliación</strong><small>Revisión y cierre contable</small></span></button>
+        <button type="button" class="accounting-workspace-tab" data-accounting-tab="journal" aria-selected="false"><i class="fas fa-book-open"></i><span><strong>Libro diario</strong><small>Asientos y balances</small></span></button>
+    </nav>
 
     <div class="accounting-main-grid">
         <aside class="card accounting-actions-card">
@@ -219,6 +225,20 @@
 @section Scripts {
     <script>
         (() => {
+            const accountingPage = document.querySelector('.accounting-page');
+            const selectAccountingWorkspace = tab => {
+                const selected = ['operations', 'close', 'journal'].includes(tab) ? tab : 'operations';
+                accountingPage.dataset.accountingWorkspace = selected;
+                document.querySelectorAll('[data-accounting-tab]').forEach(button => {
+                    const active = button.dataset.accountingTab === selected;
+                    button.classList.toggle('active', active);
+                    button.setAttribute('aria-selected', String(active));
+                });
+                try { sessionStorage.setItem('bakesmart:accounting-workspace', selected); } catch (_) { }
+            };
+            document.querySelectorAll('[data-accounting-tab]').forEach(button => button.addEventListener('click', () => selectAccountingWorkspace(button.dataset.accountingTab)));
+            try { selectAccountingWorkspace(sessionStorage.getItem('bakesmart:accounting-workspace') || 'operations'); } catch (_) { selectAccountingWorkspace('operations'); }
+
             let pageInitialized = false;
             let reconStatus = 'Pendiente';
 

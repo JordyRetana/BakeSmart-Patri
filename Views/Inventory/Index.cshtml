@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="~/css/pages/inventory-page.css" asp-append-version="true" />
 }
 
-<div class="page-shell inventory-page">
+<div class="page-shell inventory-page" data-inventory-workspace="stock">
     <div class="page-header inventory-header">
         <div>
             <h1 class="inventory-title">
@@ -21,7 +21,10 @@
         </div>
 
         <div class="page-actions inventory-actions">
-            <input id="inventorySearch" class="form-control" placeholder="Buscar por código o descripción" />
+            <div class="inventory-filter-search">
+                <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+                <input id="inventorySearch" class="form-control" placeholder="Buscar por código o descripción" />
+            </div>
             <select id="inventoryTypeFilter" class="form-control inventory-type-filter">
                 <option value="Materia prima" selected>Solo materia prima</option>
                 <option value="Empaque">Solo empaques</option>
@@ -33,6 +36,7 @@
                 <option value="critico">Stock crítico (= 0)</option>
                 <option value="disponible">Con stock (&gt; 0)</option>
             </select>
+            <div class="inventory-header-actions">
             <a class="btn btn-outline" href="/Inventory/Products">
                 <i class="fas fa-cake-candles"></i>
                 Productos vendibles
@@ -45,8 +49,14 @@
                 <i class="fas fa-right-left"></i>
                 Movimiento
             </button>
+            </div>
         </div>
     </div>
+
+    <nav class="inventory-workspace-tabs" aria-label="Áreas de inventario">
+        <button type="button" class="inventory-workspace-tab active" data-inventory-tab="stock" aria-selected="true"><i class="fas fa-boxes-stacked"></i><span><strong>Existencias</strong><small>Consulta, filtros y movimientos</small></span></button>
+        <button type="button" class="inventory-workspace-tab" data-inventory-tab="quick" aria-selected="false"><i class="fas fa-wand-magic-sparkles"></i><span><strong>Alta rápida</strong><small>Plantillas de uso frecuente</small></span></button>
+    </nav>
 
     <div class="grid grid-4 inventory-kpi-grid">
         <div class="card inventory-kpi-card">
@@ -253,6 +263,20 @@
 @section Scripts {
     <script>
         (() => {
+            const inventoryPage = document.querySelector('.inventory-page');
+            const selectInventoryWorkspace = (workspace) => {
+                if (!inventoryPage || !['stock', 'quick'].includes(workspace)) return;
+                inventoryPage.dataset.inventoryWorkspace = workspace;
+                document.querySelectorAll('[data-inventory-tab]').forEach(button => {
+                    const active = button.dataset.inventoryTab === workspace;
+                    button.classList.toggle('active', active);
+                    button.setAttribute('aria-selected', String(active));
+                });
+                sessionStorage.setItem('bakesmart.inventory.workspace', workspace);
+            };
+            document.querySelectorAll('[data-inventory-tab]').forEach(button => button.addEventListener('click', () => selectInventoryWorkspace(button.dataset.inventoryTab)));
+            selectInventoryWorkspace(sessionStorage.getItem('bakesmart.inventory.workspace') || 'stock');
+
             const search = document.getElementById('inventorySearch');
             const typeFilter = document.getElementById('inventoryTypeFilter');
             const category = document.getElementById('inventoryCategory');
