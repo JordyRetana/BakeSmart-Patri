@@ -1,4 +1,4 @@
-/* Página de inicio: composición editorial aislada. */
+/* HOME: composición editorial aislada. El banner conserva todo el ancho. */
 body[data-page="/"] .storefront-hero{width:100%;max-width:none;margin:0;border-radius:0;box-shadow:none}
 body[data-page="/"] .storefront-section{padding:clamp(4rem,7vw,7rem) 0}
 body[data-page="/"] .storefront-section>.container{width:min(1240px,calc(100% - 2.5rem))}
