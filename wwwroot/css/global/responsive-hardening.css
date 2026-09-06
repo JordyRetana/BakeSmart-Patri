@@ -1,0 +1,52 @@
+/* Capa final y acotada para legibilidad compartida y adaptación móvil. */
+html,body{max-width:100%;overflow-x:clip}
+main,.main-content,.page-shell,.container,section,article,aside,form,fieldset{min-width:0}
+img,svg,video,canvas{max-width:100%}
+:where(h1,h2,h3,h4,p,a,button,label,th,td,strong,small,span){overflow-wrap:break-word}
+
+/* Pie: contraste AA sobre el degradado, ritmo más claro y enlaces táctiles. */
+.footer{color:#fff!important}
+.footer-content{align-items:start!important}
+.footer-title,.footer-content h4{color:#fff!important;text-shadow:0 1px 1px rgba(25,12,43,.22)}
+.footer p,.footer-links,.footer-links li,.footer-links a,.footer-content a{color:rgba(255,255,255,.94)!important}
+.footer-links a{display:inline-flex;align-items:center;min-height:30px;line-height:1.45;text-decoration-thickness:1px;text-underline-offset:3px}
+.footer-links a:hover,.footer-links a:focus-visible{color:#fff!important;text-decoration:underline}
+.footer .social-links a{display:grid;place-items:center;min-width:42px;min-height:42px;color:#fff!important;border:1px solid rgba(255,255,255,.22);border-radius:12px;background:rgba(20,10,35,.12)}
+.footer-bottom{color:rgba(255,255,255,.88)!important;border-color:rgba(255,255,255,.22)!important;text-align:center}
+
+/* Menú de cuenta: compacto, anclado al botón y sin tapar media pantalla. */
+.navbar .user-dropdown{width:min(320px,calc(100vw - 1.5rem))!important;padding:.65rem!important;border-radius:18px!important}
+.navbar .user-dropdown-head{display:grid!important;grid-template-columns:42px minmax(0,1fr)!important;gap:.7rem!important;padding:.55rem .55rem .75rem!important}
+.navbar .user-dropdown-head>span:last-child{min-width:0}
+.navbar .user-dropdown-head strong,.navbar .user-dropdown-head small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navbar .user-dropdown-item{min-height:46px!important;padding:.55rem .6rem!important;gap:.65rem!important;border-radius:12px!important;font-size:.86rem!important}
+.navbar .user-dropdown-item i{width:34px!important;height:34px!important;border-radius:10px!important}
+.navbar .user-dropdown-divider{margin:.35rem .2rem!important}
+
+/* Tablas y controles deben desplazarse dentro de su bloque, nunca ampliar la página. */
+:where(.table-responsive,.table-container,.dashboard-table-wrap,.smart-table-scroll){max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+:where(input,select,textarea,button){max-width:100%}
+
+@media(max-width:860px){
+  .page-shell{width:calc(100% - 1rem)!important;margin-inline:auto!important}
+  .navbar .navbar-actions .user-menu .user-dropdown,.storefront-tools .storefront-account .user-dropdown{position:absolute!important;top:calc(100% + .55rem)!important;right:0!important;bottom:auto!important;left:auto!important;width:min(300px,calc(100vw - 1rem))!important;max-width:calc(100vw - 1rem)!important;max-height:min(68dvh,480px)!important;overflow-y:auto!important;border-radius:18px!important;transform-origin:top right!important;z-index:9300!important}
+  :where(.page-header,.client-header,.dashboard-section-head,.client-panel__header){gap:.8rem;flex-wrap:wrap}
+  :where(.page-header-actions,.page-actions,.dashboard-hero-actions,.client-profile-actions){width:100%;display:flex;flex-wrap:wrap}
+  :where(.page-header-actions,.page-actions,.dashboard-hero-actions,.client-profile-actions)>.btn{flex:1 1 150px}
+}
+
+@media(max-width:600px){
+  .footer{padding-top:2rem!important}
+  .footer-content{width:calc(100% - 2rem)!important;grid-template-columns:1fr!important;gap:1.35rem!important}
+  .footer-content>div{padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,.16)}
+  .footer-content>div:last-child{border-bottom:0}
+  .footer-title{margin-bottom:.55rem!important}
+  .footer-links{display:grid!important;gap:.15rem!important}
+  .footer-bottom{margin-top:.5rem!important;padding:1rem!important;line-height:1.55}
+  :where(.card,.client-panel,.dashboard-panel){max-width:100%}
+  :where(.btn,.form-actions button,.page-actions a){min-height:44px}
+  body.app-body table.smart-table{display:block!important;width:100%!important;min-width:0!important;max-width:100%!important}
+  body.app-body table.smart-table>tbody{display:grid!important;width:100%!important;min-width:0!important}
+  body.app-body table.smart-table>tbody>tr:not(.smart-row-hidden){display:grid!important;width:100%!important;min-width:0!important}
+  body.app-body table.smart-table>tbody>tr>td{min-width:0!important;max-width:100%!important;white-space:normal!important;overflow-wrap:anywhere!important}
+}
