@@ -132,6 +132,17 @@
       return row.cells.length === 1 && row.cells[0].colSpan > 1;
     }
 
+    annotateRows(rows) {
+      const headings = Array.from(this.table.tHead?.rows[0]?.cells || [])
+        .map((cell) => cell.textContent.trim() || "Dato");
+      rows.forEach((row) => {
+        if (this.isMessageRow(row) || row.dataset.smartIgnore) return;
+        Array.from(row.cells).forEach((cell, index) => {
+          cell.dataset.label = headings[index] || `Dato ${index + 1}`;
+        });
+      });
+    }
+
     pageItems(totalPages) {
       if (totalPages <= 5) return Array.from({ length: totalPages }, (_, index) => index + 1);
       const items = [1];
@@ -163,6 +174,7 @@
 
     render() {
       const rows = this.getRows();
+      this.annotateRows(rows);
       const messageRows = rows.filter((row) => this.isMessageRow(row));
       const dataRows = rows.filter((row) => !this.isMessageRow(row));
       const matches = dataRows.filter((row) => !this.query || normalize(row.innerText).includes(this.query));
