@@ -1,2 +1,15 @@
 .profile-page{width:min(1120px,calc(100% - 2rem));display:grid;gap:1.25rem}.profile-page .card,.profile-card{border-radius:20px!important;box-shadow:0 13px 34px rgba(48,30,62,.08)!important}.profile-page input,.profile-page select,.profile-page textarea{min-height:48px}@media(max-width:650px){.profile-page{width:calc(100% - 1rem)}.profile-page .card,.profile-card{padding:1.15rem!important}}
 body.dark .profile-page .card,body.dark .profile-card{background:#211d29!important;border-color:#403648!important;color:#f5f2f7}
+
+.profile-workspace-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;padding:.65rem;border:1px solid var(--border);border-radius:20px;background:var(--bg-card);box-shadow:0 12px 30px rgba(48,30,62,.07)}
+.profile-workspace-tab{min-height:68px;padding:.8rem 1rem;display:flex;align-items:center;gap:.8rem;border:1px solid transparent;border-radius:14px;background:transparent;color:var(--text);text-align:left;cursor:pointer}
+.profile-workspace-tab>i{width:42px;height:42px;display:grid;place-items:center;flex:0 0 42px;border-radius:12px;background:var(--primary-light);color:var(--primary)}
+.profile-workspace-tab span,.profile-workspace-tab strong,.profile-workspace-tab small{display:block}.profile-workspace-tab small{margin-top:.15rem;color:var(--text-muted)}
+.profile-workspace-tab.active{border-color:color-mix(in srgb,var(--primary) 30%,var(--border));background:linear-gradient(135deg,color-mix(in srgb,var(--primary-light) 82%,var(--bg-card)),color-mix(in srgb,var(--secondary) 8%,var(--bg-card)))}
+.profile-workspace-tab.active>i{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff}
+.profile-page[data-profile-section] .profile-grid{display:block}
+.profile-page[data-profile-section="personal"] .profile-grid>.profile-section:nth-child(2),.profile-page[data-profile-section="security"] .profile-grid>.profile-section:nth-child(1){display:none}
+.profile-page[data-profile-section] .profile-section{width:100%;max-width:none}
+body.dark .profile-workspace-tabs{background:#211d29;border-color:#403648}
+body.dark .profile-workspace-tab.active{background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(236,72,153,.14));border-color:rgba(196,181,253,.35)}
+@media(max-width:650px){.profile-workspace-tabs{grid-template-columns:1fr;padding:.45rem}.profile-workspace-tab{min-height:56px}}
