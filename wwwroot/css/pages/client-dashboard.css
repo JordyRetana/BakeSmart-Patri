@@ -1,4 +1,4 @@
-/* Panel del cliente: jerarquía, aire y superficies coherentes por tema. */
+/* Panel principal del cliente. */
 body[data-page="/client"] .client-dashboard-page{width:min(1240px,calc(100% - 2rem));margin:0 auto;padding:1.5rem 0 5rem;gap:1.35rem}
 body[data-page="/client"] .client-hero{min-height:315px;padding:clamp(1.7rem,4vw,3.25rem);grid-template-columns:minmax(0,1fr) minmax(390px,.9fr);gap:2.5rem;border-radius:30px;background:linear-gradient(125deg,#e7f6ff,#f1eaff 56%,#fff0f5);box-shadow:0 24px 60px rgba(51,31,68,.1);position:relative;overflow:hidden}
 body[data-page="/client"] .client-hero:after{content:"";position:absolute;right:-75px;top:-120px;width:310px;height:310px;border:52px solid rgba(124,58,237,.08);border-radius:50%}body[data-page="/client"] .client-hero>*{position:relative;z-index:1}
