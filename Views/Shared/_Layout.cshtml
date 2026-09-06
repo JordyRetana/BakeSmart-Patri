@@ -88,6 +88,10 @@
     {
         <link rel="stylesheet" href="~/css/global/operational-workspace.css" asp-append-version="true" />
     }
+    else
+    {
+        <link rel="stylesheet" href="~/css/global/public-spacing.css" asp-append-version="true" />
+    }
     <style>
         
         @@keyframes slideIn {
@@ -140,7 +144,7 @@
         }
     </style>
 </head>
-<body class="app-body page-ready @(isOperational ? "operational-shell" : string.Empty)" data-page="@currentPath" data-user-email="@userEmail" data-user-authenticated="@isAuth.ToString().ToLowerInvariant()">
+<body class="app-body page-ready @(isOperational ? "operational-shell" : "public-shell")" data-page="@currentPath" data-user-email="@userEmail" data-user-authenticated="@isAuth.ToString().ToLowerInvariant()">
     @if (enablePageLoader)
     {
         <div id="pageLoader" class="page-loader" aria-hidden="true">

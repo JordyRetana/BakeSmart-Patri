@@ -345,7 +345,7 @@ public class ApiController : Controller
     }
 
     [HttpGet("customers")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Roles = "Admin,Staff,Cajero")]
     public async Task<IActionResult> Customers() => Json(await _sqlStore.CustomersAsync());
 
     [HttpGet("profile/current")]

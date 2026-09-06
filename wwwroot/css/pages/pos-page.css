@@ -9,6 +9,8 @@ body[data-page="/pos"] .pos-workspace-tab small{margin-top:.15rem;color:var(--te
 body[data-page="/pos"] .pos-workspace-tab.active{border-color:color-mix(in srgb,var(--primary) 28%,var(--border));background:linear-gradient(135deg,color-mix(in srgb,var(--primary-light) 82%,var(--bg-card)),color-mix(in srgb,var(--secondary) 9%,var(--bg-card)));box-shadow:0 9px 24px rgba(112,57,158,.11)}
 body[data-page="/pos"] .pos-workspace-tab.active>i{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff}
 body[data-page="/pos"] .pos-page[data-pos-workspace="sale"] .pos-side-card{display:none!important}
+body[data-page="/pos"] .pos-page--cashier[data-pos-workspace="sale"] .pos-layout{display:block!important;grid-template-columns:1fr!important}
+body[data-page="/pos"] .pos-page--cashier[data-pos-workspace="sale"] .pos-main-card{width:100%!important;max-width:none!important;grid-column:1/-1!important;order:1!important}
 body[data-page="/pos"] .pos-page[data-pos-workspace="cash"] .pos-main-card,body[data-page="/pos"] .pos-page[data-pos-workspace="cash"] .pos-admin-block--payments,body[data-page="/pos"] .pos-page[data-pos-workspace="cash"] .pos-admin-block--credit{display:none!important}
 body[data-page="/pos"] .pos-page[data-pos-workspace="admin"] .pos-main-card,body[data-page="/pos"] .pos-page[data-pos-workspace="admin"] .pos-admin-block--cash,body[data-page="/pos"] .pos-page[data-pos-workspace="admin"] .pos-admin-block--sessions{display:none!important}
 body[data-page="/pos"] .pos-page[data-pos-workspace="cash"] .pos-layout,body[data-page="/pos"] .pos-page[data-pos-workspace="admin"] .pos-layout{display:block!important}
