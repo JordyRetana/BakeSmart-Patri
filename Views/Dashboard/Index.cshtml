@@ -7,19 +7,22 @@
     var isCashier = User?.IsInRole("Cajero") ?? false;
     var isBaker = User?.IsInRole("Repostero") ?? false;
     var isSupervisor = User?.IsInRole("Supervisor") ?? false;
+    var isRecipeManager = User?.IsInRole("EncargadoRecetas") ?? false;
     var canOrders = isAdmin || isStaff || isSupervisor || isCashier;
-    var canProduction = isAdmin || isStaff || isSupervisor || isBaker;
-    var canInventory = isAdmin || isStaff || isSupervisor || isBaker;
+    var canProduction = isAdmin || isStaff || isSupervisor || isBaker || isRecipeManager;
+    var canInventory = isAdmin || isStaff || isSupervisor || isBaker || isRecipeManager;
     var canPos = isAdmin || isStaff || isSupervisor || isCashier;
     var canReports = isAdmin || isSupervisor;
     var canAudit = isAdmin || isStaff || isSupervisor;
     var canSales = isAdmin || isStaff || isSupervisor || isCashier;
 
-    var roleKey = isAdmin ? "admin" : isCashier ? "cashier" : isBaker ? "baker" : isSupervisor ? "supervisor" : "staff";
-    var roleLabel = isAdmin ? "Administrador" : isCashier ? "Cajero" : isBaker ? "Repostero" : isSupervisor ? "Supervisor" : "Staff";
-    var roleTitle = isAdmin ? "Centro de administración" : isCashier ? "Caja y ventas" : isBaker ? "Producción de repostería" : isSupervisor ? "Supervisión general" : "Operación diaria";
-    var roleSubtitle = isAdmin ? "Una lectura completa de ventas, pedidos, inventario y operación." : isCashier ? "Controla caja, pedidos y cobros desde un espacio enfocado." : isBaker ? "Organiza la producción y anticipa necesidades de inventario." : isSupervisor ? "Supervisa el rendimiento de cada área y toma decisiones con datos." : "Coordina pedidos y el trabajo diario desde un solo lugar.";
-    var roleIcon = isAdmin ? "fa-crown" : isCashier ? "fa-cash-register" : isBaker ? "fa-cake-candles" : isSupervisor ? "fa-chart-line" : "fa-store";
+    var canFinancialInsights = isAdmin || isStaff || isSupervisor || isCashier;
+    var canOrderInsights = isAdmin || isStaff || isSupervisor || isCashier;
+    var roleKey = isAdmin ? "admin" : isCashier ? "cashier" : isBaker ? "baker" : isSupervisor ? "supervisor" : isRecipeManager ? "recipes" : "staff";
+    var roleLabel = isAdmin ? "Administrador" : isCashier ? "Cajero" : isBaker ? "Repostero" : isSupervisor ? "Supervisor" : isRecipeManager ? "Encargado de recetas" : "Staff";
+    var roleTitle = isAdmin ? "Centro de administración" : isCashier ? "Caja y ventas" : isBaker ? "Producción de repostería" : isSupervisor ? "Supervisión general" : isRecipeManager ? "Recetas y producción" : "Operación diaria";
+    var roleSubtitle = isAdmin ? "Una lectura completa de ventas, pedidos, inventario y operación." : isCashier ? "Controla caja, pedidos y cobros desde un espacio enfocado." : isBaker ? "Organiza la producción y anticipa necesidades de inventario." : isSupervisor ? "Supervisa el rendimiento de cada área y toma decisiones con datos." : isRecipeManager ? "Define recetas, valida consumos y acompaña el flujo de producción." : "Coordina pedidos y el trabajo diario desde un solo lugar.";
+    var roleIcon = isAdmin ? "fa-crown" : isCashier ? "fa-cash-register" : isBaker ? "fa-cake-candles" : isSupervisor ? "fa-chart-line" : isRecipeManager ? "fa-book-open" : "fa-store";
     var displayName = User?.FindFirst("FullName")?.Value ?? User?.Identity?.Name ?? roleLabel;
     var todayLabel = BusinessClock.Now.ToString("dddd, dd 'de' MMMM", new System.Globalization.CultureInfo("es-CR"));
 }
@@ -44,25 +47,39 @@
     </header>
 
     <section class="dashboard-kpis" aria-label="Indicadores principales">
+        @if (canOrderInsights) {
         <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--orders"><i class="fas fa-clipboard-list"></i></span><div><small>Pedidos hoy</small><strong id="dbOrders">0</strong><p id="dbOrdersHint">Cargando...</p></div></article>
+        }
+        @if (canFinancialInsights) {
         <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--sales"><i class="fas fa-coins"></i></span><div><small>Ventas del día</small><strong id="dbSales">0</strong><p id="dbSalesHint">Cargando...</p></div></article>
+        }
+        @if (canProduction) {
         <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--prod"><i class="fas fa-fire-burner"></i></span><div><small>Producción activa</small><strong id="dbProduction">0</strong><p id="dbProductionHint">Cargando...</p></div></article>
+        }
+        @if (canInventory) {
         <article class="dashboard-kpi"><span class="kpi-icon kpi-icon--stock"><i class="fas fa-boxes-stacked"></i></span><div><small>Stock bajo</small><strong id="dbLowStock">0</strong><p id="dbLowStockHint">Cargando...</p></div></article>
+        }
     </section>
 
     <section class="dashboard-insights">
+        @if (canFinancialInsights) {
         <article class="dashboard-chart-card dashboard-chart-card--wide">
             <div class="dashboard-section-head"><div><span>Comportamiento reciente</span><h2>Valor de pedidos</h2></div><i class="fas fa-chart-column"></i></div>
             <div id="dashboardTrendBars" class="dashboard-bars"></div>
         </article>
+        }
+        @if (canOrderInsights) {
         <article class="dashboard-chart-card">
             <div class="dashboard-section-head"><div><span>Distribución</span><h2>Estados de pedidos</h2></div><i class="fas fa-chart-pie"></i></div>
             <div class="dashboard-donut-layout"><div id="dashboardDonut" class="dashboard-donut"><strong id="dashboardDonutTotal">0</strong><span>pedidos</span></div><div id="dashboardStatusLegend" class="dashboard-legend"></div></div>
         </article>
+        }
+        @if (canFinancialInsights) {
         <article class="dashboard-chart-card">
             <div class="dashboard-section-head"><div><span>Control financiero</span><h2>Estado de cobros</h2></div><i class="fas fa-wallet"></i></div>
             <div id="dashboardPaymentSummary" class="dashboard-payment-summary"></div>
         </article>
+        }
     </section>
 
     <section class="dashboard-main-grid">
@@ -82,6 +99,7 @@
                     @if (canInventory) { <a href="/Inventory"><i class="fas fa-boxes-stacked"></i><span>Inventario</span></a> }
                     @if (canPos) { <a href="/Pos"><i class="fas fa-cash-register"></i><span>Punto de venta</span></a> }
                     @if (canReports) { <a href="/Reports"><i class="fas fa-chart-bar"></i><span>Reportes</span></a> }
+                    @if (isRecipeManager || isAdmin || isSupervisor) { <a href="/Recipes"><i class="fas fa-book-open"></i><span>Recetas</span></a> }
                     @if (isAdmin) { <a href="/Users"><i class="fas fa-users"></i><span>Usuarios</span></a> }
                 </div>
             </article>
@@ -109,6 +127,10 @@
     const displayStatus = status => status === 'En produccion' ? 'En producción' : status;
     const statusColors = ['#7c3aed','#c83c86','#e96868','#df9b2f','#2f8eaa','#42a674'];
     const canProduction = @(canProduction ? "true" : "false");
+    const canInventory = @(canInventory ? "true" : "false");
+    const canOrderInsights = @(canOrderInsights ? "true" : "false");
+    const canFinancialInsights = @(canFinancialInsights ? "true" : "false");
+    const setText = (id, value) => { const element = document.getElementById(id); if (element) element.textContent = value; };
     const costaRicaDateKey = value => {
         const date = value ? new Date(value) : new Date();
         if (Number.isNaN(date.getTime())) return '';
@@ -116,6 +138,7 @@
     };
 
     function renderBars(orders) {
+        if (!document.getElementById('dashboardTrendBars')) return;
         const items = orders.slice(0, 7).reverse();
         const max = Math.max(...items.map(item => Number(item.total || 0)), 1);
         document.getElementById('dashboardTrendBars').innerHTML = items.map(item => {
@@ -125,6 +148,7 @@
     }
 
     function renderStatusChart(orders) {
+        if (!document.getElementById('dashboardDonut')) return;
         const counts = orders.reduce((result, order) => { const key = statusOf(order); result[key] = (result[key] || 0) + 1; return result; }, {});
         const entries = Object.entries(counts);
         let cursor = 0;
@@ -135,6 +159,7 @@
     }
 
     function renderPayments(orders) {
+        if (!document.getElementById('dashboardPaymentSummary')) return;
         const paid = orders.filter(order => (order.paymentStatus || '') === 'Pagado').length;
         const pending = orders.length - paid;
         const paidValue = orders.filter(order => (order.paymentStatus || '') === 'Pagado').reduce((sum, order) => sum + Number(order.total || 0), 0);
@@ -145,8 +170,8 @@
     }
 
     function readDashboardState(dashboard = { kpis: [] }) {
-        const orders = BakeSmartStore.orders.list();
-        const inventory = BakeSmartStore.reports.inventory();
+        const orders = (canOrderInsights || canProduction) ? BakeSmartStore.orders.list() : [];
+        const inventory = canInventory ? BakeSmartStore.reports.inventory() : { lowStock: 0 };
         const kpis = dashboard.kpis || [];
         return { orders, inventory, kpis };
     }
@@ -160,23 +185,24 @@
         const production = orders.filter(order => ['Confirmado','En produccion','En producción','Listo','En camino'].includes(statusOf(order)));
         const lowStock = Number(getKpi('Alertas inventario', inventory.lowStock));
 
-        document.getElementById('dbOrders').textContent = getKpi('Pedidos hoy', todayOrders.length);
-        document.getElementById('dbOrdersHint').textContent = `${pendingPayments.length} con pago pendiente`;
-        document.getElementById('dbSales').textContent = format(getKpi('Ventas (CRC)', 0));
-        document.getElementById('dbSalesHint').textContent = 'ventas registradas hoy';
-        document.getElementById('dbProduction').textContent = getKpi('En producción', production.length);
-        document.getElementById('dbProductionHint').textContent = `${production.length} pedidos en flujo`;
-        document.getElementById('dbLowStock').textContent = lowStock;
-        document.getElementById('dbLowStockHint').textContent = lowStock ? 'requiere revisión' : 'inventario estable';
+        setText('dbOrders', getKpi('Pedidos hoy', todayOrders.length));
+        setText('dbOrdersHint', `${pendingPayments.length} con pago pendiente`);
+        setText('dbSales', format(getKpi('Ventas (CRC)', 0)));
+        setText('dbSalesHint', 'ventas registradas hoy');
+        setText('dbProduction', getKpi('En producción', production.length));
+        setText('dbProductionHint', `${production.length} pedidos en flujo`);
+        setText('dbLowStock', lowStock);
+        setText('dbLowStockHint', lowStock ? 'requiere revisión' : 'inventario estable');
 
         const table = document.getElementById('dbOrdersTable');
         if (table) table.innerHTML = orders.slice(0, 6).map(order => `<tr><td><strong>#${order.id}</strong></td><td>${order.cliente || order.customerName || '-'}</td><td><span class="badge">${displayStatus(statusOf(order))}</span></td><td><span class="badge ${(order.paymentStatus || '') === 'Pagado' ? 'badge-success' : 'badge-warning'}">${order.paymentStatus || '-'}</span></td><td><strong>${format(order.total)}</strong></td></tr>`).join('') || '<tr><td colspan="5" class="text-center text-muted">No hay pedidos recientes.</td></tr>';
 
         const alerts = [];
-        if (lowStock > 0) alerts.push({ icon:'fa-box-open', title:'Stock por revisar', text:`${lowStock} productos alcanzaron su mínimo.` });
-        if (pendingPayments.length) alerts.push({ icon:'fa-money-bill-wave', title:'Cobros pendientes', text:`${pendingPayments.length} pedidos necesitan seguimiento.` });
+        if (canInventory && lowStock > 0) alerts.push({ icon:'fa-box-open', title:'Stock por revisar', text:`${lowStock} productos alcanzaron su mínimo.` });
+        if (canFinancialInsights && pendingPayments.length) alerts.push({ icon:'fa-money-bill-wave', title:'Cobros pendientes', text:`${pendingPayments.length} pedidos necesitan seguimiento.` });
         if (!alerts.length) alerts.push({ icon:'fa-circle-check', title:'Operación estable', text:'No hay alertas críticas en este momento.' });
-        document.getElementById('dbAlerts').innerHTML = alerts.map(item => `<div class="dashboard-alert"><i class="fas ${item.icon}"></i><div><strong>${item.title}</strong><span>${item.text}</span></div></div>`).join('');
+        const alertsElement = document.getElementById('dbAlerts');
+        if (alertsElement) alertsElement.innerHTML = alerts.map(item => `<div class="dashboard-alert"><i class="fas ${item.icon}"></i><div><strong>${item.title}</strong><span>${item.text}</span></div></div>`).join('');
 
         if (canProduction) document.getElementById('dbProductionQueue').innerHTML = orders.filter(order => statusOf(order) !== 'Entregado').slice(0, 4).map(order => `<article><span class="production-order">#${order.id}</span><strong>${order.cliente || order.customerName || 'Cliente'}</strong><small>${order.producto || 'Pedido personalizado'}</small><span class="badge">${displayStatus(statusOf(order))}</span></article>`).join('') || '<div class="dashboard-chart-empty">No hay pedidos activos en producción.</div>';
 
@@ -192,7 +218,11 @@
             .then(response => response.ok ? response.json() : { kpis: [] })
             .catch(() => ({ kpis: [] }));
 
-        BakeSmartStore.refresh({ keys: ['orders', 'inventory', 'posConfig'] })
+        const refreshKeys = [];
+        if (canOrderInsights || canProduction) refreshKeys.push('orders');
+        if (canInventory) refreshKeys.push('inventory');
+        if (@(canPos ? "true" : "false")) refreshKeys.push('posConfig');
+        BakeSmartStore.refresh({ keys: refreshKeys })
             .then(() => paintDashboard())
             .catch(() => { });
 

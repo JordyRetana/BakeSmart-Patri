@@ -11,7 +11,7 @@
     var sinpeBusinessNumber = Context.RequestServices.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>()["Business:SinpeNumber"] ?? "+506 8888 8888";
 }
 
-<div class="page-shell client-dashboard-page client-dashboard-page--loading" id="clientDashboardPage">
+<div class="page-shell client-dashboard-page client-dashboard-page--loading" id="clientDashboardPage" data-client-workspace="overview">
     <section class="client-hero">
         <div class="client-hero__copy">
             <span class="client-hero__eyebrow">Panel de cliente</span>
@@ -43,6 +43,11 @@
             </a>
         </div>
     </section>
+
+    <nav class="client-workspace-tabs" aria-label="Secciones de mi panel">
+        <button type="button" class="client-workspace-tab active" data-client-tab="overview" aria-selected="true"><i class="fas fa-chart-pie"></i><span><strong>Resumen</strong><small>Actividad y pedidos recientes</small></span></button>
+        <button type="button" class="client-workspace-tab" data-client-tab="quick-order" aria-selected="false"><i class="fas fa-bag-shopping"></i><span><strong>Pedido rápido</strong><small>Producto, entrega y pago</small></span></button>
+    </nav>
 
     <section class="client-metrics" aria-label="Resumen de pedidos">
         <article class="client-metric">
@@ -296,6 +301,20 @@
         (() => {
         const page = document.getElementById('clientDashboardPage');
         const userEmail = document.body.dataset.userEmail || '';
+        const clientPage = document.getElementById('clientDashboardPage');
+        const selectClientWorkspace = workspace => {
+            const selected = ['overview', 'quick-order'].includes(workspace) ? workspace : 'overview';
+            clientPage.dataset.clientWorkspace = selected;
+            document.querySelectorAll('[data-client-tab]').forEach(button => {
+                const active = button.dataset.clientTab === selected;
+                button.classList.toggle('active', active);
+                button.setAttribute('aria-selected', String(active));
+            });
+            try { sessionStorage.setItem('bakesmart:client-workspace', selected); } catch (_) { }
+        };
+        document.querySelectorAll('[data-client-tab]').forEach(button => button.addEventListener('click', () => selectClientWorkspace(button.dataset.clientTab)));
+        try { selectClientWorkspace(sessionStorage.getItem('bakesmart:client-workspace') || 'overview'); } catch (_) { selectClientWorkspace('overview'); }
+
         const form = document.getElementById('quickOrderForm');
         const productInput = document.getElementById('quickOrderProduct');
         const productsGrid = document.getElementById('quickProducts');

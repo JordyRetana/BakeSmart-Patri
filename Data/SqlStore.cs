@@ -690,7 +690,7 @@ public sealed partial class SqlStore
             .ToList();
     }
 
-    public async Task<object> DashboardAsync()
+    public async Task<object> DashboardAsync(string? role = null)
     {
         var sql = UseMySql
             ? """
@@ -746,16 +746,17 @@ public sealed partial class SqlStore
         ));
 
         var row = rows.FirstOrDefault() ?? new DashboardRow(0, 0, 0, 0);
-        return new
-        {
-            kpis = new[]
-            {
-                new { label = "Pedidos hoy", value = (object)row.OrdersToday, delta = "hoy" },
-                new { label = "En produccion", value = (object)row.InProduction, delta = "activos" },
-                new { label = "Ventas (CRC)", value = (object)row.SalesToday, delta = "hoy" },
-                new { label = "Alertas inventario", value = (object)row.LowStock, delta = "stock bajo" }
-            }
-        };
+        var normalizedRole = role?.Trim() ?? "Admin";
+        var includeOrders = normalizedRole is "Admin" or "Staff" or "Supervisor" or "Cajero";
+        var includeSales = normalizedRole is "Admin" or "Staff" or "Supervisor" or "Cajero";
+        var includeProduction = normalizedRole is "Admin" or "Staff" or "Supervisor" or "Repostero" or "EncargadoRecetas";
+        var includeInventory = normalizedRole is "Admin" or "Staff" or "Supervisor" or "Repostero" or "EncargadoRecetas";
+        var kpis = new List<object>();
+        if (includeOrders) kpis.Add(new { label = "Pedidos hoy", value = (object)row.OrdersToday, delta = "hoy" });
+        if (includeProduction) kpis.Add(new { label = "En produccion", value = (object)row.InProduction, delta = "activos" });
+        if (includeSales) kpis.Add(new { label = "Ventas (CRC)", value = (object)row.SalesToday, delta = "hoy" });
+        if (includeInventory) kpis.Add(new { label = "Alertas inventario", value = (object)row.LowStock, delta = "stock bajo" });
+        return new { kpis };
     }
 
     public async Task<IReadOnlyList<object>> CustomersAsync()

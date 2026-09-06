@@ -29,7 +29,7 @@
     <link rel="stylesheet" href="~/css/pages/profile-page.css" asp-append-version="true" />
 }
 
-<div class="page-shell profile-page">
+<div class="page-shell profile-page" id="accountProfilePage" data-profile-section="personal">
 
     @if (!string.IsNullOrWhiteSpace(successMsg))
     {
@@ -60,6 +60,17 @@
             </div>
         </div>
     </div>
+
+    <nav class="profile-workspace-tabs" aria-label="Secciones del perfil">
+        <button type="button" class="profile-workspace-tab active" data-profile-section-tab="personal" aria-selected="true">
+            <i class="fas fa-user-pen"></i>
+            <span><strong>Datos y entrega</strong><small>Información personal y ubicación</small></span>
+        </button>
+        <button type="button" class="profile-workspace-tab" data-profile-section-tab="security" aria-selected="false">
+            <i class="fas fa-shield-halved"></i>
+            <span><strong>Seguridad</strong><small>Contraseña y acceso a la cuenta</small></span>
+        </button>
+    </nav>
 
     <div class="profile-grid">
         @* Datos personales *@
@@ -214,6 +225,20 @@
 let profileMapPicker;
 
 document.addEventListener('DOMContentLoaded', async () => {
+    const profilePage = document.getElementById('accountProfilePage');
+    const selectProfileSection = section => {
+        const selected = ['personal', 'security'].includes(section) ? section : 'personal';
+        profilePage.dataset.profileSection = selected;
+        document.querySelectorAll('[data-profile-section-tab]').forEach(button => {
+            const active = button.dataset.profileSectionTab === selected;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-selected', String(active));
+        });
+        try { sessionStorage.setItem('bakesmart:account-profile-section', selected); } catch (_) { }
+    };
+    document.querySelectorAll('[data-profile-section-tab]').forEach(button => button.addEventListener('click', () => selectProfileSection(button.dataset.profileSectionTab)));
+    try { selectProfileSection(sessionStorage.getItem('bakesmart:account-profile-section') || 'personal'); } catch (_) { selectProfileSection('personal'); }
+
     profileMapPicker = await BakeSmartMapPicker.create('profileMapPicker', {
         label: document.getElementById('addressLabel').value,
         address: document.getElementById('address').value,

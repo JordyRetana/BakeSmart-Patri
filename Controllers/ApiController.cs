@@ -59,7 +59,11 @@ public class ApiController : Controller
 
     [HttpGet("dashboard")]
     [Authorize(Policy = "StaffOrAdmin")]
-    public async Task<IActionResult> Dashboard() => Json(await _sqlStore.DashboardAsync());
+    public async Task<IActionResult> Dashboard()
+    {
+        var role = User.Claims.FirstOrDefault(claim => claim.Type == System.Security.Claims.ClaimTypes.Role)?.Value;
+        return Json(await _sqlStore.DashboardAsync(role));
+    }
 
     [HttpGet("orders")]
     [Authorize(Policy = "AnyUser")]
