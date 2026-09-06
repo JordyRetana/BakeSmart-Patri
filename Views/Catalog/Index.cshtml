@@ -56,8 +56,11 @@
                 <div class="catalog-product-content">
                     <div class="catalog-product-topline">
                         <h3>@product.Name</h3>
-                        <div class="catalog-product-rating" aria-label="5 estrellas">
+                        <div class="catalog-product-rating" aria-label="Calificación: 5 de 5 estrellas">
+                            <span class="catalog-rating-value">5.0</span>
+                            <span class="catalog-rating-stars" aria-hidden="true">
                             <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            </span>
                         </div>
                     </div>
 
@@ -66,11 +69,11 @@
                     </p>
 
                     <div class="catalog-product-meta">
-                        <span class="badge"><i class="fas fa-barcode"></i> @product.Code</span>
-                        <span class="badge"><i class="fas fa-box"></i> @product.Stock.ToString("0.##") @product.Unit</span>
+                        <span class="catalog-meta-chip catalog-meta-chip--code"><i class="fas fa-barcode"></i><span><small>Código</small><strong>@product.Code</strong></span></span>
+                        <span class="catalog-meta-chip catalog-meta-chip--stock"><i class="fas fa-box-open"></i><span><small>Disponible</small><strong>@product.Stock.ToString("0.##") @product.Unit</strong></span></span>
                         @if (!string.IsNullOrWhiteSpace(product.Subcategory))
                         {
-                            <span class="badge badge-info">@product.Subcategory</span>
+                            <span class="catalog-meta-chip catalog-meta-chip--type"><i class="fas fa-tag"></i><span><small>Tipo</small><strong>@product.Subcategory</strong></span></span>
                         }
                     </div>
 
