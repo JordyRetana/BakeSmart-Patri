@@ -84,6 +84,10 @@
     <link rel="stylesheet" href="~/css/global/quality-pass.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/global/modern-experience.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
+    @if (isOperational)
+    {
+        <link rel="stylesheet" href="~/css/global/operational-workspace.css" asp-append-version="true" />
+    }
     <style>
         
         @@keyframes slideIn {
@@ -136,7 +140,7 @@
         }
     </style>
 </head>
-<body class="app-body page-ready" data-page="@currentPath" data-user-email="@userEmail" data-user-authenticated="@isAuth.ToString().ToLowerInvariant()">
+<body class="app-body page-ready @(isOperational ? "operational-shell" : string.Empty)" data-page="@currentPath" data-user-email="@userEmail" data-user-authenticated="@isAuth.ToString().ToLowerInvariant()">
     @if (enablePageLoader)
     {
         <div id="pageLoader" class="page-loader" aria-hidden="true">

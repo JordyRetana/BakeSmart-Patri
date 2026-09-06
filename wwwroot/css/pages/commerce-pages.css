@@ -25,6 +25,25 @@ body.dark[data-page^="/catalog/"] .commerce-hero{border-color:#413849;background
 /* Reseteo explícito de la cuadrícula heredada de commerce-system.css. */
 body[data-page^="/catalog/"] .commerce-section{padding:0!important}
 body[data-page^="/catalog/"] .commerce-offer-list,body[data-page^="/catalog/"] .commerce-new-list,body[data-page^="/catalog/"] .commerce-combo-list,body[data-page^="/catalog/"] .commerce-product-list{align-items:start!important;grid-auto-rows:auto!important}
+
+/* Combos: composición editorial equilibrada, sin botones ni vacíos sobredimensionados. */
+body[data-page="/catalog/combos"] .commerce-combo-list{grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:1.5rem}
+body[data-page="/catalog/combos"] .commerce-combo-tile{min-height:390px;padding:0;grid-template-columns:minmax(210px,42%) minmax(0,1fr);gap:0;overflow:hidden}
+body[data-page="/catalog/combos"] .commerce-combo-images{min-height:390px;height:100%;padding:.75rem;background:linear-gradient(145deg,#f2ebff,#fff1f6)}
+body[data-page="/catalog/combos"] .commerce-combo-images img{border-radius:18px}
+body[data-page="/catalog/combos"] .commerce-combo-images:has(img:only-child){grid-template-columns:1fr;grid-template-rows:1fr}
+body[data-page="/catalog/combos"] .commerce-combo-images:has(img:only-child) img:first-child{grid-row:auto}
+body[data-page="/catalog/combos"] .commerce-combo-images:has(img:nth-child(2):last-child){grid-template-rows:1fr}
+body[data-page="/catalog/combos"] .commerce-combo-images:has(img:nth-child(2):last-child) img:first-child{grid-row:auto}
+body[data-page="/catalog/combos"] .commerce-combo-tile>div:last-child{padding:clamp(1.4rem,2.5vw,2rem);gap:.3rem}
+body[data-page="/catalog/combos"] .commerce-combo-tile h2{font-size:clamp(1.45rem,2vw,1.9rem)}
+body[data-page="/catalog/combos"] .commerce-combo-tile p{margin:.1rem 0 .35rem;color:#727987;line-height:1.55}
+body[data-page="/catalog/combos"] .commerce-combo-tile ul{margin:.4rem 0 .8rem;padding-left:1.15rem}
+body[data-page="/catalog/combos"] .commerce-combo-tile del{color:#8b8f99;font-size:.82rem}
+body[data-page="/catalog/combos"] .commerce-combo-tile strong{margin:.15rem 0 .85rem;color:#6f3bd4;font-size:1.4rem}
+body[data-page="/catalog/combos"] .commerce-combo-add{width:auto;min-width:190px;margin-top:auto;padding:.82rem 1.25rem;align-self:flex-start;border-radius:999px}
+body.dark[data-page="/catalog/combos"] .commerce-combo-images{background:linear-gradient(145deg,#2d2637,#241f2c)}
+@media(max-width:680px){body[data-page="/catalog/combos"] .commerce-combo-tile{min-height:0;grid-template-columns:1fr}body[data-page="/catalog/combos"] .commerce-combo-images{min-height:250px;height:250px}body[data-page="/catalog/combos"] .commerce-combo-add{width:100%;align-self:stretch}}
 body[data-page^="/catalog/"] .commerce-offer-tile{height:auto!important;min-height:300px!important;grid-template-columns:minmax(0,1fr) minmax(190px,42%)!important;grid-template-rows:minmax(300px,auto)!important;align-self:start!important}
 body[data-page^="/catalog/"] .commerce-offer-tile>div{min-height:300px!important;height:auto!important}
 body[data-page^="/catalog/"] .commerce-offer-tile>img{height:300px!important;min-height:300px!important;align-self:stretch!important}
