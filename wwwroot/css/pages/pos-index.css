@@ -1406,3 +1406,5 @@ body:not(.dark)[data-page="/pos"] .pos-side-card .session-status-card {
 
 .pos-cash-difference.is-balanced { color: var(--success, #198754); }
 .pos-cash-difference.has-difference { color: var(--warning, #b36b00); }
+/* POS y carrito mantienen márgenes simétricos en todos los anchos. */
+.pos-cart-page{width:min(var(--page-shell-max),calc(100% - (var(--page-shell-gutter) * 2)))!important}

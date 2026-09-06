@@ -536,3 +536,5 @@ body.catalog-sidebar-open {
         min-width: 50px !important;
     }
 }
+/* Marco fluido compartido por catálogo y favoritos. */
+.catalog-page{width:min(var(--page-shell-max),calc(100% - (var(--page-shell-gutter) * 2)))}
