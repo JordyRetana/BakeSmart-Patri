@@ -120,12 +120,7 @@
 
 /* Inventario: filtros en una banda útil y acciones separadas del título. */
 .operational-shell .inventory-header { display: grid; grid-template-columns: 1fr; }
-.operational-shell .inventory-actions {
-    width: 100%;
-    display: grid;
-    grid-template-columns: minmax(260px, 1.7fr) repeat(3, minmax(175px, 1fr));
-    align-items: stretch;
-}
+.operational-shell .inventory-actions { width: 100%; align-items: stretch; }
 .operational-shell .inventory-actions > * { width: 100%; min-width: 0 !important; }
 .operational-shell .inventory-actions > .btn { white-space: nowrap; }
 
