@@ -1,2 +1,2 @@
-.inventory-page{width:min(1240px,calc(100% - 2rem));display:grid;gap:1.25rem}.inventory-header{padding:2rem;border-radius:22px!important}.inventory-page .card{border-radius:18px!important;box-shadow:0 12px 30px rgba(48,30,62,.07)}.inventory-actions{gap:.75rem!important}@media(max-width:700px){.inventory-page{width:calc(100% - 1rem)}.inventory-header{padding:1.25rem}.inventory-actions{width:100%;display:grid!important}}
-body.dark .inventory-page .card,body.dark .inventory-header{background:#211d29!important;border-color:#403648!important}
+/* Compatibilidad de despliegue. */
+@import url("./inventory-page.css");
