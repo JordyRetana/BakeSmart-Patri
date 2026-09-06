@@ -1,1 +1,2 @@
 .profile-page{width:min(1120px,calc(100% - 2rem));display:grid;gap:1.25rem}.profile-page .card,.profile-card{border-radius:20px!important;box-shadow:0 13px 34px rgba(48,30,62,.08)!important}.profile-page input,.profile-page select,.profile-page textarea{min-height:48px}@media(max-width:650px){.profile-page{width:calc(100% - 1rem)}.profile-page .card,.profile-card{padding:1.15rem!important}}
+body.dark .profile-page .card,body.dark .profile-card{background:#211d29!important;border-color:#403648!important;color:#f5f2f7}
