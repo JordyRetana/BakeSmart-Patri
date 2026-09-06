@@ -1,4 +1,4 @@
-/* Ofertas, Novedades, Combos y Populares. Único propietario de clases commerce-*. */
+/* Vistas comerciales: composición editorial aislada para Ofertas, Novedades, Combos y Populares. */
 body[data-page^="/catalog/"] .commerce-page{width:min(1240px,calc(100% - 2rem));margin:0 auto;padding:1.5rem 0 5rem;display:grid;gap:3rem}
 body[data-page^="/catalog/"] .commerce-hero{min-height:290px;padding:clamp(2rem,4vw,3.4rem);display:grid;grid-template-columns:minmax(0,1fr) 120px;align-items:center;gap:2rem;overflow:hidden;border:1px solid #e6dced;border-radius:28px;background:linear-gradient(125deg,#e8f6ff,#f3ebff 55%,#fff0f4);box-shadow:0 20px 48px rgba(51,31,68,.09);position:relative}
 body[data-page^="/catalog/"] .commerce-hero:after{content:"";position:absolute;right:-90px;top:-120px;width:340px;height:340px;border:58px solid rgba(145,76,197,.08);border-radius:50%}
