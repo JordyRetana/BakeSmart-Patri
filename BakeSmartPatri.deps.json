@@ -9,6 +9,7 @@
       "BakeSmartPatri/1.0.0": {
         "dependencies": {
           "ClosedXML": "0.105.1",
+          "Microsoft.AspNetCore.Authentication.Google": "8.0.19",
           "Microsoft.Data.SqlClient": "5.2.2",
           "MySqlConnector": "2.4.0",
           "QuestPDF": "2026.7.2"
@@ -94,6 +95,14 @@
           "lib/netstandard2.0/ExcelNumberFormat.dll": {
             "assemblyVersion": "1.1.0.0",
             "fileVersion": "1.1.0.0"
+          }
+        }
+      },
+      "Microsoft.AspNetCore.Authentication.Google/8.0.19": {
+        "runtime": {
+          "lib/net8.0/Microsoft.AspNetCore.Authentication.Google.dll": {
+            "assemblyVersion": "8.0.19.0",
+            "fileVersion": "8.0.1925.37204"
           }
         }
       },
@@ -559,6 +568,13 @@
       "sha512": "sha512-R3BVHPs9O+RkExbZYTGT0+9HLbi8ZrNij1Yziyw6znd3J7P3uoIR07uwTLGOogtz1p6+0sna66eBoXu7tBiVQA==",
       "path": "excelnumberformat/1.1.0",
       "hashPath": "excelnumberformat.1.1.0.nupkg.sha512"
+    },
+    "Microsoft.AspNetCore.Authentication.Google/8.0.19": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-FbnDLVjNTfKOoh+qV61tzqB7Vjj4WbfBpeGeGPwv03q0QmvnD+idPJV8bAk39RNG1x9AbMPHebMeRdxcv2mk0g==",
+      "path": "microsoft.aspnetcore.authentication.google/8.0.19",
+      "hashPath": "microsoft.aspnetcore.authentication.google.8.0.19.nupkg.sha512"
     },
     "Microsoft.Bcl.AsyncInterfaces/1.1.1": {
       "type": "package",
