@@ -1,0 +1,19 @@
+@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Completar seguridad"; }
+@section Styles { <link rel="stylesheet" href="~/css/pages/auth-security.css" asp-append-version="true" /><link rel="stylesheet" href="~/css/pages/auth-security-enhancements.css" asp-append-version="true" /> }
+<main class="security-auth-shell">
+    <section class="security-auth-card password-setup-card">
+        <div class="security-auth-icon"><i class="fas fa-key"></i></div>
+        <p class="security-eyebrow">Cuenta de Google verificada</p>
+        <h1>Cree una contraseña de respaldo</h1>
+        <p>Google seguirá siendo su acceso principal. Esta contraseña protege su cuenta y le permite ingresar si pierde acceso a Google.</p>
+        @if (ViewData["Error"] is string error) { <div class="security-form-error" role="alert">@error</div> }
+        <form method="post" action="/Account/CompleteAccount">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
+            <label class="security-password-field"><span>Nueva contraseña</span><input class="input" type="password" name="password" minlength="12" autocomplete="new-password" required /></label>
+            <label class="security-password-field"><span>Confirmar contraseña</span><input class="input" type="password" name="confirmPassword" minlength="12" autocomplete="new-password" required /></label>
+            <p class="security-password-hint">Mínimo 12 caracteres e incluya mayúscula, minúscula, número y símbolo.</p>
+            <button class="btn btn-primary" type="submit"><i class="fas fa-shield-halved"></i> Guardar y continuar</button>
+        </form>
+    </section>
+</main>

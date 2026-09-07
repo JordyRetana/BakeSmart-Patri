@@ -270,10 +270,20 @@ app.UseAuthentication();
 app.Use(async (context, next) =>
 {
     if (context.User.Identity?.IsAuthenticated == true &&
+        context.User.FindFirst("bakesmart:password-setup")?.Value == "required" &&
+        !context.Request.Path.StartsWithSegments("/Account/CompleteAccount") &&
+        !context.Request.Path.StartsWithSegments("/Account/Logout") &&
+        !Path.HasExtension(context.Request.Path.Value))
+    {
+        context.Response.Redirect($"/Account/CompleteAccount?returnUrl={Uri.EscapeDataString(context.Request.Path + context.Request.QueryString)}");
+        return;
+    }
+    if (context.User.Identity?.IsAuthenticated == true &&
         !context.User.IsInRole("Cliente") &&
         context.User.FindFirst("bakesmart:2fa")?.Value != "enabled" &&
         !context.Request.Path.StartsWithSegments("/Account/Security") &&
         !context.Request.Path.StartsWithSegments("/Account/EnableTwoFactor") &&
+        !context.Request.Path.StartsWithSegments("/Account/CompleteAccount") &&
         !context.Request.Path.StartsWithSegments("/Account/Logout") &&
         !context.Request.Path.StartsWithSegments("/css") &&
         !context.Request.Path.StartsWithSegments("/js") &&

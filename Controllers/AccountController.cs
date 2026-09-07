@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Globalization;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
+using QRCoder;
 
 namespace BakeSmartPatri.Controllers
 {
@@ -225,9 +226,14 @@ namespace BakeSmartPatri.Controllers
             ViewData["TwoFactorEnabled"] = state.TwoFactorEnabled;
             if (!state.TwoFactorEnabled)
             {
-                var secret = string.IsNullOrWhiteSpace(state.TotpSecret) ? await _sqlStore.BeginTwoFactorSetupAsync(email) : state.TotpSecret;
+                // A setup that was not completed must receive a fresh secret.
+                // This also invalidates any value that may have been exposed from an abandoned setup.
+                var secret = await _sqlStore.BeginTwoFactorSetupAsync(email);
                 ViewData["Secret"] = secret;
-                ViewData["OtpAuthUri"] = $"otpauth://totp/BakeSmart%20Patri:{Uri.EscapeDataString(email)}?secret={secret}&issuer=BakeSmart%20Patri&digits=6&period=30";
+                var otpAuthUri = $"otpauth://totp/BakeSmart%20Patri:{Uri.EscapeDataString(email)}?secret={secret}&issuer=BakeSmart%20Patri&digits=6&period=30";
+                using var qrData = QRCodeGenerator.GenerateQrCode(otpAuthUri, QRCodeGenerator.ECCLevel.Q);
+                var qrCode = new PngByteQRCode(qrData);
+                ViewData["QrCodeDataUri"] = $"data:image/png;base64,{Convert.ToBase64String(qrCode.GetGraphic(8))}";
             }
             return View();
         }
@@ -245,6 +251,44 @@ namespace BakeSmartPatri.Controllers
                 TempData["ToastSuccess"] = "Autenticación de dos pasos activada correctamente.";
             }
             return RedirectToAction(nameof(Security));
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> CompleteAccount(string? returnUrl = null)
+        {
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? "";
+            if (!(await _sqlStore.GetUserSecurityAsync(email)).PasswordSetupRequired)
+                return RedirectAfterAuthentication(returnUrl, User.IsInRole("Cliente") ? "Cliente" : User.FindFirstValue(ClaimTypes.Role) ?? "Cliente");
+            ViewData["ReturnUrl"] = returnUrl ?? "";
+            return View();
+        }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [EnableRateLimiting("auth")]
+        public async Task<IActionResult> CompleteAccount(string password, string confirmPassword, string? returnUrl = null)
+        {
+            if (!IsStrongPassword(password))
+            {
+                ViewData["Error"] = "Use al menos 12 caracteres con mayúscula, minúscula, número y símbolo.";
+                ViewData["ReturnUrl"] = returnUrl ?? "";
+                return View();
+            }
+            if (!string.Equals(password, confirmPassword, StringComparison.Ordinal))
+            {
+                ViewData["Error"] = "Las contraseñas no coinciden.";
+                ViewData["ReturnUrl"] = returnUrl ?? "";
+                return View();
+            }
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? "";
+            await _sqlStore.SetExternalAccountPasswordAsync(email, password);
+            var role = User.FindFirstValue(ClaimTypes.Role) ?? "Cliente";
+            await SignInUserAsync(new SqlStore.AuthUser(email, role, User.FindFirstValue(ClaimTypes.Name) ?? email));
+            TempData["ToastSuccess"] = "Contraseña de respaldo configurada correctamente.";
+            if (role != "Cliente" && User.FindFirst("bakesmart:2fa")?.Value != "enabled") return RedirectToAction(nameof(Security));
+            return RedirectAfterAuthentication(returnUrl, role);
         }
 
         [HttpGet]
@@ -266,7 +310,18 @@ namespace BakeSmartPatri.Controllers
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(providerId)) { TempData["Toast"] = "Google no proporcionó un correo válido."; return RedirectToAction(nameof(Login)); }
             var user = await _sqlStore.RegisterOrGetGoogleUserAsync(email, name ?? email, providerId);
             await HttpContext.SignOutAsync("External");
+            var security = await _sqlStore.GetUserSecurityAsync(email);
+            if (security.TwoFactorEnabled)
+            {
+                TempData["PendingTwoFactorEmail"] = user.Email;
+                TempData["PendingTwoFactorRole"] = user.Role;
+                TempData["PendingTwoFactorName"] = user.DisplayName;
+                TempData["PendingTwoFactorReturnUrl"] = returnUrl ?? "";
+                return RedirectToAction(nameof(TwoFactor));
+            }
             await SignInUserAsync(user);
+            if (security.PasswordSetupRequired)
+                return RedirectToAction(nameof(CompleteAccount), new { returnUrl });
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
             return user.Role == "Cliente" ? RedirectToAction("Index", "Client") : RedirectToAction("Index", "Dashboard");
         }
@@ -475,6 +530,7 @@ namespace BakeSmartPatri.Controllers
                 new(ClaimTypes.Email, user.Email),
                 new(ClaimTypes.Role, user.Role),
                 new("bakesmart:2fa", security.TwoFactorEnabled ? "enabled" : "disabled"),
+                new("bakesmart:password-setup", security.PasswordSetupRequired ? "required" : "complete"),
             };
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -489,6 +545,12 @@ namespace BakeSmartPatri.Controllers
                     AllowRefresh = true,
                     ExpiresUtc = DateTimeOffset.UtcNow.AddHours(12)
                 });
+        }
+
+        private IActionResult RedirectAfterAuthentication(string? returnUrl, string role)
+        {
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
+            return role == "Cliente" ? RedirectToAction("Index", "Client") : RedirectToAction("Index", "Dashboard");
         }
 
         private void DeleteLegacyAuthCookies(bool includeCurrent = true)
