@@ -154,10 +154,12 @@ public sealed partial class SqlStore
             await ExecuteAsync("""
                 CREATE TABLE IF NOT EXISTS SeguridadUsuarios (Email varchar(254) NOT NULL PRIMARY KEY, EmailConfirmed bit NOT NULL DEFAULT 0, TwoFactorEnabled bit NOT NULL DEFAULT 0, TotpSecret varchar(128) NULL, FailedLoginAttempts int NOT NULL DEFAULT 0, LockoutEnd datetime NULL, ExternalProvider varchar(40) NULL, ExternalProviderId varchar(255) NULL, UpdatedAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """);
-            await ExecuteAsync("""
-                ALTER TABLE SeguridadUsuarios ADD COLUMN IF NOT EXISTS PasswordSetupRequired bit NOT NULL DEFAULT 0;
-                ALTER TABLE SeguridadUsuarios ADD COLUMN IF NOT EXISTS PasswordSetupMigrated bit NOT NULL DEFAULT 0;
-                """);
+            var hasPasswordSetupRequired = Convert.ToInt32(await ScalarAsync("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='SeguridadUsuarios' AND COLUMN_NAME='PasswordSetupRequired';")) > 0;
+            if (!hasPasswordSetupRequired)
+                await ExecuteAsync("ALTER TABLE SeguridadUsuarios ADD COLUMN PasswordSetupRequired bit NOT NULL DEFAULT 0;");
+            var hasPasswordSetupMigrated = Convert.ToInt32(await ScalarAsync("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='SeguridadUsuarios' AND COLUMN_NAME='PasswordSetupMigrated';")) > 0;
+            if (!hasPasswordSetupMigrated)
+                await ExecuteAsync("ALTER TABLE SeguridadUsuarios ADD COLUMN PasswordSetupMigrated bit NOT NULL DEFAULT 0;");
             await ExecuteAsync("""
                 INSERT IGNORE INTO SeguridadUsuarios(Email,EmailConfirmed,UpdatedAt) SELECT LOWER(Email),1,UTC_TIMESTAMP() FROM Usuarios;
                 UPDATE SeguridadUsuarios SET PasswordSetupRequired=CASE WHEN ExternalProvider='Google' THEN 1 ELSE 0 END,PasswordSetupMigrated=1 WHERE PasswordSetupMigrated=0;
