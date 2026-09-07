@@ -155,7 +155,7 @@
                 </div>
                 <div>
                     <h2 class="profile-section__title">Cambiar contraseña</h2>
-                    <p class="profile-section__sub">Usa mínimo 8 caracteres</p>
+                    <p class="profile-section__sub">Usa 12 caracteres, mayúscula, minúscula, número y símbolo</p>
                 </div>
             </div>
 
@@ -185,7 +185,7 @@
                     <div class="profile-input-wrap">
                         <i class="fas fa-lock profile-input-icon"></i>
                         <input class="profile-input" type="password" id="newPassword" name="newPassword"
-                               placeholder="********" minlength="8" />
+                               placeholder="********" minlength="12" />
                         <button type="button" class="profile-eye-btn" onclick="togglePass('newPassword', this)">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -197,7 +197,7 @@
                     <div class="profile-input-wrap">
                         <i class="fas fa-lock profile-input-icon"></i>
                         <input class="profile-input" type="password" id="confirmPassword" name="confirmPassword"
-                               placeholder="********" minlength="8" />
+                               placeholder="********" minlength="12" />
                         <button type="button" class="profile-eye-btn" onclick="togglePass('confirmPassword', this)">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -210,6 +210,9 @@
                 </div>
 
                 <div class="profile-form__actions">
+                    <a href="/Account/Security" class="btn btn-primary profile-save-btn">
+                        <i class="fas fa-mobile-screen-button"></i> Configurar verificación en dos pasos
+                    </a>
                     <button type="submit" class="btn btn-outline profile-save-btn" id="btnChangePass" disabled>
                         <i class="fas fa-key"></i> Cambiar contraseña
                     </button>

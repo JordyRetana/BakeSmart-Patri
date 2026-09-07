@@ -2,6 +2,8 @@ using BakeSmartPatri.Data;
 using BakeSmartPatri.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Globalization;
@@ -14,11 +16,13 @@ namespace BakeSmartPatri.Controllers
     {
         private readonly SqlStore _sqlStore;
         private readonly IEmailService _emailService;
+        private readonly IConfiguration _configuration;
 
-        public AccountController(SqlStore sqlStore, IEmailService emailService)
+        public AccountController(SqlStore sqlStore, IEmailService emailService, IConfiguration configuration)
         {
             _sqlStore = sqlStore;
             _emailService = emailService;
+            _configuration = configuration;
         }
 
         [HttpGet]
@@ -37,6 +41,7 @@ namespace BakeSmartPatri.Controllers
 
             DeleteLegacyAuthCookies();
             ViewData["ReturnUrl"] = returnUrl ?? "";
+            ViewData["GoogleEnabled"] = IsGoogleEnabled;
             return View();
         }
 
@@ -55,12 +60,37 @@ namespace BakeSmartPatri.Controllers
             email = (email ?? "").Trim().ToLowerInvariant();
             password ??= "";
 
-            var user = await _sqlStore.AuthenticateAsync(email, password);
-            if (user is null)
+            var result = await _sqlStore.AuthenticateSecureAsync(email, password);
+            if (result.Status == SqlStore.SecureAuthStatus.Locked)
+            {
+                TempData["Toast"] = "Cuenta bloqueada temporalmente por varios intentos. Intente nuevamente en 15 minutos.";
+                ViewData["ReturnUrl"] = returnUrl ?? "";
+                ViewData["GoogleEnabled"] = IsGoogleEnabled;
+                return View();
+            }
+            if (result.Status == SqlStore.SecureAuthStatus.EmailNotConfirmed)
+            {
+                TempData["Toast"] = "Confirme su correo antes de iniciar sesión.";
+                ViewData["ReturnUrl"] = returnUrl ?? "";
+                ViewData["GoogleEnabled"] = IsGoogleEnabled;
+                return View();
+            }
+            if (result.User is null)
             {
                 TempData["Toast"] = "Credenciales invalidas.";
                 ViewData["ReturnUrl"] = returnUrl ?? "";
+                ViewData["GoogleEnabled"] = IsGoogleEnabled;
                 return View();
+            }
+
+            var user = result.User;
+            if (result.Status == SqlStore.SecureAuthStatus.RequiresTwoFactor)
+            {
+                TempData["PendingTwoFactorEmail"] = user.Email;
+                TempData["PendingTwoFactorRole"] = user.Role;
+                TempData["PendingTwoFactorName"] = user.DisplayName;
+                TempData["PendingTwoFactorReturnUrl"] = returnUrl ?? "";
+                return RedirectToAction(nameof(TwoFactor));
             }
 
             DeleteLegacyAuthCookies(includeCurrent: false);
@@ -109,9 +139,9 @@ namespace BakeSmartPatri.Controllers
                 return View();
             }
 
-            if (password.Length < 8)
+            if (!IsStrongPassword(password))
             {
-                TempData["Toast"] = "La contraseña debe tener al menos 8 caracteres.";
+                TempData["Toast"] = "Use al menos 12 caracteres con mayúscula, minúscula, número y símbolo.";
                 ViewData["ReturnUrl"] = returnUrl ?? "";
                 return View();
             }
@@ -126,6 +156,7 @@ namespace BakeSmartPatri.Controllers
             try
             {
                 await _sqlStore.RegisterCustomerAsync(new SqlStore.RegisterCustomerInput(firstName, lastName, email, phone, addressLine, password));
+                await _sqlStore.MarkEmailUnconfirmedAsync(email);
             }
             catch (Exception ex)
             {
@@ -136,19 +167,108 @@ namespace BakeSmartPatri.Controllers
                 return View();
             }
 
-            var user = await _sqlStore.AuthenticateAsync(email, password);
-            if (user is null)
+            var token = await _sqlStore.CreateEmailConfirmationTokenAsync(email);
+            var confirmationUrl = Url.Action(nameof(ConfirmEmail), "Account", new { token }, Request.Scheme, Request.Host.Value)!;
+            try
             {
-                TempData["Toast"] = "Usuario creado. Inicia sesion con tus credenciales.";
+                await _emailService.SendAsync(email, $"{firstName} {lastName}".Trim(), "Confirma tu cuenta BakeSmart Patri", $"Confirma tu correo durante las próximas 24 horas:\n\n{confirmationUrl}\n\nSi no creaste esta cuenta, ignora el mensaje.");
+            }
+            catch { TempData["Toast"] = "Cuenta creada, pero no se pudo enviar la confirmación. Contacte al administrador."; return RedirectToAction(nameof(Login)); }
+            TempData["ToastSuccess"] = "Cuenta creada. Revise su correo para confirmarla antes de ingresar.";
+            return RedirectToAction(nameof(Login));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ConfirmEmail(string? token)
+        {
+            if (string.IsNullOrWhiteSpace(token) || !await _sqlStore.ConfirmEmailAsync(token))
+            {
+                TempData["Toast"] = "El enlace de confirmación venció o ya fue utilizado.";
                 return RedirectToAction(nameof(Login));
             }
+            TempData["ToastSuccess"] = "Correo confirmado. Ya puede iniciar sesión.";
+            return RedirectToAction(nameof(Login));
+        }
 
+        [HttpGet]
+        public IActionResult TwoFactor()
+        {
+            if (TempData.Peek("PendingTwoFactorEmail") is null) return RedirectToAction(nameof(Login));
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [EnableRateLimiting("auth")]
+        public async Task<IActionResult> TwoFactor(string code)
+        {
+            var email = TempData.Peek("PendingTwoFactorEmail")?.ToString();
+            if (string.IsNullOrWhiteSpace(email)) return RedirectToAction(nameof(Login));
+            if (!await _sqlStore.VerifyTwoFactorAsync(email, code))
+            {
+                ViewData["Error"] = "El código no es válido o ya venció.";
+                return View();
+            }
+            var user = new SqlStore.AuthUser(email, TempData["PendingTwoFactorRole"]?.ToString() ?? "Cliente", TempData["PendingTwoFactorName"]?.ToString() ?? email);
+            var returnUrl = TempData["PendingTwoFactorReturnUrl"]?.ToString();
             await SignInUserAsync(user);
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
+            return user.Role == "Cliente" ? RedirectToAction("Index", "Client") : RedirectToAction("Index", "Dashboard");
+        }
 
-            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
-                return Redirect(returnUrl);
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> Security()
+        {
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? "";
+            var state = await _sqlStore.GetUserSecurityAsync(email);
+            ViewData["TwoFactorEnabled"] = state.TwoFactorEnabled;
+            if (!state.TwoFactorEnabled)
+            {
+                var secret = string.IsNullOrWhiteSpace(state.TotpSecret) ? await _sqlStore.BeginTwoFactorSetupAsync(email) : state.TotpSecret;
+                ViewData["Secret"] = secret;
+                ViewData["OtpAuthUri"] = $"otpauth://totp/BakeSmart%20Patri:{Uri.EscapeDataString(email)}?secret={secret}&issuer=BakeSmart%20Patri&digits=6&period=30";
+            }
+            return View();
+        }
 
-            return RedirectToAction("Index", "Client");
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EnableTwoFactor(string code)
+        {
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? "";
+            if (!await _sqlStore.EnableTwoFactorAsync(email, code)) TempData["ToastError"] = "Código incorrecto. Verifique la hora del teléfono e intente nuevamente.";
+            else
+            {
+                await SignInUserAsync(new SqlStore.AuthUser(email, User.FindFirstValue(ClaimTypes.Role) ?? "Cliente", User.FindFirstValue(ClaimTypes.Name) ?? email));
+                TempData["ToastSuccess"] = "Autenticación de dos pasos activada correctamente.";
+            }
+            return RedirectToAction(nameof(Security));
+        }
+
+        [HttpGet]
+        public IActionResult GoogleLogin(string? returnUrl = null)
+        {
+            if (!IsGoogleEnabled) { TempData["Toast"] = "El acceso con Google aún no está configurado."; return RedirectToAction(nameof(Login)); }
+            var callback = Url.Action(nameof(GoogleCallback), "Account", new { returnUrl });
+            return Challenge(new AuthenticationProperties { RedirectUri = callback }, GoogleDefaults.AuthenticationScheme);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GoogleCallback(string? returnUrl = null)
+        {
+            var external = await HttpContext.AuthenticateAsync("External");
+            if (!external.Succeeded || external.Principal is null) { TempData["Toast"] = "No se pudo validar la cuenta de Google."; return RedirectToAction(nameof(Login)); }
+            var email = external.Principal.FindFirstValue(ClaimTypes.Email);
+            var providerId = external.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
+            var name = external.Principal.FindFirstValue(ClaimTypes.Name) ?? email;
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(providerId)) { TempData["Toast"] = "Google no proporcionó un correo válido."; return RedirectToAction(nameof(Login)); }
+            var user = await _sqlStore.RegisterOrGetGoogleUserAsync(email, name ?? email, providerId);
+            await HttpContext.SignOutAsync("External");
+            await SignInUserAsync(user);
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
+            return user.Role == "Cliente" ? RedirectToAction("Index", "Client") : RedirectToAction("Index", "Dashboard");
         }
 
         [HttpPost]
@@ -230,9 +350,9 @@ namespace BakeSmartPatri.Controllers
                     TempData["ToastError"] = "Ingrese su contraseña actual.";
                     return RedirectToAction(nameof(Profile));
                 }
-                if (newPassword.Length < 8)
+                if (!IsStrongPassword(newPassword))
                 {
-                    TempData["ToastError"] = "La nueva contraseña debe tener al menos 8 caracteres.";
+                    TempData["ToastError"] = "Use al menos 12 caracteres con mayúscula, minúscula, número y símbolo.";
                     return RedirectToAction(nameof(Profile));
                 }
                 if (newPassword != confirmPassword)
@@ -318,9 +438,9 @@ namespace BakeSmartPatri.Controllers
         public async Task<IActionResult> ResetPassword(string token, string newPassword, string confirmPassword)
         {
             ViewData["ResetToken"] = token;
-            if (string.IsNullOrWhiteSpace(token) || newPassword.Length < 8)
+            if (string.IsNullOrWhiteSpace(token) || !IsStrongPassword(newPassword))
             {
-                ViewData["ResetError"] = "La contraseña debe tener al menos 8 caracteres.";
+                ViewData["ResetError"] = "Use al menos 12 caracteres con mayúscula, minúscula, número y símbolo.";
                 return View();
             }
 
@@ -340,14 +460,21 @@ namespace BakeSmartPatri.Controllers
 
         public IActionResult Denied() => View();
 
+        private bool IsGoogleEnabled => !string.IsNullOrWhiteSpace(_configuration["Authentication:Google:ClientId"]) && !string.IsNullOrWhiteSpace(_configuration["Authentication:Google:ClientSecret"]);
+
+        private static bool IsStrongPassword(string value) =>
+            value.Length >= 12 && value.Any(char.IsUpper) && value.Any(char.IsLower) && value.Any(char.IsDigit) && value.Any(character => !char.IsLetterOrDigit(character));
+
         private async Task SignInUserAsync(SqlStore.AuthUser user)
         {
+            var security = await _sqlStore.GetUserSecurityAsync(user.Email);
             var claims = new List<Claim>
             {
                 new(ClaimTypes.NameIdentifier, user.Email),
                 new(ClaimTypes.Name, user.DisplayName),
                 new(ClaimTypes.Email, user.Email),
                 new(ClaimTypes.Role, user.Role),
+                new("bakesmart:2fa", security.TwoFactorEnabled ? "enabled" : "disabled"),
             };
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);

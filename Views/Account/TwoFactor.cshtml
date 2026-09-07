@@ -1,0 +1,18 @@
+@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Verificación en dos pasos"; }
+@section Styles { <link rel="stylesheet" href="~/css/pages/auth-security.css" asp-append-version="true" /> }
+<main class="security-auth-shell">
+    <section class="security-auth-card">
+        <span class="security-auth-icon"><i class="fas fa-shield-halved"></i></span>
+        <p class="security-eyebrow">Acceso protegido</p>
+        <h1>Verificación en dos pasos</h1>
+        <p>Ingrese el código de seis dígitos generado por su aplicación autenticadora.</p>
+        @if (ViewData["Error"] is string error) { <div class="alert alert-error">@error</div> }
+        <form method="post" action="/Account/TwoFactor">
+            @Html.AntiForgeryToken()
+            <label class="input-label" for="twoFactorCode">Código de seguridad</label>
+            <input class="input security-code-input" id="twoFactorCode" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required autofocus />
+            <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-lock-open"></i> Verificar e ingresar</button>
+        </form>
+        <a href="/Account/Login">Volver al inicio de sesión</a>
+    </section>
+</main>

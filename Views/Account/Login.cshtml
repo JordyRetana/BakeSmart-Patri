@@ -58,6 +58,11 @@
                     <a href="/Account/ForgotPassword" class="login-forgot">¿Olvidaste tu contraseña?</a>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block btn-lg login-submit-btn" id="loginSubmitBtn"><i class="fas fa-right-to-bracket"></i> Iniciar sesión</button>
+                @if ((ViewData["GoogleEnabled"] as bool?) == true)
+                {
+                    <div class="login-divider"><span>o continúa con</span></div>
+                    <a class="btn btn-outline btn-block login-google-btn" href="/Account/GoogleLogin?returnUrl=@Uri.EscapeDataString(ViewData["ReturnUrl"]?.ToString() ?? "")"><i class="fab fa-google"></i> Continuar con Google</a>
+                }
                 <div class="login-divider"><span>o</span></div>
                 <button type="button" id="createCustomerAccountBtn" class="btn btn-outline btn-block login-create-btn" data-register-url="/Account/Register?returnUrl=@(Uri.EscapeDataString(ViewData["ReturnUrl"]?.ToString() ?? ""))"><i class="fas fa-user-plus"></i> Crear cuenta de cliente</button>
             </form>

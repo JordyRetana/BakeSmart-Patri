@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -122,8 +123,13 @@ builder.Services.AddHttpClient("Nominatim", client =>
 });
 
 
-builder.Services
-    .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+var authentication = builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    })
     .AddCookie(o =>
     {
         o.Cookie.Name = "BakeSmartPatri.Auth.v4";
@@ -161,7 +167,30 @@ builder.Services
             context.Response.Redirect(context.RedirectUri);
             return Task.CompletedTask;
         };
+    })
+    .AddCookie("External", options =>
+    {
+        options.Cookie.Name = "BakeSmartPatri.External";
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
     });
+
+var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
+var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+{
+    authentication.AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+    {
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
+        options.SignInScheme = "External";
+        options.SaveTokens = false;
+        options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+        options.CorrelationCookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+    });
+}
 
 
 builder.Services.AddAuthorization(options =>
@@ -238,6 +267,24 @@ app.Use(async (context, next) =>
 
 app.UseRateLimiter();
 app.UseAuthentication();
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true &&
+        !context.User.IsInRole("Cliente") &&
+        context.User.FindFirst("bakesmart:2fa")?.Value != "enabled" &&
+        !context.Request.Path.StartsWithSegments("/Account/Security") &&
+        !context.Request.Path.StartsWithSegments("/Account/EnableTwoFactor") &&
+        !context.Request.Path.StartsWithSegments("/Account/Logout") &&
+        !context.Request.Path.StartsWithSegments("/css") &&
+        !context.Request.Path.StartsWithSegments("/js") &&
+        !context.Request.Path.StartsWithSegments("/img") &&
+        !context.Request.Path.StartsWithSegments("/lib"))
+    {
+        context.Response.Redirect("/Account/Security");
+        return;
+    }
+    await next();
+});
 app.UseAuthorization();
 
 

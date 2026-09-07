@@ -1,0 +1,26 @@
+@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Seguridad de la cuenta"; var enabled = (ViewData["TwoFactorEnabled"] as bool?) == true; }
+@section Styles { <link rel="stylesheet" href="~/css/pages/auth-security.css" asp-append-version="true" /> }
+<main class="account-security-page">
+    <section class="account-security-hero">
+        <span><i class="fas fa-user-shield"></i></span><div><p class="security-eyebrow">Protección de acceso</p><h1>Seguridad de la cuenta</h1><p>Proteja su cuenta con un código que cambia cada 30 segundos.</p></div>
+    </section>
+    <section class="account-security-card">
+        @if (enabled)
+        {
+            <div class="security-enabled"><i class="fas fa-circle-check"></i><div><h2>Verificación en dos pasos activa</h2><p>Su contraseña por sí sola ya no permite iniciar sesión.</p></div></div>
+        }
+        else
+        {
+            <h2>Configurar aplicación autenticadora</h2>
+            <ol><li>Abra Google Authenticator, Microsoft Authenticator o Authy.</li><li>Agregue una cuenta usando esta clave.</li><li>Ingrese el primer código generado para confirmar.</li></ol>
+            <div class="security-secret"><small>Clave de configuración</small><strong>@ViewData["Secret"]</strong></div>
+            <details><summary>Dirección avanzada para importar</summary><code>@ViewData["OtpAuthUri"]</code></details>
+            <form method="post" action="/Account/EnableTwoFactor" class="security-enable-form">
+                @Html.AntiForgeryToken()
+                <input class="input security-code-input" name="code" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required />
+                <button class="btn btn-primary" type="submit"><i class="fas fa-shield-halved"></i> Activar verificación</button>
+            </form>
+        }
+        <a class="btn btn-outline" href="/Account/Profile">Volver a mi perfil</a>
+    </section>
+</main>
