@@ -179,8 +179,8 @@
                 : DEFAULT_CENTER;
 
             this.map = L.map(this.canvas, { zoomControl: true, scrollWheelZoom: true }).setView([center.lat, center.lng], 14);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap &copy; CARTO',
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
                 maxZoom: 19
             }).addTo(this.map);
 
