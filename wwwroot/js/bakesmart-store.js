@@ -1,5 +1,6 @@
 (function () {
     const cache = new Map();
+    const pendingReads = new Map();
     let posSessionsCache = [];
     let activeSessionCache = null;
     let refreshAllPromise = null;
@@ -8,7 +9,16 @@
     const refreshAllTtlMs = 15000;
     const persistentCacheTtlMs = 5 * 60 * 1000;
 
-    async function request(url, options = {}) {
+    function request(url, options = {}) {
+        const shareRead = Object.keys(options).length === 0;
+        if (!shareRead) return sendRequest(url, options);
+        if (pendingReads.has(url)) return pendingReads.get(url);
+        const pending = sendRequest(url, options).finally(() => pendingReads.delete(url));
+        pendingReads.set(url, pending);
+        return pending;
+    }
+
+    async function sendRequest(url, options = {}) {
         const method = String(options.method || "GET").toUpperCase();
         const shouldTimeout = method === "GET";
         const controller = shouldTimeout ? new AbortController() : null;

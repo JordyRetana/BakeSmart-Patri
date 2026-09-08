@@ -1225,7 +1225,11 @@
                 if (event.key === 'Escape') this.closeAll();
             });
             window.addEventListener('resize', () => this.closeAll(), { passive: true });
-            window.addEventListener('scroll', () => this.closeAll(), { passive: true, capture: true });
+            window.addEventListener('scroll', event => {
+                // Scrolling the options must not dismiss the control before selection.
+                if (event.target instanceof Element && event.target.closest('.bs-select__menu')) return;
+                this.closeAll();
+            }, { passive: true, capture: true });
         },
 
         enhanceAll() {
