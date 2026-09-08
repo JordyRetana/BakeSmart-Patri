@@ -82,7 +82,11 @@
         </section>
 
         <aside class="marketing-side-stack">
-            <section class="card marketing-promotions-card" data-marketing-panel="promotions">
+            <nav class="marketing-promotion-tabs" data-marketing-panel="promotions" aria-label="Gestión de promociones">
+                <button type="button" class="active" data-promotion-tab="editor" aria-selected="true"><i class="fas fa-plus"></i> Nueva promoción</button>
+                <button type="button" data-promotion-tab="history" aria-selected="false"><i class="fas fa-clock-rotate-left"></i> Promociones registradas</button>
+            </nav>
+            <section class="card marketing-promotions-card" data-marketing-panel="promotions" data-promotion-panel="editor">
                 <div class="marketing-panel-header">
                     <div>
                         <span class="marketing-eyebrow">Promociones</span>
@@ -133,7 +137,7 @@
                 </form>
             </section>
 
-            <section class="card marketing-promotions-card" data-marketing-panel="promotions">
+            <section class="card marketing-promotions-card" data-marketing-panel="promotions" data-promotion-panel="history">
                 <div class="marketing-panel-header marketing-panel-header-compact">
                     <div>
                         <span class="marketing-eyebrow">Registro</span>
@@ -177,6 +181,18 @@
             const search = document.getElementById('marketingSearch');
             let pageInitialized = false;
             const clean = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+            const selectPromotionWorkspace = workspace => {
+                const selected = workspace === 'history' ? 'history' : 'editor';
+                document.querySelectorAll('[data-promotion-tab]').forEach(button => {
+                    const active = button.dataset.promotionTab === selected;
+                    button.classList.toggle('active', active);
+                    button.setAttribute('aria-selected', String(active));
+                });
+                document.querySelectorAll('[data-promotion-panel]').forEach(panel => panel.hidden = panel.dataset.promotionPanel !== selected);
+                sessionStorage.setItem('bakesmart.marketing.promotionWorkspace', selected);
+            };
+            document.querySelectorAll('[data-promotion-tab]').forEach(button => button.addEventListener('click', () => selectPromotionWorkspace(button.dataset.promotionTab)));
+            selectPromotionWorkspace(sessionStorage.getItem('bakesmart.marketing.promotionWorkspace') || 'editor');
             const selectMarketingWorkspace = workspace => {
                 const selected = ['customers', 'promotions', 'campaigns'].includes(workspace) ? workspace : 'customers';
                 document.querySelectorAll('[data-marketing-tab]').forEach(button => {
@@ -187,6 +203,7 @@
                 document.querySelectorAll('[data-marketing-panel]').forEach(panel => panel.hidden = panel.dataset.marketingPanel !== selected);
                 document.querySelector('.marketing-side-stack')?.toggleAttribute('hidden', selected === 'customers');
                 search.closest('.marketing-search-box').hidden = selected !== 'customers';
+                if (selected === 'promotions') selectPromotionWorkspace(sessionStorage.getItem('bakesmart.marketing.promotionWorkspace') || 'editor');
                 sessionStorage.setItem('bakesmart.marketing.workspace', selected);
             };
             document.querySelectorAll('[data-marketing-tab]').forEach(button => button.addEventListener('click', () => selectMarketingWorkspace(button.dataset.marketingTab)));
