@@ -444,10 +444,26 @@
 .marketing-workspace-tab span,.marketing-workspace-tab strong,.marketing-workspace-tab small{display:block}.marketing-workspace-tab small{margin-top:.15rem;color:var(--text-muted);font-size:.7rem}
 .marketing-workspace-tab.active{border-color:color-mix(in srgb,var(--primary) 28%,var(--border));background:linear-gradient(135deg,color-mix(in srgb,var(--primary-light) 82%,var(--bg-card)),color-mix(in srgb,var(--secondary) 9%,var(--bg-card)));box-shadow:0 9px 24px rgba(112,57,158,.11)}
 .marketing-workspace-tab.active>i{color:#fff;background:linear-gradient(135deg,var(--primary),var(--secondary))}
-.marketing-page .marketing-main-grid{grid-template-columns:1fr!important}.marketing-page .marketing-side-stack{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.marketing-page .marketing-side-stack [data-marketing-panel="campaigns"]{grid-column:1/-1}
+.marketing-page .marketing-main-grid{grid-template-columns:1fr!important}.marketing-page .marketing-side-stack{display:grid;grid-template-columns:1fr;gap:1rem}.marketing-page .marketing-side-stack [data-marketing-panel="campaigns"]{grid-column:1/-1}
 [data-marketing-panel][hidden],.marketing-side-stack[hidden],.marketing-search-box[hidden]{display:none!important}
 body.dark .marketing-workspace-tabs{border-color:#403748;background:#211e2b}
 @media(max-width:850px){.marketing-workspace-tabs,.marketing-page .marketing-side-stack{grid-template-columns:1fr}.marketing-page .marketing-side-stack [data-marketing-panel="campaigns"]{grid-column:auto}.marketing-workspace-tab{min-height:56px}}
+
+.marketing-promotion-tabs{display:flex;flex-wrap:wrap;gap:.55rem;padding:.45rem;border:1px solid var(--border);border-radius:15px;background:var(--bg-card)}
+.marketing-promotion-tabs button{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.65rem 1rem;border:1px solid transparent;border-radius:11px;background:transparent;color:var(--text);font-weight:800;cursor:pointer}
+.marketing-promotion-tabs button.active{border-color:color-mix(in srgb,var(--primary) 28%,var(--border));background:var(--primary-light);color:var(--primary)}
+[data-promotion-panel][hidden]{display:none!important}
+.marketing-page [data-promotion-panel="editor"] .marketing-form{display:grid;grid-template-columns:minmax(270px,.78fr) repeat(2,minmax(300px,1fr));grid-template-rows:auto auto auto auto;align-items:start;gap:1rem}
+.marketing-page [data-promotion-panel="editor"] .marketing-form> :nth-child(1){grid-column:1;grid-row:1}
+.marketing-page [data-promotion-panel="editor"] .marketing-form> :nth-child(2){grid-column:1;grid-row:2}
+.marketing-page [data-promotion-panel="editor"] .marketing-form> :nth-child(3){grid-column:1;grid-row:3}
+.marketing-page [data-promotion-panel="editor"] .marketing-form> :nth-child(4){grid-column:2;grid-row:1/span 4}
+.marketing-page [data-promotion-panel="editor"] .marketing-form> :nth-child(5){grid-column:3;grid-row:1/span 4}
+.marketing-page [data-promotion-panel="editor"] .marketing-form> :nth-child(6){grid-column:1;grid-row:4}
+.marketing-page [data-promotion-panel="editor"] .marketing-option-grid{grid-template-columns:1fr;max-height:430px;overflow:auto;align-content:start;padding-right:.35rem}
+body.dark .marketing-promotion-tabs{border-color:#403748;background:#211e2b}
+@media(max-width:1120px){.marketing-page [data-promotion-panel="editor"] .marketing-form{grid-template-columns:1fr 1fr}.marketing-page [data-promotion-panel="editor"] .marketing-form> :nth-child(-n+3),.marketing-page [data-promotion-panel="editor"] .marketing-form> :nth-child(6){grid-column:1/-1;grid-row:auto}.marketing-page [data-promotion-panel="editor"] .marketing-form> :nth-child(4){grid-column:1;grid-row:auto}.marketing-page [data-promotion-panel="editor"] .marketing-form> :nth-child(5){grid-column:2;grid-row:auto}}
+@media(max-width:680px){.marketing-promotion-tabs{display:grid;grid-template-columns:1fr}.marketing-page [data-promotion-panel="editor"] .marketing-form{grid-template-columns:1fr}.marketing-page [data-promotion-panel="editor"] .marketing-form>*{grid-column:1!important;grid-row:auto!important}.marketing-page [data-promotion-panel="editor"] .marketing-option-grid{max-height:280px}}
 
 @media (max-width: 760px) {
     .marketing-page .table-container,
