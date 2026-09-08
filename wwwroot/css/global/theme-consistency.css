@@ -1,0 +1,91 @@
+/* Shared surfaces and action contrast, after page-specific styles. */
+[hidden]:not([hidden="until-found"]) {
+    display: none !important;
+}
+
+body.app-body {
+    --action-text: #6025bd;
+    --action-bg: #f1eafb;
+}
+
+body.app-body.dark {
+    color-scheme: dark;
+    --bg: #18151f;
+    --bg-alt: #272230;
+    --bg-card: #211e2b;
+    --bg-card-rgb: 33, 30, 43;
+    --text: #f7f4fb;
+    --text-light: #d4cddd;
+    --text-muted: #b8b1c1;
+    --border: #494052;
+    --border-light: #352e40;
+    --action-text: #e0ceff;
+    --action-bg: #36284b;
+    --mx-surface: #211e2b;
+    --mx-surface-solid: #211e2b;
+}
+
+body.app-body .storefront-header {
+    background: var(--bg-card) !important;
+}
+
+body.app-body .storefront-header :is(.storefront-main, .storefront-nav,
+    .storefront-nav-inner, .storefront-tools) {
+    background: transparent !important;
+}
+
+body.app-body :is(.client-panel__link, .btn-outline, .btn-ghost) {
+    color: var(--action-text) !important;
+    background: var(--action-bg) !important;
+    border-color: var(--border) !important;
+}
+
+body.app-body :is(.client-panel__link, .btn-outline, .btn-ghost):hover {
+    color: #fff !important;
+    background: #6730b5 !important;
+}
+
+body.app-body :is(.btn-primary, .btn-secondary) {
+    color: #fff !important;
+}
+
+body.app-body.dark :is(.btn-primary, .btn-secondary) {
+    background: #6930ad !important;
+}
+
+body.app-body :is(button, .btn, .client-panel__link) {
+    touch-action: manipulation;
+}
+
+body.app-body :is(button, .btn, .client-panel__link):focus-visible {
+    outline: 3px solid var(--action-text) !important;
+    outline-offset: 3px;
+}
+
+/* Keep the target under the pointer while pressing it. */
+body.app-body :is(button, .btn, .product-card, .quick-product):hover {
+    transform: none !important;
+}
+
+.app-background, .cursor-glow, .bg-particles { pointer-events: none !important; }
+
+body.app-body.dark .storefront-eyebrow {
+    background: #f3d36b !important;
+    color: #34260a !important;
+}
+
+body.app-body.dark .storefront-love-seal,
+body.app-body.dark .storefront-love-seal :is(span, strong, small, i) {
+    color: #492563 !important;
+}
+
+body.app-body.dark .storefront-hero-copy h1 {
+    color: #eadcff !important;
+    -webkit-text-fill-color: #eadcff !important;
+    background: none !important;
+}
+
+body.app-body.dark :is(.storefront-heading > span, .storefront-heading > p,
+    .storefront-heading > a, .commerce-combo-tile strong) {
+    color: var(--action-text) !important;
+}
