@@ -676,7 +676,7 @@
         <span class="client-order-row__icon"><i class="fas fa-bag-shopping"></i></span>
         <span class="client-order-row__main">
         <strong>#${order.id} · ${clean((order.items || []).map(item => item.name).join(', ') || 'Pedido')}</strong>
-        <small>${clean(order.deliveryDate || order.createdAt || '')}</small>
+        <small><i class="far fa-calendar"></i> ${clean(formatMiniOrderDate(order.deliveryDate || order.createdAt))}</small>
         </span>
         <span class="client-order-row__status">
         <span class="badge badge-primary">${clean(order.status || 'Pendiente')}</span>
@@ -692,6 +692,11 @@
         </div>
         `;
         decorateMiniOrders(orders);
+        }
+
+        function formatMiniOrderDate(value) {
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? 'Fecha pendiente' : date.toLocaleDateString('es-CR', { day: '2-digit', month: 'short', year: 'numeric' });
         }
 
         function decorateMiniOrders(orders) {
@@ -888,21 +893,26 @@
         });
 
         async function submitPaymentGateway() {
-        if (!pendingPayment) return;
+        if (!pendingPayment || paymentConfirmBtn.dataset.busy === 'true') return;
 
         const data = Object.fromEntries(new FormData(paymentForm).entries());
         if (String(data.method || '').toLowerCase().includes('paypal')) {
         try {
+        paymentConfirmBtn.dataset.busy = 'true';
         paymentConfirmBtn.disabled = true;
+        paymentConfirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando…';
         await startPayPalCheckout(pendingPayment.orderIds);
         } catch (error) {
         app.toast.error(error.message);
         } finally {
+        paymentConfirmBtn.dataset.busy = 'false';
         paymentConfirmBtn.disabled = false;
+        paymentConfirmBtn.innerHTML = '<i class="fas fa-lock"></i> Confirmar forma de pago';
         }
         return;
         }
         try {
+        paymentConfirmBtn.dataset.busy = 'true';
         paymentConfirmBtn.disabled = true;
         const isSinpe = String(data.method || '').toLowerCase().includes('sinpe');
         app.toast.success(isSinpe
@@ -912,7 +922,9 @@
         } catch (error) {
         app.toast.error(error.message);
         } finally {
+        paymentConfirmBtn.dataset.busy = 'false';
         paymentConfirmBtn.disabled = false;
+        paymentConfirmBtn.innerHTML = '<i class="fas fa-lock"></i> Confirmar forma de pago';
         }
         }
 

@@ -505,7 +505,7 @@
 
 .client-orders-list {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)) !important;
+    grid-template-columns: 1fr !important;
     gap: .85rem !important;
 }
 
@@ -527,9 +527,7 @@
 }
 
 .client-order-row__main strong {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
     color: var(--text);
     font-size: .9rem;
 }
@@ -554,6 +552,7 @@
 
 .client-order-row__actions .btn {
     white-space: nowrap;
+    min-height: 42px;
 }
 
 .client-order-row--payable {

@@ -122,12 +122,14 @@
             const paymentSubmit = document.getElementById('ordersPaymentSubmit');
             let selectedOrder = null;
 
-            function showPayPalReturnMessage() {
+            async function showPayPalReturnMessage() {
                 const parameters = new URLSearchParams(window.location.search);
                 const result = parameters.get('paypal');
                 if (!result) return;
 
                 if (result === 'success') {
+                    await BakeSmartStore.refresh({ force: true });
+                    render();
                     app.toast.success('Pago confirmado por PayPal. El monto fue cobrado y tu pedido ya puede avanzar.');
                 } else if (result === 'cancelled') {
                     app.toast.info('El pago con PayPal fue cancelado. No se realizó ningún cobro.');
@@ -148,9 +150,10 @@
                         const response = await fetch(`/api/payments/paypal/status?token=${encodeURIComponent(token)}`, { credentials: 'same-origin' });
                         const result = response.ok ? await response.json() : null;
                         if (result?.confirmed) {
+                            await BakeSmartStore.refresh({ force: true });
+                            render();
                             app.toast.success('Pago confirmado por PayPal. El monto fue cobrado y tu pedido ya puede avanzar.');
                             window.history.replaceState({}, document.title, window.location.pathname);
-                            setTimeout(() => window.location.reload(), 700);
                             return;
                         }
                     } catch (_) { }
@@ -350,11 +353,13 @@
             paymentMethod.addEventListener('change', syncPaymentFields);
 
             async function submitClientPayment() {
-                if (!selectedOrder) return;
+                if (!selectedOrder || paymentSubmit.dataset.busy === 'true') return;
 
                 const data = Object.fromEntries(new FormData(paymentForm).entries());
                 try {
+                    paymentSubmit.dataset.busy = 'true';
                     paymentSubmit.disabled = true;
+                    paymentSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando…';
                     if (data.method === 'PayPal') {
                         await startGatewayCheckout('/api/payments/paypal/checkout');
                         return;
@@ -367,7 +372,9 @@
                 } catch (error) {
                     app.toast.error(error.message);
                 } finally {
+                    paymentSubmit.dataset.busy = 'false';
                     paymentSubmit.disabled = false;
+                    paymentSubmit.innerHTML = '<i class="fas fa-lock"></i> Continuar';
                 }
             }
 
@@ -379,9 +386,9 @@
 
             search.addEventListener('input', render);
             statusFilter.addEventListener('change', render);
-            BakeSmartStore.refresh().then(() => {
+            BakeSmartStore.refresh().then(async () => {
                 render();
-                showPayPalReturnMessage();
+                await showPayPalReturnMessage();
             }).catch(error => app.toast.error(error.message));
         })();
     </script>

@@ -316,7 +316,7 @@
                 ${order.paymentStatus !== 'Pagado'
                     ? `<button class="btn btn-primary" onclick="chargeOrder(${order.id})"><i class="fas fa-credit-card"></i> Cobrar pedido</button>`
                     : order.status === 'Confirmado'
-                        ? `<button class="btn btn-primary" onclick="sendOrderToProduction(${order.id})"><i class="fas fa-kitchen-set"></i> Enviar a producción</button>`
+                        ? `<button class="btn btn-primary" onclick="sendOrderToProduction(${order.id}, this)"><i class="fas fa-kitchen-set"></i> Enviar a producción</button>`
                         : order.status === 'Listo'
                             ? `<button class="btn btn-primary" onclick="advanceDelivery(${order.id})"><i class="fas fa-truck-fast"></i> Enviar a entrega</button>`
                             : order.status === 'En camino'
@@ -324,7 +324,7 @@
                                 : nextActionLabel(order)
                                     ? `<a class="btn btn-primary" href="/Production" data-full-reload><i class="fas fa-kitchen-set"></i> ${clean(nextActionLabel(order))}</a>`
                                     : ''}
-                <button class="btn btn-ghost orders-danger" onclick="deleteOrder(${order.id})">
+                <button class="btn btn-ghost orders-danger" onclick="deleteOrder(${order.id}, this)">
                     <i class="fas fa-trash-can"></i> Eliminar pedido
                 </button>
             </div>
@@ -411,11 +411,15 @@
         render();
     };
 
-    window.sendOrderToProduction = async id => {
+    window.sendOrderToProduction = async (id, button) => {
+        if (button?.dataset.busy === 'true') return;
         try {
+            if (button) { button.dataset.busy = 'true'; button.disabled = true; button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando…'; }
             await sendToProduction(id);
         } catch (error) {
             app.toast.error(error.message);
+        } finally {
+            if (button?.isConnected) { button.dataset.busy = 'false'; button.disabled = false; button.innerHTML = '<i class="fas fa-kitchen-set"></i> Enviar a producción'; }
         }
     };
 
