@@ -18,12 +18,14 @@ namespace BakeSmartPatri.Controllers
         private readonly SqlStore _sqlStore;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly IServiceScopeFactory _scopeFactory;
 
-        public AccountController(SqlStore sqlStore, IEmailService emailService, IConfiguration configuration)
+        public AccountController(SqlStore sqlStore, IEmailService emailService, IConfiguration configuration, IServiceScopeFactory scopeFactory)
         {
             _sqlStore = sqlStore;
             _emailService = emailService;
             _configuration = configuration;
+            _scopeFactory = scopeFactory;
         }
 
         [HttpGet]
@@ -96,14 +98,7 @@ namespace BakeSmartPatri.Controllers
             }
 
             DeleteLegacyAuthCookies(includeCurrent: false);
-            try
-            {
-                await _sqlStore.AddAuditLogAsync("LOGIN", $"Inicio de sesion: {email} ({user.Role})", email);
-            }
-            catch
-            {
-                // El inicio de sesion no debe bloquearse si la bitacora no esta disponible.
-            }
+            ScheduleLoginAudit(email, user.Role);
             await SignInUserAsync(user, result.Security);
 
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -524,6 +519,23 @@ namespace BakeSmartPatri.Controllers
         public IActionResult Denied() => View();
 
         private bool IsGoogleEnabled => !string.IsNullOrWhiteSpace(_configuration["Authentication:Google:ClientId"]) && !string.IsNullOrWhiteSpace(_configuration["Authentication:Google:ClientSecret"]);
+
+        private void ScheduleLoginAudit(string email, string role)
+        {
+            HttpContext.Response.OnCompleted(async () =>
+            {
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var store = scope.ServiceProvider.GetRequiredService<SqlStore>();
+                    await store.AddAuditLogAsync("LOGIN", $"Inicio de sesión: {email} ({role})", email);
+                }
+                catch
+                {
+                    // La auditoría es secundaria y nunca debe retrasar ni invalidar el acceso.
+                }
+            });
+        }
 
         private static bool IsStrongPassword(string value) =>
             value.Length >= 12 && value.Any(char.IsUpper) && value.Any(char.IsLower) && value.Any(char.IsDigit) && value.Any(character => !char.IsLetterOrDigit(character));
