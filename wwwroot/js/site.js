@@ -449,9 +449,33 @@
             app.copy?.init?.();
         },
 
-        confirm() {
-            if (this._onConfirm) this._onConfirm();
-            this.close();
+        async confirm() {
+            const callback = this._onConfirm;
+            if (!callback) return;
+
+            // Consume the callback before executing it so a second click can
+            // never repeat a destructive or expensive operation.
+            this._onConfirm = null;
+            const button = document.querySelector('#modalContainer button[onclick="app.modal.confirm()"]');
+            const originalHtml = button?.innerHTML;
+            if (button) {
+                button.disabled = true;
+                button.setAttribute('aria-busy', 'true');
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando…';
+            }
+
+            try {
+                await Promise.resolve(callback());
+                this.close();
+            } catch (error) {
+                this._onConfirm = callback;
+                if (button) {
+                    button.disabled = false;
+                    button.removeAttribute('aria-busy');
+                    button.innerHTML = originalHtml || 'Confirmar';
+                }
+                app.toast?.error?.(error?.message || 'No se pudo completar la acción.');
+            }
         },
 
         cancel() {
