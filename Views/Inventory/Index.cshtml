@@ -111,7 +111,7 @@
 
                 <div>
                     <label>Código</label>
-                    <input class="form-control" name="code" required />
+                    <input class="form-control" name="code" value="MP-XXX-001" readonly aria-readonly="true" title="Se genera automáticamente desde la descripción" />
                 </div>
 
                 <div>
@@ -340,8 +340,8 @@
             const autoProductCode = (description, type, currentId = 0) => {
                 const prefix = type === 'Empaque' ? 'EMP' : type === 'Insumo operativo' ? 'INS' : 'MP';
                 const base = `${prefix}-${codeStem(description)}`;
-                const matches = products.filter(p => p.id !== Number(currentId) && (p.code === base || p.code.startsWith(`${base}-`)));
-                return matches.length ? `${base}-${String(matches.length + 1).padStart(3, '0')}` : base;
+                const matches = products.filter(p => p.id !== Number(currentId) && p.code.startsWith(`${base}-`));
+                return `${base}-${String(matches.length + 1).padStart(3, '0')}`;
             };
             const autoLotCode = code => `LOT-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${String(code || '').split('-').at(-1) || '001'}`;
 
@@ -365,10 +365,14 @@
             }
 
             async function loadInventory() {
-                products = (await fetch('/api/inventory').then(r => r.json()))
+                const [inventoryRows, movementRows] = await Promise.all([
+                    fetch('/api/inventory').then(r => r.json()),
+                    fetch('/api/inventory/movements').then(r => r.json())
+                ]);
+                products = inventoryRows
                     .map(normalizeProduct)
                     .filter(product => product.type !== 'Producto terminado');
-                movements = await fetch('/api/inventory/movements').then(r => r.json());
+                movements = movementRows;
             }
 
             function getCategories() {
@@ -404,13 +408,10 @@
                 const codeInput = form.querySelector('[name="code"]');
                 const lotInput = form.querySelector('[name="lotCode"]');
                 const idInput = form.querySelector('[name="id"]');
-                let codeWasEdited = false;
                 let lotWasEdited = false;
-                codeInput.addEventListener('input', event => { if (event.isTrusted) codeWasEdited = true; });
                 lotInput.addEventListener('input', event => { if (event.isTrusted) lotWasEdited = true; });
                 const syncAutomaticFields = () => {
-                    if (idInput.value) codeWasEdited = true;
-                    if (!codeWasEdited) codeInput.value = autoProductCode(descriptionInput.value, typeSelect.value, idInput.value);
+                    if (!idInput.value) codeInput.value = autoProductCode(descriptionInput.value, typeSelect.value, idInput.value);
                     if (!lotWasEdited && !idInput.value) lotInput.value = autoLotCode(codeInput.value);
                 };
                 descriptionInput.addEventListener('input', syncAutomaticFields);

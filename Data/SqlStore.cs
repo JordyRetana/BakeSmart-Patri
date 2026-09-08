@@ -16,6 +16,9 @@ public sealed partial class SqlStore
     private const int ConnectTimeoutSeconds = 8;
     private const int CommandTimeoutSeconds = 10;
     private const int MaxTransientAttempts = 3;
+    private static readonly SemaphoreSlim InventoryLotsSchemaLock = new(1, 1);
+    private static bool _mySqlInventoryLotsReady;
+    private static bool _sqlServerInventoryLotsReady;
     private readonly IConfiguration _configuration;
 
     public SqlStore(IConfiguration configuration)
@@ -296,21 +299,27 @@ public sealed partial class SqlStore
 
     private async Task EnsureInventoryLotsSchemaAsync()
     {
-        if (UseMySql)
+        if (UseMySql ? _mySqlInventoryLotsReady : _sqlServerInventoryLotsReady) return;
+        await InventoryLotsSchemaLock.WaitAsync();
+        try
         {
-            await ExecuteAsync("""
-                CREATE TABLE IF NOT EXISTS LotesInventario (
-                    InventoryLotId int NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                    ProductId int NOT NULL,
-                    BatchCode varchar(80) NOT NULL,
-                    ExpirationDate date NULL,
-                    Quantity decimal(18,2) NOT NULL DEFAULT 0,
-                    CreatedAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE KEY UX_LotesInventario_Product_Batch (ProductId, BatchCode)
-                );
-                """);
-            return;
-        }
+            if (UseMySql ? _mySqlInventoryLotsReady : _sqlServerInventoryLotsReady) return;
+            if (UseMySql)
+            {
+                await ExecuteAsync("""
+                    CREATE TABLE IF NOT EXISTS LotesInventario (
+                        InventoryLotId int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                        ProductId int NOT NULL,
+                        BatchCode varchar(80) NOT NULL,
+                        ExpirationDate date NULL,
+                        Quantity decimal(18,2) NOT NULL DEFAULT 0,
+                        CreatedAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE KEY UX_LotesInventario_Product_Batch (ProductId, BatchCode)
+                    );
+                    """);
+                _mySqlInventoryLotsReady = true;
+                return;
+            }
 
         await ExecuteAsync("""
             IF OBJECT_ID(N'dbo.LotesInventario', N'U') IS NULL
@@ -324,6 +333,12 @@ public sealed partial class SqlStore
                     CONSTRAINT UX_LotesInventario_Product_Batch UNIQUE (ProductId, BatchCode)
                 );
             """);
+            _sqlServerInventoryLotsReady = true;
+        }
+        finally
+        {
+            InventoryLotsSchemaLock.Release();
+        }
     }
 
     public async Task<IReadOnlyList<object>> ProductCategoryOptionsAsync()
@@ -360,16 +375,21 @@ public sealed partial class SqlStore
         // Ejecutar estas consultas independientes en paralelo evita varias esperas
         // consecutivas contra la base de datos remota.
         var existingCode = input.Id is null
-            ? await CodeExistsAsync(input.Code.Trim())
+            ? false
             : await CodeExistsExcludingAsync(input.Code.Trim(), input.Id.Value);
 
         if (existingCode)
             throw new InvalidOperationException($"Ya existe un producto con el cÃ³digo '{input.Code.Trim()}'.");
 
-        var typeId = await EnsureProductTypeAsync(input.Type);
-        var unitId = await EnsureUnitMeasureAsync(input.Unit);
-        var categoryId = await EnsureProductCategoryAsync(input.Category, input.Subcategory);
-        var locationId = await EnsureInventoryLocationAsync();
+        var typeTask = EnsureProductTypeAsync(input.Type);
+        var unitTask = EnsureUnitMeasureAsync(input.Unit);
+        var categoryTask = EnsureProductCategoryAsync(input.Category, input.Subcategory);
+        var locationTask = EnsureInventoryLocationAsync();
+        await Task.WhenAll(typeTask, unitTask, categoryTask, locationTask);
+        var typeId = await typeTask;
+        var unitId = await unitTask;
+        var categoryId = await categoryTask;
+        var locationId = await locationTask;
 
         await using var connection = CreateConnection();
         await connection.OpenAsync();
@@ -514,7 +534,7 @@ public sealed partial class SqlStore
 
     private async Task<string> ResolveAutomaticInventoryCodeAsync(InventoryProductInput input)
     {
-        if (!string.IsNullOrWhiteSpace(input.Code))
+        if (input.Id is > 0 && !string.IsNullOrWhiteSpace(input.Code))
             return input.Code.Trim().ToUpperInvariant();
 
         var prefix = input.Type?.Trim() switch
@@ -527,12 +547,12 @@ public sealed partial class SqlStore
         var letters = new string(RemoveDiacritics(input.Description ?? string.Empty)
             .Where(char.IsLetterOrDigit).Take(3).ToArray()).ToUpperInvariant().PadRight(3, 'X');
         var baseCode = $"{prefix}-{letters}";
-        var candidate = baseCode;
-        var suffix = 2;
+        var suffix = 1;
+        var candidate = $"{baseCode}-{suffix:000}";
         while (input.Id is > 0
             ? await CodeExistsExcludingAsync(candidate, input.Id.Value)
             : await CodeExistsAsync(candidate))
-            candidate = $"{baseCode}-{suffix++.ToString("000")}";
+            candidate = $"{baseCode}-{++suffix:000}";
         return candidate;
     }
 

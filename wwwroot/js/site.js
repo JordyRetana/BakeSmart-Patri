@@ -6,6 +6,66 @@
 
     const app = window.app || (window.app = {});
 
+    app.customerPicker = {
+        attach(input, itemsProvider, onSelect) {
+            if (!input) return;
+            input.removeAttribute('list');
+            input.setAttribute('autocomplete', 'off');
+            const host = input.closest('.pos-input-shell, .pos-form-block') || input.parentElement;
+            host.classList.add('customer-picker-host');
+            let menu = host.querySelector('.customer-picker-menu');
+            if (!menu) {
+                menu = document.createElement('div');
+                menu.className = 'customer-picker-menu';
+                menu.hidden = true;
+                host.appendChild(menu);
+            }
+            input._customerItemsProvider = itemsProvider;
+            input._customerOnSelect = onSelect;
+            if (input.dataset.customerPickerReady === 'true') return;
+            input.dataset.customerPickerReady = 'true';
+            let activeIndex = -1;
+            const items = () => (input._customerItemsProvider?.() || []).filter(Boolean);
+            const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+            const render = () => {
+                const query = input.value.trim().toLowerCase();
+                const matches = items().filter(customer => `${customer.fullName || customer.name || ''} ${customer.email || ''} ${customer.phone || ''}`.toLowerCase().includes(query)).slice(0, 8);
+                activeIndex = -1;
+                menu.innerHTML = matches.map((customer, index) => `<button type="button" class="customer-picker-option" data-customer-index="${index}"><span class="customer-picker-avatar"><i class="fas fa-user"></i></span><span><strong>${escape(customer.fullName || customer.name || 'Cliente')}</strong><small>${escape(customer.email || customer.phone || 'Cliente registrado')}</small></span></button>`).join('') || `<div class="customer-picker-empty"><strong>Usar “${escape(input.value)}”</strong><small>Se guardará como cliente escrito manualmente.</small></div>`;
+                menu._matches = matches;
+                menu.hidden = false;
+            };
+            const choose = index => {
+                const customer = menu._matches?.[index];
+                if (!customer) return;
+                input.value = customer.fullName || customer.name || '';
+                menu.hidden = true;
+                input._customerOnSelect?.(customer, input);
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+            input.addEventListener('focus', render);
+            input.addEventListener('input', render);
+            input.addEventListener('keydown', event => {
+                const options = Array.from(menu.querySelectorAll('.customer-picker-option'));
+                if (event.key === 'Escape') { menu.hidden = true; return; }
+                if (!['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key) || menu.hidden || !options.length) return;
+                event.preventDefault();
+                if (event.key === 'Enter' && activeIndex >= 0) { choose(activeIndex); return; }
+                activeIndex = event.key === 'ArrowUp' ? Math.max(0, activeIndex - 1) : Math.min(options.length - 1, activeIndex + 1);
+                options.forEach((option, index) => option.classList.toggle('active', index === activeIndex));
+                options[activeIndex]?.scrollIntoView({ block: 'nearest' });
+            });
+            menu.addEventListener('mousedown', event => event.preventDefault());
+            menu.addEventListener('click', event => {
+                const option = event.target.closest('[data-customer-index]');
+                if (option) choose(Number(option.dataset.customerIndex));
+            });
+            document.addEventListener('pointerdown', event => {
+                if (!host.contains(event.target)) menu.hidden = true;
+            });
+        }
+    };
+
     app.nav = {
         markActive() {
             const path = (location.pathname || "/").toLowerCase();

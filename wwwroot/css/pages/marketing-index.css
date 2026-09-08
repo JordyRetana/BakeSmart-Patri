@@ -438,6 +438,17 @@
     }
 }
 
+.marketing-workspace-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem;padding:.65rem;border:1px solid var(--border);border-radius:18px;background:var(--bg-card);box-shadow:0 14px 34px rgba(48,29,63,.08)}
+.marketing-workspace-tab{min-height:68px;padding:.7rem 1rem;display:flex;align-items:center;gap:.75rem;border:1px solid transparent;border-radius:13px;background:transparent;color:var(--text);text-align:left;cursor:pointer}
+.marketing-workspace-tab>i{width:38px;height:38px;display:grid;place-items:center;flex:0 0 38px;border-radius:11px;background:var(--primary-light);color:var(--primary)}
+.marketing-workspace-tab span,.marketing-workspace-tab strong,.marketing-workspace-tab small{display:block}.marketing-workspace-tab small{margin-top:.15rem;color:var(--text-muted);font-size:.7rem}
+.marketing-workspace-tab.active{border-color:color-mix(in srgb,var(--primary) 28%,var(--border));background:linear-gradient(135deg,color-mix(in srgb,var(--primary-light) 82%,var(--bg-card)),color-mix(in srgb,var(--secondary) 9%,var(--bg-card)));box-shadow:0 9px 24px rgba(112,57,158,.11)}
+.marketing-workspace-tab.active>i{color:#fff;background:linear-gradient(135deg,var(--primary),var(--secondary))}
+.marketing-page .marketing-main-grid{grid-template-columns:1fr!important}.marketing-page .marketing-side-stack{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.marketing-page .marketing-side-stack [data-marketing-panel="campaigns"]{grid-column:1/-1}
+[data-marketing-panel][hidden],.marketing-side-stack[hidden],.marketing-search-box[hidden]{display:none!important}
+body.dark .marketing-workspace-tabs{border-color:#403748;background:#211e2b}
+@media(max-width:850px){.marketing-workspace-tabs,.marketing-page .marketing-side-stack{grid-template-columns:1fr}.marketing-page .marketing-side-stack [data-marketing-panel="campaigns"]{grid-column:auto}.marketing-workspace-tab{min-height:56px}}
+
 @media (max-width: 760px) {
     .marketing-page .table-container,
     .marketing-table-wrap {

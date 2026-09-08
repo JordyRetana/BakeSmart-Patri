@@ -148,6 +148,20 @@ body.global-categories-open {
     }
 }
 
+/* Selector propio de clientes: evita el desplegable nativo del navegador. */
+.customer-picker-host{position:relative!important;overflow:visible!important}
+.customer-picker-menu{position:absolute;z-index:2147482000;top:calc(100% + 7px);left:0;width:min(460px,max(100%,320px));max-height:min(360px,55vh);padding:.45rem;overflow:auto;border:1px solid var(--border);border-radius:15px;background:var(--bg-card);box-shadow:0 20px 55px rgba(31,22,42,.2)}
+.customer-picker-option{width:100%;display:flex;align-items:center;gap:.75rem;padding:.72rem;border:0;border-radius:11px;background:transparent;color:var(--text);text-align:left;cursor:pointer}
+.customer-picker-option:hover,.customer-picker-option.active{background:var(--primary-light)}
+.customer-picker-option>span:last-child{min-width:0;display:grid;gap:.12rem}
+.customer-picker-option strong,.customer-picker-option small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.customer-picker-option small,.customer-picker-empty small{color:var(--text-muted)}
+.customer-picker-avatar{width:34px;height:34px;display:grid;place-items:center;flex:0 0 34px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff}
+.customer-picker-empty{display:grid;gap:.18rem;padding:.8rem;color:var(--text)}
+body.dark .customer-picker-menu{border-color:#453b53;background:#211e2b;box-shadow:0 22px 60px rgba(0,0,0,.48)}
+body.dark .customer-picker-option:hover,body.dark .customer-picker-option.active{background:#322844}
+@media(max-width:600px){.customer-picker-menu{position:fixed;top:auto;right:.75rem;bottom:.75rem;left:.75rem;width:auto;max-height:52vh;border-radius:18px}}
+
 /* Selector global de categorías: compacto, visual y adaptable. */
 .global-categories-backdrop {
     background: rgba(19, 16, 31, .58);

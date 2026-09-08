@@ -40,8 +40,7 @@
             <form id="checkoutCartForm" class="pos-checkout-form">
                 <div class="pos-form-block">
                     <label>Cliente</label>
-                    <div class="pos-input-shell"><i class="fas fa-user"></i><input class="form-control" name="customerName" id="checkoutCustomerName" list="checkoutCustomerOptions" placeholder="Buscar cliente o escribir manualmente" required /></div>
-                    <datalist id="checkoutCustomerOptions"></datalist>
+                    <div class="pos-input-shell"><i class="fas fa-user"></i><input class="form-control pos-customer-input" name="customerName" id="checkoutCustomerName" autocomplete="off" placeholder="Buscar cliente o escribir manualmente" required /></div>
                 </div>
                 <div class="pos-form-block">
                     <label>Correo</label>
@@ -164,11 +163,16 @@
             }
 
             function renderCustomers() {
-                document.getElementById('checkoutCustomerOptions').innerHTML = store.customers.list().map(customer => `
-                            <option value="${customer.fullName || customer.name || ''}">
-                                ${customer.email || customer.phone || 'Cliente registrado'}
-                            </option>
-                        `).join('');
+                app.customerPicker.attach(
+                    document.getElementById('checkoutCustomerName'),
+                    () => store.customers.list(),
+                    customer => {
+                        form.customerEmail.value = customer.email || '';
+                        form.customerPhone.value = customer.phone || '';
+                        renderPromotions();
+                        renderCart();
+                    }
+                );
             }
 
             function renderPayments() {

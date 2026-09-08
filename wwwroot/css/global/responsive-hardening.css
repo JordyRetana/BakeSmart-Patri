@@ -35,6 +35,19 @@ img,svg,video,canvas{max-width:100%}
   :where(.page-header-actions,.page-actions,.dashboard-hero-actions,.client-profile-actions)>.btn{flex:1 1 150px}
 }
 
+/* Correcciones finales de contraste y límites para POS y Recetas. */
+body.dark[data-page="/pos/cart"] .pos-cart-checkout-card,
+body.dark[data-page="/pos/cart"] .pos-cart-checkout-card--payment{background:#171d2b!important;border-color:#3f3850!important;color:#f8fafc!important}
+body.dark[data-page="/pos/cart"] .pos-cart-checkout-card :is(h2,h3,h4,label,strong){color:#f8fafc!important}
+body.dark[data-page="/pos/cart"] .pos-cart-checkout-card :is(.text-muted,small,.pos-panel-eyebrow){color:#cbd5e1!important}
+body.dark[data-page="/pos/cart"] .pos-cart-checkout-card :is(input,select,.bs-select__button){background:#101827!important;border-color:#453b5b!important;color:#f8fafc!important}
+.recipe-page,.recipe-hero,.recipe-workspace,.recipe-products,.recipe-editor{max-width:100%;min-width:0;box-sizing:border-box}
+.recipe-section-head>div,.recipe-product>*,.recipe-editor-head>div{min-width:0;max-width:100%}
+.recipe-section-head h2,.recipe-ingredients-head h3{font-size:clamp(1.2rem,2.1vw,1.75rem)!important;overflow-wrap:anywhere}
+body.dark .recipe-products,body.dark .recipe-editor{background:#211e2b!important;border-color:#403748!important;color:#f7f3fb!important}
+body.dark .recipe-products :is(h2,h3,strong,label),body.dark .recipe-editor :is(h2,h3,strong,label){color:#f7f3fb!important}
+@media(max-width:1180px){.recipe-workspace{grid-template-columns:1fr!important}.recipe-product-list{max-height:340px!important;min-height:0!important}}
+
 @media(max-width:600px){
   .footer{padding-top:2rem!important}
   .footer-content{width:calc(100% - 2rem)!important;grid-template-columns:1fr!important;gap:1.35rem!important}

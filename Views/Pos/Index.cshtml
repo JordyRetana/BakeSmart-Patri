@@ -172,7 +172,7 @@
                     <form id="posCheckoutForm" class="pos-checkout-form">
                         <div class="pos-form-block">
                             <label>Cliente</label>
-                            <input class="form-control pos-customer-input" name="customerName" list="posCustomerOptions" placeholder="Buscar cliente o escribir manualmente" />
+                            <input class="form-control pos-customer-input" name="customerName" autocomplete="off" placeholder="Buscar cliente o escribir manualmente" />
                         </div>
 
                         <div class="pos-form-block">
@@ -235,7 +235,7 @@
                     <form id="posCheckoutFormDesktop" class="pos-checkout-form" style="display:none;">
                         <div class="pos-form-block">
                             <label>Cliente</label>
-                            <input class="form-control pos-customer-input" name="customerName" list="posCustomerOptions" placeholder="Buscar cliente o escribir manualmente" />
+                            <input class="form-control pos-customer-input" name="customerName" autocomplete="off" placeholder="Buscar cliente o escribir manualmente" />
                         </div>
 
                         <div class="pos-form-block">
@@ -269,7 +269,6 @@
                         </button>
                     </form>
                 </section>
-                <datalist id="posCustomerOptions"></datalist>
             </div>
         </section>
 
@@ -551,14 +550,18 @@
             }
 
             function renderCustomerOptions() {
-                const options = document.getElementById('posCustomerOptions');
-                if (!options) return;
-
-                options.innerHTML = store.customers.list().map(customer => `
-                    <option value="${customer.fullName || customer.name || ''}" data-email="${customer.email || ''}" data-phone="${customer.phone || ''}">
-                        ${customer.email || customer.phone || 'Cliente registrado'}
-                    </option>
-                `).join('');
+                document.querySelectorAll('.pos-customer-input').forEach(input => app.customerPicker.attach(
+                    input,
+                    () => store.customers.list(),
+                    (customer, selectedInput) => {
+                        const customerForm = selectedInput.closest('form');
+                        if (!customerForm) return;
+                        const emailInput = customerForm.querySelector('[name="customerEmail"]');
+                        const phoneInput = customerForm.querySelector('[name="customerPhone"]');
+                        if (emailInput) emailInput.value = customer.email || '';
+                        if (phoneInput) phoneInput.value = customer.phone || '';
+                    }
+                ));
             }
 
             function applyCustomerSelection(input) {

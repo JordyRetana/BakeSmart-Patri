@@ -49,8 +49,14 @@
         </div>
     </div>
 
+    <nav class="marketing-workspace-tabs" aria-label="Áreas de marketing">
+        <button type="button" class="marketing-workspace-tab active" data-marketing-tab="customers" aria-selected="true"><i class="fas fa-users"></i><span><strong>Clientes</strong><small>Base y clientes frecuentes</small></span></button>
+        <button type="button" class="marketing-workspace-tab" data-marketing-tab="promotions" aria-selected="false"><i class="fas fa-tags"></i><span><strong>Promociones</strong><small>Crear y administrar beneficios</small></span></button>
+        <button type="button" class="marketing-workspace-tab" data-marketing-tab="campaigns" aria-selected="false"><i class="fas fa-paper-plane"></i><span><strong>Comunicaciones</strong><small>Campañas para clientes</small></span></button>
+    </nav>
+
     <div class="marketing-main-grid">
-        <section class="card marketing-customers-card">
+        <section class="card marketing-customers-card" data-marketing-panel="customers">
             <div class="marketing-panel-header">
                 <div>
                     <span class="marketing-eyebrow">Clientes</span>
@@ -76,7 +82,7 @@
         </section>
 
         <aside class="marketing-side-stack">
-            <section class="card marketing-promotions-card">
+            <section class="card marketing-promotions-card" data-marketing-panel="promotions">
                 <div class="marketing-panel-header">
                     <div>
                         <span class="marketing-eyebrow">Promociones</span>
@@ -127,7 +133,7 @@
                 </form>
             </section>
 
-            <section class="card marketing-promotions-card">
+            <section class="card marketing-promotions-card" data-marketing-panel="promotions">
                 <div class="marketing-panel-header marketing-panel-header-compact">
                     <div>
                         <span class="marketing-eyebrow">Registro</span>
@@ -137,7 +143,7 @@
                 <div id="promotionsList" class="marketing-promotions-list"></div>
             </section>
 
-            <section class="card marketing-promotions-card">
+            <section class="card marketing-promotions-card" data-marketing-panel="campaigns">
                 <form id="campaignForm" class="marketing-form">
                     <div class="marketing-panel-header marketing-panel-header-compact">
                         <div>
@@ -171,6 +177,20 @@
             const search = document.getElementById('marketingSearch');
             let pageInitialized = false;
             const clean = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+            const selectMarketingWorkspace = workspace => {
+                const selected = ['customers', 'promotions', 'campaigns'].includes(workspace) ? workspace : 'customers';
+                document.querySelectorAll('[data-marketing-tab]').forEach(button => {
+                    const active = button.dataset.marketingTab === selected;
+                    button.classList.toggle('active', active);
+                    button.setAttribute('aria-selected', String(active));
+                });
+                document.querySelectorAll('[data-marketing-panel]').forEach(panel => panel.hidden = panel.dataset.marketingPanel !== selected);
+                document.querySelector('.marketing-side-stack')?.toggleAttribute('hidden', selected === 'customers');
+                search.closest('.marketing-search-box').hidden = selected !== 'customers';
+                sessionStorage.setItem('bakesmart.marketing.workspace', selected);
+            };
+            document.querySelectorAll('[data-marketing-tab]').forEach(button => button.addEventListener('click', () => selectMarketingWorkspace(button.dataset.marketingTab)));
+            selectMarketingWorkspace(sessionStorage.getItem('bakesmart.marketing.workspace') || 'customers');
 
             function renderPromotionTargets(customers) {
                 const products = BakeSmartStore.inventory.sellable();
