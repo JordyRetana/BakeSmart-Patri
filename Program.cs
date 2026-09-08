@@ -278,21 +278,6 @@ app.Use(async (context, next) =>
         context.Response.Redirect($"/Account/CompleteAccount?returnUrl={Uri.EscapeDataString(context.Request.Path + context.Request.QueryString)}");
         return;
     }
-    if (context.User.Identity?.IsAuthenticated == true &&
-        !context.User.IsInRole("Cliente") &&
-        context.User.FindFirst("bakesmart:2fa")?.Value != "enabled" &&
-        !context.Request.Path.StartsWithSegments("/Account/Security") &&
-        !context.Request.Path.StartsWithSegments("/Account/EnableTwoFactor") &&
-        !context.Request.Path.StartsWithSegments("/Account/CompleteAccount") &&
-        !context.Request.Path.StartsWithSegments("/Account/Logout") &&
-        !context.Request.Path.StartsWithSegments("/css") &&
-        !context.Request.Path.StartsWithSegments("/js") &&
-        !context.Request.Path.StartsWithSegments("/img") &&
-        !context.Request.Path.StartsWithSegments("/lib"))
-    {
-        context.Response.Redirect("/Account/Security");
-        return;
-    }
     await next();
 });
 app.UseAuthorization();

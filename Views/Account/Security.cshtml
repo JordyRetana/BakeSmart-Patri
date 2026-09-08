@@ -22,20 +22,15 @@
                     <details class="security-manual"><summary>No puedo escanear el QR</summary><p>Introduzca esta clave manualmente en su aplicación:</p><div class="security-secret"><strong id="totpSecret">@ViewData["Secret"]</strong><button type="button" class="btn btn-outline security-copy" data-copy-target="totpSecret"><i class="fas fa-copy"></i> Copiar</button></div></details>
                 </div>
             </div>
-            <form method="post" action="/Account/EnableTwoFactor" class="security-enable-form">
+            <form method="post" action="/Account/EnableTwoFactor" class="security-enable-form security-single-submit">
                 @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
                 <input class="input security-code-input" name="code" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required />
                 <button class="btn btn-primary" type="submit"><i class="fas fa-shield-halved"></i> Activar verificación</button>
             </form>
         }
-        <a class="btn btn-outline" href="/Account/Profile">Volver a mi perfil</a>
+        @if (!enabled) { <a class="btn btn-outline security-skip" href="@ViewData["ContinueUrl"]"><i class="fas fa-arrow-right"></i> Omitir por ahora y continuar</a> }
+        else { <a class="btn btn-outline" href="@ViewData["ContinueUrl"]">Continuar</a> }
     </section>
 </main>
-<script>
-document.querySelector('[data-copy-target]')?.addEventListener('click', async function () {
-    const value = document.getElementById(this.dataset.copyTarget)?.textContent?.trim();
-    if (!value) return;
-    await navigator.clipboard.writeText(value);
-    this.innerHTML = '<i class="fas fa-check"></i> Copiada';
-});
-</script>
+@section Scripts { <script src="~/js/auth-security-interactions.js" asp-append-version="true"></script> }

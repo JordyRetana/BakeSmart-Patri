@@ -219,16 +219,18 @@ namespace BakeSmartPatri.Controllers
 
         [Authorize]
         [HttpGet]
-        public async Task<IActionResult> Security()
+        public async Task<IActionResult> Security(string? returnUrl = null)
         {
             var email = User.FindFirstValue(ClaimTypes.Email) ?? "";
             var state = await _sqlStore.GetUserSecurityAsync(email);
             ViewData["TwoFactorEnabled"] = state.TwoFactorEnabled;
+            ViewData["ReturnUrl"] = returnUrl ?? "";
+            ViewData["ContinueUrl"] = GetPostAuthenticationUrl(returnUrl, User.FindFirstValue(ClaimTypes.Role) ?? "Cliente");
             if (!state.TwoFactorEnabled)
             {
-                // A setup that was not completed must receive a fresh secret.
-                // This also invalidates any value that may have been exposed from an abandoned setup.
-                var secret = await _sqlStore.BeginTwoFactorSetupAsync(email);
+                var secret = string.IsNullOrWhiteSpace(state.TotpSecret)
+                    ? await _sqlStore.BeginTwoFactorSetupAsync(email)
+                    : state.TotpSecret;
                 ViewData["Secret"] = secret;
                 var otpAuthUri = $"otpauth://totp/BakeSmart%20Patri:{Uri.EscapeDataString(email)}?secret={secret}&issuer=BakeSmart%20Patri&digits=6&period=30";
                 using var qrData = QRCodeGenerator.GenerateQrCode(otpAuthUri, QRCodeGenerator.ECCLevel.Q);
@@ -241,7 +243,7 @@ namespace BakeSmartPatri.Controllers
         [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EnableTwoFactor(string code)
+        public async Task<IActionResult> EnableTwoFactor(string code, string? returnUrl = null)
         {
             var email = User.FindFirstValue(ClaimTypes.Email) ?? "";
             if (!await _sqlStore.EnableTwoFactorAsync(email, code)) TempData["ToastError"] = "Código incorrecto. Verifique la hora del teléfono e intente nuevamente.";
@@ -250,7 +252,8 @@ namespace BakeSmartPatri.Controllers
                 await SignInUserAsync(new SqlStore.AuthUser(email, User.FindFirstValue(ClaimTypes.Role) ?? "Cliente", User.FindFirstValue(ClaimTypes.Name) ?? email));
                 TempData["ToastSuccess"] = "Autenticación de dos pasos activada correctamente.";
             }
-            return RedirectToAction(nameof(Security));
+            if (TempData.ContainsKey("ToastError")) return RedirectToAction(nameof(Security), new { returnUrl });
+            return RedirectAfterAuthentication(returnUrl, User.FindFirstValue(ClaimTypes.Role) ?? "Cliente");
         }
 
         [Authorize]
@@ -287,7 +290,7 @@ namespace BakeSmartPatri.Controllers
             var role = User.FindFirstValue(ClaimTypes.Role) ?? "Cliente";
             await SignInUserAsync(new SqlStore.AuthUser(email, role, User.FindFirstValue(ClaimTypes.Name) ?? email));
             TempData["ToastSuccess"] = "Contraseña de respaldo configurada correctamente.";
-            if (role != "Cliente" && User.FindFirst("bakesmart:2fa")?.Value != "enabled") return RedirectToAction(nameof(Security));
+            if (User.FindFirst("bakesmart:2fa")?.Value != "enabled") return RedirectToAction(nameof(Security), new { returnUrl });
             return RedirectAfterAuthentication(returnUrl, role);
         }
 
@@ -322,6 +325,8 @@ namespace BakeSmartPatri.Controllers
             await SignInUserAsync(user);
             if (security.PasswordSetupRequired)
                 return RedirectToAction(nameof(CompleteAccount), new { returnUrl });
+            if (!security.TwoFactorEnabled)
+                return RedirectToAction(nameof(Security), new { returnUrl });
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
             return user.Role == "Cliente" ? RedirectToAction("Index", "Client") : RedirectToAction("Index", "Dashboard");
         }
@@ -551,6 +556,12 @@ namespace BakeSmartPatri.Controllers
         {
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
             return role == "Cliente" ? RedirectToAction("Index", "Client") : RedirectToAction("Index", "Dashboard");
+        }
+
+        private string GetPostAuthenticationUrl(string? returnUrl, string role)
+        {
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)) return returnUrl;
+            return role == "Cliente" ? Url.Action("Index", "Client")! : Url.Action("Index", "Dashboard")!;
         }
 
         private void DeleteLegacyAuthCookies(bool includeCurrent = true)
