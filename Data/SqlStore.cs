@@ -1479,10 +1479,10 @@ public sealed partial class SqlStore
         {
             await ExecuteAsync("""
                 INSERT INTO Roles (RoleName, Description, IsSystemRole)
-                SELECT 'Cajero', 'GestiÃ³n de caja, ventas y pedidos de mostrador', 1
+                SELECT 'Cajero', 'Gestión de caja, ventas y pedidos de mostrador', 1
                 WHERE NOT EXISTS (SELECT 1 FROM Roles WHERE RoleName = 'Cajero');
                 INSERT INTO Roles (RoleName, Description, IsSystemRole)
-                SELECT 'Repostero', 'ProducciÃ³n, recetas e inventario operativo', 1
+                SELECT 'Repostero', 'Producción, recetas e inventario operativo', 1
                 WHERE NOT EXISTS (SELECT 1 FROM Roles WHERE RoleName = 'Repostero');
                 INSERT INTO Roles (RoleName, Description, IsSystemRole)
                 SELECT 'Supervisor', 'Seguimiento operativo, reportes y control de tienda', 1
@@ -1515,11 +1515,11 @@ public sealed partial class SqlStore
         const string sql = """
             IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'Cajero')
                 INSERT INTO dbo.Roles (RoleName, Description, IsSystemRole)
-                VALUES (N'Cajero', N'GestiÃ³n de caja, ventas y pedidos de mostrador', 1);
+                VALUES (N'Cajero', N'Gestión de caja, ventas y pedidos de mostrador', 1);
 
             IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'Repostero')
                 INSERT INTO dbo.Roles (RoleName, Description, IsSystemRole)
-                VALUES (N'Repostero', N'ProducciÃ³n, recetas e inventario operativo', 1);
+                VALUES (N'Repostero', N'Producción, recetas e inventario operativo', 1);
 
             IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'Supervisor')
                 INSERT INTO dbo.Roles (RoleName, Description, IsSystemRole)
@@ -1559,82 +1559,88 @@ public sealed partial class SqlStore
         if (normalized.Contains("admin"))
             return new[]
             {
-                "Dashboard", "Pedidos", "ProducciÃ³n", "Inventario", "Punto de venta",
-                "Reportes", "BitÃ¡cora", "ConfiguraciÃ³n", "Usuarios", "Roles",
-                "Contabilidad", "Marketing", "CatÃ¡logo", "Perfil"
+                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
+                "Reportes", "Bitácora", "Configuración", "Usuarios", "Roles",
+                "Contabilidad", "Marketing", "Catálogo", "Perfil"
             };
 
         if (normalized.Contains("staff"))
             return new[]
             {
-                "Dashboard", "Pedidos", "ProducciÃ³n", "Inventario", "Punto de venta",
-                "BitÃ¡cora", "ConfiguraciÃ³n", "CatÃ¡logo", "Perfil"
+                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
+                "Bitácora", "Configuración", "Catálogo", "Perfil"
             };
 
         if (normalized.Contains("super"))
             return new[]
             {
-                "Dashboard", "Pedidos", "ProducciÃ³n", "Inventario", "Punto de venta",
-                "Reportes", "BitÃ¡cora", "Contabilidad", "Marketing", "Perfil"
+                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
+                "Reportes", "Bitácora", "Contabilidad", "Marketing", "Perfil"
             };
 
         if (normalized.Contains("caj"))
-            return new[] { "Dashboard", "Pedidos", "Punto de venta", "CatÃ¡logo", "Perfil" };
+            return new[] { "Dashboard", "Pedidos", "Punto de venta", "Catálogo", "Perfil" };
 
         if (normalized.Contains("repost"))
-            return new[] { "Dashboard", "ProducciÃ³n", "Inventario", "Pedidos", "Perfil" };
+            return new[] { "Dashboard", "Producción", "Inventario", "Pedidos", "Perfil" };
 
         if (normalized.Contains("encargadorecetas"))
-            return new[] { "Dashboard", "Recetas", "ProducciÃ³n", "Inventario", "Pedidos", "Perfil" };
+            return new[] { "Dashboard", "Recetas", "Producción", "Inventario", "Pedidos", "Perfil" };
 
         if (normalized.Contains("cliente"))
-            return new[] { "CatÃ¡logo", "Pedido rÃ¡pido", "Mis pedidos", "Seguimiento", "Perfil" };
+            return new[] { "Catálogo", "Pedido rápido", "Mis pedidos", "Seguimiento", "Perfil" };
 
         return roleName switch
         {
             "Admin" => new[]
             {
-                "Dashboard", "Pedidos", "ProducciÃ³n", "Inventario", "Punto de venta",
-                "Reportes", "BitÃ¡cora", "ConfiguraciÃ³n", "Usuarios", "Roles",
-                "Contabilidad", "Marketing", "CatÃ¡logo", "Perfil"
+                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
+                "Reportes", "Bitácora", "Configuración", "Usuarios", "Roles",
+                "Contabilidad", "Marketing", "Catálogo", "Perfil"
             },
             "Staff" => new[]
             {
-                "Dashboard", "Pedidos", "ProducciÃ³n", "Inventario", "Punto de venta",
-                "BitÃ¡cora", "ConfiguraciÃ³n", "CatÃ¡logo", "Perfil"
+                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
+                "Bitácora", "Configuración", "Catálogo", "Perfil"
             },
             "Supervisor" => new[]
             {
-                "Dashboard", "Pedidos", "ProducciÃ³n", "Inventario", "Punto de venta",
-                "Reportes", "BitÃ¡cora", "Contabilidad", "Marketing", "Perfil"
+                "Dashboard", "Pedidos", "Producción", "Inventario", "Punto de venta",
+                "Reportes", "Bitácora", "Contabilidad", "Marketing", "Perfil"
             },
             "Cajero" => new[]
             {
-                "Dashboard", "Pedidos", "Punto de venta", "CatÃ¡logo", "Perfil"
+                "Dashboard", "Pedidos", "Punto de venta", "Catálogo", "Perfil"
             },
             "Repostero" => new[]
             {
-                "Dashboard", "ProducciÃ³n", "Inventario", "Pedidos", "Perfil"
+                "Dashboard", "Producción", "Inventario", "Pedidos", "Perfil"
             },
             "EncargadoRecetas" => new[]
             {
-                "Dashboard", "Recetas", "ProducciÃ³n", "Inventario", "Pedidos", "Perfil"
+                "Dashboard", "Recetas", "Producción", "Inventario", "Pedidos", "Perfil"
             },
             "Cliente" => new[]
             {
-                "CatÃ¡logo", "Pedido rÃ¡pido", "Mis pedidos", "Seguimiento", "Perfil"
+                "Catálogo", "Pedido rápido", "Mis pedidos", "Seguimiento", "Perfil"
             },
             _ => new[] { "Perfil" }
         };
     }
 
     private static string NormalizeUiCopy(string value) => (value ?? "")
-        .Replace("Gestion de", "GestiÃ³n de", StringComparison.Ordinal)
-        .Replace("Produccion", "ProducciÃ³n", StringComparison.Ordinal)
-        .Replace("Catalogo", "CatÃ¡logo", StringComparison.Ordinal)
-        .Replace("Configuracion", "ConfiguraciÃ³n", StringComparison.Ordinal)
-        .Replace("Bitacora", "BitÃ¡cora", StringComparison.Ordinal)
-        .Replace("Pedido rapido", "Pedido rÃ¡pido", StringComparison.Ordinal);
+        .Replace("GestiÃ³n", "Gestión", StringComparison.Ordinal)
+        .Replace("ProducciÃ³n", "Producción", StringComparison.Ordinal)
+        .Replace("CatÃ¡logo", "Catálogo", StringComparison.Ordinal)
+        .Replace("ConfiguraciÃ³n", "Configuración", StringComparison.Ordinal)
+        .Replace("BitÃ¡cora", "Bitácora", StringComparison.Ordinal)
+        .Replace("rÃ¡pido", "rápido", StringComparison.Ordinal)
+        .Replace("Gestion de", "Gestión de", StringComparison.Ordinal)
+        .Replace("Produccion", "Producción", StringComparison.Ordinal)
+        .Replace("Catalogo", "Catálogo", StringComparison.Ordinal)
+        .Replace("Configuracion", "Configuración", StringComparison.Ordinal)
+        .Replace("Bitacora", "Bitácora", StringComparison.Ordinal)
+        .Replace("Pedido rapido", "Pedido rápido", StringComparison.Ordinal);
 
     public async Task<IReadOnlyList<object>> PaymentMethodsAsync()
     {

@@ -91,6 +91,7 @@ namespace BakeSmartPatri.Controllers
                 TempData["PendingTwoFactorRole"] = user.Role;
                 TempData["PendingTwoFactorName"] = user.DisplayName;
                 TempData["PendingTwoFactorReturnUrl"] = returnUrl ?? "";
+                TempData["PendingPasswordSetupRequired"] = result.Security?.PasswordSetupRequired == true;
                 return RedirectToAction(nameof(TwoFactor));
             }
 
@@ -103,7 +104,7 @@ namespace BakeSmartPatri.Controllers
             {
                 // El inicio de sesion no debe bloquearse si la bitacora no esta disponible.
             }
-            await SignInUserAsync(user);
+            await SignInUserAsync(user, result.Security);
 
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
                 return Redirect(returnUrl);
@@ -212,7 +213,8 @@ namespace BakeSmartPatri.Controllers
             }
             var user = new SqlStore.AuthUser(email, TempData["PendingTwoFactorRole"]?.ToString() ?? "Cliente", TempData["PendingTwoFactorName"]?.ToString() ?? email);
             var returnUrl = TempData["PendingTwoFactorReturnUrl"]?.ToString();
-            await SignInUserAsync(user);
+            var passwordSetupRequired = string.Equals(TempData["PendingPasswordSetupRequired"]?.ToString(), "True", StringComparison.OrdinalIgnoreCase);
+            await SignInUserAsync(user, new SqlStore.UserSecurityState(true, true, null, passwordSetupRequired));
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
             return user.Role == "Cliente" ? RedirectToAction("Index", "Client") : RedirectToAction("Index", "Dashboard");
         }
@@ -320,9 +322,10 @@ namespace BakeSmartPatri.Controllers
                 TempData["PendingTwoFactorRole"] = user.Role;
                 TempData["PendingTwoFactorName"] = user.DisplayName;
                 TempData["PendingTwoFactorReturnUrl"] = returnUrl ?? "";
+                TempData["PendingPasswordSetupRequired"] = security.PasswordSetupRequired;
                 return RedirectToAction(nameof(TwoFactor));
             }
-            await SignInUserAsync(user);
+            await SignInUserAsync(user, security);
             if (security.PasswordSetupRequired)
                 return RedirectToAction(nameof(CompleteAccount), new { returnUrl });
             if (!security.TwoFactorEnabled)
@@ -525,9 +528,9 @@ namespace BakeSmartPatri.Controllers
         private static bool IsStrongPassword(string value) =>
             value.Length >= 12 && value.Any(char.IsUpper) && value.Any(char.IsLower) && value.Any(char.IsDigit) && value.Any(character => !char.IsLetterOrDigit(character));
 
-        private async Task SignInUserAsync(SqlStore.AuthUser user)
+        private async Task SignInUserAsync(SqlStore.AuthUser user, SqlStore.UserSecurityState? knownSecurity = null)
         {
-            var security = await _sqlStore.GetUserSecurityAsync(user.Email);
+            var security = knownSecurity ?? await _sqlStore.GetUserSecurityAsync(user.Email);
             var claims = new List<Claim>
             {
                 new(ClaimTypes.NameIdentifier, user.Email),

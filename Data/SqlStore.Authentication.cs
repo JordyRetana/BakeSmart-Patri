@@ -6,6 +6,9 @@ namespace BakeSmartPatri.Data;
 
 public sealed partial class SqlStore
 {
+    private static readonly SemaphoreSlim AuthenticationSchemaLock = new(1, 1);
+    private static volatile bool _authenticationSchemaReady;
+
     public async Task<SecureAuthResult> AuthenticateSecureAsync(string email, string password)
     {
         await EnsureAuthenticationTablesAsync();
@@ -19,7 +22,7 @@ public sealed partial class SqlStore
         }, new SqlParameter("@Email", email))).FirstOrDefault();
 
         if (state?.LockoutEnd is DateTime lockout && lockout > DateTime.UtcNow)
-            return new(null, SecureAuthStatus.Locked, lockout);
+            return new(null, SecureAuthStatus.Locked, lockout, null);
 
         var user = await AuthenticateAsync(email, password);
         if (user is null)
@@ -30,16 +33,16 @@ public sealed partial class SqlStore
                 : "NULL";
             await ExecuteAsync($"UPDATE {table} SET FailedLoginAttempts=@Attempts, LockoutEnd={lockExpression}, UpdatedAt={now} WHERE LOWER(Email)=LOWER(@Email);",
                 new SqlParameter("@Attempts", attempts), new SqlParameter("@Email", email));
-            return new(null, attempts >= 5 ? SecureAuthStatus.Locked : SecureAuthStatus.Invalid, attempts >= 5 ? DateTime.UtcNow.AddMinutes(15) : null);
+            return new(null, attempts >= 5 ? SecureAuthStatus.Locked : SecureAuthStatus.Invalid, attempts >= 5 ? DateTime.UtcNow.AddMinutes(15) : null, null);
         }
 
         var security = await GetUserSecurityAsync(email);
         await ExecuteAsync($"UPDATE {table} SET FailedLoginAttempts=0, LockoutEnd=NULL, UpdatedAt={now} WHERE LOWER(Email)=LOWER(@Email);", new SqlParameter("@Email", email));
         if (!security.EmailConfirmed)
-            return new(user, SecureAuthStatus.EmailNotConfirmed, null);
+            return new(user, SecureAuthStatus.EmailNotConfirmed, null, security);
         if (security.TwoFactorEnabled)
-            return new(user, SecureAuthStatus.RequiresTwoFactor, null);
-        return new(user, SecureAuthStatus.Success, null);
+            return new(user, SecureAuthStatus.RequiresTwoFactor, null, security);
+        return new(user, SecureAuthStatus.Success, null, security);
     }
 
     public async Task<UserSecurityState> GetUserSecurityAsync(string email)
@@ -149,37 +152,51 @@ public sealed partial class SqlStore
 
     private async Task EnsureAuthenticationTablesAsync()
     {
-        if (UseMySql)
+        if (_authenticationSchemaReady) return;
+
+        await AuthenticationSchemaLock.WaitAsync();
+        try
         {
-            await ExecuteAsync("""
+            if (_authenticationSchemaReady) return;
+
+            if (UseMySql)
+            {
+                await ExecuteAsync("""
                 CREATE TABLE IF NOT EXISTS SeguridadUsuarios (Email varchar(254) NOT NULL PRIMARY KEY, EmailConfirmed bit NOT NULL DEFAULT 0, TwoFactorEnabled bit NOT NULL DEFAULT 0, TotpSecret varchar(128) NULL, FailedLoginAttempts int NOT NULL DEFAULT 0, LockoutEnd datetime NULL, ExternalProvider varchar(40) NULL, ExternalProviderId varchar(255) NULL, UpdatedAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """);
-            var hasPasswordSetupRequired = Convert.ToInt32(await ScalarAsync("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='SeguridadUsuarios' AND COLUMN_NAME='PasswordSetupRequired';")) > 0;
-            if (!hasPasswordSetupRequired)
-                await ExecuteAsync("ALTER TABLE SeguridadUsuarios ADD COLUMN PasswordSetupRequired bit NOT NULL DEFAULT 0;");
-            var hasPasswordSetupMigrated = Convert.ToInt32(await ScalarAsync("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='SeguridadUsuarios' AND COLUMN_NAME='PasswordSetupMigrated';")) > 0;
-            if (!hasPasswordSetupMigrated)
-                await ExecuteAsync("ALTER TABLE SeguridadUsuarios ADD COLUMN PasswordSetupMigrated bit NOT NULL DEFAULT 0;");
-            await ExecuteAsync("""
+                var hasPasswordSetupRequired = Convert.ToInt32(await ScalarAsync("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='SeguridadUsuarios' AND COLUMN_NAME='PasswordSetupRequired';")) > 0;
+                if (!hasPasswordSetupRequired)
+                    await ExecuteAsync("ALTER TABLE SeguridadUsuarios ADD COLUMN PasswordSetupRequired bit NOT NULL DEFAULT 0;");
+                var hasPasswordSetupMigrated = Convert.ToInt32(await ScalarAsync("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='SeguridadUsuarios' AND COLUMN_NAME='PasswordSetupMigrated';")) > 0;
+                if (!hasPasswordSetupMigrated)
+                    await ExecuteAsync("ALTER TABLE SeguridadUsuarios ADD COLUMN PasswordSetupMigrated bit NOT NULL DEFAULT 0;");
+                await ExecuteAsync("""
                 INSERT IGNORE INTO SeguridadUsuarios(Email,EmailConfirmed,UpdatedAt) SELECT LOWER(Email),1,UTC_TIMESTAMP() FROM Usuarios;
                 UPDATE SeguridadUsuarios SET PasswordSetupRequired=CASE WHEN ExternalProvider='Google' THEN 1 ELSE 0 END,PasswordSetupMigrated=1 WHERE PasswordSetupMigrated=0;
                 CREATE TABLE IF NOT EXISTS TokensConfirmacionCorreo (TokenId int NOT NULL AUTO_INCREMENT PRIMARY KEY, Email varchar(254) NOT NULL, TokenHash char(64) NOT NULL UNIQUE, ExpiresAt datetime NOT NULL, UsedAt datetime NULL, CreatedAt datetime NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """);
-        }
-        else
-        {
-            await ExecuteAsync("""
+            }
+            else
+            {
+                await ExecuteAsync("""
                 IF OBJECT_ID(N'dbo.SeguridadUsuarios',N'U') IS NULL CREATE TABLE dbo.SeguridadUsuarios(Email nvarchar(254) NOT NULL PRIMARY KEY,EmailConfirmed bit NOT NULL DEFAULT 0,TwoFactorEnabled bit NOT NULL DEFAULT 0,TotpSecret nvarchar(128) NULL,FailedLoginAttempts int NOT NULL DEFAULT 0,LockoutEnd datetime2 NULL,ExternalProvider nvarchar(40) NULL,ExternalProviderId nvarchar(255) NULL,UpdatedAt datetime2 NOT NULL DEFAULT SYSUTCDATETIME());
                 """);
-            await ExecuteAsync("""
+                await ExecuteAsync("""
                 IF COL_LENGTH('dbo.SeguridadUsuarios','PasswordSetupRequired') IS NULL ALTER TABLE dbo.SeguridadUsuarios ADD PasswordSetupRequired bit NOT NULL CONSTRAINT DF_SeguridadUsuarios_PasswordSetupRequired DEFAULT 0;
                 IF COL_LENGTH('dbo.SeguridadUsuarios','PasswordSetupMigrated') IS NULL ALTER TABLE dbo.SeguridadUsuarios ADD PasswordSetupMigrated bit NOT NULL CONSTRAINT DF_SeguridadUsuarios_PasswordSetupMigrated DEFAULT 0;
                 """);
-            await ExecuteAsync("""
+                await ExecuteAsync("""
                 INSERT INTO dbo.SeguridadUsuarios(Email,EmailConfirmed) SELECT LOWER(u.Email),1 FROM dbo.Usuarios u WHERE NOT EXISTS(SELECT 1 FROM dbo.SeguridadUsuarios s WHERE LOWER(s.Email)=LOWER(u.Email));
                 UPDATE dbo.SeguridadUsuarios SET PasswordSetupRequired=CASE WHEN ExternalProvider='Google' THEN 1 ELSE 0 END,PasswordSetupMigrated=1 WHERE PasswordSetupMigrated=0;
                 IF OBJECT_ID(N'dbo.TokensConfirmacionCorreo',N'U') IS NULL CREATE TABLE dbo.TokensConfirmacionCorreo(TokenId int IDENTITY PRIMARY KEY,Email nvarchar(254) NOT NULL,TokenHash char(64) NOT NULL UNIQUE,ExpiresAt datetime2 NOT NULL,UsedAt datetime2 NULL,CreatedAt datetime2 NOT NULL);
                 """);
+            }
+
+            _authenticationSchemaReady = true;
+        }
+        finally
+        {
+            AuthenticationSchemaLock.Release();
         }
     }
 
@@ -219,6 +236,6 @@ public sealed partial class SqlStore
     }
 
     public sealed record UserSecurityState(bool EmailConfirmed, bool TwoFactorEnabled, string? TotpSecret, bool PasswordSetupRequired);
-    public sealed record SecureAuthResult(AuthUser? User, SecureAuthStatus Status, DateTime? LockoutEnd);
+    public sealed record SecureAuthResult(AuthUser? User, SecureAuthStatus Status, DateTime? LockoutEnd, UserSecurityState? Security);
     public enum SecureAuthStatus { Success, Invalid, Locked, EmailNotConfirmed, RequiresTwoFactor }
 }
