@@ -226,7 +226,8 @@ public sealed partial class SqlStore
 
     public async Task<IReadOnlyList<object>> InventoryAsync()
     {
-        const string sql = """
+        await EnsureInventoryLotsSchemaAsync();
+        var sql = UseMySql ? """
             SELECT
                 p.ProductId,
                 p.Code,
@@ -240,7 +241,26 @@ public sealed partial class SqlStore
                 COALESCE(SUM(ib.Quantity), 0) AS Stock,
                 p.MinStock,
                 p.IsActive,
-                COALESCE(MIN(img.ImageUrl), '/img/products/producto-sin-imagen.svg') AS ImageUrl
+                COALESCE(MIN(img.ImageUrl), '/img/products/producto-sin-imagen.svg') AS ImageUrl,
+                (SELECT lot.BatchCode FROM LotesInventario lot WHERE lot.ProductId = p.ProductId ORDER BY lot.InventoryLotId DESC LIMIT 1) AS LotCode,
+                (SELECT lot.ExpirationDate FROM LotesInventario lot WHERE lot.ProductId = p.ProductId ORDER BY lot.InventoryLotId DESC LIMIT 1) AS ExpirationDate
+            FROM Productos p
+            INNER JOIN TiposProducto pt ON pt.ProductTypeId = p.ProductTypeId
+            INNER JOIN UnidadesMedida um ON um.UnitMeasureId = p.UnitMeasureId
+            INNER JOIN CategoriasProducto pc ON pc.ProductCategoryId = p.ProductCategoryId
+            LEFT JOIN CategoriasProducto parent ON parent.ProductCategoryId = pc.ParentCategoryId
+            LEFT JOIN ExistenciasInventario ib ON ib.ProductId = p.ProductId
+            LEFT JOIN ImagenesProducto img ON img.ProductId = p.ProductId AND img.IsPrimary = 1
+            GROUP BY p.ProductId, p.Code, p.Name, pt.Name, um.Code, parent.Name, pc.Name,
+                     p.UnitPrice, p.UnitCost, p.MinStock, p.IsActive
+            ORDER BY pt.Name, COALESCE(parent.Name, pc.Name), p.Name;
+            """ : """
+            SELECT
+                p.ProductId, p.Code, p.Name, pt.Name AS ProductType, um.Code AS UnitCode,
+                parent.Name AS Category, pc.Name AS Subcategory, p.UnitPrice, p.UnitCost,
+                COALESCE(SUM(ib.Quantity), 0) AS Stock, p.MinStock, p.IsActive,
+                COALESCE(MIN(img.ImageUrl), '/img/products/producto-sin-imagen.svg') AS ImageUrl,
+                lot.BatchCode AS LotCode, lot.ExpirationDate
             FROM dbo.Productos p
             INNER JOIN dbo.TiposProducto pt ON pt.ProductTypeId = p.ProductTypeId
             INNER JOIN dbo.UnidadesMedida um ON um.UnitMeasureId = p.UnitMeasureId
@@ -248,8 +268,9 @@ public sealed partial class SqlStore
             LEFT JOIN dbo.CategoriasProducto parent ON parent.ProductCategoryId = pc.ParentCategoryId
             LEFT JOIN dbo.ExistenciasInventario ib ON ib.ProductId = p.ProductId
             LEFT JOIN dbo.ImagenesProducto img ON img.ProductId = p.ProductId AND img.IsPrimary = 1
+            OUTER APPLY (SELECT TOP 1 l.BatchCode, l.ExpirationDate FROM dbo.LotesInventario l WHERE l.ProductId = p.ProductId ORDER BY l.InventoryLotId DESC) lot
             GROUP BY p.ProductId, p.Code, p.Name, pt.Name, um.Code, parent.Name, pc.Name,
-                     p.UnitPrice, p.UnitCost, p.MinStock, p.IsActive
+                     p.UnitPrice, p.UnitCost, p.MinStock, p.IsActive, lot.BatchCode, lot.ExpirationDate
             ORDER BY pt.Name, COALESCE(parent.Name, pc.Name), p.Name;
             """;
 
@@ -267,8 +288,42 @@ public sealed partial class SqlStore
             stock = reader.GetDecimal("Stock"),
             min = reader.GetDecimal("MinStock"),
             active = reader.GetBoolean("IsActive"),
-            imageUrl = reader.GetString("ImageUrl")
+            imageUrl = reader.GetString("ImageUrl"),
+            lotCode = reader.GetNullableString("LotCode"),
+            expirationDate = reader.IsDBNull(reader.GetOrdinal("ExpirationDate")) ? null : reader.GetDateTime("ExpirationDate").ToString("yyyy-MM-dd")
         });
+    }
+
+    private async Task EnsureInventoryLotsSchemaAsync()
+    {
+        if (UseMySql)
+        {
+            await ExecuteAsync("""
+                CREATE TABLE IF NOT EXISTS LotesInventario (
+                    InventoryLotId int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    ProductId int NOT NULL,
+                    BatchCode varchar(80) NOT NULL,
+                    ExpirationDate date NULL,
+                    Quantity decimal(18,2) NOT NULL DEFAULT 0,
+                    CreatedAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY UX_LotesInventario_Product_Batch (ProductId, BatchCode)
+                );
+                """);
+            return;
+        }
+
+        await ExecuteAsync("""
+            IF OBJECT_ID(N'dbo.LotesInventario', N'U') IS NULL
+                CREATE TABLE dbo.LotesInventario (
+                    InventoryLotId int IDENTITY(1,1) PRIMARY KEY,
+                    ProductId int NOT NULL,
+                    BatchCode nvarchar(80) NOT NULL,
+                    ExpirationDate date NULL,
+                    Quantity decimal(18,2) NOT NULL DEFAULT 0,
+                    CreatedAt datetime2 NOT NULL DEFAULT SYSUTCDATETIME(),
+                    CONSTRAINT UX_LotesInventario_Product_Batch UNIQUE (ProductId, BatchCode)
+                );
+            """);
     }
 
     public async Task<IReadOnlyList<object>> ProductCategoryOptionsAsync()
@@ -295,6 +350,12 @@ public sealed partial class SqlStore
 
     public async Task<int> SaveInventoryProductAsync(InventoryProductInput input, string? userEmail = null)
     {
+        await EnsureInventoryLotsSchemaAsync();
+        var resolvedCode = await ResolveAutomaticInventoryCodeAsync(input);
+        var resolvedLot = string.IsNullOrWhiteSpace(input.LotCode)
+            ? $"LOT-{DateTime.UtcNow:yyyyMMdd}-{resolvedCode.Split('-').Last()}"
+            : input.LotCode.Trim().ToUpperInvariant();
+        input = input with { Code = resolvedCode, LotCode = resolvedLot };
         // Validar duplicado de cÃ³digo
         // Ejecutar estas consultas independientes en paralelo evita varias esperas
         // consecutivas contra la base de datos remota.
@@ -405,6 +466,28 @@ public sealed partial class SqlStore
             }
 
             await SetInventoryBalanceAsync(connection, transaction, productId, locationId, input.Stock);
+            if (!string.IsNullOrWhiteSpace(input.LotCode))
+            {
+                var lotSql = UseMySql
+                    ? """
+                      INSERT INTO LotesInventario (ProductId, BatchCode, ExpirationDate, Quantity, CreatedAt)
+                      VALUES (@ProductId, @BatchCode, @ExpirationDate, @Quantity, UTC_TIMESTAMP())
+                      ON DUPLICATE KEY UPDATE ExpirationDate = VALUES(ExpirationDate), Quantity = VALUES(Quantity);
+                      """
+                    : """
+                      MERGE dbo.LotesInventario AS target
+                      USING (SELECT @ProductId AS ProductId, @BatchCode AS BatchCode) AS source
+                      ON target.ProductId = source.ProductId AND target.BatchCode = source.BatchCode
+                      WHEN MATCHED THEN UPDATE SET ExpirationDate = @ExpirationDate, Quantity = @Quantity
+                      WHEN NOT MATCHED THEN INSERT (ProductId, BatchCode, ExpirationDate, Quantity)
+                      VALUES (@ProductId, @BatchCode, @ExpirationDate, @Quantity);
+                      """;
+                await ExecuteInTransactionAsync(connection, transaction, lotSql,
+                    new SqlParameter("@ProductId", productId),
+                    new SqlParameter("@BatchCode", input.LotCode.Trim().ToUpperInvariant()),
+                    new SqlParameter("@ExpirationDate", (object?)input.ExpirationDate?.Date ?? DBNull.Value),
+                    new SqlParameter("@Quantity", input.Stock));
+            }
             if (input.Stock > 0)
                 await AddInventoryMovementAsync(connection, transaction, productId, locationId, "AJUSTE", input.Stock, "Registro/actualizacion de producto");
             if (!string.IsNullOrWhiteSpace(input.ImageUrl))
@@ -427,6 +510,30 @@ public sealed partial class SqlStore
         catch { }
 
         return productId;
+    }
+
+    private async Task<string> ResolveAutomaticInventoryCodeAsync(InventoryProductInput input)
+    {
+        if (!string.IsNullOrWhiteSpace(input.Code))
+            return input.Code.Trim().ToUpperInvariant();
+
+        var prefix = input.Type?.Trim() switch
+        {
+            "Empaque" => "EMP",
+            "Insumo operativo" => "INS",
+            "Producto terminado" => "PT",
+            _ => "MP"
+        };
+        var letters = new string(RemoveDiacritics(input.Description ?? string.Empty)
+            .Where(char.IsLetterOrDigit).Take(3).ToArray()).ToUpperInvariant().PadRight(3, 'X');
+        var baseCode = $"{prefix}-{letters}";
+        var candidate = baseCode;
+        var suffix = 2;
+        while (input.Id is > 0
+            ? await CodeExistsExcludingAsync(candidate, input.Id.Value)
+            : await CodeExistsAsync(candidate))
+            candidate = $"{baseCode}-{suffix++.ToString("000")}";
+        return candidate;
     }
 
     public async Task ToggleInventoryProductAsync(int productId, string? userEmail = null)
@@ -3199,10 +3306,12 @@ public sealed partial class SqlStore
     {
         if (UseMySql)
         {
-            var cashAccountTask = EnsureAccountAsync("1-02", "Banco / SINPE / Tarjeta", "ACTIVO");
+            var cashRegisterAccountTask = EnsureAccountAsync("1-01", "Caja", "ACTIVO");
+            var bankAccountTask = EnsureAccountAsync("1-02", "Banco / SINPE / Tarjeta", "ACTIVO");
             var incomeAccountTask = EnsureAccountAsync("4-01", "Ingresos por ventas", "INGRESO");
-            await Task.WhenAll(cashAccountTask, incomeAccountTask);
-            var cashAccountId = await cashAccountTask;
+            await Task.WhenAll(cashRegisterAccountTask, bankAccountTask, incomeAccountTask);
+            var cashRegisterAccountId = await cashRegisterAccountTask;
+            var bankAccountId = await bankAccountTask;
             var incomeAccountId = await incomeAccountTask;
             // Recupera ventas que no llegaron a crearse después de que la
             // pasarela confirmó el pago. Esto hace que el webhook y la
@@ -3222,11 +3331,13 @@ public sealed partial class SqlStore
                 SELECT
                     v.SaleId,
                     v.Total,
+                    COALESCE(pm.Name, 'Efectivo') AS PaymentMethod,
                     e.AccountingEntryId,
                     COALESCE(entryLines.LineCount, 0) AS LineCount,
                     COALESCE(entryLines.DebitTotal, 0) AS DebitTotal,
                     COALESCE(entryLines.CreditTotal, 0) AS CreditTotal
                 FROM Ventas v
+                LEFT JOIN MetodosPago pm ON pm.PaymentMethodId = v.PaymentMethodId
                 LEFT JOIN (
                     SELECT ReferenceId, MIN(AccountingEntryId) AS AccountingEntryId
                     FROM AsientosContables
@@ -3249,6 +3360,7 @@ public sealed partial class SqlStore
                 {
                     saleId = reader.GetInt32("SaleId"),
                     total = reader.GetDecimal("Total"),
+                    paymentMethod = reader.GetString("PaymentMethod"),
                     entryId = reader.GetNullableInt32("AccountingEntryId")
                 });
 
@@ -3273,7 +3385,7 @@ public sealed partial class SqlStore
                         VALUES (@EntryId, @CashAccountId, @Total, 0), (@EntryId, @IncomeAccountId, 0, @Total);
                         """,
                         new SqlParameter("@EntryId", entryId),
-                        new SqlParameter("@CashAccountId", cashAccountId),
+                        new SqlParameter("@CashAccountId", RemoveDiacritics(pendingRow.paymentMethod).Contains("efectivo", StringComparison.OrdinalIgnoreCase) ? cashRegisterAccountId : bankAccountId),
                         new SqlParameter("@IncomeAccountId", incomeAccountId),
                         new SqlParameter("@Total", pendingRow.total));
                 }
@@ -5196,6 +5308,7 @@ public sealed partial class SqlStore
                 throw new InvalidOperationException("No se encontro una caja abierta para cerrar.");
 
             await AddAuditLogAsync("CIERRE_CAJA", $"Sesion de caja #{sessionId} cerrada con {closingAmount:N0}", userEmail);
+            try { await ReconcilePosAsync(userEmail); } catch { }
             return;
         }
 
@@ -5230,6 +5343,7 @@ public sealed partial class SqlStore
             throw new InvalidOperationException("No se encontro una caja abierta para cerrar.");
 
         await AddAuditLogAsync("CIERRE_CAJA", $"SesiÃ³n de caja #{sessionId} cerrada con â‚¡{closingAmount:N0}", userEmail);
+        try { await ReconcilePosAsync(userEmail); } catch { }
     }
 
     public async Task<IReadOnlyList<object>> CashSessionsAsync(string? userEmail = null, bool includeAll = false)
@@ -5739,6 +5853,10 @@ public sealed partial class SqlStore
         foreach (var selection in comboSelections)
             if (!activeCombos.ContainsKey(selection.ComboId)) throw new InvalidOperationException("Uno de los combos ya no estÃ¡ disponible.");
 
+        var cashAccountId = await EnsureAccountAsync("1-01", "Caja", "ACTIVO");
+        var bankAccountId = await EnsureAccountAsync("1-02", "Banco / SINPE / Tarjeta", "ACTIVO");
+        var incomeAccountId = await EnsureAccountAsync("4-01", "Ingresos por ventas", "INGRESO");
+
         await using var connection = CreateConnection();
         await connection.OpenAsync();
         await using var transaction = await connection.BeginTransactionAsync();
@@ -5870,6 +5988,19 @@ public sealed partial class SqlStore
                 new SqlParameter("@CashSessionId", cashSessionId),
                 new SqlParameter("@SaleId", saleId),
                 new SqlParameter("@Amount", total));
+            var debitAccountId = RemoveDiacritics(input.PaymentMethod ?? "Efectivo").Contains("efectivo", StringComparison.OrdinalIgnoreCase)
+                ? cashAccountId
+                : bankAccountId;
+            var accountingEntryId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
+                INSERT INTO AsientosContables (EntryType, ReferenceTable, ReferenceId, Note, CreatedAt)
+                VALUES ('VENTA', 'Ventas', @SaleId, CONCAT('Venta POS #', @OrderId), UTC_TIMESTAMP());
+                SELECT LAST_INSERT_ID();
+                """, new SqlParameter("@SaleId", saleId), new SqlParameter("@OrderId", orderId)));
+            await ExecuteInTransactionAsync(connection, transaction, """
+                INSERT INTO LineasAsientoContable (AccountingEntryId, AccountId, Debit, Credit)
+                VALUES (@EntryId, @DebitAccountId, @Total, 0), (@EntryId, @IncomeAccountId, 0, @Total);
+                """, new SqlParameter("@EntryId", accountingEntryId), new SqlParameter("@DebitAccountId", debitAccountId),
+                new SqlParameter("@IncomeAccountId", incomeAccountId), new SqlParameter("@Total", total));
             foreach (var selection in comboSelections)
             {
                 var combo = activeCombos[selection.ComboId];
@@ -6112,7 +6243,7 @@ public sealed partial class SqlStore
     public sealed record ProfileInput(string FirstName, string LastName, string? Phone, string? Address, string? NewPassword, int? CustomerAddressId = null, string? AddressLabel = null, decimal? Latitude = null, decimal? Longitude = null);
     public sealed record ProfileData(string FirstName, string LastName, string Email, string Phone, string Address, string Role, int? CustomerAddressId, string AddressLabel, decimal? Latitude, decimal? Longitude, bool IsFrequent);
     public sealed record CustomerAddressData(int Id, string Label, string AddressLine, decimal? Latitude, decimal? Longitude, bool IsDefault);
-    public sealed record InventoryProductInput(int? Id, string Code, string Description, string Type, string Unit, string Category, string? Subcategory, decimal Price, decimal Stock, decimal MinStock, string? ImageUrl = null);
+    public sealed record InventoryProductInput(int? Id, string Code, string Description, string Type, string Unit, string Category, string? Subcategory, decimal Price, decimal Stock, decimal MinStock, string? ImageUrl = null, string? LotCode = null, DateTime? ExpirationDate = null);
     public sealed record InventoryMovementInput(int ProductId, string Type, decimal Quantity, string? Note);
     public sealed record PaymentMethodInput(int? Id, string Name, decimal CommissionRate, bool IsActive, string? Account);
     public sealed record PromotionInput(int? Id, string Name, DateTime StartDate, DateTime EndDate, decimal Discount, bool IsActive = true, IReadOnlyList<int>? ProductIds = null, IReadOnlyList<int>? CustomerIds = null);

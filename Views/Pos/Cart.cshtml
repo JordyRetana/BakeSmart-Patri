@@ -376,8 +376,8 @@
                 const method = String(gatewayMethod.value || '').toLowerCase();
                 if (method.includes('efectivo')) {
                     gatewayReferenceLabel.textContent = 'Recibido por';
-                    gatewayReference.placeholder = 'Nombre de quien recibe el efectivo';
-                    gatewayReference.required = true;
+                    gatewayReference.placeholder = 'Opcional: nombre de quien recibe';
+                    gatewayReference.required = false;
                 } else if (method.includes('sinpe')) {
                     gatewayReferenceLabel.textContent = 'Referencia SINPE';
                     gatewayReference.placeholder = 'Telefono o comprobante SINPE';
@@ -511,6 +511,7 @@
 
             paymentForm.addEventListener('submit', async event => {
                 event.preventDefault();
+                if (paymentForm.dataset.processing === 'true') return;
                 const data = Object.fromEntries(new FormData(paymentForm).entries());
                 const method = String(data.method || gatewayMethod.value || '').trim();
                 data.method = method;
@@ -518,17 +519,17 @@
                     app.toast.error('Seleccione un metodo de pago.');
                     return;
                 }
-                if (!String(data.holder || '').trim()) {
+                if (method.toLowerCase().includes('sinpe') && !String(data.holder || '').trim()) {
                     app.toast.error('Complete la referencia del pago.');
                     gatewayReference.focus();
                     return;
                 }
 
                 try {
+                    paymentForm.dataset.processing = 'true';
                     paymentConfirmBtn.disabled = true;
                     paymentConfirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando cobro';
                     setPaymentStatus('processing', 'Procesando pago', 'Validando datos y registrando el movimiento contable.', 'fa-spinner fa-spin');
-                    await new Promise(resolve => setTimeout(resolve, 650));
                     const result = await completeCheckout(data);
                     setPaymentStatus('success', 'Pago aprobado', 'La venta quedo registrada y el inventario fue actualizado.', 'fa-circle-check');
                     app.toast.success(result.message);
@@ -539,6 +540,7 @@
                     // completeCheckout already reports the error.
                     setPaymentStatus('error', 'No se pudo aprobar', 'Revise los datos del pago e intente nuevamente.', 'fa-triangle-exclamation');
                 } finally {
+                    paymentForm.dataset.processing = 'false';
                     if (paymentModal.dataset.state !== 'success') {
                         paymentConfirmBtn.disabled = false;
                         paymentConfirmBtn.innerHTML = '<i class="fas fa-lock"></i> Aprobar cobro';

@@ -48,6 +48,8 @@
         </div>
         <div><label>Disponibles</label><input class="form-control" name="stock" type="number" min="0" step="1" required /></div>
         <div><label>Minimo</label><input class="form-control" name="minStock" type="number" min="0" step="1" value="2" required /></div>
+        <div><label>Lote</label><input class="form-control" name="lotCode" placeholder="Se genera automáticamente" /></div>
+        <div><label>Fecha de vencimiento</label><input class="form-control" name="expirationDate" type="date" /></div>
         <input type="hidden" name="type" value="Producto terminado" />
         <input type="hidden" name="unit" value="unidad" />
         <div class="inventory-modal-actions inventory-modal-full">
@@ -90,8 +92,16 @@
         stock: Number(p.stock || 0),
         minStock: Number(p.min || p.minStock || 0),
         active: p.active !== false,
-        imageUrl: p.imageUrl || '/img/products/producto-sin-imagen.svg'
+        imageUrl: p.imageUrl || '/img/products/producto-sin-imagen.svg',
+        lotCode: p.lotCode || '',
+        expirationDate: p.expirationDate || ''
     });
+    const codeStem = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 3).padEnd(3, 'X');
+    const automaticSellableCode = (description, currentId = 0) => {
+        const base = `PT-${codeStem(description)}`;
+        const matches = products.filter(p => p.id !== Number(currentId) && (p.code === base || p.code.startsWith(`${base}-`)));
+        return matches.length ? `${base}-${String(matches.length + 1).padStart(3, '0')}` : base;
+    };
 
     async function postJson(url, payload = {}) {
         const response = await fetch(url, {
@@ -139,6 +149,7 @@
                         <span>${clean(p.code)}</span>
                         <h3>${clean(p.description)}</h3>
                         <p>${clean(p.category)}${p.subcategory ? ` / ${clean(p.subcategory)}` : ''}</p>
+                        ${p.lotCode ? `<small><i class="fas fa-boxes-stacked"></i> ${clean(p.lotCode)}${p.expirationDate ? ` · vence ${clean(p.expirationDate)}` : ''}</small>` : ''}
                     </div>
                     <div class="product-tile__meta">
                         <strong>${money(p.price)}</strong>
@@ -160,6 +171,18 @@
         const imageInput = form.querySelector('[name="imageFile"]');
         const imageUrlInput = form.querySelector('[name="imageUrl"]');
         const imagePreview = document.getElementById('sellableImagePreview');
+        const descriptionInput = form.querySelector('[name="description"]');
+        const codeInput = form.querySelector('[name="code"]');
+        const lotInput = form.querySelector('[name="lotCode"]');
+        const idInput = form.querySelector('[name="id"]');
+        let codeWasEdited = Boolean(item);
+        let lotWasEdited = Boolean(item?.lotCode);
+        codeInput.addEventListener('input', event => { if (event.isTrusted) codeWasEdited = true; });
+        lotInput.addEventListener('input', event => { if (event.isTrusted) lotWasEdited = true; });
+        descriptionInput.addEventListener('input', () => {
+            if (!codeWasEdited) codeInput.value = automaticSellableCode(descriptionInput.value, idInput.value);
+            if (!lotWasEdited) lotInput.value = `LOT-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${codeStem(descriptionInput.value)}`;
+        });
 
         const categories = [...new Set([...Object.keys(sellableCategories), item?.category].filter(Boolean))];
         categorySelect.innerHTML = '<option value="">Seleccione una categoria</option>' + categories.map(value => `<option value="${clean(value)}">${clean(value)}</option>`).join('');
@@ -214,7 +237,9 @@
                     price: Number(data.price || 0),
                     stock: Number(data.stock || 0),
                     minStock: Number(data.minStock || 0),
-                    imageUrl: imageUrlInput.value || null
+                    imageUrl: imageUrlInput.value || null,
+                    lotCode: data.lotCode || null,
+                    expirationDate: data.expirationDate || null
                 });
                 app.modal.close();
                 app.toast.success('Producto guardado correctamente.');

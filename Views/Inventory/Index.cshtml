@@ -181,6 +181,16 @@
                     <input class="form-control" name="minStock" type="number" min="0" step="0.01" value="5" required />
                 </div>
 
+                <div>
+                    <label>Lote</label>
+                    <input class="form-control" name="lotCode" placeholder="Se genera automáticamente" />
+                </div>
+
+                <div>
+                    <label>Fecha de vencimiento</label>
+                    <input class="form-control" name="expirationDate" type="date" />
+                </div>
+
                 <div class="inventory-modal-actions inventory-modal-full">
                     <button class="btn btn-primary" type="submit">
                         <i class="fas fa-save"></i>
@@ -320,9 +330,20 @@
                     price: Number(p.price || p.costo || 0),
                     stock: Number(p.stock || 0),
                     minStock: Number(p.min || p.minStock || 0),
-                    active: Boolean(p.active)
+                    active: Boolean(p.active),
+                    lotCode: p.lotCode || '',
+                    expirationDate: p.expirationDate || ''
                 };
             }
+
+            const codeStem = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 3).padEnd(3, 'X');
+            const autoProductCode = (description, type, currentId = 0) => {
+                const prefix = type === 'Empaque' ? 'EMP' : type === 'Insumo operativo' ? 'INS' : 'MP';
+                const base = `${prefix}-${codeStem(description)}`;
+                const matches = products.filter(p => p.id !== Number(currentId) && (p.code === base || p.code.startsWith(`${base}-`)));
+                return matches.length ? `${base}-${String(matches.length + 1).padStart(3, '0')}` : base;
+            };
+            const autoLotCode = code => `LOT-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${String(code || '').split('-').at(-1) || '001'}`;
 
             async function postJson(url, payload = {}) {
                 const response = await fetch(url, {
@@ -379,6 +400,20 @@
                 const typeSelect = form.querySelector('[name="type"]');
                 const categorySelect = form.querySelector('[name="category"]');
                 const subcategorySelect = form.querySelector('[name="subcategory"]');
+                const descriptionInput = form.querySelector('[name="description"]');
+                const codeInput = form.querySelector('[name="code"]');
+                const lotInput = form.querySelector('[name="lotCode"]');
+                const idInput = form.querySelector('[name="id"]');
+                let codeWasEdited = false;
+                let lotWasEdited = false;
+                codeInput.addEventListener('input', event => { if (event.isTrusted) codeWasEdited = true; });
+                lotInput.addEventListener('input', event => { if (event.isTrusted) lotWasEdited = true; });
+                const syncAutomaticFields = () => {
+                    if (idInput.value) codeWasEdited = true;
+                    if (!codeWasEdited) codeInput.value = autoProductCode(descriptionInput.value, typeSelect.value, idInput.value);
+                    if (!lotWasEdited && !idInput.value) lotInput.value = autoLotCode(codeInput.value);
+                };
+                descriptionInput.addEventListener('input', syncAutomaticFields);
                 const refreshRawCategories = (keepCategory = '', keepSubcategory = '') => {
                     const groups = rawCategories[typeSelect.value] || rawCategories['Materia prima'];
                     const categoryNames = Object.keys(groups);
@@ -389,7 +424,7 @@
                     subcategorySelect.value = subcategories.includes(keepSubcategory) ? keepSubcategory : subcategories[0];
                     [categorySelect, subcategorySelect].forEach(select => app.selects.refresh(select));
                 };
-                typeSelect.addEventListener('change', () => refreshRawCategories());
+                typeSelect.addEventListener('change', () => { refreshRawCategories(); syncAutomaticFields(); });
                 categorySelect.addEventListener('change', () => refreshRawCategories(categorySelect.value, ''));
                 refreshRawCategories(categorySelect.value, subcategorySelect.value);
                 form.refreshRawCategories = refreshRawCategories;
@@ -407,7 +442,9 @@
                         subcategory: data.subcategory || null,
                         price: Number(data.price || 0),
                         stock: Number(data.stock || 0),
-                        minStock: Number(data.minStock || 0)
+                        minStock: Number(data.minStock || 0),
+                        lotCode: data.lotCode || null,
+                        expirationDate: data.expirationDate || null
                     };
 
                     try {
@@ -490,6 +527,7 @@
                         <td>
                             <strong style="font-size:.92rem;">${p.description}</strong>
                             <div class="text-muted" style="font-size:.75rem;">${p.subcategory || 'Sin subcategoría'} · ${p.unit || 'unidad'}</div>
+                            ${p.lotCode ? `<div class="text-muted" style="font-size:.72rem;margin-top:.2rem;"><i class="fas fa-boxes-stacked"></i> ${p.lotCode}${p.expirationDate ? ` · vence ${p.expirationDate}` : ''}</div>` : ''}
                         </td>
                         <td><span class="inventory-type-chip">${p.type}</span></td>
                         <td><span style="font-size:.85rem;">${p.category}</span></td>

@@ -298,8 +298,8 @@ public class ApiController : Controller
         if (request is null)
             return BadRequest(new { message = "No se recibio la informacion del producto." });
 
-        if (string.IsNullOrWhiteSpace(request.Code) || string.IsNullOrWhiteSpace(request.Description))
-            return BadRequest(new { message = "Debe indicar codigo y descripcion." });
+        if (string.IsNullOrWhiteSpace(request.Description))
+            return BadRequest(new { message = "Debe indicar la descripción; el código se puede generar automáticamente." });
 
         if (request.Stock < 0 || request.MinStock < 0 || request.Price < 0)
             return BadRequest(new { message = "Los valores numericos no pueden ser negativos." });
