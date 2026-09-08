@@ -830,15 +830,36 @@ public class ApiController : Controller
             return BadRequest(new { message = "Coordenadas invalidas." });
 
         var client = _httpClientFactory.CreateClient("Nominatim");
-        var response = await client.GetAsync($"reverse?format=json&lat={lat.ToString(System.Globalization.CultureInfo.InvariantCulture)}&lon={lng.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
+        var response = await client.GetAsync($"reverse?format=json&addressdetails=1&zoom=18&accept-language=es&lat={lat.ToString(System.Globalization.CultureInfo.InvariantCulture)}&lon={lng.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
         if (!response.IsSuccessStatusCode)
             return StatusCode(502, new { message = "Servicio de geocodificacion no disponible." });
 
         using var stream = await response.Content.ReadAsStreamAsync();
         var result = await JsonSerializer.DeserializeAsync<JsonElement>(stream);
-        var displayName = result.TryGetProperty("display_name", out var nameElement)
-            ? nameElement.GetString()
-            : $"{lat}, {lng}";
+        var displayName = result.TryGetProperty("display_name", out var nameElement) ? nameElement.GetString() : null;
+        if (result.TryGetProperty("address", out var address) && address.ValueKind == JsonValueKind.Object)
+        {
+            static string? Value(JsonElement source, params string[] keys)
+            {
+                foreach (var key in keys)
+                    if (source.TryGetProperty(key, out var item) && !string.IsNullOrWhiteSpace(item.GetString())) return item.GetString();
+                return null;
+            }
+
+            var road = Value(address, "road", "pedestrian", "residential", "path");
+            var number = Value(address, "house_number");
+            var district = Value(address, "suburb", "neighbourhood", "quarter", "village");
+            var city = Value(address, "city", "town", "municipality", "county");
+            var state = Value(address, "state");
+            var country = Value(address, "country");
+            var street = string.Join(" ", new[] { road, number }.Where(value => !string.IsNullOrWhiteSpace(value)));
+            var parts = new[] { street, district, city, state, country }
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+            var friendlyAddress = string.Join(", ", parts);
+            if (!string.IsNullOrWhiteSpace(friendlyAddress)) displayName = friendlyAddress;
+        }
+        displayName ??= $"{lat}, {lng}";
 
         return Json(new { displayName });
     }

@@ -73,9 +73,21 @@
         return response.json();
     }
 
-    function getAccuratePosition({ timeout = 18000, targetAccuracy = 80 } = {}) {
+    function distanceMeters(first, second) {
+        const toRadians = value => value * Math.PI / 180;
+        const lat1 = toRadians(first.coords.latitude);
+        const lat2 = toRadians(second.coords.latitude);
+        const deltaLat = lat2 - lat1;
+        const deltaLng = toRadians(second.coords.longitude - first.coords.longitude);
+        const value = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+        return 6371000 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+    }
+
+    function getAccuratePosition({ timeout = 18000, targetAccuracy = 60, maximumAcceptedAccuracy = 120 } = {}) {
         return new Promise((resolve, reject) => {
             let bestPosition = null;
+            let bestIsStable = false;
+            let previousFreshPosition = null;
             let watchId = null;
             let settled = false;
 
@@ -88,18 +100,25 @@
             };
 
             const timer = setTimeout(() => {
-                if (bestPosition) finish(resolve, bestPosition);
-                else finish(reject, { code: 3, message: 'Tiempo de ubicacion agotado.' });
+                const bestAccuracy = Number(bestPosition?.coords?.accuracy);
+                if (bestPosition && Number.isFinite(bestAccuracy) && bestAccuracy <= maximumAcceptedAccuracy && (bestAccuracy <= targetAccuracy || bestIsStable)) finish(resolve, bestPosition);
+                else finish(reject, { code: 'LOW_ACCURACY', accuracy: bestAccuracy, message: 'El dispositivo solo compartió una ubicación aproximada.' });
             }, timeout);
 
             watchId = navigator.geolocation.watchPosition(
                 (position) => {
                     const accuracy = Number(position.coords.accuracy);
+                    const age = Date.now() - Number(position.timestamp || 0);
+                    if (!Number.isFinite(age) || age > 30000 || !isValidCoordinate(position.coords.latitude, position.coords.longitude)) return;
+                    const stable = previousFreshPosition && distanceMeters(previousFreshPosition, position) <= Math.max(accuracy, Number(previousFreshPosition.coords.accuracy), 45);
                     const bestAccuracy = Number(bestPosition?.coords?.accuracy);
                     if (!bestPosition || !Number.isFinite(bestAccuracy) || accuracy < bestAccuracy) {
                         bestPosition = position;
+                        bestIsStable = Boolean(stable);
                     }
-                    if (Number.isFinite(accuracy) && accuracy <= targetAccuracy) finish(resolve, position);
+                    previousFreshPosition = position;
+                    if (Number.isFinite(accuracy) && accuracy <= 30) finish(resolve, position);
+                    else if (Number.isFinite(accuracy) && accuracy <= targetAccuracy && stable) finish(resolve, position);
                 },
                 (error) => {
                     if (bestPosition && error?.code !== 1) finish(resolve, bestPosition);
@@ -396,7 +415,7 @@
             try {
                 const position = await getAccuratePosition();
                 const accuracy = Number(position.coords.accuracy);
-                if (Number.isFinite(accuracy) && accuracy > 1000) {
+                if (Number.isFinite(accuracy) && accuracy > 120) {
                     const accuracyLabel = accuracy >= 10000
                         ? `${Math.round(accuracy / 1000)} km`
                         : `${Math.round(accuracy)} m`;
@@ -413,7 +432,9 @@
                 const accuracyText = Number.isFinite(accuracy) ? ` (precisión aproximada: ${Math.round(accuracy)} m)` : '';
                 window.app?.toast?.success?.(`Ubicación actualizada con la posición de este dispositivo${accuracyText}.`);
             } catch (error) {
-                const message = error?.code === error?.PERMISSION_DENIED || error?.code === 1
+                const message = error?.code === 'LOW_ACCURACY'
+                    ? 'No cambiamos la dirección porque el teléfono solo compartió una ubicación aproximada. Active “ubicación precisa” para este navegador o ajuste el pin manualmente.'
+                    : error?.code === error?.PERMISSION_DENIED || error?.code === 1
                     ? 'No se concedió permiso para usar la ubicación. Selecciona el punto manualmente en el mapa.'
                     : error?.code === error?.TIMEOUT || error?.code === 3
                         ? 'La ubicación tardó demasiado. Intenta de nuevo o selecciona un punto en el mapa.'
