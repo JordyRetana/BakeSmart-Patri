@@ -2932,8 +2932,6 @@ public sealed partial class SqlStore
     {
         if (UseMySql)
         {
-            var inventoryLocationId = await EnsureInventoryLocationAsync();
-
             await using var connection = CreateConnection();
             await connection.OpenAsync();
             await using var transaction = await connection.BeginTransactionAsync();
@@ -2947,19 +2945,21 @@ public sealed partial class SqlStore
 
                 await ExecuteInTransactionAsync(connection, transaction, """
                     INSERT INTO ExistenciasInventario (ProductId, InventoryLocationId, Quantity, UpdatedAt)
-                    SELECT ProductId, @InventoryLocationId, SUM(Quantity), UTC_TIMESTAMP()
-                    FROM DetallePedido
-                    WHERE OrderId = @OrderId
-                    GROUP BY ProductId
+                    SELECT ProductId, InventoryLocationId, SUM(Quantity), UTC_TIMESTAMP()
+                    FROM MovimientosInventario
+                    WHERE MovementType = 'SALIDA'
+                      AND Note IN (CONCAT('Pedido web #', @OrderId), CONCAT('Venta POS #', @OrderId))
+                    GROUP BY ProductId, InventoryLocationId
                     ON DUPLICATE KEY UPDATE
                         Quantity = ExistenciasInventario.Quantity + VALUES(Quantity),
                         UpdatedAt = UTC_TIMESTAMP();
 
                     INSERT INTO MovimientosInventario (ProductId, InventoryLocationId, MovementType, Quantity, Note, CreatedAt)
-                    SELECT ProductId, @InventoryLocationId, 'ENTRADA', SUM(Quantity), CONCAT('Reversion por eliminacion pedido #', @OrderId), UTC_TIMESTAMP()
-                    FROM DetallePedido
-                    WHERE OrderId = @OrderId
-                    GROUP BY ProductId;
+                    SELECT ProductId, InventoryLocationId, 'ENTRADA', SUM(Quantity), CONCAT('Reversion por eliminacion pedido #', @OrderId), UTC_TIMESTAMP()
+                    FROM MovimientosInventario
+                    WHERE MovementType = 'SALIDA'
+                      AND Note IN (CONCAT('Pedido web #', @OrderId), CONCAT('Venta POS #', @OrderId))
+                    GROUP BY ProductId, InventoryLocationId;
 
                     DELETE csp
                     FROM PagosSesionCaja csp
@@ -2971,8 +2971,7 @@ public sealed partial class SqlStore
                     DELETE FROM DetallePedido WHERE OrderId = @OrderId;
                     DELETE FROM Pedidos WHERE OrderId = @OrderId;
                     """,
-                    new SqlParameter("@OrderId", orderId),
-                    new SqlParameter("@InventoryLocationId", inventoryLocationId));
+                    new SqlParameter("@OrderId", orderId));
 
                 await transaction.CommitAsync();
             }
@@ -2982,7 +2981,7 @@ public sealed partial class SqlStore
                 throw;
             }
 
-            await AddAuditLogAsync("ELIMINAR_PEDIDO", $"Pedido #{orderId} eliminado y stock restaurado", userEmail);
+            await AddAuditLogAsync("ELIMINAR_PEDIDO", $"Pedido #{orderId} eliminado; stock previamente descontado restaurado", userEmail);
             return;
         }
 
@@ -2993,36 +2992,28 @@ public sealed partial class SqlStore
             IF NOT EXISTS (SELECT 1 FROM dbo.Pedidos WHERE OrderId = @OrderId)
                 THROW 50060, 'El pedido no existe.', 1;
 
-            DECLARE @InventoryLocationId int;
-
-            IF NOT EXISTS (SELECT 1 FROM dbo.UbicacionesInventario WHERE Name = N'Bodega principal')
-                INSERT INTO dbo.UbicacionesInventario (Name, Description)
-                VALUES (N'Bodega principal', N'Ubicacion principal de BakeSmart Patri');
-
-            SELECT @InventoryLocationId = InventoryLocationId
-            FROM dbo.UbicacionesInventario
-            WHERE Name = N'Bodega principal';
-
             ;WITH Items AS (
-                SELECT ProductId, SUM(Quantity) AS Quantity
-                FROM dbo.DetallePedido
-                WHERE OrderId = @OrderId
-                GROUP BY ProductId
+                SELECT ProductId, InventoryLocationId, SUM(Quantity) AS Quantity
+                FROM dbo.MovimientosInventario
+                WHERE MovementType = N'SALIDA'
+                  AND Note IN (CONCAT(N'Pedido web #', @OrderId), CONCAT(N'Venta POS #', @OrderId))
+                GROUP BY ProductId, InventoryLocationId
             )
             MERGE dbo.ExistenciasInventario AS target
             USING Items AS source
-            ON target.ProductId = source.ProductId AND target.InventoryLocationId = @InventoryLocationId
+            ON target.ProductId = source.ProductId AND target.InventoryLocationId = source.InventoryLocationId
             WHEN MATCHED THEN
                 UPDATE SET Quantity = target.Quantity + source.Quantity, UpdatedAt = SYSUTCDATETIME()
             WHEN NOT MATCHED THEN
                 INSERT (ProductId, InventoryLocationId, Quantity)
-                VALUES (source.ProductId, @InventoryLocationId, source.Quantity);
+                VALUES (source.ProductId, source.InventoryLocationId, source.Quantity);
 
             INSERT INTO dbo.MovimientosInventario (ProductId, InventoryLocationId, MovementType, Quantity, Note, CreatedAt)
-            SELECT ProductId, @InventoryLocationId, N'ENTRADA', SUM(Quantity), CONCAT(N'Reversion por eliminacion pedido #', @OrderId), SYSUTCDATETIME()
-            FROM dbo.DetallePedido
-            WHERE OrderId = @OrderId
-            GROUP BY ProductId;
+            SELECT ProductId, InventoryLocationId, N'ENTRADA', SUM(Quantity), CONCAT(N'Reversion por eliminacion pedido #', @OrderId), SYSUTCDATETIME()
+            FROM dbo.MovimientosInventario
+            WHERE MovementType = N'SALIDA'
+              AND Note IN (CONCAT(N'Pedido web #', @OrderId), CONCAT(N'Venta POS #', @OrderId))
+            GROUP BY ProductId, InventoryLocationId;
 
             DELETE csp
             FROM dbo.PagosSesionCaja csp
@@ -3038,7 +3029,7 @@ public sealed partial class SqlStore
             """;
 
         await ExecuteAsync(sql, new SqlParameter("@OrderId", orderId));
-        await AddAuditLogAsync("ELIMINAR_PEDIDO", $"Pedido #{orderId} eliminado y stock restaurado", userEmail);
+        await AddAuditLogAsync("ELIMINAR_PEDIDO", $"Pedido #{orderId} eliminado; stock previamente descontado restaurado", userEmail);
     }
 
     public async Task<object> AccountingOverviewAsync()
@@ -5110,25 +5101,15 @@ public sealed partial class SqlStore
             IF @DeliveryMethod <> N'retiro' AND (@DestLat IS NULL OR @DestLng IS NULL)
                 THROW 50020, 'Debe indicar una ubicacion de entrega valida en el mapa.', 1;
 
-            DECLARE @InventoryLocationId int;
-            DECLARE @AvailableStock decimal(18,2);
-
-            SELECT TOP 1
-                @InventoryLocationId = ib.InventoryLocationId,
-                @AvailableStock = ib.Quantity
-            FROM dbo.Productos p
-            INNER JOIN dbo.TiposProducto pt ON pt.ProductTypeId = p.ProductTypeId
-            INNER JOIN dbo.ExistenciasInventario ib ON ib.ProductId = p.ProductId
-            WHERE p.ProductId = @ProductId
-              AND p.IsActive = 1
-              AND pt.Name = N'Producto terminado'
-            ORDER BY ib.Quantity DESC;
-
-            IF @InventoryLocationId IS NULL
-                THROW 50030, 'El producto seleccionado no esta disponible para venta.', 1;
-
-            IF @AvailableStock < @Quantity
-                THROW 50031, 'No hay stock suficiente para completar el pedido.', 1;
+            -- Los pedidos web se elaboran después de confirmar el pago. El stock
+            -- terminado se controla en el POS; la materia prima se valida al
+            -- iniciar producción mediante la receta aprobada.
+            IF NOT EXISTS (
+                SELECT 1 FROM dbo.Productos p
+                INNER JOIN dbo.TiposProducto pt ON pt.ProductTypeId = p.ProductTypeId
+                WHERE p.ProductId = @ProductId AND p.IsActive = 1
+                  AND pt.Name = N'Producto terminado'
+            ) THROW 50030, 'El producto seleccionado no esta disponible para pedidos.', 1;
 
             DECLARE @WebChannelId int = (SELECT OrderChannelId FROM dbo.CanalesPedido WHERE Name = N'Web');
             DECLARE @PendingStatusId int = (SELECT OrderStatusId FROM dbo.EstadosPedido WHERE Name = N'Pendiente pago');
@@ -5167,15 +5148,6 @@ public sealed partial class SqlStore
 
             INSERT INTO dbo.DetallePedido (OrderId, ProductId, Quantity, UnitPrice)
             VALUES (@OrderId, @ProductId, @Quantity, @UnitPrice);
-
-            UPDATE dbo.ExistenciasInventario
-            SET Quantity = Quantity - @Quantity,
-                UpdatedAt = SYSUTCDATETIME()
-            WHERE ProductId = @ProductId
-              AND InventoryLocationId = @InventoryLocationId;
-
-            INSERT INTO dbo.MovimientosInventario (ProductId, InventoryLocationId, MovementType, Quantity, Note, CreatedAt)
-            VALUES (@ProductId, @InventoryLocationId, N'SALIDA', @Quantity, CONCAT(N'Pedido web #', @OrderId), SYSUTCDATETIME());
 
             INSERT INTO dbo.EventosSeguimientoPedido (OrderId, OrderStatusId, Detail, CreatedAt)
             VALUES (@OrderId, @PendingStatusId, N'Pedido creado desde formulario web', SYSUTCDATETIME());
@@ -5792,8 +5764,8 @@ public sealed partial class SqlStore
                 destinationLabel = config.OriginName;
             }
 
-            var stock = await ResolveProductStockMySqlAsync(connection, transaction, input.ProductId, input.Quantity);
-            var subtotal = Math.Round(stock.UnitPrice * input.Quantity, 2, MidpointRounding.AwayFromZero);
+            var unitPrice = await ResolveWebOrderProductPriceMySqlAsync(connection, transaction, input.ProductId);
+            var subtotal = Math.Round(unitPrice * input.Quantity, 2, MidpointRounding.AwayFromZero);
             var paymentMethodId = await ResolvePaymentMethodMySqlAsync(connection, transaction, input.PaymentMethod, fallbackToCash: false);
             var channelId = await ResolveLookupIdMySqlAsync(connection, transaction, "CanalesPedido", "OrderChannelId", "Name", "Web");
             var statusId = await ResolveLookupIdMySqlAsync(connection, transaction, "EstadosPedido", "OrderStatusId", "Name", "Pendiente pago");
@@ -5845,8 +5817,7 @@ public sealed partial class SqlStore
                 new SqlParameter("@OrderId", orderId),
                 new SqlParameter("@ProductId", input.ProductId),
                 new SqlParameter("@Quantity", input.Quantity),
-                new SqlParameter("@UnitPrice", stock.UnitPrice));
-            await DeductStockMySqlAsync(connection, transaction, input.ProductId, stock.InventoryLocationId, input.Quantity, $"Pedido web #{orderId}");
+                new SqlParameter("@UnitPrice", unitPrice));
             await ExecuteInTransactionAsync(connection, transaction,
                 "INSERT INTO EventosSeguimientoPedido (OrderId, OrderStatusId, Detail, CreatedAt) VALUES (@OrderId, @StatusId, 'Pedido creado desde formulario web', UTC_TIMESTAMP());",
                 new SqlParameter("@OrderId", orderId),
@@ -6137,6 +6108,22 @@ public sealed partial class SqlStore
             throw new InvalidOperationException("No hay stock suficiente para completar la venta.");
 
         return (locationId, available, reader.GetDecimal("UnitPrice"));
+    }
+
+    private static async Task<decimal> ResolveWebOrderProductPriceMySqlAsync(DbConnection connection, DbTransaction transaction, int productId)
+    {
+        const string sql = """
+            SELECT p.UnitPrice
+            FROM Productos p
+            INNER JOIN TiposProducto pt ON pt.ProductTypeId = p.ProductTypeId
+            WHERE p.ProductId = @ProductId AND p.IsActive = 1
+              AND pt.Name = 'Producto terminado'
+            LIMIT 1;
+            """;
+        var price = await ScalarInTransactionAsync(connection, transaction, sql, new SqlParameter("@ProductId", productId));
+        if (price is null || price is DBNull)
+            throw new InvalidOperationException("El producto seleccionado no esta disponible para pedidos.");
+        return Convert.ToDecimal(price, CultureInfo.InvariantCulture);
     }
 
     private static async Task DeductStockMySqlAsync(DbConnection connection, DbTransaction transaction, int productId, int locationId, decimal quantity, string note)

@@ -1,0 +1,35 @@
+{
+  "notes": "Borradores estimados para revisión de la pastelera. Cantidades en la misma unidad del inventario: Kilogramo o L. No representan las fórmulas propias de BakeSmart.",
+  "ingredients": [
+    ["MP-PAN-001", "Pan añejo", "Kilogramo"],
+    ["MP-VAI-001", "Extracto de vainilla", "L"],
+    ["MP-NAR-001", "Naranja", "Kilogramo"],
+    ["MP-LEV-001", "Levadura seca", "Kilogramo"],
+    ["MP-CHO-001", "Chocolate para repostería", "Kilogramo"],
+    ["MP-CAC-001", "Cacao en polvo", "Kilogramo"],
+    ["MP-PIST-001", "Pistacho", "Kilogramo"],
+    ["MP-FRAM-001", "Frambuesa", "Kilogramo"],
+    ["MP-ARAN-001", "Arándano", "Kilogramo"],
+    ["MP-CRE-001", "Crema de leche", "L"],
+    ["MP-MAI-001", "Maicena", "Kilogramo"],
+    ["MP-BAN-001", "Banano", "Kilogramo"],
+    ["MP-POL-001", "Polvo de hornear", "Kilogramo"],
+    ["MP-CAN-001", "Canela molida", "Kilogramo"],
+    ["MP-AVE-001", "Avellanas", "Kilogramo"],
+    ["MP-AZG-001", "Azúcar glas", "Kilogramo"],
+    ["MP-ACE-001", "Aceite vegetal", "L"],
+    ["MP-CAR-001", "Caramelo para repostería", "Kilogramo"]
+  ],
+  "recipes": [
+    {"productId":319,"yield":10,"source":"https://donamaria.cr/receta/budin-de-pan/","items":[["MP-PAN-001",0.5],[307,0.2],[308,0.06],[332,0.2],[333,0.75],["MP-VAI-001",0.005]]},
+    {"productId":320,"yield":10,"source":"https://www.kingarthurbaking.com/recipes/almond-tea-cakes-recipe","items":[[335,0.13],[306,0.06],["MP-AZG-001",0.2],[308,0.17],[332,0.16],["MP-VAI-001",0.005]]},
+    {"productId":321,"yield":8,"source":"https://www.kingarthurbaking.com/recipes/bakers-croissants-recipe","items":[[306,0.255],[307,0.025],[308,0.141],[333,0.057],[332,0.05],[334,0.005],["MP-LEV-001",0.005],["MP-NAR-001",0.08],["MP-CHO-001",0.12]]},
+    {"productId":322,"yield":8,"source":"https://www.kingarthurbaking.com/recipes/bakers-croissants-recipe","items":[[306,0.255],[307,0.025],[308,0.141],[333,0.057],[332,0.05],[334,0.005],["MP-LEV-001",0.005]]},
+    {"productId":324,"yield":8,"source":"https://www.kingarthurbaking.com/recipes/berry-cream-tart-recipe","items":[[306,0.18],[308,0.1],[307,0.12],[332,0.1],[333,0.3],["MP-MAI-001",0.025],["MP-PIST-001",0.1],["MP-FRAM-001",0.2]]},
+    {"productId":325,"yield":8,"source":"https://www.kingarthurbaking.com/recipes/berry-cream-tart-recipe","items":[[306,0.18],[308,0.1],[307,0.12],[332,0.1],[333,0.3],["MP-MAI-001",0.025],["MP-ARAN-001",0.2],["MP-VAI-001",0.005]]},
+    {"productId":326,"yield":12,"source":"https://www.kingarthurbaking.com/recipes/chocolate-caramel-cake-recipe","items":[[306,0.27],["MP-CAC-001",0.064],[307,0.35],[308,0.11],["MP-ACE-001",0.07],[333,0.23],[332,0.2],["MP-POL-001",0.012],["MP-CHO-001",0.2],["MP-CRE-001",0.2],["MP-CAR-001",0.2]]},
+    {"productId":327,"yield":10,"source":"https://www.kingarthurbaking.com/recipes/rich-and-tender-banana-cake-recipe","items":[[306,0.18],[307,0.2],[308,0.085],[332,0.05],["MP-BAN-001",0.17],["MP-POL-001",0.008],[333,0.06],["MP-CAR-001",0.15]]},
+    {"productId":328,"yield":24,"source":"https://www.kingarthurbaking.com/recipes/buttery-snickerdoodles-recipe","items":[[306,0.32],[307,0.25],[308,0.17],[332,0.1],["MP-CAN-001",0.012],["MP-POL-001",0.006],["MP-VAI-001",0.005]]},
+    {"productId":329,"yield":36,"source":"https://www.kingarthurbaking.com/recipes/chunky-hazelnut-meringues-recipe","items":[["MP-CHO-001",0.142],["MP-AVE-001",0.142],[332,0.1],[307,0.131]]}
+  ]
+}
