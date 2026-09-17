@@ -5051,6 +5051,15 @@ public sealed partial class SqlStore
 
     public async Task<int> CreateOrderAsync(CreateOrderInput input, string? userEmail = null)
     {
+        if (input.Quantity <= 0 || input.ProductId <= 0)
+            throw new InvalidOperationException("Seleccione un producto y una cantidad válida.");
+        if (string.IsNullOrWhiteSpace(input.CustomerName) || string.IsNullOrWhiteSpace(input.Email))
+            throw new InvalidOperationException("Indique el nombre y el correo del cliente.");
+        if ((BuildOrderNotes(input.Notes, input.DeliveryReference)?.Length ?? 0) > 500)
+            throw new InvalidOperationException("Los detalles y la referencia del pedido no pueden superar 500 caracteres. Acorte el texto e intente de nuevo.");
+        if ((input.Address?.Trim().Length ?? 0) > 160)
+            throw new InvalidOperationException("La dirección no puede superar 160 caracteres. Use la referencia para los detalles adicionales.");
+
         if (UseMySql)
             return await CreateOrderMySqlAsync(input, userEmail);
 
@@ -5182,7 +5191,8 @@ public sealed partial class SqlStore
             new SqlParameter("@CustomerAddressId", (object?)input.CustomerAddressId ?? DBNull.Value),
             new SqlParameter("@DeliveryMethod", (object?)input.DeliveryMethod?.Trim() ?? "domicilio")));
 
-        await AddAuditLogAsync("CREAR_PEDIDO", $"Pedido #{orderId} creado para {input.CustomerName}", userEmail);
+        try { await AddAuditLogAsync("CREAR_PEDIDO", $"Pedido #{orderId} creado para {input.CustomerName}", userEmail); }
+        catch (Exception ex) { System.Diagnostics.Trace.TraceError("No se pudo registrar la bitácora del pedido {0}: {1}", orderId, ex.Message); }
         return orderId;
     }
 
@@ -5824,7 +5834,10 @@ public sealed partial class SqlStore
                 new SqlParameter("@StatusId", statusId));
 
             await transaction.CommitAsync();
-            await AddAuditLogAsync("CREAR_PEDIDO", $"Pedido #{orderId} creado para {input.CustomerName}", userEmail);
+            // El pedido ya está confirmado: una falla de bitácora no debe
+            // presentarlo como fallido ni provocar un segundo pedido al reintentar.
+            try { await AddAuditLogAsync("CREAR_PEDIDO", $"Pedido #{orderId} creado para {input.CustomerName}", userEmail); }
+            catch (Exception ex) { System.Diagnostics.Trace.TraceError("No se pudo registrar la bitácora del pedido {0}: {1}", orderId, ex.Message); }
             return orderId;
         }
         catch
