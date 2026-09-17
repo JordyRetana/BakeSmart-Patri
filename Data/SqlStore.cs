@@ -5140,7 +5140,7 @@ public sealed partial class SqlStore
             VALUES
                 (@CustomerId, @ResolvedAddressId, @WebChannelId, @PendingStatusId, @PendingPaymentId, @CashMethodId,
                  @Notes, @Subtotal, @EffectiveDiscount, @EffectiveTax, @EffectiveTotal, @DeliveryDate,
-                 NULL, NULL,
+                 @OriginLat, @OriginLng,
                  @DestLat, @DestLng, @DestLabel, N'Costa Rica',
                  CASE WHEN @DeliveryMethod = N'retiro' THEN N'pickup' ELSE N'ground' END, @OriginName);
 
@@ -5786,7 +5786,7 @@ public sealed partial class SqlStore
                 VALUES
                     (@CustomerId, @CustomerAddressId, @ChannelId, @StatusId, @PaymentStatusId, @PaymentMethodId,
                      @Notes, @Subtotal, @Discount, @Tax, @Total, @DeliveryDate,
-                     NULL, NULL, @DestLat, @DestLng, @DestLabel,
+                     @OriginLat, @OriginLng, @DestLat, @DestLng, @DestLabel,
                      'Costa Rica', @RouteMode, 0, @OriginName, UTC_TIMESTAMP());
                 SELECT LAST_INSERT_ID();
                 """;
