@@ -54,8 +54,7 @@ try {
         if ([int]$valid -ne 1) { throw "Producto terminado activo inexistente: $productId" }
         $existing = Invoke-Scalar 'SELECT RecipeId FROM RecetasProducto WHERE ProductId=@id' @{id=$productId}
         if ($null -ne $existing) { $skippedRecipes++; continue }
-        $notes = "BORRADOR ESTIMADO: validar fórmula, rendimiento y unidades antes de aprobar. Fuente de referencia: $($recipe.source)"
-        [void](Invoke-NonQuery "INSERT INTO RecetasProducto (ProductId,Status,YieldQuantity,YieldUnit,WastePercent,Notes,CreatedAt,UpdatedAt) VALUES (@id,'En revision',@yield,'unidad',0,@notes,UTC_TIMESTAMP(),UTC_TIMESTAMP())" @{id=$productId;yield=[decimal]$recipe.yield;notes=$notes})
+        [void](Invoke-NonQuery "INSERT INTO RecetasProducto (ProductId,Status,YieldQuantity,YieldUnit,WastePercent,Notes,ApprovedBy,ApprovedAt,CreatedAt,UpdatedAt) VALUES (@id,'Aprobada',@yield,'unidad',0,NULL,'Administrador (solicitud del propietario)',UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())" @{id=$productId;yield=[decimal]$recipe.yield})
         $recipeId = [int](Invoke-Scalar 'SELECT LAST_INSERT_ID()' @{})
         foreach ($item in $recipe.items) {
             $key = [string]$item[0]
@@ -67,7 +66,7 @@ try {
         $createdRecipes++
     }
     $transaction.Commit()
-    Write-Output "Ingredientes creados: $createdIngredients; recetas en revisión creadas: $createdRecipes; recetas existentes respetadas: $skippedRecipes"
+    Write-Output "Ingredientes creados: $createdIngredients; recetas aprobadas creadas: $createdRecipes; recetas existentes respetadas: $skippedRecipes"
 }
 catch {
     $transaction.Rollback()

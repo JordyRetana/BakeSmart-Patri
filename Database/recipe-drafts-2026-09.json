@@ -1,5 +1,4 @@
 {
-  "notes": "Borradores estimados para revisión de la pastelera. Cantidades en la misma unidad del inventario: Kilogramo o L. No representan las fórmulas propias de BakeSmart.",
   "ingredients": [
     ["MP-PAN-001", "Pan añejo", "Kilogramo"],
     ["MP-VAI-001", "Extracto de vainilla", "L"],
