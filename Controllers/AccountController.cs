@@ -589,7 +589,9 @@ namespace BakeSmartPatri.Controllers
                 Response.Cookies.Delete("BakeSmartPatri.Auth.v4");
             Response.Cookies.Delete(".AspNetCore.Antiforgery.gl4x9LQyqcE");
             Response.Cookies.Delete("BakeSmartPatri.Antiforgery.v2");
-            Response.Cookies.Delete("BakeSmartPatri.Antiforgery.v3");
+            // Keep the active antiforgery cookie: the login view creates its
+            // hidden token from this cookie during the same response. Deleting
+            // it here leaves that form with a token the next POST cannot match.
         }
     }
 }
