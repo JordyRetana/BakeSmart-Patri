@@ -88,6 +88,7 @@
         <div><label>Contraseña</label><input class="form-control" name="password" type="text" placeholder="Mínimo 8 caracteres" /></div>
         <div><label>Rol</label><select class="form-control" name="role" id="userRole" required></select></div>
         <div class="users-form-full"><label>Direccion</label><input class="form-control" name="address" /></div>
+        <div class="users-form-full"><label><input type="checkbox" name="isTestAccount" /> Cuenta de prueba: permitir acceso sin confirmar el correo</label></div>
         <div class="users-form-actions users-form-full">
             <button class="btn btn-outline" type="button" id="clearUserForm">Limpiar</button>
             <button class="btn btn-primary" type="submit"><i class="fas fa-save"></i> Guardar usuario</button>
@@ -147,13 +148,15 @@
         if (item) {
             Object.entries(item).forEach(([key, value]) => {
                 const input = form.querySelector(`[name="${key}"]`);
-                if (input) input.value = value ?? '';
+                if (input?.type === 'checkbox') input.checked = !!value;
+                else if (input) input.value = value ?? '';
             });
             form.password.value = '';
         }
         form.addEventListener('submit', async e => {
             e.preventDefault();
             const data = Object.fromEntries(new FormData(form).entries());
+            data.isTestAccount = form.querySelector('[name="isTestAccount"]').checked;
             if (!validateUserData(data)) return;
             await store.users.save(data);
             app.modal.close();

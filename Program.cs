@@ -92,7 +92,11 @@ else
     dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath));
 }
 
-builder.Services.AddControllersWithViews(options => options.Filters.AddService<AuditMutationFilter>());
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.AddService<AuditMutationFilter>();
+    options.Filters.Add(new LoginAntiforgeryRecoveryFilter());
+});
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;

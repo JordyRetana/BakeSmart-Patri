@@ -1136,14 +1136,19 @@ public sealed partial class SqlStore
 
     public async Task<IReadOnlyList<object>> UsersAsync()
     {
+        await EnsureAuthenticationTablesAsync();
         const string sql = """
-            SELECT u.UserId, u.FirstName, u.LastName, u.Email, u.Phone, u.AddressLine, u.IsActive, u.CreatedAt, r.RoleName
+            SELECT u.UserId, u.FirstName, u.LastName, u.Email, u.Phone, u.AddressLine, u.IsActive, u.CreatedAt, r.RoleName, COALESCE(s.IsTestAccount,0) IsTestAccount
             FROM dbo.Usuarios u
             INNER JOIN dbo.Roles r ON r.RoleId = u.RoleId
+            LEFT JOIN dbo.SeguridadUsuarios s ON LOWER(s.Email)=LOWER(u.Email)
             ORDER BY u.FirstName, u.LastName;
             """;
 
-        return await QueryAsync(sql, reader => new
+        var usersSql = UseMySql
+            ? sql.Replace("LOWER(s.Email)=LOWER(u.Email)", "LOWER(s.Email) COLLATE utf8mb4_unicode_ci=LOWER(u.Email) COLLATE utf8mb4_unicode_ci")
+            : sql;
+        return await QueryAsync(usersSql, reader => new
         {
             id = reader.GetInt32("UserId"),
             firstName = reader.GetString("FirstName"),
@@ -1153,6 +1158,7 @@ public sealed partial class SqlStore
             address = reader.GetNullableString("AddressLine") ?? "",
             role = reader.GetString("RoleName"),
             active = reader.GetBoolean("IsActive"),
+            isTestAccount = Convert.ToBoolean(reader["IsTestAccount"]),
             createdAt = reader.GetDateTime("CreatedAt").ToString("o")
         });
     }
@@ -6259,7 +6265,7 @@ public sealed partial class SqlStore
 
     public sealed record AuthUser(string Email, string Role, string DisplayName);
     public sealed record RegisterCustomerInput(string FirstName, string LastName, string Email, string? Phone, string? AddressLine, string Password);
-    public sealed record UserInput(int? Id, string FirstName, string LastName, string Email, string? Phone, string? Address, string Role, string? Password);
+    public sealed record UserInput(int? Id, string FirstName, string LastName, string Email, string? Phone, string? Address, string Role, string? Password, bool IsTestAccount = false);
     public sealed record ProfileInput(string FirstName, string LastName, string? Phone, string? Address, string? NewPassword, int? CustomerAddressId = null, string? AddressLabel = null, decimal? Latitude = null, decimal? Longitude = null);
     public sealed record ProfileData(string FirstName, string LastName, string Email, string Phone, string Address, string Role, int? CustomerAddressId, string AddressLabel, decimal? Latitude, decimal? Longitude, bool IsFrequent);
     public sealed record CustomerAddressData(int Id, string Label, string AddressLine, decimal? Latitude, decimal? Longitude, bool IsDefault);

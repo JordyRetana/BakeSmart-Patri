@@ -29,7 +29,7 @@ namespace BakeSmartPatri.Controllers
         }
 
         [HttpGet]
-        public IActionResult Login(string? returnUrl = null)
+        public IActionResult Login(string? returnUrl = null, bool formExpired = false)
         {
             if (User?.Identity?.IsAuthenticated ?? false)
             {
@@ -43,6 +43,7 @@ namespace BakeSmartPatri.Controllers
             }
 
             DeleteLegacyAuthCookies();
+            if (formExpired) TempData["Toast"] = "El formulario de acceso venció. Ingrese nuevamente sus credenciales.";
             ViewData["ReturnUrl"] = returnUrl ?? "";
             ViewData["GoogleEnabled"] = IsGoogleEnabled;
             return View();

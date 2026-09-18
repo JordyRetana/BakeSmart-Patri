@@ -677,6 +677,7 @@ public class ApiController : Controller
             return BadRequest(new { message = "La contraseña debe tener al menos 8 caracteres." });
 
         var userId = await _sqlStore.SaveUserAsync(request);
+        await _sqlStore.SetTestAccountAsync(request.Email, request.IsTestAccount);
 
         var action = request.Id is > 0 ? "actualizado" : "creado";
         await _sqlStore.AddAuditLogAsync($"USUARIO_{action.ToUpperInvariant()}", $"Usuario '{request.Email}' {action}", CurrentUserEmail);

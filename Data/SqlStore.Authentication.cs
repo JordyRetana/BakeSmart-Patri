@@ -38,7 +38,8 @@ public sealed partial class SqlStore
 
         var security = await GetUserSecurityAsync(email);
         await ExecuteAsync($"UPDATE {table} SET FailedLoginAttempts=0, LockoutEnd=NULL, UpdatedAt={now} WHERE LOWER(Email)=LOWER(@Email);", new SqlParameter("@Email", email));
-        if (!security.EmailConfirmed)
+        var isTestAccount = Convert.ToInt32(await ScalarAsync($"SELECT IsTestAccount FROM {table} WHERE LOWER(Email)=LOWER(@Email);", new SqlParameter("@Email", email)) ?? 0) == 1;
+        if (!security.EmailConfirmed && !isTestAccount)
             return new(user, SecureAuthStatus.EmailNotConfirmed, null, security);
         if (security.TwoFactorEnabled)
             return new(user, SecureAuthStatus.RequiresTwoFactor, null, security);
@@ -52,6 +53,14 @@ public sealed partial class SqlStore
         var rows = await QueryAsync($"SELECT EmailConfirmed, TwoFactorEnabled, TotpSecret, PasswordSetupRequired FROM {table} WHERE LOWER(Email)=LOWER(@Email);", reader => new UserSecurityState(
             reader.GetBoolean("EmailConfirmed"), reader.GetBoolean("TwoFactorEnabled"), reader.GetNullableString("TotpSecret"), reader.GetBoolean("PasswordSetupRequired")), new SqlParameter("@Email", email));
         return rows.FirstOrDefault() ?? new UserSecurityState(false, false, null, false);
+    }
+
+    public async Task SetTestAccountAsync(string email, bool enabled)
+    {
+        await EnsureAuthenticationTablesAsync();
+        var table = UseMySql ? "SeguridadUsuarios" : "dbo.SeguridadUsuarios";
+        await ExecuteAsync($"UPDATE {table} SET IsTestAccount=@Enabled WHERE LOWER(Email)=LOWER(@Email);",
+            new SqlParameter("@Enabled", enabled), new SqlParameter("@Email", email.Trim().ToLowerInvariant()));
     }
 
     public async Task<string> CreateEmailConfirmationTokenAsync(string email)
@@ -192,6 +201,13 @@ public sealed partial class SqlStore
                 """);
             }
 
+            if (UseMySql)
+            {
+                if (Convert.ToInt32(await ScalarAsync("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='SeguridadUsuarios' AND COLUMN_NAME='IsTestAccount';")) == 0)
+                    await ExecuteAsync("ALTER TABLE SeguridadUsuarios ADD IsTestAccount bit NOT NULL DEFAULT 0;");
+            }
+            else
+                await ExecuteAsync("IF COL_LENGTH('dbo.SeguridadUsuarios','IsTestAccount') IS NULL ALTER TABLE dbo.SeguridadUsuarios ADD IsTestAccount bit NOT NULL DEFAULT 0;");
             _authenticationSchemaReady = true;
         }
         finally

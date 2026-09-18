@@ -490,7 +490,8 @@
                     phone: input.phone || "",
                     address: input.address || "",
                     role: input.role || "Cliente",
-                    password: input.password || ""
+                    password: input.password || "",
+                    isTestAccount: input.isTestAccount === true
                 };
 
                 const result = await request("/api/users", { method: "POST", body: JSON.stringify(payload) });
