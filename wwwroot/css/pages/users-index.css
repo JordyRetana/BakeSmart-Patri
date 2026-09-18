@@ -190,6 +190,35 @@
     font-weight: 800;
 }
 
+.users-form label.users-test-account {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 12px 0;
+}
+
+.users-form .users-test-account input[type="checkbox"] {
+    appearance: auto;
+    display: inline-block;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    accent-color: #7c3aed;
+}
+
+.users-test-account span { display: block; }
+.users-test-account small {
+    display: block;
+    margin-top: 3px;
+    font-weight: 400;
+    font-size: .875rem;
+}
+
 .users-form-full {
     grid-column: 1 / -1;
 }
