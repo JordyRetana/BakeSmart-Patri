@@ -63,6 +63,17 @@ public sealed partial class SqlStore
             new SqlParameter("@Enabled", enabled), new SqlParameter("@Email", email.Trim().ToLowerInvariant()));
     }
 
+    public async Task<bool> NeedsEmailConfirmationAsync(string email)
+    {
+        await EnsureAuthenticationTablesAsync();
+        var users = UseMySql ? "Usuarios" : "dbo.Usuarios";
+        var security = UseMySql ? "SeguridadUsuarios" : "dbo.SeguridadUsuarios";
+        var emailJoin = UseMySql ? "LOWER(s.Email) COLLATE utf8mb4_unicode_ci=LOWER(u.Email) COLLATE utf8mb4_unicode_ci" : "LOWER(s.Email)=LOWER(u.Email)";
+        var count = await ScalarAsync($"SELECT COUNT(1) FROM {users} u INNER JOIN {security} s ON {emailJoin} WHERE LOWER(u.Email)=LOWER(@Email) AND u.IsActive=1 AND s.EmailConfirmed=0;",
+            new SqlParameter("@Email", email.Trim().ToLowerInvariant()));
+        return Convert.ToInt32(count ?? 0) > 0;
+    }
+
     public async Task<string> CreateEmailConfirmationTokenAsync(string email)
     {
         await EnsureAuthenticationTablesAsync();
@@ -80,7 +91,11 @@ public sealed partial class SqlStore
     {
         await EnsureAuthenticationTablesAsync();
         var table = UseMySql ? "SeguridadUsuarios" : "dbo.SeguridadUsuarios";
-        await ExecuteAsync($"UPDATE {table} SET EmailConfirmed=0 WHERE LOWER(Email)=LOWER(@Email);", new SqlParameter("@Email", email));
+        var now = UseMySql ? "UTC_TIMESTAMP()" : "SYSUTCDATETIME()";
+        var sql = UseMySql
+            ? $"INSERT INTO {table}(Email,EmailConfirmed,UpdatedAt) VALUES(LOWER(@Email),0,{now}) ON DUPLICATE KEY UPDATE EmailConfirmed=0,UpdatedAt={now};"
+            : $"IF EXISTS(SELECT 1 FROM {table} WHERE LOWER(Email)=LOWER(@Email)) UPDATE {table} SET EmailConfirmed=0,UpdatedAt={now} WHERE LOWER(Email)=LOWER(@Email); ELSE INSERT INTO {table}(Email,EmailConfirmed,UpdatedAt) VALUES(LOWER(@Email),0,{now});";
+        await ExecuteAsync(sql, new SqlParameter("@Email", email.Trim().ToLowerInvariant()));
     }
 
     public async Task<bool> ConfirmEmailAsync(string token)
@@ -92,9 +107,11 @@ public sealed partial class SqlStore
         var now = UseMySql ? "UTC_TIMESTAMP()" : "SYSUTCDATETIME()";
         var email = (await QueryAsync($"SELECT Email FROM {tokens} WHERE TokenHash=@Hash AND UsedAt IS NULL AND ExpiresAt>{now};", r => r.GetString("Email"), new SqlParameter("@Hash", hash))).FirstOrDefault();
         if (string.IsNullOrWhiteSpace(email)) return false;
-        await ExecuteAsync($"UPDATE {security} SET EmailConfirmed=1,UpdatedAt={now} WHERE LOWER(Email)=LOWER(@Email); UPDATE {tokens} SET UsedAt={now} WHERE TokenHash=@Hash;",
-            new SqlParameter("@Email", email), new SqlParameter("@Hash", hash));
-        return true;
+        var confirmSql = UseMySql
+            ? $"INSERT INTO {security}(Email,EmailConfirmed,UpdatedAt) VALUES(LOWER(@Email),1,{now}) ON DUPLICATE KEY UPDATE EmailConfirmed=1,UpdatedAt={now}; UPDATE {tokens} SET UsedAt={now} WHERE TokenHash=@Hash;"
+            : $"IF EXISTS(SELECT 1 FROM {security} WHERE LOWER(Email)=LOWER(@Email)) UPDATE {security} SET EmailConfirmed=1,UpdatedAt={now} WHERE LOWER(Email)=LOWER(@Email); ELSE INSERT INTO {security}(Email,EmailConfirmed,UpdatedAt) VALUES(LOWER(@Email),1,{now}); UPDATE {tokens} SET UsedAt={now} WHERE TokenHash=@Hash;";
+        await ExecuteAsync(confirmSql, new SqlParameter("@Email", email), new SqlParameter("@Hash", hash));
+        return (await GetUserSecurityAsync(email)).EmailConfirmed;
     }
 
     public async Task<string> BeginTwoFactorSetupAsync(string email)

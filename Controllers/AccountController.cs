@@ -188,6 +188,26 @@ namespace BakeSmartPatri.Controllers
             return RedirectToAction(nameof(Login));
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [EnableRateLimiting("auth")]
+        public async Task<IActionResult> ResendConfirmation(string email)
+        {
+            email = (email ?? "").Trim().ToLowerInvariant();
+            if (!string.IsNullOrWhiteSpace(email) && await _sqlStore.NeedsEmailConfirmationAsync(email))
+            {
+                var token = await _sqlStore.CreateEmailConfirmationTokenAsync(email);
+                var confirmationUrl = Url.Action(nameof(ConfirmEmail), "Account", new { token }, Request.Scheme, Request.Host.Value)!;
+                try
+                {
+                    await _emailService.SendAsync(email, email, "Confirma tu cuenta BakeSmart Patri", $"Confirma tu correo durante las próximas 24 horas:\n\n{confirmationUrl}\n\nSi no solicitaste este mensaje, puedes ignorarlo.");
+                }
+                catch { }
+            }
+            TempData["ToastSuccess"] = "Si la cuenta está pendiente, enviamos un enlace nuevo. Revise también Spam y Promociones.";
+            return RedirectToAction(nameof(Login));
+        }
+
         [HttpGet]
         public IActionResult TwoFactor()
         {

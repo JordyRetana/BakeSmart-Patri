@@ -38,6 +38,10 @@
             {
                 <div class="alert alert-error login-alert"><i class="fas fa-circle-exclamation"></i><span>@TempData["Toast"]</span></div>
             }
+            @if (!string.IsNullOrEmpty(TempData["ToastSuccess"]?.ToString()))
+            {
+                <div class="alert alert-success login-alert login-alert-success"><i class="fas fa-circle-check"></i><span>@TempData["ToastSuccess"]</span></div>
+            }
 
             <form method="post" action="/Account/Login" class="login-form" id="loginForm">
                 @Html.AntiForgeryToken()
@@ -55,7 +59,6 @@
                 </div>
                 <div class="login-options">
                     <label class="login-remember"><input type="checkbox" name="remember" /><span>Recordarme</span></label>
-                    <a href="/Account/ForgotPassword" class="login-forgot">¿Olvidaste tu contraseña?</a>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block btn-lg login-submit-btn" id="loginSubmitBtn"><i class="fas fa-right-to-bracket"></i> Iniciar sesión</button>
                 @if ((ViewData["GoogleEnabled"] as bool?) == true)
@@ -66,6 +69,18 @@
                 <div class="login-divider"><span>o</span></div>
                 <button type="button" id="createCustomerAccountBtn" class="btn btn-outline btn-block login-create-btn" data-register-url="/Account/Register?returnUrl=@(Uri.EscapeDataString(ViewData["ReturnUrl"]?.ToString() ?? ""))"><i class="fas fa-user-plus"></i> Crear cuenta de cliente</button>
             </form>
+
+            <details class="login-help">
+                <summary>¿No puedes iniciar sesión? <i class="fas fa-arrow-right"></i></summary>
+                <div class="login-help-panel">
+                    <a href="/Account/ForgotPassword"><i class="fas fa-key"></i><span><strong>Recuperar contraseña</strong><small>Recibe un enlace para crear una contraseña nueva.</small></span></a>
+                    <form method="post" action="/Account/ResendConfirmation">
+                        @Html.AntiForgeryToken()
+                        <label for="resendEmail">Reenviar verificación</label>
+                        <div class="login-help-resend"><input id="resendEmail" class="input" type="email" name="email" placeholder="tu@correo.com" required autocomplete="email" /><button class="btn btn-outline" type="submit">Enviar</button></div>
+                    </form>
+                </div>
+            </details>
 
             <div class="login-security-note"><i class="fas fa-shield-halved"></i><span><strong>Conexión protegida.</strong> Tus credenciales se validan de forma segura.</span></div>
         </div>
