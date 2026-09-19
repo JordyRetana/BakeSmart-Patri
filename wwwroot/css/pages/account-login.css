@@ -312,6 +312,21 @@ body.dark .password-card .login-form { background:#171b2b !important; }
     text-decoration: none;
 }
 
+.login-help { margin-top: 1rem; border: 1px solid #e8e0ee; border-radius: 12px; overflow: hidden; }
+.login-help summary { display: flex; justify-content: space-between; align-items: center; padding: .9rem 1rem; cursor: pointer; color: #6331ad; font-weight: 900; list-style: none; }
+.login-help summary::-webkit-details-marker { display: none; }
+.login-help[open] summary i { transform: rotate(90deg); }
+.login-help summary i { transition: transform .2s ease; }
+.login-help-panel { display: grid; gap: .9rem; padding: 0 1rem 1rem; }
+.login-help-panel > a { display: flex; gap: .75rem; align-items: center; padding: .8rem; border-radius: 10px; background: #f7f3fc; color: #332a3b; text-decoration: none; }
+.login-help-panel > a i { color: #713cc2; }
+.login-help-panel strong,.login-help-panel small { display: block; }
+.login-help-panel small { margin-top: .2rem; color: #777080; font-weight: 500; }
+.login-help-panel form label { display: block; margin-bottom: .4rem; font-weight: 800; }
+.login-help-resend { display: grid; grid-template-columns: 1fr auto; gap: .55rem; }
+.login-help-resend .btn { min-width: 90px; }
+.login-alert-success { border-color: #b7e4c7; background: #effbf3; color: #18723a; }
+
 .login-submit-btn,
 .login-create-btn {
     min-height: 52px !important;
