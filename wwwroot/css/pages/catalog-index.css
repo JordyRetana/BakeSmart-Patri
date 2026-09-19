@@ -538,3 +538,11 @@ body.catalog-sidebar-open {
 }
 /* Marco fluido compartido por catálogo y favoritos. */
 .catalog-page{width:min(var(--page-shell-max),calc(100% - (var(--page-shell-gutter) * 2)))}
+
+body.dark .catalog-favorites-hero { background:linear-gradient(120deg,#26374a,#342644 58%,#392736); border-color:#4a5368; }
+body.dark .catalog-favorites-hero span { color:#d6b9ff; }
+body.dark .catalog-favorites-hero h1,body.dark .catalog-favorites-empty h2 { color:#f7f8fc; }
+body.dark .catalog-favorites-hero p,body.dark .catalog-favorites-empty p,body.dark .catalog-favorites-login p { color:#c5cfdd; }
+body.dark .catalog-favorites-empty,body.dark .catalog-favorites-login,body.dark .favorite-product-card { background:#202a39; border-color:#4a5368; }
+body.dark .favorite-product-card h2 { color:#f7f8fc; }
+body.dark .favorite-product-card p { color:#c5cfdd; }

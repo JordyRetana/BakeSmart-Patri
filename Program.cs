@@ -223,7 +223,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AnyUser", p => p.RequireRole("Admin", "Staff", "Cliente", "Cajero", "Repostero", "Supervisor", "EncargadoRecetas"));
 
     
-    options.AddPolicy("ClientOnly", p => p.RequireRole("Cliente"));
+    options.AddPolicy("ClientOnly", p => p.RequireRole("Cliente", "Admin"));
 });
 
 

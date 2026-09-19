@@ -228,7 +228,7 @@
             function currentDiscountBreakdown(subtotal) {
                 const manual = normalizeDiscountRate(form.discountRate?.value);
                 const customer = selectedCustomer();
-                const frequent = customer?.frequent ? Math.min(Math.max(Number(store.pos.config().frequentCustomerDiscount || 0), 0), 1) : 0;
+                const frequent = document.getElementById('checkoutPromotion').value === 'frequent' && customer?.frequent ? Math.min(Math.max(Number(store.pos.config().frequentCustomerDiscount || 0), 0), 1) : 0;
                 const promotion = store.marketing.promotions().find(row => String(row.id) === document.getElementById('checkoutPromotion').value);
                 const eligibleIds = new Set((promotion?.productIds || []).map(Number));
                 const promotionBase = promotion ? cart.reduce((sum, item) => {
@@ -261,10 +261,10 @@
                     && (!promotion.startDate || promotion.startDate <= today)
                     && (!promotion.endDate || promotion.endDate >= today)
                     && (!(promotion.customerIds || []).length || (customer && promotion.customerIds.map(Number).includes(Number(customer.id)))));
-                select.innerHTML = '<option value="">Sin promocion</option>' + rows.map(promotion =>
+                select.innerHTML = '<option value="">Sin promoción</option>' + (customer?.frequent ? `<option value="frequent">Cliente frecuente · ${Math.round(Number(store.pos.config().frequentCustomerDiscount || 0) * 100)}%</option>` : '') + rows.map(promotion =>
                     `<option value="${promotion.id}">${promotion.name} · ${Math.round(Number(promotion.discount || 0) * 100)}%</option>`
                 ).join('');
-                select.value = rows.some(row => String(row.id) === selected) ? selected : '';
+                select.value = (selected === 'frequent' && customer?.frequent) || rows.some(row => String(row.id) === selected) ? selected : '';
                 app.selects?.refresh?.(select);
             }
 

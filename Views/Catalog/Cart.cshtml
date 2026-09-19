@@ -46,7 +46,7 @@
 (() => {
     const email = (document.body.dataset.userEmail || '').trim().toLowerCase();
     const authenticated = document.body.dataset.userAuthenticated === 'true';
-    const products = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Products.Select(p => new { id = p.Id, name = p.Name, price = p.UnitPrice, imageUrl = p.ImageUrl, code = p.Code })));
+    const products = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Products.Select(p => new { id = p.Id, name = p.Name, price = p.UnitPrice, imageUrl = p.ImageUrl, code = p.Code, stock = p.Stock })));
     const productById = new Map(products.map(product => [Number(product.id), product]));
     const keyFor = identity => `bakesmart:catalog-cart:${(identity || 'guest').trim().toLowerCase()}`;
     const activeKey = keyFor(email || 'guest');
@@ -104,12 +104,28 @@
     document.getElementById('cartLines').addEventListener('click', event => {
         const quantity = event.target.closest('[data-quantity]');
         const remove = event.target.closest('[data-remove]');
-        if (quantity) { const item = items.find(row => String(row.id) === String(quantity.dataset.quantity)); if (!item) return; item.quantity = Math.max(1, Number(item.quantity || 1) + Number(quantity.dataset.change)); save(); }
+        if (quantity) {
+            const item = items.find(row => String(row.id) === String(quantity.dataset.quantity));
+            if (!item) return;
+            const next = Math.max(1, Number(item.quantity || 1) + Number(quantity.dataset.change));
+            const stock = item.isCombo ? Infinity : Math.max(0, Math.floor(Number(productById.get(Number(item.id))?.stock || 0)));
+            if (next > stock) {
+                app.toast.warning(stock ? `Solo quedan ${stock} unidades disponibles.` : 'Este producto no tiene existencias disponibles.');
+                return;
+            }
+            item.quantity = next;
+            save();
+        }
         if (remove) { items = items.filter(item => String(item.id) !== String(remove.dataset.remove)); save(); }
     });
     document.getElementById('cartCheckout').addEventListener('click', () => {
         if (!items.length) return;
         if (!authenticated) { window.location.href = `/Account/Login?ReturnUrl=${encodeURIComponent('/Catalog/Cart')}`; return; }
+        const unavailable = items.find(item => !item.isCombo && Number(item.quantity) > Number(productById.get(Number(item.id))?.stock || 0));
+        if (unavailable) {
+            app.toast.warning('Revisa las cantidades del carrito: una de ellas supera las existencias disponibles.');
+            return;
+        }
         window.location.href = '/Client?cart=checkout';
     });
     items = read(); render(); notifyCartChanged();

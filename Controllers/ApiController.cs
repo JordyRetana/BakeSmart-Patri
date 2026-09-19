@@ -59,7 +59,7 @@ public class ApiController : Controller
     }
 
     [HttpGet("dashboard")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize(Roles = "Admin,Staff,Cajero,Supervisor,Repostero,EncargadoRecetas")]
     public async Task<IActionResult> Dashboard()
     {
         var role = User.Claims.FirstOrDefault(claim => claim.Type == System.Security.Claims.ClaimTypes.Role)?.Value;
@@ -175,7 +175,7 @@ public class ApiController : Controller
     }
 
     [HttpGet("production/{id:int}/materials")]
-    [Authorize(Policy = "StaffOrAdmin")]
+    [Authorize(Roles = "Admin,Staff,Repostero,Supervisor,EncargadoRecetas")]
     public async Task<IActionResult> ProductionMaterials(int id)
     {
         try { return Json(await _sqlStore.ProductionMaterialReadinessAsync(id)); }
@@ -960,8 +960,8 @@ public class ApiController : Controller
     {
         try
         {
-            if (request.Items is null || request.Items.Count == 0)
-                return BadRequest(new { message = "Debe incluir al menos un producto." });
+            if ((request.Items?.Count ?? 0) == 0 && (request.Combos?.Count ?? 0) == 0)
+                return BadRequest(new { message = "Debe incluir al menos un producto o combo." });
 
             var paymentMethod = request.PaymentMethod?.Trim() ?? string.Empty;
             if (!string.Equals(paymentMethod, "Efectivo", StringComparison.OrdinalIgnoreCase) &&

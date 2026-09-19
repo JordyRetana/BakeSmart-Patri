@@ -2060,7 +2060,7 @@ public sealed partial class SqlStore
                 id = reader.GetInt32("AuditLogId"),
                 type = reader.GetString("LogType"),
                 detail = reader.GetString("Detail"),
-                createdAt = reader.GetDateTime("CreatedAt").ToString("o"),
+                createdAt = DateTime.SpecifyKind(reader.GetDateTime("CreatedAt"), DateTimeKind.Utc).ToString("O"),
                 userName = reader.GetString("UserName"),
                 userEmail = reader.GetString("UserEmail")
             });
@@ -2084,7 +2084,7 @@ public sealed partial class SqlStore
             id = reader.GetInt32("AuditLogId"),
             type = reader.GetString("LogType"),
             detail = reader.GetString("Detail"),
-            createdAt = reader.GetDateTime("CreatedAt").ToString("o"),
+            createdAt = DateTime.SpecifyKind(reader.GetDateTime("CreatedAt"), DateTimeKind.Utc).ToString("O"),
             userName = reader.GetString("UserName"),
             userEmail = reader.GetString("UserEmail")
         });
@@ -5628,7 +5628,7 @@ public sealed partial class SqlStore
             IF @TaxRate IS NULL SET @TaxRate = 0.13;
 
             DECLARE @EffectiveDiscount decimal(18,2) = COALESCE(@Discount, 0);
-            IF EXISTS (SELECT 1 FROM dbo.Clientes WHERE CustomerId = @CustomerId AND IsFrequent = 1)
+            IF @ApplyFrequentDiscount = 1 AND EXISTS (SELECT 1 FROM dbo.Clientes WHERE CustomerId = @CustomerId AND IsFrequent = 1)
             BEGIN
                 DECLARE @FrequentDiscount decimal(18,2) = ROUND(@Subtotal * @FrequentDiscountRate, 2);
                 IF @FrequentDiscount > @EffectiveDiscount SET @EffectiveDiscount = @FrequentDiscount;
@@ -5730,6 +5730,7 @@ public sealed partial class SqlStore
             new SqlParameter("@Subtotal", input.Subtotal),
             new SqlParameter("@Discount", input.Discount),
             new SqlParameter("@PromotionId", (object?)input.PromotionId ?? DBNull.Value),
+            new SqlParameter("@ApplyFrequentDiscount", input.ApplyFrequentDiscount),
             new SqlParameter("@Tax", input.Tax),
             new SqlParameter("@Total", input.Total),
             new SqlParameter("@Notes", (object?)input.Notes?.Trim() ?? DBNull.Value),
@@ -5913,7 +5914,7 @@ public sealed partial class SqlStore
             var isFrequent = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
                 "SELECT IsFrequent FROM Clientes WHERE CustomerId = @CustomerId;",
                 new SqlParameter("@CustomerId", customerId)) ?? 0) == 1;
-            var frequentDiscount = isFrequent ? Math.Round(saleSubtotal * config.FrequentDiscountRate, 2) : 0m;
+            var frequentDiscount = input.ApplyFrequentDiscount && isFrequent ? Math.Round(saleSubtotal * config.FrequentDiscountRate, 2) : 0m;
             var manualDiscount = Math.Clamp(input.Discount, 0m, saleSubtotal);
             var promotionDiscountRate = input.PromotionId is > 0
                 ? Convert.ToDecimal(await ScalarInTransactionAsync(connection, transaction, """
@@ -6288,7 +6289,7 @@ public sealed partial class SqlStore
     public sealed record SupplierPaymentInput(string Supplier, decimal Amount, string? Account, string Method);
     public sealed record CreditNoteInput(int SaleId, string Reason);
     public sealed record CreateOrderInput(string CustomerName, string Email, string? Phone, int ProductId, decimal Quantity, decimal UnitPrice, decimal Subtotal, decimal Tax, decimal Total, DateTime DeliveryDate, string? Address, string? Notes, string? PaymentMethod, decimal? DestinationLatitude = null, decimal? DestinationLongitude = null, string? DeliveryReference = null, int? CustomerAddressId = null, string? DeliveryMethod = "domicilio");
-    public sealed record SaleInput(string? CustomerName, string? CustomerEmail, string? CustomerPhone, string? PaymentMethod, decimal Subtotal, decimal Discount, decimal Tax, decimal Total, string? Notes, IReadOnlyList<SaleItemInput> Items, int? PromotionId = null, IReadOnlyList<ComboSaleInput>? Combos = null);
+    public sealed record SaleInput(string? CustomerName, string? CustomerEmail, string? CustomerPhone, string? PaymentMethod, decimal Subtotal, decimal Discount, decimal Tax, decimal Total, string? Notes, IReadOnlyList<SaleItemInput> Items, int? PromotionId = null, IReadOnlyList<ComboSaleInput>? Combos = null, bool ApplyFrequentDiscount = false);
     public sealed record SaleItemInput(int ProductId, decimal Quantity, decimal UnitPrice);
     public sealed record ComboSaleInput(int ComboId, decimal Quantity);
 

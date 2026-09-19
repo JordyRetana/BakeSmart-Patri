@@ -610,7 +610,7 @@
                     return Math.min(numeric > 1 ? numeric / 100 : numeric, 1);
                 };
                 const manualDiscountRate = normalizeDiscountRate(input.discountRate);
-                const frequentDiscountRate = customer?.frequent ? Math.min(Math.max(Number(api.pos.config().frequentCustomerDiscount || 0), 0), 1) : 0;
+                const frequentDiscountRate = input.promotionId === 'frequent' && customer?.frequent ? Math.min(Math.max(Number(api.pos.config().frequentCustomerDiscount || 0), 0), 1) : 0;
                 const discountRate = Math.max(manualDiscountRate, frequentDiscountRate);
                 const taxRate = Number(api.pos.config().iva || 0);
                 const discountedSubtotal = Math.max(0, subtotal - subtotal * discountRate);
@@ -627,7 +627,8 @@
                     tax,
                     total,
                     notes: null,
-                    promotionId: input.promotionId ? Number(input.promotionId) : null,
+                    promotionId: input.promotionId && input.promotionId !== 'frequent' ? Number(input.promotionId) : null,
+                    applyFrequentDiscount: input.promotionId === 'frequent',
                     items: items.map(item => ({
                         productId: item.productId,
                         quantity: item.quantity,

@@ -1,58 +1,24 @@
-﻿@{
+@{
     Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Acceso Denegado";
+    ViewData["Title"] = "Acceso restringido";
+    Context.Response.StatusCode = 403;
 }
 
-<div style="min-height: 60vh; display: flex; align-items: center; justify-content: center;">
-    <div style="text-align: center; max-width: 500px;">
-        <div style="font-size: 8rem; font-weight: 800; background: linear-gradient(135deg, var(--warning), var(--danger)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1;">
-            403
+@section Styles { <link rel="stylesheet" href="~/css/pages/error-pages.css" asp-append-version="true" /> }
+
+<main class="bs-error" aria-labelledby="deniedTitle">
+    <section class="bs-error-card">
+        <div class="bs-error-symbol" aria-hidden="true"><i class="fas fa-lock"></i></div>
+        <span class="bs-error-code">Error 403</span>
+        <h1 id="deniedTitle">Esta sección está restringida</h1>
+        <p>Tu cuenta no tiene acceso a esta página. Puedes volver al inicio o entrar con otra cuenta que tenga el permiso necesario.</p>
+        <div class="bs-error-actions">
+            <a class="bs-error-button bs-error-button-primary" href="/"><i class="fas fa-house" aria-hidden="true"></i> Ir al inicio</a>
+            <a class="bs-error-button bs-error-button-secondary" href="/Account/Login"><i class="fas fa-right-to-bracket" aria-hidden="true"></i> Cambiar de cuenta</a>
         </div>
-
-        <h2 style="margin: 1rem 0;">Acceso Denegado</h2>
-
-        <p class="text-muted" style="margin-bottom: 2rem;">
-            No tienes permisos para acceder a esta sección. Si crees que esto es un error, contacta al administrador.
-        </p>
-
-        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-            <a href="/" class="btn-primary">
-                <i class="fas fa-home"></i>
-                Ir al inicio
-            </a>
-            <a href="/Account/Login" class="btn-outline">
-                <i class="fas fa-sign-in-alt"></i>
-                Cambiar usuario
-            </a>
-        </div>
-
-        <div style="margin-top: 3rem;">
-            <div class="card" style="text-align: left;">
-                <h4 style="margin-bottom: 0.5rem;">Tu perfil actual:</h4>
-                @if (User?.Identity?.IsAuthenticated ?? false)
-                {
-                    <p><strong>Usuario:</strong> @User.Identity.Name</p>
-                    <p>
-                        <strong>Roles:</strong>
-                        @if (User.IsInRole("Admin"))
-                        {
-                            <span class="badge badge-primary">Admin</span>
-                        }
-                        @if (User.IsInRole("Staff"))
-                        {
-                            <span class="badge badge-info">Staff</span>
-                        }
-                        @if (User.IsInRole("Cliente"))
-                        {
-                            <span class="badge badge-success">Cliente</span>
-                        }
-                    </p>
-                }
-                else
-                {
-                    <p class="text-muted">No has iniciado sesión</p>
-                }
-            </div>
-        </div>
-    </div>
-</div>
+        @if (User?.Identity?.IsAuthenticated ?? false)
+        {
+            <div class="bs-error-note"><i class="fas fa-circle-info" aria-hidden="true"></i><span>Sesión actual: <strong>@User.Identity.Name</strong>. Si necesitas acceso, consulta con un administrador.</span></div>
+        }
+    </section>
+</main>

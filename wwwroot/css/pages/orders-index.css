@@ -415,3 +415,28 @@
 .orders-customization-block span { color: #a1377e !important; }
 body.dark .orders-customization-block { background: linear-gradient(90deg, #322130, #251f33); }
 .orders-custom-tag,.production-custom-tag { display:inline-flex; align-items:center; gap:.35rem; width:fit-content; margin-top:.38rem; padding:.26rem .55rem; border-radius:999px; background:#f8e8f4; color:#a1377e; font-size:.68rem; font-weight:800; }
+
+body.dark .orders-list-item { background:#202a39; border-color:#46536a; color:#f5f7fc; }
+body.dark .orders-list-item:hover,
+body.dark .orders-list-item.is-active { background:#29354a; border-color:#a775e5; }
+body.dark .orders-list-top strong,
+body.dark .orders-list-top b { color:#f5f7fc; }
+body.dark .orders-list-sub,
+body.dark .orders-list-meta { color:#c5cede; }
+body.dark .orders-list-meta small { background:#17202d; border-color:#46536a; color:#e8ecf5; }
+body.dark .orders-list-icon { background:#3c2b59; border-color:#70549a; color:#d7bdff; }
+body.dark .orders-detail-grid > div,
+body.dark .orders-detail-block { background:#202a39; border-color:#46536a; }
+body.dark .orders-detail-grid span,
+body.dark .orders-detail-block span { color:#b6c4d7; }
+body.dark .orders-detail-grid strong,
+body.dark .orders-detail-block strong { color:#f6f7fc; }
+body.dark .orders-progress { background:#202a39; border-color:#46536a; }
+body.dark .orders-progress span { color:#d0d8e6; }
+body.dark .orders-progress i { background:#151c29; border-color:#526078; color:#d1d9e7; }
+body.dark .orders-progress .is-done i { background:#047857; border-color:#10b981; color:#fff; }
+body.dark .orders-progress .is-current i { background:linear-gradient(135deg,#7c3aed,#c83c86); border-color:transparent; color:#fff; }
+body.dark .orders-count-pill { background:#39294f; border-color:#6b4c8a; color:#e7d3ff; }
+body.dark .orders-custom-tag { background:#4a2942; color:#ffd3ef; }
+body.dark .orders-customization-block { background:linear-gradient(90deg,#382638,#272337); }
+body.dark .orders-customization-block span { color:#ffc5e7 !important; }

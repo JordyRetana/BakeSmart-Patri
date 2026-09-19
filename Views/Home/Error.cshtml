@@ -1,22 +1,19 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "No pudimos completar la solicitud";
+    ViewData["Title"] = "No pudimos abrir esta página";
 }
 
 @section Styles { <link rel="stylesheet" href="~/css/pages/error-pages.css" asp-append-version="true" /> }
 
-<main class="error-page" aria-labelledby="errorTitle">
-    <section class="error-card">
-        <div class="error-visual error-visual--server" aria-hidden="true"><span>500</span><i class="fas fa-cookie-bite"></i></div>
-        <div class="error-copy">
-            <span class="error-eyebrow">Error temporal</span>
-            <h1 id="errorTitle">No pudimos completar la solicitud</h1>
-            <p>Algo falló mientras procesábamos esta página. Puedes intentarlo nuevamente o volver a un lugar seguro.</p>
-            <div class="error-actions">
-                <button type="button" class="btn btn-primary" onclick="window.location.reload()"><i class="fas fa-rotate-right"></i> Intentar de nuevo</button>
-                <a class="btn btn-outline" href="/"><i class="fas fa-house"></i> Volver al inicio</a>
-            </div>
-            <small><i class="fas fa-circle-info"></i> Si vuelve a ocurrir, anota la hora y la acción que estabas realizando.</small>
+<main class="bs-error" aria-labelledby="errorTitle">
+    <section class="bs-error-card">
+        <div class="bs-error-symbol" aria-hidden="true"><i class="fas fa-cookie-bite"></i></div>
+        <span class="bs-error-code">Error 500</span>
+        <h1 id="errorTitle">Algo salió mal</h1>
+        <p>No pudimos completar esta solicitud. Espera un momento e inténtalo de nuevo. Si continúa, anota qué estabas haciendo para que podamos revisarlo.</p>
+        <div class="bs-error-actions">
+            <button type="button" class="bs-error-button bs-error-button-primary" onclick="window.location.reload()"><i class="fas fa-rotate-right" aria-hidden="true"></i> Intentar de nuevo</button>
+            <a class="bs-error-button bs-error-button-secondary" href="/"><i class="fas fa-house" aria-hidden="true"></i> Ir al inicio</a>
         </div>
     </section>
 </main>

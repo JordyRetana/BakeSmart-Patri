@@ -1,25 +1,34 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     var code = (int)(ViewBag.Code ?? 500);
-    var title = code switch { 400 => "La solicitud no es válida", 401 => "Necesitas iniciar sesión", 403 => "No tienes acceso a esta página", 404 => "No encontramos esta página", _ => "No pudimos completar la solicitud" };
-    var message = code switch { 400 => "Los datos enviados no pudieron procesarse. Regresa y revisa la información.", 401 => "Tu sesión terminó o necesitas identificarte para continuar.", 403 => "Tu cuenta no tiene permiso para abrir este contenido.", 404 => "El enlace puede estar desactualizado o la página fue movida.", _ => "Ocurrió un problema temporal. Intenta nuevamente en unos segundos." };
+    var title = code switch { 400 => "Revisa esta solicitud", 401 => "Inicia sesión para continuar", 403 => "Esta sección está restringida", 404 => "No encontramos esta página", _ => "Algo salió mal" };
+    var message = code switch { 400 => "No pudimos procesar los datos enviados. Vuelve a la página anterior y revisa la información.", 401 => "Tu sesión terminó o necesitas identificarte para continuar.", 403 => "Tu cuenta no tiene permiso para abrir este contenido.", 404 => "Puede que el enlace haya cambiado o que la página ya no esté disponible.", _ => "No pudimos completar esta solicitud. Inténtalo de nuevo en un momento." };
+    var icon = code switch { 400 => "fa-circle-exclamation", 401 => "fa-user-lock", 403 => "fa-lock", 404 => "fa-compass", _ => "fa-cookie-bite" };
     ViewData["Title"] = title;
 }
 
 @section Styles { <link rel="stylesheet" href="~/css/pages/error-pages.css" asp-append-version="true" /> }
 
-<main class="error-page" aria-labelledby="statusTitle">
-    <section class="error-card">
-        <div class="error-visual" aria-hidden="true"><span>@code</span><i class="fas @(code == 404 ? "fa-map-signs" : code == 403 ? "fa-lock" : code == 401 ? "fa-user-lock" : "fa-triangle-exclamation")"></i></div>
-        <div class="error-copy">
-            <span class="error-eyebrow">No se pudo abrir la página</span>
-            <h1 id="statusTitle">@title</h1>
-            <p>@message</p>
-            <div class="error-actions">
-                @if (code == 401) { <a class="btn btn-primary" href="/Account/Login"><i class="fas fa-right-to-bracket"></i> Iniciar sesión</a> }
-                else { <button type="button" class="btn btn-primary" onclick="history.length > 1 ? history.back() : location.assign('/')"><i class="fas fa-arrow-left"></i> Regresar</button> }
-                <a class="btn btn-outline" href="/"><i class="fas fa-house"></i> Ir al inicio</a>
-            </div>
+<main class="bs-error" aria-labelledby="statusTitle">
+    <section class="bs-error-card">
+        <div class="bs-error-symbol" aria-hidden="true"><i class="fas @icon"></i></div>
+        <span class="bs-error-code">Error @code</span>
+        <h1 id="statusTitle">@title</h1>
+        <p>@message</p>
+        <div class="bs-error-actions">
+            @if (code == 401)
+            {
+                <a class="bs-error-button bs-error-button-primary" href="/Account/Login"><i class="fas fa-right-to-bracket" aria-hidden="true"></i> Iniciar sesión</a>
+            }
+            else if (code == 500)
+            {
+                <button type="button" class="bs-error-button bs-error-button-primary" onclick="window.location.reload()"><i class="fas fa-rotate-right" aria-hidden="true"></i> Intentar de nuevo</button>
+            }
+            else
+            {
+                <button type="button" class="bs-error-button bs-error-button-primary" onclick="history.length > 1 ? history.back() : location.assign('/')"><i class="fas fa-arrow-left" aria-hidden="true"></i> Volver atrás</button>
+            }
+            <a class="bs-error-button bs-error-button-secondary" href="/"><i class="fas fa-house" aria-hidden="true"></i> Ir al inicio</a>
         </div>
     </section>
 </main>

@@ -41,7 +41,7 @@
     <div class="catalog-products-grid" id="productsGrid">
         @foreach (var product in Model.Products)
         {
-            <div class="card product-card" data-id="@product.Id" data-category="@product.Category" data-price="@product.UnitPrice" data-name="@product.Name">
+            <div class="card product-card" data-id="@product.Id" data-category="@product.Category" data-price="@product.UnitPrice" data-name="@product.Name" data-stock="@product.Stock.ToString(System.Globalization.CultureInfo.InvariantCulture)">
                 <div class="catalog-product-media">
                     <img src="@product.ImageUrl"
                          alt="@product.AltText"
@@ -274,6 +274,11 @@
     function openCategoriesSidebar() {
         const sidebar = document.getElementById('catalogCategoriesSidebar');
         const backdrop = document.getElementById('catalogCategoriesBackdrop');
+        // The animated page container creates a stacking context below the header.
+        // Keep the drawer at body level so it remains in front after every opening.
+        if (sidebar.parentElement !== document.body) {
+            document.body.append(backdrop, sidebar);
+        }
         sidebar.classList.add('is-open');
         sidebar.setAttribute('aria-hidden', 'false');
         backdrop.hidden = false;
@@ -327,7 +332,13 @@
     }
 
     function addToCart(productId, name, price) {
+        const card = document.querySelector(`.product-card[data-id="${productId}"]`);
+        const available = Math.max(0, Math.floor(Number(card?.dataset.stock || 0)));
         const existingItem = cart.find(item => !item.isCombo && Number(item.id) === Number(productId));
+        if ((existingItem?.quantity || 0) >= available) {
+            app.toast.warning(available ? `Solo quedan ${available} unidades disponibles de ${name}.` : `${name} no tiene existencias disponibles.`);
+            return;
+        }
         if (existingItem) {
             existingItem.quantity++;
         } else {

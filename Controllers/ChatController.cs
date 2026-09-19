@@ -30,9 +30,13 @@ public class ChatController : ControllerBase
         if (string.IsNullOrWhiteSpace(req.Message))
             return BadRequest(new { message = "Escriba un mensaje para el asistente." });
 
+        var simpleMessage = req.Message.Trim().ToLowerInvariant();
+        if (System.Text.RegularExpressions.Regex.IsMatch(simpleMessage, @"^(hola|buenas|buenos días|buenos dias|buenas tardes|buenas noches|hey|saludos)[!¡. ]*$"))
+            return Ok(new { reply = "¡Hola! Soy Richie 🍰 Puedo ayudarte a encontrar productos, revisar el catálogo o explicarte cómo hacer un pedido.", products = Array.Empty<object>(), navigation = (object?)null, cartOffer = (object?)null });
+
         var apiKey = _config["Groq:ApiKey"] ?? _config["GROQ_API_KEY"];
         if (string.IsNullOrWhiteSpace(apiKey))
-            return BadRequest(new { message = "Falta configurar la API key del bot." });
+            return Ok(new { reply = "Ahora mismo no puedo responder preguntas detalladas. Puedes explorar el catálogo o escribirnos desde Contacto.", products = Array.Empty<object>(), navigation = (object?)ResolveNavigation(req.Message), cartOffer = (object?)null });
 
         var databaseContext = await BuildDatabaseContextAsync();
         var userContext = await BuildUserContextAsync();

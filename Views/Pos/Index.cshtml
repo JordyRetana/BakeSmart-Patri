@@ -405,8 +405,8 @@
                         && new Date(`${x.endDate}T23:59:59`) >= new Date()
                         && (!x.customerIds?.length || (customer && x.customerIds.map(Number).includes(Number(customer.id)))));
                     const selected = select.value;
-                    select.innerHTML = '<option value="">Sin promoción</option>' + promotions.map(p => `<option value="${p.id}">${p.name} · ${(Number(p.discount) * 100).toFixed(0)}%</option>`).join('');
-                    select.value = promotions.some(p => String(p.id) === selected) ? selected : '';
+                    select.innerHTML = '<option value="">Sin promoción</option>' + (customer?.frequent ? `<option value="frequent">Cliente frecuente · ${Math.round(Number(store.pos.config().frequentCustomerDiscount || 0) * 100)}%</option>` : '') + promotions.map(p => `<option value="${p.id}">${p.name} · ${(Number(p.discount) * 100).toFixed(0)}%</option>`).join('');
+                    select.value = (selected === 'frequent' && customer?.frequent) || promotions.some(p => String(p.id) === selected) ? selected : '';
                     select.dispatchEvent(new Event('change', { bubbles: true }));
                 });
 

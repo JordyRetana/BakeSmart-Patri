@@ -223,7 +223,6 @@
                 updatedOrder.estado = result.status;
                 updatedOrder.status = result.status;
             }
-            await renderProduction();
             await store.refresh({ keys: ['orders'], force: true });
             await renderProduction();
             app.toast.success(`Pedido #${orderId} actualizado.`);
