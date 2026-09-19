@@ -293,3 +293,47 @@ body.dark .users-security-action { color:#c4b5fd; border-color:#5b4a78; }
 
 .users-client-group > summary::marker { display: none; }
 .users-client-group[open] > summary { border-bottom: 1px solid var(--border); }
+
+/* Users directory: balanced density and consistent dark surfaces. */
+@media (min-width: 1081px) {
+    .users-layout { grid-template-columns:minmax(0,1fr) 300px; gap:1.15rem; }
+}
+
+.users-table-card { padding:1.15rem !important; }
+.users-roles-card { padding:1rem !important; }
+.users-table-scroll { border:1px solid var(--border); border-radius:10px; }
+.users-table { width:100%; min-width:850px; table-layout:fixed; }
+.users-table th,.users-table td { padding:.82rem .7rem !important; vertical-align:middle; }
+.users-table th:nth-child(1){width:27%}.users-table th:nth-child(2){width:21%}.users-table th:nth-child(3){width:14%}.users-table th:nth-child(4){width:11%}.users-table th:nth-child(5){width:11%}.users-table th:nth-child(6){width:16%}
+.users-table td:first-child small,.users-table td:nth-child(2) span,.users-table td:nth-child(2) small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.users-created-at { white-space:nowrap; font-variant-numeric:tabular-nums; }
+.users-row-actions { align-items:center; flex-wrap:nowrap; white-space:nowrap; }
+.users-row-actions .btn { min-height:36px; }
+.users-role-list { gap:.72rem; }
+.users-role-chip { padding:.9rem; background:color-mix(in srgb,var(--primary) 3%,var(--bg-card)); }
+.users-role-chip b { min-width:38px; height:32px; }
+.users-client-group { border-radius:10px; }
+
+body.dark .users-table-card,
+body.dark .users-roles-card,
+body.dark .users-kpis article,
+body.dark .users-hero { background:#1d1a26 !important; border-color:#453a52 !important; }
+body.dark .users-table-scroll { border-color:#42506a !important; background:#152033 !important; }
+body.dark .users-table thead th { color:#dbeafe !important; background:#101827 !important; border-color:#344158 !important; }
+body.dark .users-table tbody td { color:#e5e7eb !important; background:#172235 !important; border-color:#344158 !important; }
+body.dark .users-table tbody tr:hover td { background:#1c2940 !important; }
+body.dark .users-table td small { color:#aebbd0 !important; }
+body.dark .users-role-chip { background:#17141e !important; border-color:#493c55 !important; }
+body.dark .users-role-chip strong { color:#f8fafc !important; }
+body.dark .users-role-chip span { color:#b9c4d4 !important; }
+body.dark .users-role-chip b { color:#d8b4fe !important; background:#352548 !important; border-color:#624678 !important; }
+body.dark .users-client-group { border-color:#453a52; }
+body.dark .users-client-group > summary { color:#f8fafc !important; background:#251d32 !important; }
+body.dark .users-row-actions .btn { color:#eadcff !important; background:#352747 !important; border-color:#584269 !important; }
+body.dark .users-row-actions .btn:hover { background:#49305f !important; border-color:#8b5cf6 !important; }
+
+@media(max-width:1280px) and (min-width:1081px){
+    .users-layout{grid-template-columns:minmax(0,1fr) 270px}
+    .users-table{min-width:820px}
+    .users-table th,.users-table td{padding:.72rem .55rem !important}
+}

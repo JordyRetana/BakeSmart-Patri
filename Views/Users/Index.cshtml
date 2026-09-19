@@ -104,6 +104,7 @@
     const clientsBody = document.getElementById('clientsTableBody');
     const search = document.getElementById('userSearch');
     const rolePreview = document.getElementById('rolePreview');
+    const shortDate = value => new Intl.DateTimeFormat('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value));
 
     const clean = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 
@@ -205,7 +206,7 @@
                 <td><span>${clean(u.email)}</span><small>${clean(u.phone)}</small></td>
                 <td><span class="badge badge-primary">${clean(u.role)}</span></td>
                 <td><span class="badge ${u.active ? 'badge-success' : 'badge-warning'}">${u.active ? 'Activo' : 'Inactivo'}</span>${u.twoFactorResetPending ? '<small class="users-security-pending"><i class="fas fa-clock"></i> Solicitud 2FA</small>' : (u.twoFactorEnabled ? '<small class="users-security-enabled"><i class="fas fa-shield-halved"></i> 2FA activo</small>' : '')}</td>
-                <td>${new Date(u.createdAt).toLocaleDateString('es-CR')}</td>
+                <td class="users-created-at">${shortDate(u.createdAt)}</td>
                 <td class="text-right">
                     <div class="users-row-actions">
                         <button class="btn btn-outline btn-sm" onclick="editUser(${u.id})"><i class="fas fa-pen"></i></button>
@@ -221,7 +222,7 @@
                 <td><strong>${clean(u.firstName)} ${clean(u.lastName)}</strong><small>${clean(u.address || 'Sin dirección')}</small></td>
                 <td><span>${clean(u.email)}</span><small>${clean(u.phone)}</small></td>
                 <td><span class="badge ${u.active ? 'badge-success' : 'badge-warning'}">${u.active ? 'Activo' : 'Inactivo'}</span>${u.twoFactorResetPending ? '<small class="users-security-pending"><i class="fas fa-clock"></i> Solicitud 2FA</small>' : (u.twoFactorEnabled ? '<small class="users-security-enabled"><i class="fas fa-shield-halved"></i> 2FA activo</small>' : '')}</td>
-                <td>${new Date(u.createdAt).toLocaleDateString('es-CR')}</td>
+                <td class="users-created-at">${shortDate(u.createdAt)}</td>
                 <td class="text-right"><div class="users-row-actions">
                     <button class="btn btn-outline btn-sm" onclick="editUser(${u.id})"><i class="fas fa-pen"></i></button>
                     <button class="btn btn-outline btn-sm" onclick="toggleUser(${u.id})">${u.active ? 'Desactivar' : 'Activar'}</button>
