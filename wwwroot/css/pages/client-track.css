@@ -780,11 +780,15 @@
 .track-layout {
     grid-template-columns: minmax(0, 1.7fr) minmax(300px, .65fr) !important;
     gap: 1.25rem !important;
+    align-items: stretch !important;
 }
 
 .track-map-card {
     padding: 0 !important;
     border-radius: 28px !important;
+    align-self: stretch !important;
+    display: flex;
+    flex-direction: column;
 }
 
 .track-map-header {
@@ -794,7 +798,9 @@
 }
 
 .track-page .delivery-map {
-    height: clamp(440px, 57vh, 680px) !important;
+    height: clamp(440px, 57vh, 680px);
+    min-height: 540px;
+    flex: 1;
     border: 0 !important;
     border-radius: 0 0 27px 27px !important;
 }
@@ -836,5 +842,5 @@ body.dark .track-page .leaflet-control-zoom a { color: #111827 !important; backg
     .track-kpis { grid-template-columns: 1fr !important; }
     .track-side-stack { grid-template-columns: 1fr; }
     .track-map-header { padding: 1rem !important; }
-    .track-page .delivery-map { height: 390px !important; }
+    .track-page .delivery-map { height: 390px !important; min-height: 390px; flex: none; }
 }

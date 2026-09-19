@@ -155,9 +155,11 @@ public sealed partial class SqlStore
                 ps.Name AS PaymentStatus,
                 pm.Name AS PaymentMethod,
                 o.Notes,
-                COALESCE(ca.AddressLine, o.DestinationLabel) AS Address,
+                COALESCE(NULLIF(o.DestinationLabel, ''), ca.AddressLine) AS Address,
+                o.RouteMode,
                 o.DestinationLatitude,
                 o.DestinationLongitude,
+                o.DestinationCountry,
                 o.CurrentLatitude,
                 o.CurrentLongitude,
                 o.TrackingStep,
@@ -176,7 +178,7 @@ public sealed partial class SqlStore
             INNER JOIN dbo.Productos p ON p.ProductId = oi.ProductId
             WHERE (@CustomerEmail IS NULL OR c.Email = @CustomerEmail)
             GROUP BY o.OrderId, c.FullName, c.Email, c.Phone, os.Name, o.DeliveryDate, o.Total, oc.Name, ps.Name, pm.Name, o.Notes,
-                     ca.AddressLine, o.DestinationLabel, o.DestinationLatitude, o.DestinationLongitude,
+                     ca.AddressLine, o.DestinationLabel, o.RouteMode, o.DestinationLatitude, o.DestinationLongitude, o.DestinationCountry,
                      o.CurrentLatitude, o.CurrentLongitude, o.TrackingStep, o.CreatedAt
             ORDER BY o.CreatedAt DESC;
             """;
@@ -212,6 +214,7 @@ public sealed partial class SqlStore
             notes,
             isCustomOrder = !string.IsNullOrWhiteSpace(notes) && notes.Contains("Tipo de encargo", StringComparison.OrdinalIgnoreCase),
             address = reader.GetString("Address"),
+            routeMode = reader.GetNullableString("RouteMode") ?? "ground",
             destinationLat = reader.GetDecimal("DestinationLatitude"),
             destinationLng = reader.GetDecimal("DestinationLongitude"),
             tracking = new
@@ -220,6 +223,7 @@ public sealed partial class SqlStore
                 currentLng = reader.GetDecimal("CurrentLongitude"),
                 destinationLat = reader.GetDecimal("DestinationLatitude"),
                 destinationLng = reader.GetDecimal("DestinationLongitude"),
+                destinationCountry = reader.GetNullableString("DestinationCountry") ?? "Costa Rica",
                 currentStep,
                 steps = new[] { "Pendiente pago", "Confirmado", "En produccion", "Listo", "En camino", "Entregado" }
             }
@@ -5772,7 +5776,8 @@ public sealed partial class SqlStore
                 {
                     destinationLat ??= addressReader.GetNullableDecimal("Latitude");
                     destinationLng ??= addressReader.GetNullableDecimal("Longitude");
-                    destinationLabel = addressReader.GetNullableString("AddressLine") ?? destinationLabel;
+                    if (string.IsNullOrWhiteSpace(input.Address))
+                        destinationLabel = addressReader.GetNullableString("AddressLine") ?? destinationLabel;
                 }
             }
 

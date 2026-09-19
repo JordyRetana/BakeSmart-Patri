@@ -706,8 +706,8 @@
         geo: {
             origin() {
                 const config = cached("posConfig", {});
-                const defaultLat = 9.9281;
-                const defaultLng = -84.0907;
+                const defaultLat = 9.9142;
+                const defaultLng = -84.0734;
                 const lat = Number(config.originLatitude);
                 const lng = Number(config.originLongitude);
                 return {
@@ -715,8 +715,8 @@
                     address: config.originAddress || "",
                     city: "San Jose",
                     country: "Costa Rica",
-                    lat: Number.isFinite(lat) ? lat : defaultLat,
-                    lng: Number.isFinite(lng) ? lng : defaultLng
+                    lat: Number.isFinite(lat) && lat !== 0 ? lat : defaultLat,
+                    lng: Number.isFinite(lng) && lng !== 0 ? lng : defaultLng
                 };
             },
             presets() {

@@ -1078,7 +1078,8 @@
         addNavigation(data.navigation);
         } catch (err) {
         typingEl.remove();
-        addMsg('bot', 'Uy, se me cayo un poquito de merengue 🍰 Proba de nuevo en un momento.');
+        addMsg('bot', 'No puedo responder desde el chat en este momento. Puedes revisar los productos disponibles en el catálogo.');
+        addNavigation({ label: 'Ver catálogo', url: '/Catalog' });
         }
         }
 

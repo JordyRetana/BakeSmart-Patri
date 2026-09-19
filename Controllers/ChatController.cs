@@ -33,10 +33,13 @@ public class ChatController : ControllerBase
         var simpleMessage = req.Message.Trim().ToLowerInvariant();
         if (System.Text.RegularExpressions.Regex.IsMatch(simpleMessage, @"^(hola|buenas|buenos días|buenos dias|buenas tardes|buenas noches|hey|saludos)[!¡. ]*$"))
             return Ok(new { reply = "¡Hola! Soy Richie 🍰 Puedo ayudarte a encontrar productos, revisar el catálogo o explicarte cómo hacer un pedido.", products = Array.Empty<object>(), navigation = (object?)null, cartOffer = (object?)null });
+        if (System.Text.RegularExpressions.Regex.IsMatch(simpleMessage, @"\b(mi|mis)\s+pedidos?\b") ||
+            HasProductIntent(simpleMessage) || ResolveNavigation(simpleMessage) is not null)
+            return await FallbackResponseAsync(req.Message);
 
         var apiKey = _config["Groq:ApiKey"] ?? _config["GROQ_API_KEY"];
         if (string.IsNullOrWhiteSpace(apiKey))
-            return Ok(new { reply = "Ahora mismo no puedo responder preguntas detalladas. Puedes explorar el catálogo o escribirnos desde Contacto.", products = Array.Empty<object>(), navigation = (object?)ResolveNavigation(req.Message), cartOffer = (object?)null });
+            return await FallbackResponseAsync(req.Message);
 
         var databaseContext = await BuildDatabaseContextAsync();
         var userContext = await BuildUserContextAsync();
@@ -90,17 +93,23 @@ public class ChatController : ControllerBase
         request.Headers.Add("Authorization", $"Bearer {apiKey}");
         request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
 
-        var response = await _http.SendAsync(request);
-        var json = await response.Content.ReadAsStringAsync();
-        if (!response.IsSuccessStatusCode)
-            return StatusCode((int)response.StatusCode, new { message = "Richie no pudo responder en este momento. Intente de nuevo en unos segundos." });
+        string? reply;
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+            using var response = await _http.SendAsync(request, timeout.Token);
+            if (!response.IsSuccessStatusCode)
+                return await FallbackResponseAsync(req.Message);
 
-        using var doc = JsonDocument.Parse(json);
-        var reply = doc.RootElement
-            .GetProperty("choices")[0]
-            .GetProperty("message")
-            .GetProperty("content")
-            .GetString();
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(timeout.Token));
+            reply = doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString();
+            if (string.IsNullOrWhiteSpace(reply))
+                return await FallbackResponseAsync(req.Message);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or KeyNotFoundException or InvalidOperationException)
+        {
+            return await FallbackResponseAsync(req.Message);
+        }
 
         var products = await GetChatProductsAsync(req.Message);
         var navigation = ResolveNavigation(req.Message);
@@ -109,10 +118,39 @@ public class ChatController : ControllerBase
         return Ok(new { reply = conciseReply, products, navigation, cartOffer });
     }
 
+    private async Task<IActionResult> FallbackResponseAsync(string message)
+    {
+        IReadOnlyList<object> products = Array.Empty<object>();
+        var productIntent = HasProductIntent(message);
+        try
+        {
+            if (productIntent && await ShouldUseDatabaseAsync())
+                products = await GetChatProductsAsync(message);
+        }
+        catch { /* El catálogo puede fallar sin impedir que Richie oriente al visitante. */ }
+
+        var asksForOwnOrders = System.Text.RegularExpressions.Regex.IsMatch(message, @"\b(mi|mis)\s+pedidos?\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var navigation = asksForOwnOrders
+            ? (User?.Identity?.IsAuthenticated ?? false)
+                ? (object)new { label = "Ver mis pedidos", url = "/Client/Orders" }
+                : new { label = "Iniciar sesión", url = "/Account/Login" }
+            : ResolveNavigation(message) ?? (productIntent ? new { label = "Ver catálogo", url = "/Catalog" } : null);
+        var reply = asksForOwnOrders
+            ? (User?.Identity?.IsAuthenticated ?? false ? "Puedes ver el estado de tus pedidos desde Mis pedidos." : "Inicia sesión para consultar tus pedidos de forma segura.")
+            : products.Count > 0
+            ? "Encontré estas opciones disponibles en el catálogo. Puedes abrir la que te interese para ver sus detalles."
+            : productIntent
+                ? "No encontré productos para mostrar aquí. Puedes revisar el catálogo completo y sus existencias actuales."
+            : navigation is not null
+                ? "Te dejo el acceso a esa sección. Si necesitas ayuda con un producto, dime cuál buscas."
+                : "Puedo ayudarte a buscar productos, consultar el catálogo o explicarte cómo hacer un pedido. Para una consulta específica, también puedes escribirnos desde Contacto.";
+        return Ok(new { reply, products, navigation, cartOffer = (object?)null });
+    }
+
     private async Task<IReadOnlyList<object>> GetChatProductsAsync(string message)
     {
         var normalized = message.ToLowerInvariant();
-        if (!new[] { "producto", "productos", "catalogo", "catálogo", "precio", "que tienen", "que hay", "brownie", "queque", "cupcake", "galleta" }.Any(normalized.Contains)) return Array.Empty<object>();
+        if (!HasProductIntent(normalized)) return Array.Empty<object>();
         var terms = normalized.Split(new[] { ' ', ',', '.', '?', '¿', '!', '¡' }, StringSplitOptions.RemoveEmptyEntries)
             .Where(term => term.Length >= 4 && term is not "producto" and not "productos" and not "precio" and not "catalogo" and not "catálogo")
             .ToArray();
@@ -124,6 +162,10 @@ public class ChatController : ControllerBase
         }
         return list.Take(8).Select(product => (object)new { id = product.Id, name = product.Name, price = product.UnitPrice, stock = product.Stock, category = product.Category }).ToArray();
     }
+
+    private static bool HasProductIntent(string message) =>
+        new[] { "producto", "productos", "catalogo", "catálogo", "precio", "que tienen", "que hay", "brownie", "queque", "cupcake", "galleta" }
+            .Any(message.Contains);
 
     private static object? ResolveNavigation(string message)
     {

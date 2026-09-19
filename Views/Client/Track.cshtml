@@ -105,8 +105,8 @@
         address: '',
         city: 'San Jose',
         country: 'Costa Rica',
-        lat: 9.9281,
-        lng: -84.0907
+        lat: 9.9142,
+        lng: -84.0734
     };
     const orderSelect = document.getElementById('trackOrderSelect');
     const userEmail = document.body.dataset.userEmail || '';
@@ -117,6 +117,7 @@
     let layers = [];
     let activeOrderId = null;
     let pageInitialized = false;
+    let mapResizeObserver;
 
     function isValidCoordinate(lat, lng) {
         const latitude = Number(lat);
@@ -252,6 +253,8 @@
             worldCopyJump: true,
             preferCanvas: true
         }).setView([origin.lat, origin.lng], 10);
+        mapResizeObserver = new ResizeObserver(() => map.invalidateSize({ pan: false }));
+        mapResizeObserver.observe(document.getElementById('deliveryMap'));
 
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
@@ -282,10 +285,12 @@
 
     async function roadRoute(start, end) {
         const query = new URLSearchParams({ startLat: start[0], startLng: start[1], endLat: end[0], endLng: end[1] });
-        const response = await fetch(`/api/geo/route?${query}`);
-        if (!response.ok) return null;
-        const route = await response.json();
-        return Array.isArray(route.points) && route.points.length > 1 ? route : null;
+        try {
+            const response = await fetch(`/api/geo/route?${query}`, { signal: AbortSignal.timeout(8000) });
+            if (!response.ok) return null;
+            const route = await response.json();
+            return Array.isArray(route.points) && route.points.length > 1 ? route : null;
+        } catch { return null; }
     }
 
     function renderLiveStatus(order, hasLiveRoute) {
@@ -436,33 +441,50 @@
         const destination = exactDestination(order);
         const safeDestination = destination || { name: order.address || 'Dirección pendiente', country: 'Costa Rica' };
         const isInternational = safeDestination.country !== 'Costa Rica';
-        const hasLiveRoute = canShowLiveRoute(order);
-        const routeType = hasLiveRoute ? (isInternational ? 'Trayectoria aerea' : 'Trayecto local') : 'Ruta pendiente';
+        const isPickup = String(order.routeMode || '').toLowerCase() === 'pickup';
+        const hasLiveRoute = !isPickup && canShowLiveRoute(order);
+        const routeType = isPickup ? 'Retiro en tienda' : hasLiveRoute ? (isInternational ? 'Trayectoria aérea' : 'Trayecto local') : 'Ruta pendiente';
         document.getElementById('trackOrderId').textContent = `#${order.id}`;
         document.getElementById('trackStatus').textContent = order.status;
         document.getElementById('trackRouteType').textContent = routeType;
-        document.getElementById('trackMeta').textContent = `${origin.city}, ${origin.country} → ${safeDestination.name}, ${safeDestination.country}`;
+        document.getElementById('trackMeta').textContent = `${origin.name} → ${safeDestination.name}`;
 
         clearVisuals();
         renderTimeline(order, safeDestination, hasLiveRoute);
         renderTrackingSummary(order, safeDestination, routeType);
         renderLiveStatus(order, hasLiveRoute);
 
-        const mapInstance = ensureMap();
         const startLatLng = [origin.lat, origin.lng];
         if (!destination) {
             document.getElementById('trackMeta').textContent = 'Este pedido no tiene coordenadas verificadas. La dirección debe corregirse antes de mostrar una ruta.';
-            document.getElementById('deliveryMap').innerHTML = '<div class="track-empty-state"><i class="fas fa-map-location-dot"></i><strong>Ubicación exacta pendiente</strong><span>No mostraremos pines aproximados ni ubicaciones inventadas. Actualice la dirección del pedido para habilitar el mapa.</span></div>';
+            const mapWithoutDestination = ensureMap();
+            if (mapWithoutDestination) {
+                mapWithoutDestination.setView(startLatLng, 13);
+                const notice = document.createElement('div');
+                notice.className = 'track-map-notice';
+                notice.innerHTML = '<span><i class="fas fa-map-location-dot"></i></span><div><strong>Ubicación exacta pendiente</strong><p>Corrige la dirección del pedido para ver el destino y la ruta.</p></div>';
+                document.getElementById('deliveryMap').appendChild(notice);
+            }
             return;
         }
+        const mapInstance = ensureMap();
         const destinationLatLng = [destination.lat, destination.lng];
         if (!mapInstance || !isValidCoordinate(startLatLng[0], startLatLng[1])) return;
 
         const icons = getIcons();
 
         const originMarker = L.marker(startLatLng, { icon: icons.origin }).addTo(mapInstance).bindPopup(`${origin.name}<br>${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)}`);
-        const destinationMarker = L.marker(destinationLatLng, { icon: icons.destination }).addTo(mapInstance).bindPopup(`${destination.name}<br>${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)}`);
-        markers.push(originMarker, destinationMarker);
+        markers.push(originMarker);
+        if (!isPickup) {
+            const destinationMarker = L.marker(destinationLatLng, { icon: icons.destination }).addTo(mapInstance).bindPopup(`${escapeHtml(destination.name)}<br>${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)}`);
+            markers.push(destinationMarker);
+        }
+        if (isPickup) {
+            document.getElementById('trackMeta').textContent = 'Retiro en tienda · el origen y el destino son el mismo punto';
+            mapInstance.setView(startLatLng, 15);
+            requestAnimationFrame(() => mapInstance.invalidateSize(true));
+            return;
+        }
         const calculatedRoute = await roadRoute(startLatLng, destinationLatLng);
         if (Number(activeOrderId) !== Number(order.id)) return;
         const routePoints = calculatedRoute?.points || [startLatLng, destinationLatLng];
@@ -479,7 +501,7 @@
             ? (Math.abs(currentPoint[0] - origin.lat) < .00008 && Math.abs(currentPoint[1] - origin.lng) < .00008 ? 'salida registrada en el negocio' : 'última ubicación real reportada')
             : 'sin ubicación en vivo';
         document.getElementById('trackMeta').textContent = `${calculatedRoute ? 'Ruta vial verificada' : 'Referencia entre coordenadas'} · ${distance} · ${locationLabel}`;
-        mapInstance.fitBounds(L.latLngBounds(routePoints), { padding: [48, 48] });
+        mapInstance.fitBounds(L.latLngBounds(routePoints), { padding: [48, 48], maxZoom: 16 });
 
         requestAnimationFrame(() => {
             mapInstance.invalidateSize(true);
