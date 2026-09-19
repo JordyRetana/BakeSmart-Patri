@@ -58,5 +58,13 @@ namespace BakeSmartPatri.Controllers
         }
 
         public IActionResult Error() => View();
+
+        [Route("Home/Status")]
+        public IActionResult Status(int code = 500)
+        {
+            Response.StatusCode = code;
+            ViewBag.Code = code;
+            return View("~/Views/Shared/Status.cshtml");
+        }
     }
 }

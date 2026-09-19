@@ -1,13 +1,25 @@
-﻿@{
+@{
     Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Estado";
     var code = (int)(ViewBag.Code ?? 500);
+    var title = code switch { 400 => "La solicitud no es válida", 401 => "Necesitas iniciar sesión", 403 => "No tienes acceso a esta página", 404 => "No encontramos esta página", _ => "No pudimos completar la solicitud" };
+    var message = code switch { 400 => "Los datos enviados no pudieron procesarse. Regresa y revisa la información.", 401 => "Tu sesión terminó o necesitas identificarte para continuar.", 403 => "Tu cuenta no tiene permiso para abrir este contenido.", 404 => "El enlace puede estar desactualizado o la página fue movida.", _ => "Ocurrió un problema temporal. Intenta nuevamente en unos segundos." };
+    ViewData["Title"] = title;
 }
 
-<div class="card">
-    <div class="text-2xl font-extrabold">Estado</div>
-    <div class="muted mt-1">Código HTTP: <b>@code</b></div>
-    <div class="mt-4">
-        <a class="btn" href="/">Volver al inicio</a>
-    </div>
-</div>
+@section Styles { <link rel="stylesheet" href="~/css/pages/error-pages.css" asp-append-version="true" /> }
+
+<main class="error-page" aria-labelledby="statusTitle">
+    <section class="error-card">
+        <div class="error-visual" aria-hidden="true"><span>@code</span><i class="fas @(code == 404 ? "fa-map-signs" : code == 403 ? "fa-lock" : code == 401 ? "fa-user-lock" : "fa-triangle-exclamation")"></i></div>
+        <div class="error-copy">
+            <span class="error-eyebrow">No se pudo abrir la página</span>
+            <h1 id="statusTitle">@title</h1>
+            <p>@message</p>
+            <div class="error-actions">
+                @if (code == 401) { <a class="btn btn-primary" href="/Account/Login"><i class="fas fa-right-to-bracket"></i> Iniciar sesión</a> }
+                else { <button type="button" class="btn btn-primary" onclick="history.length > 1 ? history.back() : location.assign('/')"><i class="fas fa-arrow-left"></i> Regresar</button> }
+                <a class="btn btn-outline" href="/"><i class="fas fa-house"></i> Ir al inicio</a>
+            </div>
+        </div>
+    </section>
+</main>

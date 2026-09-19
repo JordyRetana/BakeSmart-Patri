@@ -269,6 +269,10 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseRouting();
 
+app.UseWhen(
+    context => !context.Request.Path.StartsWithSegments("/api") && !Path.HasExtension(context.Request.Path),
+    branch => branch.UseStatusCodePagesWithReExecute("/Home/Status", "?code={0}"));
+
 app.Use(async (context, next) =>
 {
     context.Response.Headers.XContentTypeOptions = "nosniff";
