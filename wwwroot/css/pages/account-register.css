@@ -476,8 +476,8 @@ body.dark .auth-help-card--login { color:#d4cede; }
 body.dark .auth-help-card--login a { color:#c4b5fd; }
 
 /* Compact registration layout. */
-body[data-page="/account/register"] .auth-page-shell.register-page { width:min(1080px,calc(100% - 2rem)) !important; gap:.65rem; }
-body[data-page="/account/register"] .register-card { grid-template-columns:.56fr 1.44fr !important; min-height:0; }
+body[data-page="/account/register"] .auth-page-shell.register-page { width:min(1280px,calc(100% - 2rem)) !important; gap:.7rem; }
+body[data-page="/account/register"] .register-card { grid-template-columns:.65fr 1.35fr !important; min-height:0; }
 body[data-page="/account/register"] .auth-hero { padding:1.65rem !important; }
 body[data-page="/account/register"] .auth-logo-wrap { width:58px !important; height:58px !important; margin:0 0 .75rem !important; border-radius:16px !important; background:rgba(255,255,255,.18) !important; box-shadow:none !important; }
 body[data-page="/account/register"] .auth-logo-wrap i { display:block !important; color:#fff !important; font-size:1.35rem !important; }
@@ -488,19 +488,21 @@ body[data-page="/account/register"] .auth-benefits div { grid-template-columns:3
 body[data-page="/account/register"] .auth-benefits span { width:32px; height:32px; }
 body[data-page="/account/register"] .auth-benefits strong { font-size:.76rem; }
 body[data-page="/account/register"] .auth-benefits small { font-size:.66rem; }
-body[data-page="/account/register"] .register-form-panel { padding:1.5rem 1.8rem; }
-body[data-page="/account/register"] .register-heading h1 { font-size:1.55rem; }
-body[data-page="/account/register"] .register-heading p { margin:.35rem 0 .9rem; font-size:.82rem; }
-body[data-page="/account/register"] .register-grid { gap:.65rem .8rem; }
-body[data-page="/account/register"] .register-form .input { min-height:39px; font-size:.82rem; }
-body[data-page="/account/register"] .input-label { font-size:.72rem; }
-body[data-page="/account/register"] .register-phone-row { border:1px solid #dcd3e8 !important; border-radius:10px; box-shadow:none !important; }
-body[data-page="/account/register"] .register-phone-row .input { border:0 !important; outline:0 !important; box-shadow:none !important; }
+body[data-page="/account/register"] .register-form-panel { padding:1.65rem 2.15rem; }
+body[data-page="/account/register"] .register-heading h1 { font-size:1.75rem; }
+body[data-page="/account/register"] .register-heading p { margin:.4rem 0 1rem; font-size:.86rem; }
+body[data-page="/account/register"] .register-grid { gap:.72rem .9rem; }
+body[data-page="/account/register"] .register-form .input { height:44px; min-height:44px; box-sizing:border-box; font-size:.86rem; }
+body[data-page="/account/register"] .input-label { font-size:.76rem; }
+body[data-page="/account/register"] .register-phone-row { height:44px; box-sizing:border-box; border:1px solid #dcd3e8 !important; border-radius:10px; box-shadow:none !important; }
+body[data-page="/account/register"] .register-phone-row .input { height:42px; min-height:42px; border:0 !important; outline:0 !important; box-shadow:none !important; }
 body[data-page="/account/register"] .register-phone-row select.input { flex-basis:112px; width:112px; border-right:1px solid #e6deee !important; }
 body[data-page="/account/register"] .register-phone-row:focus-within { border-color:#8b5cf6 !important; box-shadow:0 0 0 3px rgba(124,58,237,.11) !important; }
 body[data-page="/account/register"] .password-strength { margin:.6rem 0 .75rem; }
-body[data-page="/account/register"] .register-submit-btn { min-height:43px !important; }
-body[data-page="/account/register"] .auth-help-card--login { width:max-content; max-width:100%; justify-self:center; gap:.55rem; padding:.65rem 1rem; border-radius:999px; background:#fff; box-shadow:0 8px 24px rgba(46,30,64,.07); font-size:.8rem; }
+body[data-page="/account/register"] .register-submit-btn { min-height:46px !important; }
+body[data-page="/account/register"] .password-field { height:44px; }
+body[data-page="/account/register"] .password-toggle { top:4px !important; right:4px !important; transform:none !important; width:36px !important; height:36px !important; min-height:36px !important; padding:0 !important; border:0 !important; box-shadow:none !important; z-index:2; }
+body[data-page="/account/register"] .auth-help-card--login { width:100%; min-height:44px; box-sizing:border-box; justify-self:stretch; justify-content:center; gap:.65rem; padding:.55rem 1rem; border-radius:8px; background:#fff; box-shadow:0 8px 24px rgba(46,30,64,.05); font-size:.82rem; }
 body.dark[data-page="/account/register"] .register-phone-row { border-color:#4b3f61 !important; background:#111827; }
 body.dark[data-page="/account/register"] .register-phone-row select.input { border-right-color:#4b3f61 !important; }
 body.dark[data-page="/account/register"] .auth-help-card--login { background:#211e2b; border-color:#403649; }
