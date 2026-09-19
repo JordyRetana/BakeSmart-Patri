@@ -451,6 +451,30 @@ body[data-page="/account/register"] .auth-hero .auth-logo-wrap {
     margin-left: 0 !important;
 }
 
+/* Clear visual groups for the registration flow. */
+.register-section-title { display:flex; align-items:center; gap:.75rem; margin:.15rem 0 .2rem; padding:.75rem .85rem; border-radius:10px; background:linear-gradient(100deg,#f6f0ff,#fff7fb); }
+.register-section-title--access { margin-top:.35rem; }
+.register-section-title>span { width:36px; height:36px; display:grid; place-items:center; flex:0 0 36px; border-radius:9px; background:linear-gradient(135deg,#7c3aed,#d53f7b); color:#fff; }
+.register-section-title strong,.register-section-title small { display:block; }
+.register-section-title strong { color:#27314a; font-size:.86rem; }
+.register-section-title small { margin-top:.12rem; color:#747b8b; font-size:.72rem; }
+.register-form .input { border-radius:10px; background:#fdfcff; transition:border-color .18s ease,box-shadow .18s ease,background .18s ease; }
+.register-form .input:focus { border-color:#8b5cf6; background:#fff; box-shadow:0 0 0 3px rgba(124,58,237,.11); }
+.password-strength__labels { display:flex; justify-content:space-between; grid-template-columns:none; gap:.75rem; }
+.password-strength__labels b { min-width:76px !important; color:#7b7280 !important; text-align:right; }
+.password-strength[data-level="weak"] .password-strength__labels b { color:#ec267e !important; }
+.password-strength[data-level="medium"] .password-strength__labels b { color:#f59e0b !important; }
+.password-strength[data-level="strong"] .password-strength__labels b { color:#36a852 !important; }
+.password-strength__help { color:#7d8493; font-size:.7rem; line-height:1.45; }
+.register-submit-note { display:flex; justify-content:center; align-items:center; gap:.4rem; margin:.65rem 0 0; color:#777e8e; font-size:.72rem; }
+.auth-help-card--login { justify-content:center; padding:1rem; color:#5f6573; }
+.auth-help-card--login a { display:inline-flex; align-items:center; gap:.4rem; color:#6d35ba; font-weight:900; text-decoration:none; }
+body.dark .register-section-title { background:linear-gradient(100deg,#29223a,#2b202d); }
+body.dark .register-section-title strong { color:#fff; }
+body.dark .register-section-title small,body.dark .password-strength__help,body.dark .register-submit-note { color:#c8c2d0; }
+body.dark .auth-help-card--login { color:#d4cede; }
+body.dark .auth-help-card--login a { color:#c4b5fd; }
+
 @media (max-width: 900px) {
     body[data-page="/account/register"] .register-card {
         grid-template-columns: 1fr !important;
