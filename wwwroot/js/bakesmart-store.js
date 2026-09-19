@@ -638,9 +638,11 @@
                 };
 
                 const result = await request("/api/pos/sell", { method: "POST", body: JSON.stringify(saleInput) });
-                await loadPosSessions();
-                await load("inventory", "/api/inventory", [], { force: true });
-                await load("inventoryMovements", "/api/inventory/movements", [], { force: true });
+                await Promise.allSettled([
+                    loadPosSessions(),
+                    load("inventory", "/api/inventory", [], { force: true }),
+                    load("inventoryMovements", "/api/inventory/movements", [], { force: true })
+                ]);
                 return result;
             }
         },

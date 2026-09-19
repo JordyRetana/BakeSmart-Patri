@@ -225,7 +225,7 @@
                     <div id="posCartDesktop" class="pos-cart-list"></div>
 
                     <div class="pos-cart-summary-actions">
-                        <button class="btn btn-outline" type="button" onclick="closeCartPanel()">Seguir vendiendo</button>
+                        <button class="btn btn-outline" id="posContinueSelling" type="button">Seguir vendiendo</button>
                         <button class="btn btn-primary" type="button" onclick="continueToCart()">
                             Continuar
                             <i class="fas fa-arrow-right"></i>
@@ -1060,6 +1060,8 @@
                     panel.style.display = 'none';
                 }
             }
+
+            document.getElementById('posContinueSelling')?.addEventListener('click', closeCartPanel);
 
             const navSignal = app.navigation.getAbortSignal();
             document.getElementById('posCartToggle').addEventListener('click', openCartPanel);
