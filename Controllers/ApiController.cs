@@ -14,6 +14,7 @@ namespace BakeSmartPatri.Controllers;
 [Route("api")]
 public class ApiController : Controller
 {
+    public sealed record ResetTwoFactorRequest(string? Password, string? Code);
     private readonly SqlStore _sqlStore;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IWebHostEnvironment _environment;
@@ -691,6 +692,28 @@ public class ApiController : Controller
     {
         await _sqlStore.ToggleUserAsync(id);
         await _sqlStore.AddAuditLogAsync("USUARIO_TOGGLE", $"Usuario ID {id} cambio de estado", CurrentUserEmail);
+        return Ok(new { ok = true });
+    }
+
+    [HttpPost("users/{id:int}/reset-two-factor")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> ResetUserTwoFactor(int id, [FromBody] ResetTwoFactorRequest request)
+    {
+        var adminEmail = CurrentUserEmail ?? string.Empty;
+        var verification = await _sqlStore.AuthenticateSecureAsync(adminEmail, request.Password ?? string.Empty);
+        if (verification.User is null || verification.Status is SqlStore.SecureAuthStatus.Invalid or SqlStore.SecureAuthStatus.Locked or SqlStore.SecureAuthStatus.EmailNotConfirmed)
+            return BadRequest(new { message = "La contraseña del administrador no es correcta." });
+        if (verification.Status == SqlStore.SecureAuthStatus.RequiresTwoFactor && !await _sqlStore.VerifyTwoFactorAsync(adminEmail, request.Code ?? string.Empty))
+            return BadRequest(new { message = "Ingrese el código actual de verificación del administrador." });
+
+        var email = await _sqlStore.ResetTwoFactorAsync(id, adminEmail);
+        if (email is null) return NotFound(new { message = "No se encontró el usuario." });
+        await _sqlStore.AddAuditLogAsync("RESTABLECER_2FA", $"Se restableció la verificación en dos pasos de {email}; se cerraron sus sesiones activas", adminEmail);
+        try
+        {
+            await _emailService.SendAsync(email, email, "Verificación en dos pasos restablecida", "Un administrador restableció su verificación en dos pasos. Sus sesiones anteriores fueron cerradas. Ya puede iniciar sesión y configurar nuevamente el autenticador desde la seguridad de su cuenta. Si no solicitó este cambio, comuníquese inmediatamente con BakeSmart Patri.");
+        }
+        catch { }
         return Ok(new { ok = true });
     }
 

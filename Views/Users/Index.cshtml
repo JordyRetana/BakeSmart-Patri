@@ -204,12 +204,13 @@
                 <td><strong>${clean(u.firstName)} ${clean(u.lastName)}</strong><small>${clean(u.address || 'Sin dirección')}</small></td>
                 <td><span>${clean(u.email)}</span><small>${clean(u.phone)}</small></td>
                 <td><span class="badge badge-primary">${clean(u.role)}</span></td>
-                <td><span class="badge ${u.active ? 'badge-success' : 'badge-warning'}">${u.active ? 'Activo' : 'Inactivo'}</span></td>
+                <td><span class="badge ${u.active ? 'badge-success' : 'badge-warning'}">${u.active ? 'Activo' : 'Inactivo'}</span>${u.twoFactorResetPending ? '<small class="users-security-pending"><i class="fas fa-clock"></i> Solicitud 2FA</small>' : (u.twoFactorEnabled ? '<small class="users-security-enabled"><i class="fas fa-shield-halved"></i> 2FA activo</small>' : '')}</td>
                 <td>${new Date(u.createdAt).toLocaleDateString('es-CR')}</td>
                 <td class="text-right">
                     <div class="users-row-actions">
                         <button class="btn btn-outline btn-sm" onclick="editUser(${u.id})"><i class="fas fa-pen"></i></button>
                         <button class="btn btn-outline btn-sm" onclick="toggleUser(${u.id})">${u.active ? 'Desactivar' : 'Activar'}</button>
+                    ${u.twoFactorEnabled ? `<button class="btn btn-outline btn-sm users-security-action" onclick="openTwoFactorReset(${u.id})" title="Restablecer verificación en dos pasos" aria-label="Restablecer verificación en dos pasos"><i class="fas fa-shield-virus"></i></button>` : ''}
                     </div>
                 </td>
             </tr>
@@ -219,11 +220,12 @@
             <tr>
                 <td><strong>${clean(u.firstName)} ${clean(u.lastName)}</strong><small>${clean(u.address || 'Sin dirección')}</small></td>
                 <td><span>${clean(u.email)}</span><small>${clean(u.phone)}</small></td>
-                <td><span class="badge ${u.active ? 'badge-success' : 'badge-warning'}">${u.active ? 'Activo' : 'Inactivo'}</span></td>
+                <td><span class="badge ${u.active ? 'badge-success' : 'badge-warning'}">${u.active ? 'Activo' : 'Inactivo'}</span>${u.twoFactorResetPending ? '<small class="users-security-pending"><i class="fas fa-clock"></i> Solicitud 2FA</small>' : (u.twoFactorEnabled ? '<small class="users-security-enabled"><i class="fas fa-shield-halved"></i> 2FA activo</small>' : '')}</td>
                 <td>${new Date(u.createdAt).toLocaleDateString('es-CR')}</td>
                 <td class="text-right"><div class="users-row-actions">
                     <button class="btn btn-outline btn-sm" onclick="editUser(${u.id})"><i class="fas fa-pen"></i></button>
                     <button class="btn btn-outline btn-sm" onclick="toggleUser(${u.id})">${u.active ? 'Desactivar' : 'Activar'}</button>
+                    ${u.twoFactorEnabled ? `<button class="btn btn-outline btn-sm users-security-action" onclick="openTwoFactorReset(${u.id})" title="Restablecer verificación en dos pasos" aria-label="Restablecer verificación en dos pasos"><i class="fas fa-shield-virus"></i></button>` : ''}
                 </div></td>
             </tr>
         `).join('') || `<tr><td colspan="5" class="text-center text-muted">No hay clientes registrados.</td></tr>`;
@@ -239,6 +241,26 @@
         await store.users.toggle(id);
         app.toast.success('Estado actualizado.');
         renderUsers();
+    };
+
+    window.openTwoFactorReset = id => {
+        const user = store.users.list().find(x => Number(x.id) === Number(id));
+        if (!user) return;
+        app.modal.open({ title: 'Restablecer verificación en dos pasos', maxWidth: '520px', content: `<form id="twoFactorResetForm" class="users-security-form">
+            <div class="users-security-warning"><i class="fas fa-triangle-exclamation"></i><p><strong>${clean(user.firstName)} ${clean(user.lastName)}</strong><span>${clean(user.email)}</span></p></div>
+            <p>Se eliminará el autenticador actual y se cerrarán todas las sesiones de esta cuenta. El usuario recibirá un correo para configurarlo nuevamente.</p>
+            <label>Contraseña del administrador<input class="form-control" type="password" name="password" required autocomplete="current-password" /></label>
+            <label>Código 2FA del administrador <small>(si está activado)</small><input class="form-control" name="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" /></label>
+            <div class="users-security-form-actions"><button type="button" class="btn btn-outline" onclick="app.modal.close()">Cancelar</button><button class="btn btn-primary" type="submit"><i class="fas fa-shield-halved"></i> Restablecer 2FA</button></div>
+        </form>` });
+        document.getElementById('twoFactorResetForm')?.addEventListener('submit', async event => {
+            event.preventDefault();
+            const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+            await store.users.resetTwoFactor(id, data.password || '', data.code || '');
+            app.modal.close();
+            app.toast.success('Verificación en dos pasos restablecida y sesiones cerradas.');
+            renderUsers();
+        });
     };
 
     document.getElementById('openUserQuickActions').addEventListener('click', () => openUserModal());

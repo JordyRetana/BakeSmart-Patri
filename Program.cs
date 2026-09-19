@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
@@ -170,6 +171,24 @@ var authentication = builder.Services
 
             context.Response.Redirect(context.RedirectUri);
             return Task.CompletedTask;
+        };
+        o.Events.OnValidatePrincipal = async context =>
+        {
+            var email = context.Principal?.FindFirstValue(ClaimTypes.Email)
+                ?? context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+            var claimedVersion = context.Principal?.FindFirstValue("bakesmart:session-version");
+            if (string.IsNullOrWhiteSpace(email) || !int.TryParse(claimedVersion, out var version))
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return;
+            }
+            var store = context.HttpContext.RequestServices.GetRequiredService<SqlStore>();
+            if (await store.GetSessionVersionAsync(email) != version)
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            }
         };
     })
     .AddCookie("External", options =>

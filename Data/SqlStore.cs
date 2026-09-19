@@ -1138,15 +1138,18 @@ public sealed partial class SqlStore
     {
         await EnsureAuthenticationTablesAsync();
         const string sql = """
-            SELECT u.UserId, u.FirstName, u.LastName, u.Email, u.Phone, u.AddressLine, u.IsActive, u.CreatedAt, r.RoleName, COALESCE(s.IsTestAccount,0) IsTestAccount
+            SELECT u.UserId, u.FirstName, u.LastName, u.Email, u.Phone, u.AddressLine, u.IsActive, u.CreatedAt, r.RoleName, COALESCE(s.IsTestAccount,0) IsTestAccount, COALESCE(s.TwoFactorEnabled,0) TwoFactorEnabled,
+                   CASE WHEN q.Status='PENDIENTE' THEN 1 ELSE 0 END TwoFactorResetPending
             FROM dbo.Usuarios u
             INNER JOIN dbo.Roles r ON r.RoleId = u.RoleId
             LEFT JOIN dbo.SeguridadUsuarios s ON LOWER(s.Email)=LOWER(u.Email)
+            LEFT JOIN dbo.SolicitudesRestablecimiento2FA q ON LOWER(q.Email)=LOWER(u.Email)
             ORDER BY u.FirstName, u.LastName;
             """;
 
         var usersSql = UseMySql
             ? sql.Replace("LOWER(s.Email)=LOWER(u.Email)", "LOWER(s.Email) COLLATE utf8mb4_unicode_ci=LOWER(u.Email) COLLATE utf8mb4_unicode_ci")
+                 .Replace("LOWER(q.Email)=LOWER(u.Email)", "LOWER(q.Email) COLLATE utf8mb4_unicode_ci=LOWER(u.Email) COLLATE utf8mb4_unicode_ci")
             : sql;
         return await QueryAsync(usersSql, reader => new
         {
@@ -1159,6 +1162,8 @@ public sealed partial class SqlStore
             role = reader.GetString("RoleName"),
             active = reader.GetBoolean("IsActive"),
             isTestAccount = Convert.ToBoolean(reader["IsTestAccount"]),
+            twoFactorEnabled = Convert.ToBoolean(reader["TwoFactorEnabled"]),
+            twoFactorResetPending = Convert.ToBoolean(reader["TwoFactorResetPending"]),
             createdAt = reader.GetDateTime("CreatedAt").ToString("o")
         });
     }

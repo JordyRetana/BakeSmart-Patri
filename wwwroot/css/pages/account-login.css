@@ -328,6 +328,13 @@ body.dark .password-card .login-form { background:#171b2b !important; }
 .login-help-verify { grid-template-columns: 42px 1fr; margin-bottom: .6rem; }
 .login-help-form { display: grid; gap: .7rem; }
 .login-help-form .btn { min-height: 48px; }
+.login-help-recovery { margin-top:.8rem; }
+.login-help-recovery > summary { list-style:none; cursor:pointer; margin-bottom:0; }
+.login-help-recovery > summary::-webkit-details-marker { display:none; }
+.login-help-recovery[open] > summary { border-color:#8b5cf6; border-radius:12px 12px 0 0; }
+.login-help-recovery[open] > summary > i:last-child { transform:rotate(180deg); }
+.login-help-recovery-body { padding:.9rem; border:1px solid #e5daef; border-top:0; border-radius:0 0 12px 12px; background:#fff; }
+.login-help-recovery-body p { margin:0 0 .75rem; color:#686274; font-size:.82rem; line-height:1.45; }
 .login-alert-success { border-color: #b7e4c7; background: #effbf3; color: #18723a; }
 
 .login-submit-btn,
@@ -421,6 +428,8 @@ body.dark .login-help-option strong { color: #fff !important; }
 body.dark .login-help-option small { color: #cbd5e1 !important; }
 body.dark .login-help-option > i:first-child { background: #312453; color: #c4b5fd; }
 body.dark .login-help-option > i:last-child { color: #c4b5fd; }
+body.dark .login-help-recovery-body { border-color:#403653; background:#151827; }
+body.dark .login-help-recovery-body p { color:#cbd5e1 !important; }
 body.dark .login-help-form .input {
     border-color: #51436b !important;
     background: #111827 !important;

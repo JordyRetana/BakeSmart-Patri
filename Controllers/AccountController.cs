@@ -208,6 +208,25 @@ namespace BakeSmartPatri.Controllers
             return RedirectToAction(nameof(Login));
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [EnableRateLimiting("auth")]
+        public async Task<IActionResult> RequestTwoFactorReset(string email)
+        {
+            email = (email ?? "").Trim().ToLowerInvariant();
+            if (!string.IsNullOrWhiteSpace(email) && await _sqlStore.RequestTwoFactorResetAsync(email))
+            {
+                try
+                {
+                    await _emailService.SendAsync(email, email, "Solicitud para recuperar la verificación en dos pasos", "Recibimos su solicitud. Por seguridad, un administrador debe validar su identidad y restablecer la verificación en dos pasos. Le avisaremos por correo cuando pueda volver a ingresar y configurar un autenticador nuevo. Si no hizo esta solicitud, comuníquese con BakeSmart Patri.");
+                }
+                catch { }
+                try { await _sqlStore.AddAuditLogAsync("SOLICITUD_RESTABLECER_2FA", $"Solicitud de restablecimiento 2FA para {email}"); } catch { }
+            }
+            TempData["ToastSuccess"] = "Si la cuenta tiene verificación en dos pasos, registramos la solicitud y enviamos las instrucciones por correo.";
+            return RedirectToAction(nameof(Login));
+        }
+
         [HttpGet]
         public IActionResult TwoFactor()
         {
@@ -572,6 +591,7 @@ namespace BakeSmartPatri.Controllers
                 new(ClaimTypes.Role, user.Role),
                 new("bakesmart:2fa", security.TwoFactorEnabled ? "enabled" : "disabled"),
                 new("bakesmart:password-setup", security.PasswordSetupRequired ? "required" : "complete"),
+                new("bakesmart:session-version", (await _sqlStore.GetSessionVersionAsync(user.Email)).ToString(CultureInfo.InvariantCulture)),
             };
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);

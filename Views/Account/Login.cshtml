@@ -83,6 +83,17 @@
                     <input id="resendEmail" class="input" type="email" name="email" placeholder="tu@correo.com" required autocomplete="email" aria-label="Correo para reenviar verificación" />
                     <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-paper-plane"></i> Enviar verificación</button>
                 </form>
+                <details class="login-help-recovery">
+                    <summary class="login-help-option"><i class="fas fa-mobile-screen-button"></i><span><strong>Perdí mi verificación en dos pasos</strong><small>Solicita al administrador que restablezca tu autenticador.</small></span><i class="fas fa-chevron-down"></i></summary>
+                    <div class="login-help-recovery-body">
+                        <p>Por seguridad, un administrador revisará la solicitud. Te avisaremos por correo cuando puedas ingresar y configurar un autenticador nuevo.</p>
+                        <form class="login-help-form" method="post" action="/Account/RequestTwoFactorReset">
+                            @Html.AntiForgeryToken()
+                            <input class="input" type="email" name="email" placeholder="tu@correo.com" required autocomplete="email" aria-label="Correo de la cuenta sin acceso al autenticador" />
+                            <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-shield-halved"></i> Solicitar ayuda</button>
+                        </form>
+                    </div>
+                </details>
             </section>
         </div>
     </section>

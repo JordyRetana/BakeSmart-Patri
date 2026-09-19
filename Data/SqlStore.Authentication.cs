@@ -139,6 +139,44 @@ public sealed partial class SqlStore
         return state.TwoFactorEnabled && !string.IsNullOrWhiteSpace(state.TotpSecret) && VerifyTotp(state.TotpSecret, code);
     }
 
+    public async Task<int> GetSessionVersionAsync(string email)
+    {
+        await EnsureAuthenticationTablesAsync();
+        var table = UseMySql ? "SeguridadUsuarios" : "dbo.SeguridadUsuarios";
+        return Convert.ToInt32(await ScalarAsync($"SELECT SessionVersion FROM {table} WHERE LOWER(Email)=LOWER(@Email);", new SqlParameter("@Email", email)) ?? 0);
+    }
+
+    public async Task<bool> RequestTwoFactorResetAsync(string email)
+    {
+        await EnsureAuthenticationTablesAsync();
+        email = email.Trim().ToLowerInvariant();
+        var users = UseMySql ? "Usuarios" : "dbo.Usuarios";
+        var security = UseMySql ? "SeguridadUsuarios" : "dbo.SeguridadUsuarios";
+        var requests = UseMySql ? "SolicitudesRestablecimiento2FA" : "dbo.SolicitudesRestablecimiento2FA";
+        var emailJoin = UseMySql ? "LOWER(s.Email) COLLATE utf8mb4_unicode_ci=LOWER(u.Email) COLLATE utf8mb4_unicode_ci" : "LOWER(s.Email)=LOWER(u.Email)";
+        var exists = Convert.ToInt32(await ScalarAsync($"SELECT COUNT(1) FROM {users} u INNER JOIN {security} s ON {emailJoin} WHERE LOWER(u.Email)=LOWER(@Email) AND u.IsActive=1 AND s.TwoFactorEnabled=1;", new SqlParameter("@Email", email)) ?? 0) > 0;
+        if (!exists) return false;
+        var sql = UseMySql
+            ? $"INSERT INTO {requests}(Email,Status,RequestedAt) VALUES(@Email,'PENDIENTE',UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE Status='PENDIENTE',RequestedAt=UTC_TIMESTAMP(),ResolvedAt=NULL,ResolvedBy=NULL;"
+            : $"IF EXISTS(SELECT 1 FROM {requests} WHERE LOWER(Email)=LOWER(@Email)) UPDATE {requests} SET Status='PENDIENTE',RequestedAt=SYSUTCDATETIME(),ResolvedAt=NULL,ResolvedBy=NULL WHERE LOWER(Email)=LOWER(@Email); ELSE INSERT INTO {requests}(Email,Status,RequestedAt) VALUES(@Email,'PENDIENTE',SYSUTCDATETIME());";
+        await ExecuteAsync(sql, new SqlParameter("@Email", email));
+        return true;
+    }
+
+    public async Task<string?> ResetTwoFactorAsync(int userId, string resolvedBy)
+    {
+        await EnsureAuthenticationTablesAsync();
+        var users = UseMySql ? "Usuarios" : "dbo.Usuarios";
+        var security = UseMySql ? "SeguridadUsuarios" : "dbo.SeguridadUsuarios";
+        var requests = UseMySql ? "SolicitudesRestablecimiento2FA" : "dbo.SolicitudesRestablecimiento2FA";
+        var email = (await QueryAsync($"SELECT Email FROM {users} WHERE UserId=@UserId;", r => r.GetString("Email"), new SqlParameter("@UserId", userId))).FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(email)) return null;
+        var now = UseMySql ? "UTC_TIMESTAMP()" : "SYSUTCDATETIME()";
+        await ExecuteAsync($"UPDATE {security} SET TwoFactorEnabled=0,TotpSecret=NULL,FailedLoginAttempts=0,LockoutEnd=NULL,SessionVersion=SessionVersion+1,UpdatedAt={now} WHERE LOWER(Email)=LOWER(@Email); UPDATE {requests} SET Status='RESUELTA',ResolvedAt={now},ResolvedBy=@ResolvedBy WHERE LOWER(Email)=LOWER(@Email) AND Status='PENDIENTE';",
+            new SqlParameter("@Email", email), new SqlParameter("@ResolvedBy", resolvedBy));
+        return email;
+    }
+
     public async Task<AuthUser> RegisterOrGetGoogleUserAsync(string email, string displayName, string providerId)
     {
         await EnsureAuthenticationTablesAsync();
@@ -196,10 +234,13 @@ public sealed partial class SqlStore
                 var hasPasswordSetupMigrated = Convert.ToInt32(await ScalarAsync("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='SeguridadUsuarios' AND COLUMN_NAME='PasswordSetupMigrated';")) > 0;
                 if (!hasPasswordSetupMigrated)
                     await ExecuteAsync("ALTER TABLE SeguridadUsuarios ADD COLUMN PasswordSetupMigrated bit NOT NULL DEFAULT 0;");
+                if (Convert.ToInt32(await ScalarAsync("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='SeguridadUsuarios' AND COLUMN_NAME='SessionVersion';")) == 0)
+                    await ExecuteAsync("ALTER TABLE SeguridadUsuarios ADD COLUMN SessionVersion int NOT NULL DEFAULT 0;");
                 await ExecuteAsync("""
                 INSERT IGNORE INTO SeguridadUsuarios(Email,EmailConfirmed,UpdatedAt) SELECT LOWER(Email),1,UTC_TIMESTAMP() FROM Usuarios;
                 UPDATE SeguridadUsuarios SET PasswordSetupRequired=CASE WHEN ExternalProvider='Google' THEN 1 ELSE 0 END,PasswordSetupMigrated=1 WHERE PasswordSetupMigrated=0;
                 CREATE TABLE IF NOT EXISTS TokensConfirmacionCorreo (TokenId int NOT NULL AUTO_INCREMENT PRIMARY KEY, Email varchar(254) NOT NULL, TokenHash char(64) NOT NULL UNIQUE, ExpiresAt datetime NOT NULL, UsedAt datetime NULL, CreatedAt datetime NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                CREATE TABLE IF NOT EXISTS SolicitudesRestablecimiento2FA (Email varchar(254) NOT NULL PRIMARY KEY, Status varchar(20) NOT NULL, RequestedAt datetime NOT NULL, ResolvedAt datetime NULL, ResolvedBy varchar(254) NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """);
             }
             else
@@ -210,11 +251,13 @@ public sealed partial class SqlStore
                 await ExecuteAsync("""
                 IF COL_LENGTH('dbo.SeguridadUsuarios','PasswordSetupRequired') IS NULL ALTER TABLE dbo.SeguridadUsuarios ADD PasswordSetupRequired bit NOT NULL CONSTRAINT DF_SeguridadUsuarios_PasswordSetupRequired DEFAULT 0;
                 IF COL_LENGTH('dbo.SeguridadUsuarios','PasswordSetupMigrated') IS NULL ALTER TABLE dbo.SeguridadUsuarios ADD PasswordSetupMigrated bit NOT NULL CONSTRAINT DF_SeguridadUsuarios_PasswordSetupMigrated DEFAULT 0;
+                IF COL_LENGTH('dbo.SeguridadUsuarios','SessionVersion') IS NULL ALTER TABLE dbo.SeguridadUsuarios ADD SessionVersion int NOT NULL CONSTRAINT DF_SeguridadUsuarios_SessionVersion DEFAULT 0;
                 """);
                 await ExecuteAsync("""
                 INSERT INTO dbo.SeguridadUsuarios(Email,EmailConfirmed) SELECT LOWER(u.Email),1 FROM dbo.Usuarios u WHERE NOT EXISTS(SELECT 1 FROM dbo.SeguridadUsuarios s WHERE LOWER(s.Email)=LOWER(u.Email));
                 UPDATE dbo.SeguridadUsuarios SET PasswordSetupRequired=CASE WHEN ExternalProvider='Google' THEN 1 ELSE 0 END,PasswordSetupMigrated=1 WHERE PasswordSetupMigrated=0;
                 IF OBJECT_ID(N'dbo.TokensConfirmacionCorreo',N'U') IS NULL CREATE TABLE dbo.TokensConfirmacionCorreo(TokenId int IDENTITY PRIMARY KEY,Email nvarchar(254) NOT NULL,TokenHash char(64) NOT NULL UNIQUE,ExpiresAt datetime2 NOT NULL,UsedAt datetime2 NULL,CreatedAt datetime2 NOT NULL);
+                IF OBJECT_ID(N'dbo.SolicitudesRestablecimiento2FA',N'U') IS NULL CREATE TABLE dbo.SolicitudesRestablecimiento2FA(Email nvarchar(254) NOT NULL PRIMARY KEY,Status nvarchar(20) NOT NULL,RequestedAt datetime2 NOT NULL,ResolvedAt datetime2 NULL,ResolvedBy nvarchar(254) NULL);
                 """);
             }
 
