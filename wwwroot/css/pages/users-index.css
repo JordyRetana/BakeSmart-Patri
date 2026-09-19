@@ -337,3 +337,193 @@ body.dark .users-row-actions .btn:hover { background:#49305f !important; border-
     .users-table{min-width:820px}
     .users-table th,.users-table td{padding:.72rem .55rem !important}
 }
+
+/* The users directory must stay inside its card. The global smart-table rules use
+   a wide minimum intended for accounting reports, which made this page scroll. */
+.users-page .users-table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.users-page .users-table.smart-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+}
+
+.users-page .users-table th,
+.users-page .users-table td {
+    min-width: 0;
+}
+
+.users-page .users-table th:nth-child(1) { width: 25%; }
+.users-page .users-table th:nth-child(2) { width: 21%; }
+.users-page .users-table th:nth-child(3) { width: 14%; }
+.users-page .users-table th:nth-child(4) { width: 12%; }
+.users-page .users-table th:nth-child(5) { width: 11%; }
+.users-page .users-table th:nth-child(6) { width: 17%; }
+
+.users-page .users-table td:first-child,
+.users-page .users-table td:nth-child(2) {
+    overflow: hidden;
+}
+
+.users-page .users-row-actions {
+    display: flex;
+    width: 100%;
+    gap: .35rem;
+}
+
+.users-page .users-row-actions .btn {
+    min-width: 34px;
+    min-height: 34px;
+    padding: .45rem .58rem !important;
+    font-size: .72rem;
+}
+
+.users-page .smart-table-toolbar {
+    padding: .65rem;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--primary) 3%, var(--bg-card));
+    box-shadow: none;
+}
+
+.users-page .smart-table-search {
+    width: min(420px, 100%);
+    min-height: 40px;
+    border-radius: 9px;
+}
+
+.users-page .smart-table-search input {
+    font-size: .8rem;
+}
+
+.users-page .smart-table-dock {
+    min-height: 48px;
+    padding: .45rem .65rem;
+    box-shadow: none;
+}
+
+.users-page .smart-table-page-size {
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.users-page .smart-table-page-size span {
+    display: inline-block;
+    min-width: max-content;
+}
+
+.users-page .smart-table-page-size select {
+    width: 66px !important;
+    min-width: 66px !important;
+    min-height: 36px !important;
+    padding: .4rem 2rem .4rem .7rem !important;
+}
+
+@media (max-width: 1360px) {
+    .users-layout,
+    .users-layout:first-child {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    .users-role-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-height: none;
+        overflow: visible;
+    }
+}
+
+@media (max-width: 760px) {
+    .users-page { gap: .75rem; }
+    .users-table-card,
+    .users-roles-card { padding: .75rem !important; }
+    .users-section-head { margin-bottom: .65rem; }
+    .users-section-head h2 { font-size: 1.45rem; }
+
+    .users-page .smart-table-toolbar {
+        gap: .55rem;
+        margin-bottom: .6rem;
+        padding: .55rem;
+    }
+
+    .users-page .smart-table-toolbar-meta {
+        justify-content: stretch;
+    }
+
+    .users-page .smart-table-match {
+        width: 100%;
+        justify-content: center;
+        padding: .42rem .6rem;
+    }
+
+    .users-page .users-table-scroll {
+        max-height: none;
+        overflow: visible;
+        border: 0;
+        background: transparent !important;
+    }
+
+    .users-page .users-table.smart-table tbody {
+        gap: .65rem !important;
+    }
+
+    .users-page .users-table.smart-table tbody tr:not(.smart-row-hidden) {
+        padding: .35rem .7rem !important;
+        border-radius: 12px !important;
+        box-shadow: none !important;
+    }
+
+    .users-page .users-table.smart-table tbody td {
+        grid-template-columns: 78px minmax(0, 1fr) !important;
+        min-height: 38px !important;
+        padding: .48rem 0 !important;
+        gap: .55rem !important;
+        text-align: left !important;
+    }
+
+    .users-page .users-table.smart-table tbody td > :where(strong, span, small, div) {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .users-page .users-table td:first-child small,
+    .users-page .users-table td:nth-child(2) span,
+    .users-page .users-table td:nth-child(2) small {
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .users-page .users-row-actions {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr) 40px;
+        max-width: none;
+        gap: .45rem;
+    }
+
+    .users-page .users-row-actions .btn {
+        width: 100%;
+        min-height: 38px;
+        margin: 0;
+    }
+
+    .users-page .smart-table-dock,
+    .users-page .smart-table-dock.is-compact {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: .55rem;
+        padding: .5rem;
+    }
+
+    .users-page .smart-table-pagination {
+        justify-content: center;
+        overflow: visible;
+    }
+
+    .users-page .smart-table-page-size {
+        justify-self: start;
+    }
+
+    .users-role-list { grid-template-columns: 1fr; }
+    .users-client-group { margin-top: .75rem; }
+}
