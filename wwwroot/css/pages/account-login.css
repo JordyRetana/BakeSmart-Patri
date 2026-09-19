@@ -312,19 +312,22 @@ body.dark .password-card .login-form { background:#171b2b !important; }
     text-decoration: none;
 }
 
-.login-help { margin-top: 1rem; border: 1px solid #e8e0ee; border-radius: 12px; overflow: hidden; }
-.login-help summary { display: flex; justify-content: space-between; align-items: center; padding: .9rem 1rem; cursor: pointer; color: #6331ad; font-weight: 900; list-style: none; }
-.login-help summary::-webkit-details-marker { display: none; }
-.login-help[open] summary i { transform: rotate(90deg); }
-.login-help summary i { transition: transform .2s ease; }
-.login-help-panel { display: grid; gap: .9rem; padding: 0 1rem 1rem; }
-.login-help-panel > a { display: flex; gap: .75rem; align-items: center; padding: .8rem; border-radius: 10px; background: #f7f3fc; color: #332a3b; text-decoration: none; }
-.login-help-panel > a i { color: #713cc2; }
-.login-help-panel strong,.login-help-panel small { display: block; }
-.login-help-panel small { margin-top: .2rem; color: #777080; font-weight: 500; }
-.login-help-panel form label { display: block; margin-bottom: .4rem; font-weight: 800; }
-.login-help-resend { display: grid; grid-template-columns: 1fr auto; gap: .55rem; }
-.login-help-resend .btn { min-width: 90px; }
+.login-help-trigger { display: flex; align-items: center; justify-content: center; gap: .55rem; width: 100%; margin-top: 1rem; padding: .7rem; border: 0; background: transparent; color: #6532ad; font-weight: 900; cursor: pointer; }
+.login-help-trigger:hover { color: #d63e78; }
+.login-help-view { align-content: center; min-height: 520px; }
+.login-help-view[hidden] { display: none !important; }
+.login-help-back { border: 0; background: transparent; color: #6f6579; font-weight: 800; cursor: pointer; padding: .5rem 0; margin-bottom: 2rem; }
+.login-help-heading { text-align: center; margin-bottom: 1.5rem; }
+.login-help-heading span { color: #d52e79; font-size: .78rem; font-weight: 900; text-transform: uppercase; }
+.login-help-heading h2 { margin: .4rem 0; color: #171c30; font-size: clamp(2rem,4vw,3rem); }
+.login-help-heading p { margin: 0; color: #747b8c; }
+.login-help-option { display: grid; grid-template-columns: 42px 1fr auto; gap: .8rem; align-items: center; margin-bottom: .8rem; padding: 1rem; border: 1px solid #e5daef; border-radius: 12px; background: #faf7ff; color: #302738; text-decoration: none; }
+.login-help-option > i:first-child { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 11px; background: #eee4ff; color: #713cc2; }
+.login-help-option strong,.login-help-option small { display: block; }
+.login-help-option small { margin-top: .2rem; color: #777080; font-weight: 500; }
+.login-help-verify { grid-template-columns: 42px 1fr; margin-bottom: .6rem; }
+.login-help-form { display: grid; gap: .7rem; }
+.login-help-form .btn { min-height: 48px; }
 .login-alert-success { border-color: #b7e4c7; background: #effbf3; color: #18723a; }
 
 .login-submit-btn,
