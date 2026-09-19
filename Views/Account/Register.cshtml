@@ -163,8 +163,12 @@
         const min = Number(option.dataset.min || 8);
         const max = Number(option.dataset.max || 15);
         const digits = phoneInput.value.replace(/\D/g, '').slice(0, max);
-        phoneInput.value = digits;
-        phoneInput.placeholder = '0'.repeat(min);
+        const formatDigits = value => {
+            if (phoneCountry.value === '+506') return value.replace(/(\d{4})(?=\d)/, '$1 ');
+            return value.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
+        };
+        phoneInput.value = formatDigits(digits);
+        phoneInput.placeholder = phoneCountry.value === '+506' ? '0000 0000' : formatDigits('0'.repeat(min));
         if (phoneHelp) phoneHelp.textContent = `${option.textContent.trim()} · ${min} dígitos`;
         phoneInput.setCustomValidity(digits && digits.length !== min ? `Ingresa exactamente ${min} dígitos para el país seleccionado.` : '');
         return !digits || digits.length === min;
@@ -179,7 +183,7 @@
             form.reportValidity();
             return;
         }
-        if (phoneInput?.value) phoneInput.value = `${phoneCountry.value}${phoneInput.value}`;
+        if (phoneInput?.value) phoneInput.value = `${phoneCountry.value}${phoneInput.value.replace(/\D/g, '')}`;
         submit.disabled = true;
         submit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando cuenta...';
     });
