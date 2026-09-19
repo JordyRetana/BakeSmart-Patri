@@ -13,3 +13,23 @@ body.dark .profile-page .card,body.dark .profile-card{background:#211d29!importa
 body.dark .profile-workspace-tabs{background:#211d29;border-color:#403648}
 body.dark .profile-workspace-tab.active{background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(236,72,153,.14));border-color:rgba(196,181,253,.35)}
 @media(max-width:650px){.profile-workspace-tabs{grid-template-columns:1fr;padding:.45rem}.profile-workspace-tab{min-height:56px}}
+
+/* Complete dark theme for profile forms and actions. */
+body.dark .profile-page .profile-hero{background:#1c1925!important;border-color:#463a50!important}
+body.dark .profile-page .profile-hero__name{color:#fff!important}
+body.dark .profile-page .profile-hero__role,body.dark .profile-page .profile-hero__email{color:#d3cadb!important}
+body.dark .profile-page .profile-section{background:#1c1925!important;border-color:#463a50!important}
+body.dark .profile-page .profile-section__title,body.dark .profile-page .profile-label{color:#f8fafc!important}
+body.dark .profile-page .profile-section__sub{color:#b9c2d1!important}
+body.dark .profile-page .profile-input-wrap{background:#101827!important;border-color:#48536a!important}
+body.dark .profile-page .profile-input{color:#f8fafc!important;background:transparent!important;border-color:#48536a!important;box-shadow:none!important}
+body.dark .profile-page .profile-input::placeholder{color:#94a3b8!important}
+body.dark .profile-page .profile-input-wrap:focus-within{border-color:#9b6df2!important;box-shadow:0 0 0 3px rgba(155,109,242,.18)!important}
+body.dark .profile-page .profile-input-icon,body.dark .profile-page .profile-eye-btn{color:#bca7db!important}
+body.dark .profile-page .profile-input-wrap--disabled,body.dark .profile-page .profile-input:disabled{background:#252231!important;color:#a9a1b2!important}
+body.dark .profile-page .profile-input-badge{color:#d8cbed!important;background:#38294a!important;border-color:#5d4671!important}
+body.dark .profile-workspace-tab{color:#e8e3ed!important}
+body.dark .profile-workspace-tab small{color:#b9b1c2!important}
+body.dark .profile-workspace-tab:not(.active)>i{color:#c4a7ff!important;background:#30233f!important}
+body.dark .profile-page .btn-outline{color:#e9ddf8!important;background:#30233f!important;border-color:#5d4671!important}
+body.dark .profile-page .btn-outline:hover{color:#fff!important;background:#49305f!important;border-color:#8b5cf6!important}
