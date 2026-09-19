@@ -404,6 +404,31 @@ body.dark .login-remember {
     color: #c2bac8;
 }
 
+body.dark .login-help-trigger { color: #c4b5fd; }
+body.dark .login-help-trigger:hover { color: #f9a8d4; }
+body.dark .login-help-back { color: #d8d4e2; }
+body.dark .login-help-back:hover { color: #fff; }
+body.dark .login-help-heading span { color: #f9a8d4; }
+body.dark .login-help-heading h2 { color: #fff !important; }
+body.dark .login-help-heading p { color: #cbd5e1 !important; }
+body.dark .login-help-option {
+    border-color: #4b3f61;
+    background: #171b2b;
+    color: #f8fafc !important;
+}
+body.dark .login-help-option:hover { border-color: #8b5cf6; background: #201c35; }
+body.dark .login-help-option strong { color: #fff !important; }
+body.dark .login-help-option small { color: #cbd5e1 !important; }
+body.dark .login-help-option > i:first-child { background: #312453; color: #c4b5fd; }
+body.dark .login-help-option > i:last-child { color: #c4b5fd; }
+body.dark .login-help-form .input {
+    border-color: #51436b !important;
+    background: #111827 !important;
+    color: #fff !important;
+}
+body.dark .login-help-form .input::placeholder { color: #aeb7c8 !important; }
+body.dark .login-divider { color: #d1d5db; }
+
 @media (max-width: 900px) {
     .login-card {
         grid-template-columns: 1fr !important;
