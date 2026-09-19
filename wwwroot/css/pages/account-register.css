@@ -612,3 +612,62 @@ body[data-page="/account/register"] .auth-help-card--login a {
         width: 114px;
     }
 }
+
+/* Keep the registration hierarchy readable in dark mode. */
+body.dark[data-page="/account/register"] .register-card,
+body.dark[data-page="/account/register"] .register-form-panel {
+    background: #182334 !important;
+    border-color: #354158 !important;
+}
+
+body.dark[data-page="/account/register"] .register-heading h1,
+body.dark[data-page="/account/register"] .register-heading h1 i,
+body.dark[data-page="/account/register"] .input-label {
+    color: #f8fafc !important;
+}
+
+body.dark[data-page="/account/register"] .register-heading p,
+body.dark[data-page="/account/register"] .password-strength__labels span,
+body.dark[data-page="/account/register"] .password-strength__help,
+body.dark[data-page="/account/register"] .register-submit-note {
+    color: #b9c4d4 !important;
+}
+
+body.dark[data-page="/account/register"] .register-form .input,
+body.dark[data-page="/account/register"] .register-phone-row {
+    color: #eef2f7 !important;
+    border-color: #43506a !important;
+    background: #101827 !important;
+    box-shadow: none !important;
+}
+
+body.dark[data-page="/account/register"] .register-phone-row select.input {
+    border-right-color: #43506a !important;
+    background-color: #151d30 !important;
+}
+
+body.dark[data-page="/account/register"] .register-form .input:focus,
+body.dark[data-page="/account/register"] .register-phone-row:focus-within {
+    border-color: #9b6df2 !important;
+    box-shadow: 0 0 0 3px rgba(155, 109, 242, .2) !important;
+}
+
+body.dark[data-page="/account/register"] .password-strength__bars span {
+    background: #3b465b;
+}
+
+body.dark[data-page="/account/register"] .auth-help-card--login {
+    color: #cbd5e1 !important;
+    border-color: #3e4a60 !important;
+    background: #182334 !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .22) !important;
+}
+
+body.dark[data-page="/account/register"] .auth-help-card--login span {
+    color: #cbd5e1 !important;
+}
+
+body.dark[data-page="/account/register"] .auth-help-card--login a,
+body.dark[data-page="/account/register"] .auth-help-card--login a i {
+    color: #c4a7ff !important;
+}
