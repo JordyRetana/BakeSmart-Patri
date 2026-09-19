@@ -316,19 +316,19 @@ body.dark .password-card .login-form { background:#171b2b !important; }
 .login-help-trigger:hover { color: #d63e78; }
 .login-help-view { align-content: center; min-height: 520px; }
 .login-help-view[hidden] { display: none !important; }
-.login-help-back { border: 0; background: transparent; color: #6f6579; font-weight: 800; cursor: pointer; padding: .5rem 0; margin-bottom: 2rem; }
-.login-help-heading { text-align: center; margin-bottom: 1.5rem; }
+.login-help-back { border: 0; background: transparent; color: #6f6579; font-weight: 800; cursor: pointer; padding: .5rem 0; margin-bottom: 1.25rem; }
+.login-help-heading { text-align: center; margin-bottom: 1.2rem; }
 .login-help-heading span { color: #d52e79; font-size: .78rem; font-weight: 900; text-transform: uppercase; }
 .login-help-heading h2 { margin: .4rem 0; color: #171c30; font-size: clamp(2rem,4vw,3rem); }
 .login-help-heading p { margin: 0; color: #747b8c; }
-.login-help-option { display: grid; grid-template-columns: 42px 1fr auto; gap: .8rem; align-items: center; margin-bottom: .8rem; padding: 1rem; border: 1px solid #e5daef; border-radius: 12px; background: #faf7ff; color: #302738; text-decoration: none; }
+.login-help-options { display:grid; gap:.7rem; }
+.login-help-option { display: grid; grid-template-columns: 42px 1fr auto; gap: .8rem; align-items: center; margin:0; padding: .85rem; border: 1px solid #e5daef; border-radius: 12px; background: #faf7ff; color: #302738; text-decoration: none; }
 .login-help-option > i:first-child { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 11px; background: #eee4ff; color: #713cc2; }
 .login-help-option strong,.login-help-option small { display: block; }
 .login-help-option small { margin-top: .2rem; color: #777080; font-weight: 500; }
-.login-help-verify { grid-template-columns: 42px 1fr; margin-bottom: .6rem; }
 .login-help-form { display: grid; gap: .7rem; }
 .login-help-form .btn { min-height: 48px; }
-.login-help-recovery { margin-top:.8rem; }
+.login-help-recovery { margin:0; }
 .login-help-recovery > summary { list-style:none; cursor:pointer; margin-bottom:0; }
 .login-help-recovery > summary::-webkit-details-marker { display:none; }
 .login-help-recovery[open] > summary { border-color:#8b5cf6; border-radius:12px 12px 0 0; }
