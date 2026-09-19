@@ -502,6 +502,14 @@
                 await request(`/api/users/${id}/toggle`, { method: "POST", body: JSON.stringify({}) });
                 const rows = await load("users", "/api/users", [], { force: true });
                 return rows.find(user => Number(user.id) === Number(id));
+            },
+            async resetTwoFactor(id, password, code) {
+                const result = await request(`/api/users/${id}/reset-two-factor`, {
+                    method: "POST",
+                    body: JSON.stringify({ password, code })
+                });
+                await load("users", "/api/users", [], { force: true });
+                return result;
             }
         },
         roles: {
