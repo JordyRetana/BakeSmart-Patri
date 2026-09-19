@@ -515,3 +515,100 @@ body.dark[data-page="/account/register"] .auth-help-card--login { background:#21
         grid-template-columns: 1fr !important;
     }
 }
+
+/* Final scale and alignment pass. */
+@media (min-width: 901px) {
+    body[data-page="/account/register"] .auth-page-shell.register-page {
+        width: min(1520px, calc(100% - 2.5rem)) !important;
+        margin: 1rem auto 1.25rem !important;
+    }
+
+    body[data-page="/account/register"] .register-card {
+        min-height: 690px !important;
+        grid-template-columns: .66fr 1.34fr !important;
+    }
+
+    body[data-page="/account/register"] .auth-hero {
+        padding: 2.35rem !important;
+    }
+
+    body[data-page="/account/register"] .auth-logo-wrap {
+        width: 64px !important;
+        height: 64px !important;
+    }
+
+    body[data-page="/account/register"] .auth-title { font-size: 1.95rem; }
+    body[data-page="/account/register"] .auth-subtitle { font-size: .92rem; line-height: 1.5; }
+    body[data-page="/account/register"] .auth-benefits { gap: .72rem; }
+    body[data-page="/account/register"] .auth-benefits strong { font-size: .82rem; }
+    body[data-page="/account/register"] .auth-benefits small { font-size: .71rem; }
+
+    body[data-page="/account/register"] .register-form-panel {
+        padding: 2.5rem 3rem;
+    }
+
+    body[data-page="/account/register"] .register-heading h1 { font-size: 2.05rem; }
+    body[data-page="/account/register"] .register-heading p { font-size: .92rem; margin-bottom: 1.35rem; }
+    body[data-page="/account/register"] .register-grid { gap: 1rem 1.1rem; }
+    body[data-page="/account/register"] .input-label { font-size: .82rem; margin-bottom: .4rem; }
+    body[data-page="/account/register"] .register-form .input { height: 50px; min-height: 50px; font-size: .92rem; }
+    body[data-page="/account/register"] .password-field { height: 50px; }
+    body[data-page="/account/register"] .password-toggle { top: 7px !important; }
+    body[data-page="/account/register"] .register-submit-btn { min-height: 50px !important; }
+}
+
+body[data-page="/account/register"] .register-phone-row {
+    height: 50px;
+    align-items: center;
+}
+
+body[data-page="/account/register"] .register-phone-row .input {
+    height: 48px;
+    min-height: 48px;
+}
+
+body[data-page="/account/register"] .register-phone-row select.input {
+    align-self: center;
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: 48px;
+    text-align: center;
+    text-align-last: center;
+}
+
+body[data-page="/account/register"] .register-phone-row input.input {
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: normal;
+}
+
+body[data-page="/account/register"] .auth-help-card--login {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+body[data-page="/account/register"] .auth-help-card--login span,
+body[data-page="/account/register"] .auth-help-card--login a {
+    margin: 0;
+    line-height: 1;
+}
+
+@media (max-width: 650px) {
+    body[data-page="/account/register"] .auth-help-card--login {
+        height: 40px !important;
+        min-height: 40px !important;
+        max-height: 40px !important;
+        gap: .45rem;
+        padding: 0 .5rem !important;
+        font-size: .76rem;
+    }
+
+    body[data-page="/account/register"] .register-phone-row select.input {
+        flex-basis: 114px;
+        width: 114px;
+    }
+}
