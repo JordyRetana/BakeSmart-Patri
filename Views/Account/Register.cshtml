@@ -4,7 +4,7 @@
 }
 
 @section Styles {
-    <link rel="stylesheet" href="/css/pages/account-register.css?v=phone-inline-20260809" />
+    <link rel="stylesheet" href="~/css/pages/account-register.css" asp-append-version="true" />
 }
 
 <div class="auth-page-shell register-page">
@@ -43,6 +43,7 @@
                 <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
 
                 <div class="register-grid">
+                    <div class="register-section-title register-full"><span><i class="fas fa-address-card"></i></span><div><strong>Información personal</strong><small>Datos para identificarte y contactarte.</small></div></div>
                     <div class="input-group">
                         <label class="input-label"><i class="fas fa-user"></i> Nombre</label>
                         <input class="input" name="firstName" placeholder="Ingresa tu nombre" required autocomplete="given-name" />
@@ -78,6 +79,8 @@
                         <input class="input" name="addressLine" placeholder="Ingresa tu dirección completa" autocomplete="street-address" />
                     </div>
 
+                    <div class="register-section-title register-full register-section-title--access"><span><i class="fas fa-shield-halved"></i></span><div><strong>Protege tu cuenta</strong><small>Crea una contraseña segura que puedas recordar.</small></div></div>
+
                     <div class="input-group">
                         <label class="input-label"><i class="fas fa-lock"></i> Contraseña</label>
                         <div class="password-field">
@@ -96,28 +99,21 @@
                 </div>
 
                 <div class="password-strength" data-password-strength data-level="empty" aria-live="polite">
-                    <div class="password-strength__labels"><span>Seguridad de la contraseña:</span><b data-strength-label>Débil</b><b>Media</b><b>Fuerte</b></div>
+                    <div class="password-strength__labels"><span>Seguridad de la contraseña</span><b data-strength-label>Sin evaluar</b></div>
                     <div class="password-strength__bars"><span></span><span></span><span></span></div>
+                    <small class="password-strength__help">Usa 12 o más caracteres, mayúscula, minúscula, número y símbolo.</small>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-block btn-lg register-submit-btn" id="registerSubmitBtn">
                     <i class="fas fa-user-check"></i>
                     Crear cuenta
                 </button>
+                <p class="register-submit-note"><i class="fas fa-envelope-circle-check"></i> Te enviaremos un enlace para confirmar tu correo.</p>
             </form>
         </section>
     </div>
 
-    <div class="auth-help-card">
-        <div class="auth-help-row">
-            <i class="fas fa-shield-halved"></i>
-            <div>
-                <p><strong>Seguridad:</strong> La contraseña se guarda hasheada con PBKDF2.</p>
-                <p class="text-muted">El usuario nuevo queda registrado con rol Cliente.</p>
-            </div>
-        </div>
-        <a href="/Account/Login" class="btn btn-outline btn-sm">Ya tengo cuenta</a>
-    </div>
+    <div class="auth-help-card auth-help-card--login"><span>¿Ya tienes una cuenta?</span><a href="/Account/Login">Inicia sesión <i class="fas fa-arrow-right"></i></a></div>
 </div>
 
 @section Scripts {
@@ -142,10 +138,10 @@
         if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score++;
         if (/\d/.test(value)) score++;
         if (/[^A-Za-z0-9]/.test(value)) score++;
-        if (!value) return { level: 'empty', text: 'Debil' };
+        if (!value) return { level: 'empty', text: 'Sin evaluar' };
         if (score >= 4) return { level: 'strong', text: 'Fuerte' };
         if (score >= 2) return { level: 'medium', text: 'Media' };
-        return { level: 'weak', text: 'Debil' };
+        return { level: 'weak', text: 'Débil' };
     };
 
     if (passwordInput && strength) {
