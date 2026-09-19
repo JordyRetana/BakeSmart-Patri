@@ -180,14 +180,14 @@ var authentication = builder.Services
             if (string.IsNullOrWhiteSpace(email) || !int.TryParse(claimedVersion, out var version))
             {
                 context.RejectPrincipal();
-                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                context.HttpContext.Response.Cookies.Delete("BakeSmartPatri.Auth.v4");
                 return;
             }
             var store = context.HttpContext.RequestServices.GetRequiredService<SqlStore>();
             if (await store.GetSessionVersionAsync(email) != version)
             {
                 context.RejectPrincipal();
-                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                context.HttpContext.Response.Cookies.Delete("BakeSmartPatri.Auth.v4");
             }
         };
     })
