@@ -612,8 +612,11 @@ public class ApiController : Controller
         var body = $"Nombre: {request.Name.Trim()}\nCorreo: {request.Email.Trim()}\nTeléfono: {request.Phone?.Trim() ?? "No indicado"}\nTipo: {subject}\n\nMensaje:\n{request.Message.Trim()}";
         try
         {
-            await _emailService.SendAsync(recipient, "Repostería Patri", $"Nueva consulta: {subject}", body);
-            await _emailService.SendAsync(request.Email, request.Name, "Recibimos su consulta", "Gracias por escribirnos. Recibimos su consulta y nuestro equipo le responderá lo antes posible.");
+            // Ambos correos son independientes; enviarlos en paralelo evita duplicar
+            // la latencia del proveedor antes de confirmar la consulta al cliente.
+            await Task.WhenAll(
+                _emailService.SendAsync(recipient, "Repostería Patri", $"Nueva consulta: {subject}", body),
+                _emailService.SendAsync(request.Email, request.Name, "Recibimos su consulta", "Gracias por escribirnos. Recibimos su consulta y nuestro equipo le responderá lo antes posible."));
             return Ok(new { ok = true });
         }
         catch (InvalidOperationException ex)
