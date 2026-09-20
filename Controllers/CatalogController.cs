@@ -1,6 +1,7 @@
 using BakeSmartPatri.Data;
 using BakeSmartPatri.Models;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace BakeSmartPatri.Controllers
 {
@@ -32,7 +33,27 @@ namespace BakeSmartPatri.Controllers
 
         public IActionResult Categories() => RedirectToAction(nameof(Index), new { categories = "open" });
 
-        public async Task<IActionResult> Offers() => View(await BuildIndexModelAsync());
+        public async Task<IActionResult> Offers()
+        {
+            var modelTask = BuildIndexModelAsync();
+            var promotionsTask = _sqlStore.PromotionsAsync();
+            await Task.WhenAll(modelTask, promotionsTask);
+            var model = await modelTask;
+            var today = DateTime.UtcNow.Date;
+            var discounts = new Dictionary<int, decimal>();
+            foreach (var promotion in JsonSerializer.SerializeToElement(await promotionsTask).EnumerateArray())
+            {
+                if (!promotion.GetProperty("active").GetBoolean()) continue;
+                if (DateTime.TryParse(promotion.GetProperty("startDate").GetString(), out var start) && start.Date > today) continue;
+                if (DateTime.TryParse(promotion.GetProperty("endDate").GetString(), out var end) && end.Date < today) continue;
+                var rate = promotion.GetProperty("discount").GetDecimal();
+                var ids = promotion.GetProperty("productIds").EnumerateArray().Select(item => item.GetInt32()).ToArray();
+                var targets = ids.Length > 0 ? ids : model.Products.Where(item => item.IsActive).Select(item => item.Id);
+                foreach (var id in targets) discounts[id] = Math.Max(discounts.GetValueOrDefault(id), rate);
+            }
+            ViewBag.OfferDiscounts = discounts;
+            return View(model);
+        }
 
         public async Task<IActionResult> Popular() => View(await BuildIndexModelAsync());
 

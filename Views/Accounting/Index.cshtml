@@ -331,7 +331,8 @@
                     const data = Object.fromEntries(new FormData(event.target).entries());
                     const result = await BakeSmartStore.pos.creditNote(data);
                     event.target.reset();
-                    app.toast.success(`Nota de crédito #${result.id} registrada correctamente.`);
+                    const creditCode = `NC-${new Date().getUTCFullYear()}-${String(result.id).padStart(6, '0')}`;
+                    app.toast.success(`Nota de crédito ${creditCode} registrada. Este código puede utilizarse en el POS.`);
                     await Promise.all([render(), loadCreditNoteSales()]);
                 } catch (error) {
                     app.toast.error(error.message);

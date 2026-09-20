@@ -45,6 +45,8 @@
                 <div class="catalog-product-media">
                     <img src="@product.ImageUrl"
                          alt="@product.AltText"
+                         loading="lazy"
+                         decoding="async"
                          onerror="this.src='/img/products/producto-sin-imagen.svg';"
                          class="catalog-product-image">
                     <span class="badge badge-primary catalog-product-category">@product.Category</span>

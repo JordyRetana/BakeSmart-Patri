@@ -983,10 +983,11 @@
                 if (!permissions.canManageCreditNotes) return;
 
                 try {
-                    await store.pos.creditNote(Object.fromEntries(new FormData(event.target).entries()));
+                    const result = await store.pos.creditNote(Object.fromEntries(new FormData(event.target).entries()));
                     recentSales = await store.pos.recentSales();
                     event.target.reset();
-                    app.toast.success('Nota de crédito registrada.');
+                    const creditCode = `NC-${new Date().getUTCFullYear()}-${String(result.id).padStart(6, '0')}`;
+                    app.toast.success(`Nota de crédito ${creditCode} registrada y disponible para usar en el POS.`);
                     await renderAll();
                 } catch (error) {
                     app.toast.error(error.message);

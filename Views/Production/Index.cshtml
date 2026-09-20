@@ -176,6 +176,7 @@
 
     async function loadMaterialReadiness(orders) {
         await Promise.all(orders.map(async order => {
+            if (materialReadiness.has(Number(order.id))) return;
             try {
                 const response = await fetch(`/api/production/${order.id}/materials`, { headers: { Accept: 'application/json' } });
                 if (response.ok) materialReadiness.set(Number(order.id), await response.json());
@@ -211,7 +212,15 @@
         document.getElementById('productionSchedule').innerHTML = productionOrders.slice(0, 5).map(scheduleRow).join('') || '<div class="text-muted">No hay programacion para hoy.</div>';
     }
 
+    const productionActionsInFlight = new Set();
     window.moveProductionOrder = orderId => {
+        if (productionActionsInFlight.has(Number(orderId))) return;
+        productionActionsInFlight.add(Number(orderId));
+        const actionButton = document.querySelector(`button[onclick="moveProductionOrder(${Number(orderId)})"]`);
+        if (actionButton) {
+            actionButton.disabled = true;
+            actionButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Actualizando…';
+        }
         fetch(`/api/production/${orderId}/advance`, { method: 'POST', headers: { 'Content-Type': 'application/json' } }).then(async response => {
             if (!response.ok) {
                 const error = await response.json().catch(() => null);
@@ -223,10 +232,10 @@
                 updatedOrder.estado = result.status;
                 updatedOrder.status = result.status;
             }
-            await store.refresh({ keys: ['orders'], force: true });
             await renderProduction();
             app.toast.success(`Pedido #${orderId} actualizado.`);
-        }).catch(error => app.toast.error(error.message));
+            store.refresh({ keys: ['orders'], force: true }).then(renderProduction).catch(() => { });
+        }).catch(error => app.toast.error(error.message)).finally(() => productionActionsInFlight.delete(Number(orderId)));
     };
 
     store.refresh({ keys: ['orders'], force: true }).then(() => renderProduction()).catch(error => app.toast.error(error.message));

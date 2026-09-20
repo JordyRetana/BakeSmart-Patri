@@ -176,7 +176,7 @@
             }
 
             function renderPayments() {
-                const methods = ['Efectivo', 'SINPE'];
+                const methods = ['Efectivo', 'SINPE', 'Nota de crédito'];
                 const options = methods.map(name => `<option value="${name}">${name}</option>`).join('');
                 const checkoutPaymentMethod = document.getElementById('checkoutPaymentMethod');
                 const previousCheckoutMethod = checkoutPaymentMethod.value;
@@ -386,6 +386,10 @@
                     gatewayReferenceLabel.textContent = 'Referencia SINPE';
                     gatewayReference.placeholder = 'Telefono o comprobante SINPE';
                     gatewayReference.required = true;
+                } else if (method.includes('nota de cr')) {
+                    gatewayReferenceLabel.textContent = 'Código de nota de crédito';
+                    gatewayReference.placeholder = 'NC-2026-000001';
+                    gatewayReference.required = true;
                 } else {
                     gatewayReferenceLabel.textContent = 'Referencia del pago';
                     gatewayReference.placeholder = 'Referencia o detalle del cobro';
@@ -411,6 +415,7 @@
                 const selectedMethod = form.paymentMethod.value || gatewayMethod.options[0]?.value || 'Efectivo';
                 const method = String(selectedMethod).toLowerCase();
                 const normalizedMethod = method.includes('sinpe') ? 'SINPE'
+                    : method.includes('nota de cr') ? 'Nota de crédito'
                     : method.includes('efectivo') ? 'Efectivo'
                     : 'Efectivo';
                 gatewayMethod.value = [...gatewayMethod.options].some(option => option.value === normalizedMethod)
@@ -479,6 +484,7 @@
                         await store.pos.sell({
                             ...Object.fromEntries(new FormData(form).entries()),
                             paymentMethod: paymentData.method || form.paymentMethod.value,
+                            creditNoteCode: String(paymentData.method || '').toLowerCase().includes('nota de cr') ? paymentData.holder : null,
                             items: cart.filter(item => !item.isCombo).map(item => ({ productId: Number(item.productId), quantity: Number(item.quantity) })),
                             combos: cart.filter(item => item.isCombo).map(item => ({ comboId: Number(item.comboId), quantity: Number(item.quantity) }))
                         });
@@ -525,6 +531,11 @@
                 }
                 if (method.toLowerCase().includes('sinpe') && !String(data.holder || '').trim()) {
                     app.toast.error('Complete la referencia del pago.');
+                    gatewayReference.focus();
+                    return;
+                }
+                if (method.toLowerCase().includes('nota de cr') && !String(data.holder || '').trim()) {
+                    app.toast.error('Ingrese el código de la nota de crédito.');
                     gatewayReference.focus();
                     return;
                 }

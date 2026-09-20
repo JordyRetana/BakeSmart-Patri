@@ -38,6 +38,15 @@ public class ApiController : Controller
         User?.FindFirst(ClaimTypes.Email)?.Value ??
         User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? null;
 
+    private void QueueExternalNotification(Func<Task> operation, string description)
+    {
+        _ = Task.Run(async () =>
+        {
+            try { await operation(); }
+            catch (Exception ex) { _logger.LogWarning(ex, "No se pudo completar en segundo plano: {Description}", description); }
+        });
+    }
+
     [HttpGet("health")]
     public async Task<IActionResult> Health()
     {
@@ -540,7 +549,6 @@ public class ApiController : Controller
     public async Task<IActionResult> ToggleFrequentCustomer(int id)
     {
         var isFrequent = await _sqlStore.MarkCustomerFrequentAsync(id, CurrentUserEmail);
-        var emailSent = false;
         var recipient = (await _sqlStore.MarketingRecipientsAsync(new[] { id })).FirstOrDefault();
         if (recipient is not null)
         {
@@ -551,11 +559,12 @@ public class ApiController : Controller
                 ? $"Hola {recipient.FullName}, ahora formas parte de nuestros clientes frecuentes. Recibirás promociones y beneficios especiales de Repostería Patri."
                 : $"Hola {recipient.FullName}, te confirmamos que tu estado de cliente frecuente fue desactivado. Puedes volver a formar parte del programa cuando se active nuevamente.";
 
-            await _emailService.SendAsync(recipient.Email, recipient.FullName, subject, message);
-            emailSent = true;
+            QueueExternalNotification(
+                () => _emailService.SendAsync(recipient.Email, recipient.FullName, subject, message),
+                $"notificación de cliente frecuente para {recipient.Email}");
         }
 
-        return Ok(new { ok = true, frequent = isFrequent, emailSent });
+        return Ok(new { ok = true, frequent = isFrequent, notificationQueued = recipient is not null });
     }
 
     [HttpPost("marketing/campaigns")]
@@ -571,18 +580,15 @@ public class ApiController : Controller
                 return BadRequest(new { message = "Puede enviar una campaña a un máximo de 50 clientes por operación." });
 
             var subject = string.IsNullOrWhiteSpace(request.Subject) ? "Promoción Repostería Patri" : request.Subject;
-            foreach (var batch in recipients.Chunk(5))
-            {
-                await Task.WhenAll(batch.Select(recipient => _emailService.SendAsync(
-                    recipient.Email,
-                    recipient.FullName,
-                    subject,
-                    request.Message)));
-            }
-
             var campaign = request with { CustomerIds = recipients.Select(recipient => recipient.CustomerId).ToArray() };
             var id = await _sqlStore.SendMarketingCampaignAsync(campaign, CurrentUserEmail);
-            return Ok(new { ok = true, id, sent = recipients.Count });
+            QueueExternalNotification(async () =>
+            {
+                foreach (var batch in recipients.Chunk(5))
+                    await Task.WhenAll(batch.Select(recipient => _emailService.SendAsync(
+                        recipient.Email, recipient.FullName, subject, request.Message)));
+            }, $"campaña #{id} para {recipients.Count} clientes");
+            return Ok(new { ok = true, id, queued = recipients.Count });
         }
         catch (InvalidOperationException ex)
         {
@@ -610,19 +616,12 @@ public class ApiController : Controller
 
         var subject = string.IsNullOrWhiteSpace(request.Subject) ? "Consulta desde el sitio web" : request.Subject.Trim();
         var body = $"Nombre: {request.Name.Trim()}\nCorreo: {request.Email.Trim()}\nTeléfono: {request.Phone?.Trim() ?? "No indicado"}\nTipo: {subject}\n\nMensaje:\n{request.Message.Trim()}";
-        try
-        {
-            // Ambos correos son independientes; enviarlos en paralelo evita duplicar
-            // la latencia del proveedor antes de confirmar la consulta al cliente.
-            await Task.WhenAll(
+        QueueExternalNotification(
+            () => Task.WhenAll(
                 _emailService.SendAsync(recipient, "Repostería Patri", $"Nueva consulta: {subject}", body),
-                _emailService.SendAsync(request.Email, request.Name, "Recibimos su consulta", "Gracias por escribirnos. Recibimos su consulta y nuestro equipo le responderá lo antes posible."));
-            return Ok(new { ok = true });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return StatusCode(503, new { message = ex.Message });
-        }
+                _emailService.SendAsync(request.Email, request.Name, "Recibimos su consulta", "Gracias por escribirnos. Recibimos su consulta y nuestro equipo le responderá lo antes posible.")),
+            $"consulta de contacto de {request.Email}");
+        return Ok(new { ok = true, queued = true });
     }
 
     [HttpPost("public/newsletter")]
@@ -969,8 +968,9 @@ public class ApiController : Controller
 
             var paymentMethod = request.PaymentMethod?.Trim() ?? string.Empty;
             if (!string.Equals(paymentMethod, "Efectivo", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(paymentMethod, "SINPE", StringComparison.OrdinalIgnoreCase))
-                return BadRequest(new { message = "En Punto de Venta solo se permiten efectivo o SINPE Móvil. El datáfono estará disponible próximamente." });
+                !string.Equals(paymentMethod, "SINPE", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(paymentMethod, "Nota de crédito", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { message = "En Punto de Venta se permite efectivo, SINPE Móvil o una nota de crédito vigente." });
 
             var orderId = await _sqlStore.RegisterSaleAsync(request, CurrentUserEmail);
             return Ok(new { ok = true, id = orderId });

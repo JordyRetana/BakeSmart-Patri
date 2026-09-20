@@ -226,7 +226,7 @@
             }
 
             async function render() {
-                await BakeSmartStore.refresh();
+                await BakeSmartStore.refresh({ keys: ['customers', 'promotions', 'inventory', 'posConfig'] });
                 const customers = BakeSmartStore.customers.search(search.value);
                 const promotions = BakeSmartStore.marketing.promotions();
                 renderPromotionTargets(BakeSmartStore.customers.list());
