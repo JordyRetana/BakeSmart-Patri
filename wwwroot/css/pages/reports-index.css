@@ -12,10 +12,28 @@
 .reports-page .table-container {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+    border: 1px solid var(--border);
+    border-radius: 14px;
 }
 
 .reports-page .table {
-    min-width: 760px;
+    width: max-content;
+    min-width: 100%;
+    table-layout: auto;
+}
+
+.reports-page .table th,
+.reports-page .table td {
+    min-width: 120px;
+    max-width: 320px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    vertical-align: top;
+}
+
+.reports-page .table th {
+    white-space: nowrap;
 }
 
 .report-print-header { display: none; }
