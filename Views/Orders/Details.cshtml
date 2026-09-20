@@ -14,7 +14,7 @@
                 <div id="orderSubtitle" class="sub">Cargando informacion del pedido...</div>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                <a class="btn btn-secondary" href="/Orders/Edit/@orderId"><i class="fas fa-pen"></i> Modificar pedido</a>
+                <a class="btn btn-secondary" id="editOrderAction" href="/Orders/Edit/@orderId" style="display:none"><i class="fas fa-pen"></i> Modificar pedido</a>
                 <a class="btn" href="/Client/Orders">Volver a mis pedidos</a>
             </div>
         </div>
@@ -73,6 +73,8 @@
             document.getElementById('orderTitle').textContent = `Pedido #${order.id}`;
             document.getElementById('orderSubtitle').textContent = `${order.cliente || order.customerName || '-'} - ${order.paymentMethod || '-'}`;
             document.getElementById('orderStatus').textContent = order.estado || order.status || '-';
+            const status = String(order.estado || order.status || '').toLowerCase();
+            document.getElementById('editOrderAction').style.display = ['producci', 'listo', 'camino', 'entregado'].some(value => status.includes(value)) ? 'none' : '';
             document.getElementById('orderDelivery').textContent = order.entrega || order.deliveryDate || '-';
             document.getElementById('orderTotal').textContent = money(order.total);
             document.getElementById('orderProducts').textContent = order.producto || order.products || 'Sin detalle';

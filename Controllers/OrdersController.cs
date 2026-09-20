@@ -213,7 +213,7 @@ namespace BakeSmartPatri.Controllers
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        private static bool IsLockedForCustomer(string status) => new[] { "produccion", "listo", "camino", "entregado" }
+        private static bool IsLockedForCustomer(string status) => new[] { "producci", "listo", "camino", "entregado" }
             .Any(token => status.Contains(token, StringComparison.OrdinalIgnoreCase));
 
         [HttpGet]
