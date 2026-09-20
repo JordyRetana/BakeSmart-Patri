@@ -59,6 +59,7 @@
     </div>
 
     <div class="track-layout">
+        <div class="track-main-stack">
         <div class="card track-map-card">
             <div class="track-map-header">
                 <div>
@@ -76,19 +77,18 @@
             <div id="deliveryMap" class="delivery-map"></div>
         </div>
 
-        <div class="track-side-stack">
-            <div class="card">
+        <div class="card track-summary-card">
+            <h3 class="track-section-title track-summary-title">Resumen logístico</h3>
+            <div id="trackingSummary" class="tracking-summary text-muted"></div>
+        </div>
+        </div>
+
+        <div class="card track-progress-card">
                 <div class="track-side-header">
                     <h3 class="track-section-title">Progreso del pedido</h3>
                     <span class="badge badge-info"><i class="fas fa-eye"></i> Solo lectura</span>
                 </div>
                 <div id="trackingTimeline" class="tracking-timeline"></div>
-            </div>
-
-            <div class="card">
-            <h3 class="track-section-title track-summary-title">Resumen logistico</h3>
-                <div id="trackingSummary" class="tracking-summary text-muted"></div>
-            </div>
         </div>
     </div>
 </div>
@@ -118,37 +118,6 @@
     let activeOrderId = null;
     let pageInitialized = false;
     let mapResizeObserver;
-    let layoutResizeObserver;
-
-    function syncDesktopMapHeight() {
-        const mapElement = document.getElementById('deliveryMap');
-        const mapHeader = document.querySelector('.track-map-header');
-        const sideStack = document.querySelector('.track-side-stack');
-        if (!mapElement || !mapHeader || !sideStack) return;
-
-        if (window.matchMedia('(max-width: 1080px)').matches) {
-            mapElement.style.removeProperty('height');
-            mapElement.style.removeProperty('min-height');
-        } else {
-            const sideHeight = Math.ceil(sideStack.getBoundingClientRect().height);
-            const headerHeight = Math.ceil(mapHeader.getBoundingClientRect().height);
-            const targetHeight = Math.max(540, sideHeight - headerHeight);
-            mapElement.style.height = `${targetHeight}px`;
-            mapElement.style.minHeight = `${targetHeight}px`;
-        }
-
-        requestAnimationFrame(() => map?.invalidateSize({ pan: false }));
-    }
-
-    function observeTrackingLayout() {
-        if (layoutResizeObserver) return;
-        const sideStack = document.querySelector('.track-side-stack');
-        if (!sideStack) return;
-        layoutResizeObserver = new ResizeObserver(syncDesktopMapHeight);
-        layoutResizeObserver.observe(sideStack);
-        window.addEventListener('resize', syncDesktopMapHeight, { passive: true });
-        syncDesktopMapHeight();
-    }
 
     function isValidCoordinate(lat, lng) {
         const latitude = Number(lat);
@@ -484,7 +453,6 @@
         renderTimeline(order, safeDestination, hasLiveRoute);
         renderTrackingSummary(order, safeDestination, routeType);
         renderLiveStatus(order, hasLiveRoute);
-        syncDesktopMapHeight();
 
         const startLatLng = [origin.lat, origin.lng];
         if (!destination) {
@@ -541,7 +509,6 @@
 
         renderTimeline(order, destination, hasLiveRoute);
         renderTrackingSummary(order, destination, routeType);
-        syncDesktopMapHeight();
     }
 
     function renderSelector() {
@@ -591,7 +558,6 @@
             await BakeSmartStore.refresh({ keys: ['orders', 'posConfig'] });
             origin = sanitizeLocation(BakeSmartStore.geo.origin(), defaultOrigin);
             renderSelector();
-            observeTrackingLayout();
         } finally {
             requestAnimationFrame(() => {
                 showPage();

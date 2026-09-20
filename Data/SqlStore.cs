@@ -529,7 +529,8 @@ public sealed partial class SqlStore
         try
         {
             var action = input.Id is > 0 ? "actualizado" : "creado";
-            await AddAuditLogAsync($"INVENTARIO_PRODUCTO_{action.ToUpperInvariant()}", $"Producto '{input.Code}' {action}: {input.Description}", userEmail);
+            await AddAuditLogAsync($"INVENTARIO_PRODUCTO_{action.ToUpperInvariant()}", $"Producto '{input.Code}' {action}: {input.Description}", userEmail)
+                .WaitAsync(TimeSpan.FromSeconds(2));
         }
         catch { }
 
@@ -3222,7 +3223,7 @@ public sealed partial class SqlStore
 
             // La auditoría es secundaria: nunca debe convertir un gasto ya confirmado
             // en un error ni intentar revertir una transacción que ya hizo commit.
-            try { await AddAuditLogAsync("CONTABILIDAD_GASTO", $"Gasto #{mysqlExpenseId} registrado por {input.Amount:N2}", userEmail); }
+            try { await AddAuditLogAsync("CONTABILIDAD_GASTO", $"Gasto #{mysqlExpenseId} registrado por {input.Amount:N2}", userEmail).WaitAsync(TimeSpan.FromSeconds(2)); }
             catch { }
             return mysqlExpenseId;
         }
@@ -3254,7 +3255,8 @@ public sealed partial class SqlStore
             new SqlParameter("@AccountId", accountId),
             new SqlParameter("@CashAccountId", cashAccountId)));
 
-        await AddAuditLogAsync("CONTABILIDAD_GASTO", $"Gasto #{id} registrado por {input.Amount:N2}", userEmail);
+        try { await AddAuditLogAsync("CONTABILIDAD_GASTO", $"Gasto #{id} registrado por {input.Amount:N2}", userEmail).WaitAsync(TimeSpan.FromSeconds(2)); }
+        catch { }
         return id;
     }
 
@@ -3312,7 +3314,7 @@ public sealed partial class SqlStore
                 throw;
             }
 
-            try { await AddAuditLogAsync("CONTABILIDAD_PAGO_PROVEEDOR", $"Pago proveedor #{mysqlSupplierPaymentId} registrado por {input.Amount:N2}", userEmail); }
+            try { await AddAuditLogAsync("CONTABILIDAD_PAGO_PROVEEDOR", $"Pago proveedor #{mysqlSupplierPaymentId} registrado por {input.Amount:N2}", userEmail).WaitAsync(TimeSpan.FromSeconds(2)); }
             catch { }
             return mysqlSupplierPaymentId;
         }
@@ -3344,7 +3346,8 @@ public sealed partial class SqlStore
             new SqlParameter("@AccountId", accountId),
             new SqlParameter("@CashAccountId", cashAccountId)));
 
-        await AddAuditLogAsync("CONTABILIDAD_PAGO_PROVEEDOR", $"Pago proveedor #{id} registrado por {input.Amount:N2}", userEmail);
+        try { await AddAuditLogAsync("CONTABILIDAD_PAGO_PROVEEDOR", $"Pago proveedor #{id} registrado por {input.Amount:N2}", userEmail).WaitAsync(TimeSpan.FromSeconds(2)); }
+        catch { }
         return id;
     }
 
@@ -3449,7 +3452,8 @@ public sealed partial class SqlStore
             await Task.WhenAll(reviewedTask, issuesTask);
             var reviewed = Convert.ToInt32(await reviewedTask);
             var issues = Convert.ToInt32(await issuesTask);
-            await AddAuditLogAsync("CONCILIACION_POS", $"Conciliación: {reviewed} ventas revisadas, {recoveredSales} ventas recuperadas, {rows.Count} asientos reparados, {issues} diferencias", userEmail);
+            try { await AddAuditLogAsync("CONCILIACION_POS", $"Conciliación: {reviewed} ventas revisadas, {recoveredSales} ventas recuperadas, {rows.Count} asientos reparados, {issues} diferencias", userEmail).WaitAsync(TimeSpan.FromSeconds(2)); }
+            catch { }
             return new { status = issues == 0 ? "Correcto" : "Con diferencias", reviewed, issues, generated = rows.Count, recovered = recoveredSales };
         }
 
@@ -3570,7 +3574,8 @@ public sealed partial class SqlStore
             generated = reader.GetInt32("Generated")
         })).FirstOrDefault() ?? new { reviewed = 0, issues = 0, generated = 0 };
 
-        await AddAuditLogAsync("CONCILIACION_POS", $"ConciliaciÃ³n POS: {row.reviewed} ventas revisadas, {row.generated} asientos reparados, {row.issues} diferencias", userEmail);
+        try { await AddAuditLogAsync("CONCILIACION_POS", $"ConciliaciÃ³n POS: {row.reviewed} ventas revisadas, {row.generated} asientos reparados, {row.issues} diferencias", userEmail).WaitAsync(TimeSpan.FromSeconds(2)); }
+        catch { }
         return new { status = row.issues == 0 ? "Correcto" : "Con diferencias", row.reviewed, row.issues, row.generated };
     }
 
@@ -3627,7 +3632,8 @@ public sealed partial class SqlStore
                 new SqlParameter("@Start", start),
                 new SqlParameter("@Today", today)));
 
-            await AddAuditLogAsync("CIERRE_CONTABLE", $"Cierre contable {normalizedType.ToLowerInvariant()} #{mysqlCloseId} generado", userEmail);
+            try { await AddAuditLogAsync("CIERRE_CONTABLE", $"Cierre contable {normalizedType.ToLowerInvariant()} #{mysqlCloseId} generado", userEmail).WaitAsync(TimeSpan.FromSeconds(2)); }
+            catch { }
             return new { closeId = mysqlCloseId, type = normalizedType, count = 1 };
         }
 
@@ -3664,7 +3670,8 @@ public sealed partial class SqlStore
             """;
 
         var id = Convert.ToInt32(await ScalarAsync(sql, new SqlParameter("@CloseType", normalizedType)));
-        await AddAuditLogAsync("CIERRE_CONTABLE", $"Cierre contable {normalizedType.ToLowerInvariant()} #{id} generado", userEmail);
+        try { await AddAuditLogAsync("CIERRE_CONTABLE", $"Cierre contable {normalizedType.ToLowerInvariant()} #{id} generado", userEmail).WaitAsync(TimeSpan.FromSeconds(2)); }
+        catch { }
         return new { closeId = id, type = normalizedType, count = 1 };
     }
 
