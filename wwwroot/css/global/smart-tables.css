@@ -66,13 +66,20 @@
 }
 
 .smart-table-search input {
+    width: 100% !important;
+    min-width: 0 !important;
     min-height: 38px !important;
     padding: 0 !important;
     border: 0 !important;
+    border-radius: 0 !important;
+    outline: 0 !important;
+    appearance: none !important;
     background: transparent !important;
     box-shadow: none !important;
     font-size: .76rem;
 }
+
+.smart-table-search .smart-table-clear[hidden] { display: none !important; }
 
 .smart-table-search-button {
     width: 28px;
@@ -127,7 +134,7 @@
     margin: .75rem 0 0;
     padding: .55rem .65rem;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: max-content minmax(0, 1fr) max-content;
     align-items: center;
     gap: .75rem;
     border: 1px solid var(--bs-line, #e9e2ee);
@@ -143,7 +150,10 @@
 .smart-table-page-size {
     display: flex;
     align-items: center;
+    flex-wrap: nowrap;
     gap: .45rem;
+    min-width: max-content;
+    white-space: nowrap;
     color: #757b88;
     font-size: .66rem;
     font-weight: 800;
@@ -255,6 +265,10 @@
 .smart-table-empty span {
     font-size: .7rem;
 }
+
+.smart-table-page-size > span { flex: 0 0 auto; white-space: nowrap; }
+.smart-table-page-size .bs-select { flex: 0 0 76px; width: 76px; min-width: 76px; }
+.smart-table-page-size .bs-select__button { width: 76px; min-height: 34px; padding: .3rem .5rem; }
 
 body.app-body select,
 body.app-body select.form-control,
