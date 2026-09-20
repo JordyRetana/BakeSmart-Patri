@@ -79,3 +79,8 @@ body[data-page="/catalog"] #productsGrid .catalog-product-footer{margin-top:.85r
  body[data-page="/catalog"] #productsGrid .catalog-product-media{height:180px!important;min-height:180px!important;aspect-ratio:auto}
 }
 body.dark[data-page="/catalog"] #productsGrid .catalog-product-topline h3{color:#f7f4fb!important}
+body.dark[data-page="/catalog"] #catalogCartButtonCount {
+    background:#3d2a58 !important;
+    border-color:#8b68af !important;
+    color:#fff !important;
+}
