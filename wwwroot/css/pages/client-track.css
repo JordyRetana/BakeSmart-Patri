@@ -799,9 +799,9 @@
 }
 
 .track-summary-card .tracking-summary {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: .75rem;
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: .75rem !important;
 }
 
 .track-summary-card .summary-row {
@@ -870,14 +870,14 @@ body.dark .track-page .leaflet-control-zoom a { color: #111827 !important; backg
 
 @media (max-width: 1080px) {
     .track-layout { grid-template-columns: 1fr !important; }
-    .track-summary-card .tracking-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .track-summary-card .tracking-summary { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
 }
 
 @media (max-width: 720px) {
     .track-page { width: min(100% - 1rem, 1480px) !important; }
     .track-hero { border-radius: 22px; }
     .track-kpis { grid-template-columns: 1fr !important; }
-    .track-summary-card .tracking-summary { grid-template-columns: 1fr; }
+    .track-summary-card .tracking-summary { grid-template-columns: 1fr !important; }
     .track-summary-card .summary-row:nth-child(6) { grid-column: auto; }
     .track-map-header { padding: 1rem !important; }
     .track-page .delivery-map { height: 390px !important; min-height: 390px; flex: none; }
