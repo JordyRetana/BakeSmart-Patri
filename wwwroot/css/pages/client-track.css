@@ -803,6 +803,10 @@
     height: auto !important;
 }
 
+.track-summary-card--wide {
+    margin-top: 1.25rem;
+}
+
 .track-summary-card .tracking-summary {
     display: flex !important;
     flex-flow: row wrap !important;
