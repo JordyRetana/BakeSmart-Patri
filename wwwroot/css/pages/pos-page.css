@@ -14,6 +14,7 @@ body[data-page="/pos/cart"] .customer-picker-avatar{align-items:center!important
 body[data-page="/pos/cart"] .pos-cart-checkout-card--payment .pos-form-block{align-content:start;grid-auto-rows:max-content}
 body[data-page="/pos/cart"] .pos-cart-checkout-card--payment .pos-form-block label{font-size:.82rem!important;font-weight:750!important;line-height:1.25!important;margin:0!important}
 body[data-page="/pos/cart"] .pos-cart-checkout-card--payment .pos-input-shell > i{width:1rem;height:1rem;display:grid;place-items:center;font-size:.9rem;line-height:1}
+body[data-page="/pos/cart"] .pos-cart-checkout-card--payment .pos-form-block .bs-select__button{height:52px!important;min-height:52px!important;box-sizing:border-box!important;font-size:.95rem!important;font-weight:700!important}
 body[data-page="/pos/cart"] .pos-cart-totals:empty{display:none!important}
 @media(max-width:650px){body[data-page="/pos"] #posCartPanel.pos-cart-open{bottom:calc(.75rem + env(safe-area-inset-bottom))!important;max-height:calc(100dvh - 1.5rem - env(safe-area-inset-bottom))!important}}
 /* Customer and payment fields share the card; totals follow below instead of
