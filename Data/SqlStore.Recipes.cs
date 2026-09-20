@@ -5,8 +5,17 @@ namespace BakeSmartPatri.Data;
 
 public sealed partial class SqlStore
 {
+    private static readonly SemaphoreSlim RecipeSchemaLock = new(1, 1);
+    private static bool _mySqlRecipeSchemaReady;
+    private static bool _sqlServerRecipeSchemaReady;
+
     private async Task EnsureRecipeSchemaAsync()
     {
+        if (UseMySql ? _mySqlRecipeSchemaReady : _sqlServerRecipeSchemaReady) return;
+        await RecipeSchemaLock.WaitAsync();
+        try
+        {
+            if (UseMySql ? _mySqlRecipeSchemaReady : _sqlServerRecipeSchemaReady) return;
         if (UseMySql)
         {
             await ExecuteAsync("""
@@ -45,6 +54,7 @@ public sealed partial class SqlStore
                     UNIQUE KEY UX_ReservaPedidoIngrediente (OrderId, IngredientProductId)
                 );
                 """);
+            _mySqlRecipeSchemaReady = true;
             return;
         }
 
@@ -87,6 +97,12 @@ public sealed partial class SqlStore
                 CONSTRAINT UX_ReservaPedidoIngrediente UNIQUE (OrderId, IngredientProductId)
             );
             """);
+            _sqlServerRecipeSchemaReady = true;
+        }
+        finally
+        {
+            RecipeSchemaLock.Release();
+        }
     }
 
     public async Task<IReadOnlyList<object>> RecipesAsync()
