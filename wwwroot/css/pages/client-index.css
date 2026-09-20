@@ -199,7 +199,7 @@
 
 .quick-order {
     display: grid !important;
-    grid-template-columns: minmax(320px, .85fr) minmax(460px, 1fr) !important;
+    grid-template-columns: minmax(380px, .95fr) minmax(480px, 1fr) !important;
     gap: 1rem !important;
     align-items: start !important;
 }
@@ -250,33 +250,73 @@
 
 .quick-products {
     display: grid;
-    gap: .55rem;
-    max-height: 360px;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: .75rem;
+    max-height: 500px;
     overflow: auto;
     padding-right: .2rem;
 }
 
 .quick-product {
+    position: relative;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: .7rem;
-    align-items: center;
+    grid-template-columns: 82px minmax(0, 1fr);
+    gap: .85rem;
+    align-items: stretch;
     width: 100%;
-    min-height: 72px;
-    padding: .7rem;
+    min-height: 118px;
+    padding: .65rem;
     text-align: left;
     color: var(--text);
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--bg);
     cursor: pointer;
-    transition: border-color .18s ease, background .18s ease;
+    box-shadow: 0 10px 24px rgba(45, 33, 58, .05);
+    transition: border-color .18s ease, background .18s ease, transform .18s ease;
 }
 
 .quick-product:hover,
 .quick-product--selected {
     border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
     background: color-mix(in srgb, var(--primary-light) 34%, var(--bg));
+}
+
+.quick-product--selected::after {
+    content: '✓';
+    position: absolute;
+    top: .5rem;
+    right: .5rem;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    color: #fff;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    box-shadow: 0 4px 10px color-mix(in srgb, var(--primary) 35%, transparent);
+    font-weight: 900;
+}
+
+.quick-product:hover {
+    transform: translateY(-2px);
+}
+
+.quick-product__image {
+    grid-row: span 2;
+    width: 82px;
+    height: 100%;
+    min-height: 94px;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #f8f2fb;
+}
+
+.quick-product__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .quick-product__body,
@@ -286,9 +326,11 @@
 }
 
 .quick-product__body strong {
+    display: -webkit-box;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-height: 1.2;
 }
 
 .quick-product__body small,
@@ -298,8 +340,24 @@
 }
 
 .quick-product__meta {
-    justify-items: end;
+    grid-column: 2;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    justify-items: start;
     white-space: nowrap;
+}
+
+.quick-product__meta strong {
+    color: var(--primary);
+    font-size: 1.05rem;
+}
+
+.quick-product__meta small {
+    padding: .22rem .48rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, #22c55e 12%, white);
+    color: #2d7244;
+    font-weight: 850;
 }
 
 .quick-products-empty {
@@ -447,13 +505,13 @@
 
 .client-orders-list {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)) !important;
+    grid-template-columns: 1fr !important;
     gap: .85rem !important;
 }
 
 .client-order-row {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     gap: 1rem;
     align-items: center;
     min-height: 112px;
@@ -469,9 +527,7 @@
 }
 
 .client-order-row__main strong {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
     color: var(--text);
     font-size: .9rem;
 }
@@ -486,6 +542,17 @@
     justify-items: end;
     gap: .25rem;
     white-space: nowrap;
+}
+
+.client-order-row__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.client-order-row__actions .btn {
+    white-space: nowrap;
+    min-height: 42px;
 }
 
 .client-order-row--payable {
@@ -787,6 +854,7 @@ html.dark-start .payment-modal__close {
 
     .quick-product__meta,
     .client-order-row__status,
+    .client-order-row__actions,
     .profile-source a {
         grid-column: 2;
         justify-items: start;
@@ -806,3 +874,4 @@ html.dark-start .payment-modal__close {
         width: 100%;
     }
 }
+ .payment-modal__sinpe{display:grid;gap:.35rem;padding:1rem;border:1px solid rgba(124,58,237,.28);border-radius:12px;background:rgba(124,58,237,.06);color:var(--text,#25293b)}.payment-modal__sinpe strong{font-size:1.25rem;color:#6d28d9;letter-spacing:.03em}.payment-modal__sinpe small{color:var(--muted,#667085);line-height:1.45}

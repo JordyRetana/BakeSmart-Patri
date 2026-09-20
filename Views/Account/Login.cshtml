@@ -5,6 +5,7 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/account-login.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/login-page.css" asp-append-version="true" />
 }
 
 <main class="login-page-shell">
@@ -16,11 +17,18 @@
                 <div class="login-logo-wrap"><img src="/img/logo.png" alt="BakeSmart Patri" /></div>
                 <span class="login-eyebrow">Repostería artesanal</span>
                 <h1>Bienvenido a BakeSmart Patri</h1>
-                <p>Ingresa para administrar tu trabajo o continuar con tus pedidos.</p>
+                <div class="login-heart-divider"><span></span><i class="fas fa-heart"></i><span></span></div>
+                <p>La plataforma creada para administrar tu negocio de repostería, gestionar pedidos y hacer crecer tu marca cada día.</p>
+                <div class="login-feature-row" aria-label="Beneficios de BakeSmart Patri">
+                    <span><i class="fas fa-cake-candles"></i>Pedidos<br />organizados</span>
+                    <span><i class="fas fa-cube"></i>Inventario<br />controlado</span>
+                    <span><i class="fas fa-chart-line"></i>Negocio<br />en crecimiento</span>
+                </div>
             </div>
         </aside>
 
         <div class="login-form-panel">
+            <div id="loginMainView">
             <div class="login-form-heading">
                 <span>Acceso seguro</span>
                 <h2>Iniciar sesión</h2>
@@ -31,36 +39,113 @@
             {
                 <div class="alert alert-error login-alert"><i class="fas fa-circle-exclamation"></i><span>@TempData["Toast"]</span></div>
             }
+            @if (!string.IsNullOrEmpty(TempData["ToastSuccess"]?.ToString()))
+            {
+                <div class="alert alert-success login-alert login-alert-success"><i class="fas fa-circle-check"></i><span>@TempData["ToastSuccess"]</span></div>
+            }
 
             <form method="post" action="/Account/Login" class="login-form" id="loginForm">
                 @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@(ViewData["ReturnUrl"]?.ToString() ?? "")" />
                 <div class="input-group">
                     <label class="input-label" for="loginEmail"><i class="fas fa-envelope"></i> Correo electrónico</label>
                     <input id="loginEmail" type="email" class="input" name="email" placeholder="tu@correo.com" required autocomplete="username" />
                 </div>
                 <div class="input-group">
                     <label class="input-label" for="loginPassword"><i class="fas fa-lock"></i> Contraseña</label>
-                    <input id="loginPassword" type="password" class="input" name="password" placeholder="Escribe tu contraseña" required autocomplete="current-password" />
+                    <div class="password-field">
+                        <input id="loginPassword" type="password" class="input" name="password" placeholder="Escribe tu contraseña" required autocomplete="current-password" />
+                        <button type="button" class="password-toggle" data-password-toggle="loginPassword" aria-label="Mostrar contraseña"><i class="fas fa-eye"></i></button>
+                    </div>
                 </div>
                 <div class="login-options">
                     <label class="login-remember"><input type="checkbox" name="remember" /><span>Recordarme</span></label>
-                    <a href="/Account/ForgotPassword" class="login-forgot">¿Olvidaste tu contraseña?</a>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block btn-lg login-submit-btn" id="loginSubmitBtn"><i class="fas fa-right-to-bracket"></i> Iniciar sesión</button>
+                @if ((ViewData["GoogleEnabled"] as bool?) == true)
+                {
+                    <div class="login-divider"><span>o continúa con</span></div>
+                    <a class="btn btn-outline btn-block login-google-btn" href="/Account/GoogleLogin?returnUrl=@Uri.EscapeDataString(ViewData["ReturnUrl"]?.ToString() ?? "")"><i class="fab fa-google"></i> Continuar con Google</a>
+                }
                 <div class="login-divider"><span>o</span></div>
-                <a href="/Account/Register" class="btn btn-outline btn-block"><i class="fas fa-user-plus"></i> Crear cuenta de cliente</a>
+                <button type="button" id="createCustomerAccountBtn" class="btn btn-outline btn-block login-create-btn" data-register-url="/Account/Register?returnUrl=@(Uri.EscapeDataString(ViewData["ReturnUrl"]?.ToString() ?? ""))"><i class="fas fa-user-plus"></i> Crear cuenta de cliente</button>
             </form>
+            <button type="button" id="openLoginHelp" class="login-help-trigger">¿No puedes iniciar sesión? <i class="fas fa-arrow-right"></i></button>
+            </div>
+
+            <section id="loginHelpView" class="login-help-view" hidden aria-labelledby="loginHelpTitle">
+                <button type="button" id="closeLoginHelp" class="login-help-back"><i class="fas fa-arrow-left"></i> Volver a iniciar sesión</button>
+                <div class="login-help-heading"><span>Ayuda de acceso</span><h2 id="loginHelpTitle">Recupera tu cuenta</h2><p>Elige la opción que necesitas.</p></div>
+                <div class="login-help-options">
+                <a class="login-help-option" href="/Account/ForgotPassword"><i class="fas fa-key"></i><span><strong>Olvidé mi contraseña</strong><small>Recibe un enlace para crear una contraseña nueva.</small></span><i class="fas fa-chevron-right"></i></a>
+                <details class="login-help-recovery" data-login-help-detail>
+                    <summary class="login-help-option"><i class="fas fa-envelope-circle-check"></i><span><strong>Reenviar verificación</strong><small>Solicita un enlace nuevo para confirmar tu correo.</small></span><i class="fas fa-chevron-down"></i></summary>
+                    <div class="login-help-recovery-body">
+                        <p>Escribe el correo con el que creaste la cuenta. Revisa también las carpetas Spam y Promociones.</p>
+                        <form class="login-help-form" method="post" action="/Account/ResendConfirmation">
+                            @Html.AntiForgeryToken()
+                            <input id="resendEmail" class="input" type="email" name="email" placeholder="tu@correo.com" required autocomplete="email" aria-label="Correo para reenviar verificación" />
+                            <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-paper-plane"></i> Enviar verificación</button>
+                        </form>
+                    </div>
+                </details>
+                <details class="login-help-recovery" data-login-help-detail>
+                    <summary class="login-help-option"><i class="fas fa-mobile-screen-button"></i><span><strong>Perdí mi verificación en dos pasos</strong><small>Solicita al administrador que restablezca tu autenticador.</small></span><i class="fas fa-chevron-down"></i></summary>
+                    <div class="login-help-recovery-body">
+                        <p>Por seguridad, un administrador revisará la solicitud. Te avisaremos por correo cuando puedas ingresar y configurar un autenticador nuevo.</p>
+                        <form class="login-help-form" method="post" action="/Account/RequestTwoFactorReset">
+                            @Html.AntiForgeryToken()
+                            <input class="input" type="email" name="email" placeholder="tu@correo.com" required autocomplete="email" aria-label="Correo de la cuenta sin acceso al autenticador" />
+                            <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-shield-halved"></i> Solicitar ayuda</button>
+                        </form>
+                    </div>
+                </details>
+                </div>
+            </section>
         </div>
     </section>
-
-    <div class="login-security-note"><i class="fas fa-shield-halved"></i><span><strong>Conexión protegida</strong> Tus credenciales se validan de forma segura.</span></div>
 </main>
 
 @section Scripts {
 <script>
 (() => {
+    document.querySelectorAll('[data-password-toggle]').forEach(toggle => {
+        toggle.addEventListener('click', () => {
+            const input = document.getElementById(toggle.dataset.passwordToggle);
+            if (!input) return;
+            input.type = input.type === 'password' ? 'text' : 'password';
+            toggle.querySelector('i')?.classList.toggle('fa-eye-slash');
+        });
+    });
+
     const form = document.getElementById('loginForm');
     const button = document.getElementById('loginSubmitBtn');
+    const createAccountButton = document.getElementById('createCustomerAccountBtn');
+    const mainView = document.getElementById('loginMainView');
+    const helpView = document.getElementById('loginHelpView');
+    document.getElementById('openLoginHelp')?.addEventListener('click', () => {
+        mainView.hidden = true;
+        helpView.hidden = false;
+        document.getElementById('closeLoginHelp')?.focus();
+    });
+    document.querySelectorAll('[data-login-help-detail]').forEach(detail => {
+        detail.addEventListener('toggle', () => {
+            if (!detail.open) return;
+            document.querySelectorAll('[data-login-help-detail]').forEach(other => {
+                if (other !== detail) other.open = false;
+            });
+            detail.querySelector('input')?.focus();
+        });
+    });
+    document.getElementById('closeLoginHelp')?.addEventListener('click', () => {
+        helpView.hidden = true;
+        mainView.hidden = false;
+        document.getElementById('loginEmail')?.focus();
+    });
+    createAccountButton?.addEventListener('click', () => {
+        const target = createAccountButton.dataset.registerUrl || '/Account/Register';
+        window.location.assign(target);
+    });
     if (!form || !button) return;
     form.addEventListener('submit', () => {
         button.disabled = true;

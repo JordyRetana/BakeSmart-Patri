@@ -8,94 +8,185 @@
 }
 
 <div class="auth-page-shell register-page">
-    <div class="card auth-card register-card">
-        <div class="auth-hero">
+    <div class="auth-card register-card">
+        <aside class="auth-hero">
+            <div class="auth-hero-decor auth-hero-decor--top"></div>
+            <div class="auth-hero-decor auth-hero-decor--bottom"></div>
             <div class="auth-logo-wrap">
                 <i class="fas fa-user-plus"></i>
             </div>
             <h2 class="auth-title">Crear cuenta</h2>
-            <p class="text-muted auth-subtitle">Registra tu usuario para hacer pedidos y consultar seguimiento.</p>
-        </div>
-
-        @if (!string.IsNullOrEmpty(TempData["Toast"]?.ToString()))
-        {
-            <div class="alert alert-error auth-alert">
-                <i class="fas fa-exclamation-circle"></i>
-                @TempData["Toast"]
+            <p class="auth-subtitle">Registra tu usuario para hacer pedidos, guardar tus favoritos y consultar el seguimiento de tus pedidos.</p>
+            <div class="auth-benefits">
+                <div><span><i class="fas fa-bag-shopping"></i></span><strong>Pedidos más rápidos</strong><small>Guarda tus datos y compra en segundos.</small></div>
+                <div><span><i class="fas fa-heart"></i></span><strong>Tus favoritos siempre contigo</strong><small>Guarda y organiza tus postres favoritos.</small></div>
+                <div><span><i class="fas fa-truck-fast"></i></span><strong>Seguimiento en tiempo real</strong><small>Consulta el estado de tus pedidos fácilmente.</small></div>
             </div>
-        }
+        </aside>
 
-        <form method="post" action="/Account/Register" class="register-form" id="registerForm">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
-
-            <div class="register-grid">
-                <div class="input-group">
-                    <label class="input-label"><i class="fas fa-user"></i> Nombre</label>
-                    <input class="input" name="firstName" required autocomplete="given-name" />
-                </div>
-
-                <div class="input-group">
-                    <label class="input-label"><i class="fas fa-user"></i> Apellidos</label>
-                    <input class="input" name="lastName" required autocomplete="family-name" />
-                </div>
-
-                <div class="input-group">
-                    <label class="input-label"><i class="fas fa-envelope"></i> Correo electronico</label>
-                    <input class="input" type="email" name="email" required autocomplete="email" />
-                </div>
-
-                <div class="input-group">
-                    <label class="input-label"><i class="fas fa-phone"></i> Telefono</label>
-                    <input class="input" name="phone" autocomplete="tel" />
-                </div>
-
-                <div class="input-group register-full">
-                    <label class="input-label"><i class="fas fa-location-dot"></i> Direccion</label>
-                    <input class="input" name="addressLine" autocomplete="street-address" />
-                </div>
-
-                <div class="input-group">
-                    <label class="input-label"><i class="fas fa-lock"></i> Contraseña</label>
-                    <input class="input" type="password" name="password" minlength="8" required autocomplete="new-password" />
-                </div>
-
-                <div class="input-group">
-                    <label class="input-label"><i class="fas fa-lock"></i> Confirmar contraseña</label>
-                    <input class="input" type="password" name="confirmPassword" minlength="8" required autocomplete="new-password" />
-                </div>
+        <section class="register-form-panel">
+            <div class="register-heading">
+                <h1><i class="fas fa-user"></i> Completa tus datos</h1>
+                <p>Todos los campos principales son obligatorios.</p>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block btn-lg register-submit-btn" id="registerSubmitBtn">
-                <i class="fas fa-user-check"></i>
-                Crear cuenta
-            </button>
-        </form>
+            @if (!string.IsNullOrEmpty(TempData["Toast"]?.ToString()))
+            {
+                <div class="alert alert-error auth-alert">
+                    <i class="fas fa-exclamation-circle"></i>
+                    @TempData["Toast"]
+                </div>
+            }
+
+            <form method="post" action="/Account/Register" class="register-form" id="registerForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
+
+                <div class="register-grid">
+                    <div class="input-group">
+                        <label class="input-label"><i class="fas fa-user"></i> Nombre</label>
+                        <input class="input" name="firstName" placeholder="Ingresa tu nombre" required autocomplete="given-name" />
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label"><i class="fas fa-user"></i> Apellidos</label>
+                        <input class="input" name="lastName" placeholder="Ingresa tus apellidos" required autocomplete="family-name" />
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label"><i class="fas fa-envelope"></i> Correo electrónico</label>
+                        <input class="input" type="email" name="email" placeholder="ejemplo@correo.com" required autocomplete="email" />
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label" for="registerPhone"><i class="fas fa-phone"></i> Teléfono</label>
+                        <div class="register-phone-row">
+                            <select class="input" id="registerPhoneCountry" aria-label="País del teléfono">
+                                <option value="+506" data-min="8" data-max="8">🇨🇷 +506</option>
+                                <option value="+1" data-min="10" data-max="10">🇺🇸 +1</option>
+                                <option value="+52" data-min="10" data-max="10">🇲🇽 +52</option>
+                                <option value="+34" data-min="9" data-max="9">🇪🇸 +34</option>
+                                <option value="+57" data-min="10" data-max="10">🇨🇴 +57</option>
+                                <option value="+54" data-min="10" data-max="10">🇦🇷 +54</option>
+                            </select>
+                            <input class="input" id="registerPhone" name="phone" type="tel" inputmode="numeric" placeholder="6000 0000" autocomplete="tel" />
+                        </div>
+                    </div>
+
+                    <div class="input-group register-full">
+                        <label class="input-label"><i class="fas fa-location-dot"></i> Direccion</label>
+                        <input class="input" name="addressLine" placeholder="Ingresa tu dirección completa" autocomplete="street-address" />
+                    </div>
+
+
+                    <div class="input-group">
+                        <label class="input-label"><i class="fas fa-lock"></i> Contraseña</label>
+                        <div class="password-field">
+                            <input id="registerPassword" class="input" type="password" name="password" placeholder="Crea una contraseña" minlength="12" required autocomplete="new-password" />
+                            <button type="button" class="password-toggle" data-password-toggle="registerPassword" aria-label="Mostrar contraseña"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label"><i class="fas fa-lock"></i> Confirmar contraseña</label>
+                        <div class="password-field">
+                            <input id="registerConfirmPassword" class="input" type="password" name="confirmPassword" placeholder="Confirma tu contraseña" minlength="12" required autocomplete="new-password" />
+                            <button type="button" class="password-toggle" data-password-toggle="registerConfirmPassword" aria-label="Mostrar contraseña"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="password-strength" data-password-strength data-level="empty" aria-live="polite">
+                    <div class="password-strength__labels"><span>Seguridad de la contraseña</span><b data-strength-label>Sin evaluar</b></div>
+                    <div class="password-strength__bars"><span></span><span></span><span></span></div>
+                    <small class="password-strength__help">Usa 12 o más caracteres, mayúscula, minúscula, número y símbolo.</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block btn-lg register-submit-btn" id="registerSubmitBtn">
+                    <i class="fas fa-user-check"></i>
+                    Crear cuenta
+                </button>
+                <p class="register-submit-note"><i class="fas fa-envelope-circle-check"></i> Te enviaremos un enlace para confirmar tu correo.</p>
+            </form>
+        </section>
     </div>
 
-    <div class="card auth-help-card">
-        <div class="auth-help-row">
-            <i class="fas fa-shield-halved"></i>
-            <div>
-                <p><strong>Seguridad:</strong> La contraseña se guarda hasheada con PBKDF2.</p>
-                <p class="text-muted">El usuario nuevo queda registrado con rol Cliente.</p>
-            </div>
-        </div>
-        <a href="/Account/Login" class="btn btn-outline btn-sm">Ya tengo cuenta</a>
-    </div>
+    <div class="auth-help-card auth-help-card--login"><span>¿Ya tienes una cuenta?</span><a href="/Account/Login">Inicia sesión <i class="fas fa-arrow-right"></i></a></div>
 </div>
 
 @section Scripts {
 <script>
 (() => {
+    document.querySelectorAll('[data-password-toggle]').forEach(toggle => {
+        toggle.addEventListener('click', () => {
+            const input = document.getElementById(toggle.dataset.passwordToggle);
+            if (!input) return;
+            input.type = input.type === 'password' ? 'text' : 'password';
+            toggle.querySelector('i')?.classList.toggle('fa-eye-slash');
+        });
+    });
+
+    const passwordInput = document.getElementById('registerPassword');
+    const strength = document.querySelector('[data-password-strength]');
+    const strengthLabel = document.querySelector('[data-strength-label]');
+    const calculateStrength = value => {
+        let score = 0;
+        if (value.length >= 8) score++;
+        if (value.length >= 12) score++;
+        if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score++;
+        if (/\d/.test(value)) score++;
+        if (/[^A-Za-z0-9]/.test(value)) score++;
+        if (!value) return { level: 'empty', text: 'Sin evaluar' };
+        if (score >= 4) return { level: 'strong', text: 'Fuerte' };
+        if (score >= 2) return { level: 'medium', text: 'Media' };
+        return { level: 'weak', text: 'Débil' };
+    };
+
+    if (passwordInput && strength) {
+        passwordInput.addEventListener('input', () => {
+            const result = calculateStrength(passwordInput.value);
+            strength.dataset.level = result.level;
+            if (strengthLabel) strengthLabel.textContent = result.text;
+        });
+    }
+
     const form = document.getElementById('registerForm');
     const submit = document.getElementById('registerSubmitBtn');
     if (!form || !submit) return;
 
-    form.addEventListener('submit', () => {
+    const phoneInput = document.getElementById('registerPhone');
+    const phoneCountry = document.getElementById('registerPhoneCountry');
+    const phoneHelp = document.getElementById('registerPhoneHelp');
+    const syncPhone = () => {
+        if (!phoneInput || !phoneCountry) return true;
+        const option = phoneCountry.options[phoneCountry.selectedIndex];
+        const min = Number(option.dataset.min || 8);
+        const max = Number(option.dataset.max || 15);
+        const digits = phoneInput.value.replace(/\D/g, '').slice(0, max);
+        const formatDigits = value => {
+            if (phoneCountry.value === '+506') return value.replace(/(\d{4})(?=\d)/, '$1 ');
+            return value.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
+        };
+        phoneInput.value = formatDigits(digits);
+        phoneInput.placeholder = phoneCountry.value === '+506' ? '0000 0000' : formatDigits('0'.repeat(min));
+        if (phoneHelp) phoneHelp.textContent = `${option.textContent.trim()} · ${min} dígitos`;
+        phoneInput.setCustomValidity(digits && digits.length !== min ? `Ingresa exactamente ${min} dígitos para el país seleccionado.` : '');
+        return !digits || digits.length === min;
+    };
+    phoneCountry?.addEventListener('change', syncPhone);
+    phoneInput?.addEventListener('input', syncPhone);
+    syncPhone();
+
+    form.addEventListener('submit', event => {
+        if (!syncPhone() || !form.checkValidity()) {
+            event.preventDefault();
+            form.reportValidity();
+            return;
+        }
+        if (phoneInput?.value) phoneInput.value = `${phoneCountry.value}${phoneInput.value.replace(/\D/g, '')}`;
         submit.disabled = true;
         submit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando cuenta...';
-    }, { once: true });
+    });
 })();
 </script>
 }

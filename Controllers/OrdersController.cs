@@ -2,10 +2,12 @@ using BakeSmartPatri.Data;
 using BakeSmartPatri.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
+using System.Text.Json;
 
 namespace BakeSmartPatri.Controllers
 {
-    [Authorize(Policy = "AnyUser")]
+    [Authorize]
     public class OrdersController : Controller
     {
         private readonly SqlStore _sqlStore;
@@ -17,7 +19,6 @@ namespace BakeSmartPatri.Controllers
 
         public IActionResult Index() => View();
 
-        [Authorize(Policy = "StaffOrAdmin")]
         public async Task<IActionResult> Create()
         {
             var model = new OrderCreateViewModel(
@@ -29,14 +30,33 @@ namespace BakeSmartPatri.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "StaffOrAdmin")]
         public async Task<IActionResult> Create(
             string? cliente, string? telefono, string? email,
             int? productoId, DateTime? entrega, string? metodoPago,
             string? direccion, string? notas, string? metodoEntrega,
-            decimal? latitudEntrega, decimal? longitudEntrega,
-            string? referenciaEntrega, int? customerAddressId)
+            string? latitudEntrega, string? longitudEntrega,
+            string? referenciaEntrega, int? customerAddressId,
+            string? tipoPedido, string? tamano, string? hora, string? sabor,
+            string? color, string? mensaje)
         {
+            var parsedLatitude = ParseCoordinate(latitudEntrega);
+            var parsedLongitude = ParseCoordinate(longitudEntrega);
+
+            if (User.IsInRole("Cliente"))
+            {
+                var currentEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? string.Empty;
+                var profile = await _sqlStore.GetProfileAsync(currentEmail);
+                if (profile is null)
+                {
+                    TempData["ToastError"] = "No se encontro el perfil autenticado.";
+                    return RedirectToAction("Login", "Account");
+                }
+
+                cliente = $"{profile.FirstName} {profile.LastName}".Trim();
+                email = profile.Email;
+                telefono = profile.Phone;
+            }
+
             if (string.IsNullOrWhiteSpace(cliente) || string.IsNullOrWhiteSpace(email) || !productoId.HasValue || !entrega.HasValue)
             {
                 TempData["ToastError"] = "Complete los campos obligatorios: cliente, email, producto y fecha de entrega.";
@@ -52,7 +72,7 @@ namespace BakeSmartPatri.Controllers
                     return RedirectToAction(nameof(Create));
                 }
 
-                if (!SqlStore.HasValidCoordinates(latitudEntrega, longitudEntrega))
+                if (!SqlStore.HasValidCoordinates(parsedLatitude, parsedLongitude))
                 {
                     TempData["ToastError"] = "Debe seleccionar una ubicacion valida en el mapa.";
                     return RedirectToAction(nameof(Create));
@@ -87,10 +107,10 @@ namespace BakeSmartPatri.Controllers
                     Total: total,
                     DeliveryDate: entrega.Value,
                     Address: direccion?.Trim(),
-                    Notes: notas?.Trim(),
+                    Notes: BuildOrderNotes(tipoPedido, tamano, hora, sabor, color, mensaje, notas),
                     PaymentMethod: metodoPago?.Trim() ?? "Pendiente",
-                    DestinationLatitude: latitudEntrega,
-                    DestinationLongitude: longitudEntrega,
+                    DestinationLatitude: parsedLatitude,
+                    DestinationLongitude: parsedLongitude,
                     DeliveryReference: referenciaEntrega,
                     CustomerAddressId: customerAddressId,
                     DeliveryMethod: deliveryMethod
@@ -98,7 +118,8 @@ namespace BakeSmartPatri.Controllers
 
                 var orderId = await _sqlStore.CreateOrderAsync(input, User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value);
                 TempData["ToastSuccess"] = $"Pedido #{orderId} creado correctamente.";
-                return RedirectToAction(nameof(Details), new { id = orderId });
+                var onlinePayment = string.Equals(metodoPago?.Trim(), "PayPal", StringComparison.OrdinalIgnoreCase);
+                return RedirectToAction(nameof(Details), new { id = orderId, pay = onlinePayment ? metodoPago : null });
             }
             catch (Exception ex)
             {
@@ -107,19 +128,93 @@ namespace BakeSmartPatri.Controllers
             }
         }
 
-        public IActionResult Details(int id) => View();
+        private static decimal? ParseCoordinate(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            if (decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var invariant)) return invariant;
+            if (decimal.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out var localized)) return localized;
+            return null;
+        }
 
-        [Authorize(Policy = "StaffOrAdmin")]
-        public IActionResult Edit(int id) => View();
+        private static string? BuildOrderNotes(string? tipoPedido, string? tamano, string? hora, string? sabor, string? color, string? mensaje, string? notes)
+        {
+            var parts = new[]
+            {
+                ("Tipo de encargo", tipoPedido), ("Tamaño / porciones", tamano), ("Hora solicitada", hora),
+                ("Sabor", sabor), ("Color de decoración", color), ("Mensaje", mensaje), ("Notas", notes)
+            }
+            .Where(item => !string.IsNullOrWhiteSpace(item.Item2))
+            .Select(item => $"{item.Item1}: {item.Item2!.Trim()}");
+            var result = string.Join(" | ", parts);
+            return string.IsNullOrWhiteSpace(result) ? null : result;
+        }
+
+        public async Task<IActionResult> Details(int id)
+        {
+            if (!User.IsInRole("Cliente")) return RedirectToAction(nameof(Index));
+            var order = await FindOrderAsync(id);
+            ViewData["OrderJson"] = order.ValueKind == JsonValueKind.Undefined ? "null" : order.GetRawText();
+            return View();
+        }
+
+        /// <summary>Checkout dedicado para un pedido ya creado; no mezcla el flujo de POS.</summary>
+        public async Task<IActionResult> Checkout(int id)
+        {
+            var order = await FindOrderAsync(id);
+            if (order.ValueKind == JsonValueKind.Undefined)
+            {
+                TempData["ToastError"] = "No se encontro el pedido solicitado.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            ViewData["OrderJson"] = order.GetRawText();
+            return View();
+        }
+
+        private async Task<JsonElement> FindOrderAsync(int id)
+        {
+            var email = User.IsInRole("Cliente")
+                ? User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                : null;
+            var ordersJson = JsonSerializer.SerializeToElement(await _sqlStore.OrdersAsync(email));
+            return ordersJson.EnumerateArray().FirstOrDefault(row => row.TryGetProperty("id", out var value) && value.GetInt32() == id);
+        }
+
+        public async Task<IActionResult> Edit(int id)
+        {
+            if (!User.IsInRole("Cliente")) return RedirectToAction(nameof(Index));
+            var order = await FindOrderAsync(id);
+            if (order.ValueKind == JsonValueKind.Undefined) return RedirectToAction(nameof(Details), new { id });
+            var status = order.TryGetProperty("estado", out var value) ? value.GetString() ?? string.Empty : string.Empty;
+            if (IsLockedForCustomer(status))
+            {
+                TempData["ToastError"] = "Este pedido ya está en producción o en entrega; ya no puede modificarse.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            ViewData["OrderJson"] = order.GetRawText();
+            return View();
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "StaffOrAdmin")]
-        public IActionResult Edit(int id, string? estado, DateTime? entrega, string? notas)
+        public async Task<IActionResult> Edit(int id, DateTime? entrega, string? notas)
         {
-            TempData["Toast"] = "Editar pedidos debe completarse desde el flujo del sistema.";
+            if (!User.IsInRole("Cliente")) return RedirectToAction(nameof(Index));
+            var order = await FindOrderAsync(id);
+            if (order.ValueKind == JsonValueKind.Undefined) return RedirectToAction(nameof(Details), new { id });
+            var status = order.TryGetProperty("estado", out var value) ? value.GetString() ?? string.Empty : string.Empty;
+            if (IsLockedForCustomer(status))
+            {
+                TempData["ToastError"] = "Este pedido ya está en producción o en entrega; ya no puede modificarse.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            await _sqlStore.UpdateCustomerOrderAsync(id, entrega, notas, User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value);
+            TempData["ToastSuccess"] = "Pedido actualizado correctamente.";
             return RedirectToAction(nameof(Details), new { id });
         }
+
+        private static bool IsLockedForCustomer(string status) => new[] { "producci", "listo", "camino", "entregado" }
+            .Any(token => status.Contains(token, StringComparison.OrdinalIgnoreCase));
 
         [HttpGet]
         public async Task<IActionResult> Data()

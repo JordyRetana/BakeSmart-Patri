@@ -1,9 +1,17 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
+using System.Threading.RateLimiting;
 using BakeSmartPatri.Data;
+using BakeSmartPatri.Services;
+using QuestPDF.Infrastructure;
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 if (args.Contains("--check-databases", StringComparer.OrdinalIgnoreCase))
 {
@@ -17,8 +25,23 @@ if (args.Contains("--migrate-database", StringComparer.OrdinalIgnoreCase))
     return;
 }
 
+if (args.Contains("--migrate-to-mysql", StringComparer.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = await MySqlMigrationRunner.MigrateAsync();
+    return;
+}
+
+if (args.Contains("--mysql-smoke", StringComparer.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = await MySqlSmokeRunner.RunAsync();
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration
+    .AddJsonFile("appsettings.Payments.json", optional: true, reloadOnChange: true)
+    .AddJsonFile("appsettings.StripeKeys.json", optional: true, reloadOnChange: true)
+    .AddJsonFile("appsettings.PayPalWebhook.json", optional: true, reloadOnChange: true)
     .AddJsonFile("appsettings.Azure.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
@@ -44,13 +67,13 @@ var dataProtection = builder.Services
     .SetApplicationName("BakeSmartPatri");
 
 var dataProtectionConnectionString = builder.Configuration.GetConnectionString("BakeSmartDb");
-var disableSqlDataProtection = builder.Configuration.GetValue<bool>("Features:DisableSqlDataProtection");
-var explicitSqlDataProtection = builder.Configuration.GetSection("Features:UseSqlDataProtection").Exists();
+var disableSqlDataProtection = ReadBool(builder.Configuration, "Features:DisableSqlDataProtection");
+var forceSqlDataProtection = ReadBool(builder.Configuration, "Features:ForceSqlDataProtection");
+var hasMySqlConnectionString = IsMySqlConnectionString(dataProtectionConnectionString);
 var useSqlDataProtection = !builder.Environment.IsDevelopment() &&
-    (explicitSqlDataProtection
-        ? builder.Configuration.GetValue<bool>("Features:UseSqlDataProtection")
-        : (!disableSqlDataProtection &&
-           builder.Configuration.GetValue<bool>("Features:UseSqlDatabase")));
+    !disableSqlDataProtection &&
+    (forceSqlDataProtection || hasMySqlConnectionString) &&
+    ReadBool(builder.Configuration, "Features:UseSqlDataProtection", hasMySqlConnectionString);
 
 if (useSqlDataProtection &&
     !string.IsNullOrWhiteSpace(dataProtectionConnectionString))
@@ -70,10 +93,34 @@ else
     dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath));
 }
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.AddService<AuditMutationFilter>();
+    options.Filters.Add(new LoginAntiforgeryRecoveryFilter());
+});
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 12,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+});
 builder.Services.AddHttpClient();
 builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 builder.Services.AddScoped<SqlStore>();
+builder.Services.AddScoped<ReportExportService>();
+builder.Services.AddScoped<AuditMutationFilter>();
+builder.Services.AddHttpClient<IEmailService, BrevoEmailService>(client =>
+{
+    client.BaseAddress = new Uri("https://api.brevo.com/v3/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 builder.Services.AddHttpClient("Nominatim", client =>
 {
     client.BaseAddress = new Uri("https://nominatim.openstreetmap.org/");
@@ -81,11 +128,16 @@ builder.Services.AddHttpClient("Nominatim", client =>
 });
 
 
-builder.Services
-    .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+var authentication = builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    })
     .AddCookie(o =>
     {
-        o.Cookie.Name = "BakeSmartPatri.Auth";
+        o.Cookie.Name = "BakeSmartPatri.Auth.v4";
         o.LoginPath = "/Account/Login";
         o.AccessDeniedPath = "/Account/Denied";
         o.SlidingExpiration = true;
@@ -97,23 +149,99 @@ builder.Services
         o.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
             ? CookieSecurePolicy.SameAsRequest
             : CookieSecurePolicy.Always;
+
+        o.Events.OnRedirectToLogin = context =>
+        {
+            if (context.Request.Path.StartsWithSegments("/api"))
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            }
+
+            context.Response.Redirect(context.RedirectUri);
+            return Task.CompletedTask;
+        };
+        o.Events.OnRedirectToAccessDenied = context =>
+        {
+            if (context.Request.Path.StartsWithSegments("/api"))
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return Task.CompletedTask;
+            }
+
+            context.Response.Redirect(context.RedirectUri);
+            return Task.CompletedTask;
+        };
+        o.Events.OnValidatePrincipal = async context =>
+        {
+            var email = context.Principal?.FindFirstValue(ClaimTypes.Email)
+                ?? context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+            var claimedVersion = context.Principal?.FindFirstValue("bakesmart:session-version");
+            if (string.IsNullOrWhiteSpace(email) || !int.TryParse(claimedVersion, out var version))
+            {
+                context.RejectPrincipal();
+                context.HttpContext.Response.Cookies.Delete("BakeSmartPatri.Auth.v4");
+                return;
+            }
+            var store = context.HttpContext.RequestServices.GetRequiredService<SqlStore>();
+            if (await store.GetSessionVersionAsync(email) != version)
+            {
+                context.RejectPrincipal();
+                context.HttpContext.Response.Cookies.Delete("BakeSmartPatri.Auth.v4");
+            }
+        };
+    })
+    .AddCookie("External", options =>
+    {
+        options.Cookie.Name = "BakeSmartPatri.External";
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
     });
+
+var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
+var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+{
+    authentication.AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+    {
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
+        options.SignInScheme = "External";
+        options.SaveTokens = false;
+        options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+        options.CorrelationCookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+    });
+}
 
 
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
-    options.AddPolicy("StaffOrAdmin", p => p.RequireRole("Staff", "Admin", "Cajero", "Repostero", "Supervisor"));
-    options.AddPolicy("AnyUser", p => p.RequireRole("Admin", "Staff", "Cliente", "Cajero", "Repostero", "Supervisor"));
+    options.AddPolicy("StaffOrAdmin", p => p.RequireRole("Staff", "Admin", "Cajero", "Repostero", "Supervisor", "EncargadoRecetas"));
+    options.AddPolicy("AnyUser", p => p.RequireRole("Admin", "Staff", "Cliente", "Cajero", "Repostero", "Supervisor", "EncargadoRecetas"));
 
     
-    options.AddPolicy("ClientOnly", p => p.RequireRole("Cliente"));
+    options.AddPolicy("ClientOnly", p => p.RequireRole("Cliente", "Admin"));
 });
 
 
 builder.Services.AddAntiforgery(o =>
 {
     o.HeaderName = "X-CSRF-TOKEN";
+    o.Cookie.Name = "BakeSmartPatri.Antiforgery.v3";
+    o.Cookie.HttpOnly = true;
+    o.Cookie.SameSite = SameSiteMode.Strict;
+    o.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
+});
+builder.Services.AddHttpClient("Osrm", client =>
+{
+    client.BaseAddress = new Uri("https://router.project-osrm.org/");
+    client.Timeout = TimeSpan.FromSeconds(12);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("BakeSmartPatri/1.0 (contact@bakesmart.com)");
 });
 
 var app = builder.Build();
@@ -141,8 +269,17 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseRouting();
 
+app.UseWhen(
+    context => !context.Request.Path.StartsWithSegments("/api") && !Path.HasExtension(context.Request.Path),
+    branch => branch.UseStatusCodePagesWithReExecute("/Home/Status", "?code={0}"));
+
 app.Use(async (context, next) =>
 {
+    context.Response.Headers.XContentTypeOptions = "nosniff";
+    context.Response.Headers.XFrameOptions = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), payment=(self), geolocation=(self)";
+
     var path = context.Request.Path.Value ?? "";
     var isStaticAsset = Path.HasExtension(path);
     if (!isStaticAsset)
@@ -155,7 +292,21 @@ app.Use(async (context, next) =>
     await next();
 });
 
+app.UseRateLimiter();
 app.UseAuthentication();
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true &&
+        context.User.FindFirst("bakesmart:password-setup")?.Value == "required" &&
+        !context.Request.Path.StartsWithSegments("/Account/CompleteAccount") &&
+        !context.Request.Path.StartsWithSegments("/Account/Logout") &&
+        !Path.HasExtension(context.Request.Path.Value))
+    {
+        context.Response.Redirect($"/Account/CompleteAccount?returnUrl={Uri.EscapeDataString(context.Request.Path + context.Request.QueryString)}");
+        return;
+    }
+    await next();
+});
 app.UseAuthorization();
 
 
@@ -166,3 +317,24 @@ app.MapControllerRoute(
 app.MapGet("/ping", () => Results.Text("ok", "text/plain"));
 
 app.Run();
+
+static bool ReadBool(IConfiguration configuration, string key, bool fallback = false)
+{
+    var value = configuration[key];
+    if (string.IsNullOrWhiteSpace(value))
+        return fallback;
+
+    return bool.TryParse(value.Trim().Trim('\uFEFF'), out var parsed) ? parsed : fallback;
+}
+
+static bool IsMySqlConnectionString(string? connectionString)
+{
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return false;
+
+    connectionString = connectionString.Trim().Trim('\uFEFF');
+    return connectionString.Contains("Port=", StringComparison.OrdinalIgnoreCase) ||
+           connectionString.Contains("SslMode=", StringComparison.OrdinalIgnoreCase) ||
+           connectionString.Contains("Allow User Variables=", StringComparison.OrdinalIgnoreCase) ||
+           connectionString.Contains("DefaultCommandTimeout=", StringComparison.OrdinalIgnoreCase);
+}

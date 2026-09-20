@@ -1,36 +1,19 @@
-﻿@{
+@{
     Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Error";
+    ViewData["Title"] = "No pudimos abrir esta página";
 }
 
-<div style="min-height: 60vh; display: flex; align-items: center; justify-content: center;">
-    <div style="text-align: center; max-width: 500px;">
-        <div style="font-size: 8rem; font-weight: 800; background: linear-gradient(135deg, var(--danger), var(--warning)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1;">
-            500
+@section Styles { <link rel="stylesheet" href="~/css/pages/error-pages.css" asp-append-version="true" /> }
+
+<main class="bs-error" aria-labelledby="errorTitle">
+    <section class="bs-error-card">
+        <div class="bs-error-symbol" aria-hidden="true"><i class="fas fa-cookie-bite"></i></div>
+        <span class="bs-error-code">Error 500</span>
+        <h1 id="errorTitle">Algo salió mal</h1>
+        <p>No pudimos completar esta solicitud. Espera un momento e inténtalo de nuevo. Si continúa, anota qué estabas haciendo para que podamos revisarlo.</p>
+        <div class="bs-error-actions">
+            <button type="button" class="bs-error-button bs-error-button-primary" onclick="window.location.reload()"><i class="fas fa-rotate-right" aria-hidden="true"></i> Intentar de nuevo</button>
+            <a class="bs-error-button bs-error-button-secondary" href="/"><i class="fas fa-house" aria-hidden="true"></i> Ir al inicio</a>
         </div>
-
-        <h2 style="margin: 1rem 0;">¡Algo salió mal!</h2>
-
-        <p class="text-muted" style="margin-bottom: 2rem;">
-            Ha ocurrido un error inesperado. Nuestro equipo ha sido notificado y estamos trabajando para solucionarlo.
-        </p>
-
-        <div style="display: flex; gap: 1rem; justify-content: center;">
-            <a href="/" class="btn-primary">
-                <i class="fas fa-home"></i>
-                Ir al inicio
-            </a>
-            <button class="btn-outline" onclick="window.location.reload()">
-                <i class="fas fa-sync-alt"></i>
-                Reintentar
-            </button>
-        </div>
-
-        <div style="margin-top: 3rem; padding: 1rem; background: var(--bg-alt); border-radius: var(--radius);">
-            <p class="text-muted" style="margin: 0; font-size: 0.875rem;">
-                <i class="fas fa-info-circle"></i>
-                Si el problema persiste, contacta a soporte: support@bakesmart.com
-            </p>
-        </div>
-    </div>
-</div>
+    </section>
+</main>

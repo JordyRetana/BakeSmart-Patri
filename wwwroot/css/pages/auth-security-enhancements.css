@@ -1,0 +1,25 @@
+.security-setup-grid {
+    display: grid;
+    grid-template-columns: minmax(230px, 300px) 1fr;
+    gap: clamp(1rem, 3vw, 2rem);
+    align-items: center;
+}
+.security-qr-panel { padding: 1rem; text-align: center; border: 1px solid var(--border); border-radius: 20px; background: #fff; }
+.security-qr { display: block; width: min(248px, 100%); height: auto; margin: auto; border-radius: 12px; }
+.security-qr-panel p { margin: .8rem 0 0; color: #4b5563; font-size: .92rem; line-height: 1.5; }
+.security-setup-steps ol { margin: 0; }
+.security-manual { margin-top: 1rem; }
+.security-manual summary { cursor: pointer; font-weight: 800; color: var(--primary-dark); }
+.security-manual p { margin: .75rem 0 .4rem; }
+.security-secret { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.security-secret strong { flex: 1; min-width: 180px; }
+.security-copy { flex: 0 0 auto; }
+.security-form-error { padding: .8rem 1rem; border-radius: 12px; background: #fff0f0; color: #a52d2d; text-align: left; font-weight: 700; }
+.security-password-field { display: grid; gap: .4rem; text-align: left; }
+.security-password-field span { font-weight: 800; color: var(--text); }
+.security-password-hint { margin: 0; color: var(--muted); font-size: .85rem; text-align: left; }
+.password-setup-card > p:not(.security-eyebrow) { color: var(--muted); line-height: 1.55; }
+@media (max-width: 700px) {
+    .security-setup-grid { grid-template-columns: 1fr; }
+    .security-qr-panel { width: min(320px, 100%); margin: auto; }
+}

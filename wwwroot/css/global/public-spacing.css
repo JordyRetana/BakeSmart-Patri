@@ -1,0 +1,32 @@
+/* Margen exterior único para las vistas públicas. El banner principal del inicio
+   conserva su ancho completo; el contenido navegable respira en los bordes. */
+.public-shell {
+    --public-edge: clamp(.75rem, 1.6vw, 1.75rem);
+}
+
+.public-shell[data-page^="/catalog/"] .commerce-page,
+.public-shell[data-page="/catalog"] .catalog-page-header,
+.public-shell[data-page="/catalog"] .catalog-page-content,
+.public-shell[data-page="/home/about"] .story-page,
+.public-shell[data-page="/home/contact"] .contact-page,
+.public-shell[data-page="/home/terms"] .legal-page,
+.public-shell[data-page="/home/privacy"] .legal-page {
+    width: min(1600px, calc(100% - (var(--public-edge) * 2))) !important;
+    max-width: none !important;
+    margin-inline: auto !important;
+}
+
+.public-shell .page-shell {
+    width: min(var(--page-shell-max), calc(100% - (var(--public-edge) * 2))) !important;
+    margin-inline: auto !important;
+}
+
+.public-shell[data-page="/"] .storefront-section > .container {
+    width: min(1600px, calc(100% - (var(--public-edge) * 2))) !important;
+    max-width: none !important;
+    margin-inline: auto !important;
+}
+
+@media (max-width: 600px) {
+    .public-shell { --public-edge: .5rem; }
+}

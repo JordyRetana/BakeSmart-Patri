@@ -1,6 +1,6 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Produccion";
+    ViewData["Title"] = "Producción";
 }
 
 <div class="page-shell production-page">
@@ -8,13 +8,13 @@
         <div>
             <h1 style="margin:0;display:flex;align-items:center;gap:.75rem;">
                 <i class="fas fa-utensils" style="color:var(--primary);"></i>
-                Produccion
+                Producción
             </h1>
-            <p class="text-muted" style="margin:.35rem 0 0;">Cola de produccion y estado de pedidos.</p>
+            <p class="text-muted" style="margin:.35rem 0 0;">Cola de producción y estado de pedidos.</p>
         </div>
-        <span class="badge badge-info">
+        <span class="badge badge-info production-date-chip">
             <i class="fas fa-calendar-day"></i>
-            @DateTime.Now.ToString("dddd, dd MMM", new System.Globalization.CultureInfo("es-ES"))
+            @BusinessClock.Now.ToString("dddd, dd MMM", new System.Globalization.CultureInfo("es-CR"))
         </span>
     </div>
 
@@ -55,7 +55,7 @@
 
             <div class="card production-lane production-lane--active">
                 <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-                    <h3 style="margin:0;"><span style="width:12px;height:12px;background:var(--info);display:inline-block;border-radius:50%;margin-right:.5rem;"></span>En produccion</h3>
+                    <h3 style="margin:0;"><span style="width:12px;height:12px;background:var(--info);display:inline-block;border-radius:50%;margin-right:.5rem;"></span>En producción</h3>
                     <span id="prodActiveBadge" class="badge badge-info">0</span>
                 </div>
                 <div id="prodActiveList" class="kanban-column" style="display:flex;flex-direction:column;gap:1rem;">
@@ -80,7 +80,7 @@
                     <i class="fas fa-clock" style="color:var(--primary);"></i>
                     Programacion del dia
                 </h3>
-                <span class="badge badge-info">@DateTime.Now.ToString("dd/MM/yyyy")</span>
+                <span class="badge badge-info">@BusinessClock.Now.ToString("dd/MM/yyyy")</span>
             </div>
             <div id="productionSchedule" style="display:flex;flex-direction:column;gap:1rem;">
                 <div class="text-muted">Cargando programacion...</div>
@@ -97,13 +97,11 @@
     today.setHours(0, 0, 0, 0);
 
     const statusMeta = {
-        'Pendiente pago': { badge: 'badge-warning', border: 'var(--warning)', next: 'Confirmado', action: 'Cobrar', icon: 'fa-money-bill-wave', progress: 10 },
-        'Confirmado': { badge: 'badge-info', border: 'var(--info)', next: 'En produccion', action: 'Iniciar', icon: 'fa-play', progress: 25 },
-        'En produccion': { badge: 'badge-primary', border: 'var(--primary)', next: 'Listo', action: 'Listo', icon: 'fa-arrow-right', progress: 60 },
-        'En producción': { badge: 'badge-primary', border: 'var(--primary)', next: 'Listo', action: 'Listo', icon: 'fa-arrow-right', progress: 60 },
-        'Listo': { badge: 'badge-success', border: 'var(--success)', next: 'En camino', action: 'Enviar', icon: 'fa-truck', progress: 82 },
-        'En camino': { badge: 'badge-info', border: 'var(--info)', next: 'Entregado', action: 'Entregar', icon: 'fa-check', progress: 92 },
-        'Entregado': { badge: 'badge-success', border: 'var(--success)', next: '', action: '', icon: 'fa-check', progress: 100 }
+        'Pendiente produccion': { badge: 'badge-warning', border: 'var(--warning)', action: 'Iniciar elaboración', icon: 'fa-play', progress: 20 },
+        'Pendiente producción': { badge: 'badge-warning', border: 'var(--warning)', action: 'Iniciar elaboración', icon: 'fa-play', progress: 20 },
+        'En produccion': { badge: 'badge-primary', border: 'var(--primary)', action: 'Marcar listo', icon: 'fa-check', progress: 65 },
+        'En producción': { badge: 'badge-primary', border: 'var(--primary)', action: 'Marcar listo', icon: 'fa-check', progress: 65 },
+        'Listo': { badge: 'badge-success', border: 'var(--success)', action: '', icon: 'fa-check', progress: 100 }
     };
 
     const setText = (id, value) => {
@@ -113,26 +111,51 @@
 
     const fmtDate = value => new Date(value).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit' });
     const statusOf = order => order.estado || order.status || '';
+    const displayStatus = value => value === 'En produccion' ? 'En producción' : value;
     const customerOf = order => order.cliente || order.customerName || '-';
     const deliveryOf = order => order.entrega || order.deliveryDate || new Date().toISOString();
     const itemOf = order => order.producto || order.products || 'Pedido personalizado';
+    const materialReadiness = new Map();
+
+    const materialPanel = orderId => {
+        const readiness = materialReadiness.get(Number(orderId));
+        if (!readiness) return '<div class="production-material-state is-loading"><i class="fas fa-spinner fa-spin"></i> Validando receta y materiales...</div>';
+        const missingRecipes = readiness.missingRecipes || [];
+        const materials = readiness.materials || [];
+        if (missingRecipes.length > 0) {
+            const missing = missingRecipes.map(escapeHtml).join(', ');
+            return `<div class="production-material-state is-danger"><i class="fas fa-triangle-exclamation"></i><span><strong>Falta receta aprobada</strong><small>${missing} debe tener una receta revisada antes de producir.</small></span><a href="/Recipes">Abrir recetas</a></div>`;
+        }
+        if (!readiness.canStart) {
+            const shortages = materials
+                .filter(item => Number(item.availableQuantity || 0) < Number(item.requiredQuantity || 0))
+                .map(item => {
+                    const shortage = Math.max(0, Number(item.requiredQuantity || 0) - Number(item.availableQuantity || 0));
+                    return `${escapeHtml(item.name)}: faltan ${shortage.toFixed(2).replace(/\.00$/, '')} ${escapeHtml(item.unit)}`;
+                })
+                .join(' · ');
+            return `<div class="production-material-state is-warning"><i class="fas fa-boxes-stacked"></i><span><strong>Material insuficiente</strong><small>${shortages || 'Revise el inventario disponible.'}</small></span><a href="/Inventory">Ver inventario</a></div>`;
+        }
+        const count = materials.length;
+        return `<div class="production-material-state is-ready"><i class="fas fa-circle-check"></i><span><strong>Materiales listos</strong><small>${count} ingrediente${count === 1 ? '' : 's'} validados para iniciar.</small></span></div>`;
+    };
 
     function ticket(order, mode) {
         const status = statusOf(order);
-        const meta = statusMeta[status] || statusMeta.Confirmado;
-        const action = status === 'Pendiente pago'
-            ? `<button class="btn btn-primary btn-sm" onclick="chargeProductionOrder(${order.id})"><i class="fas fa-money-bill-wave"></i> Cobrar</button>`
-            : status !== 'Entregado'
-            ? `<button class="btn btn-primary btn-sm" onclick="moveProductionOrder(${order.id}, '${meta.next}')"><i class="fas ${meta.icon}"></i> ${meta.action}</button>`
-            : `<span class="badge badge-success">Completado</span>`;
+        const meta = statusMeta[status] || statusMeta['Pendiente produccion'];
+        const action = status === 'Listo'
+            ? `<span class="badge badge-success"><i class="fas fa-box-check"></i> Listo para entrega</span>`
+            : `<button class="btn btn-primary btn-sm" onclick="moveProductionOrder(${order.id})"><i class="fas ${meta.icon}"></i> ${meta.action}</button>`;
 
         return `
             <div class="card production-ticket" style="border-left:4px solid ${meta.border};">
                 <div style="display:flex;justify-content:space-between;gap:.75rem;margin-bottom:.5rem;align-items:start;">
                     <strong>#${order.id} - ${customerOf(order)}</strong>
-                    <span class="badge ${meta.badge}">${status}</span>
+                    <span class="badge ${meta.badge}">${displayStatus(status)}</span>
                 </div>
                 <div>${itemOf(order)}</div>
+                ${(order.isCustomOrder || String(order.notes || '').includes('Tipo de encargo')) ? '<span class="production-custom-tag"><i class="fas fa-wand-magic-sparkles"></i> Personalizado</span>' : ''}
+                ${status !== 'Listo' ? materialPanel(order.id) : ''}
                 ${mode !== 'pending' ? `<div class="progress" style="margin:.65rem 0;"><div class="progress-bar" style="width:${meta.progress}%;"></div></div>` : ''}
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:.75rem;margin-top:.65rem;">
                     <span class="text-muted"><i class="fas fa-calendar"></i> ${fmtDate(deliveryOf(order))}</span>
@@ -151,15 +174,26 @@
             </div>`;
     }
 
-    function renderProduction() {
+    async function loadMaterialReadiness(orders) {
+        await Promise.all(orders.map(async order => {
+            if (materialReadiness.has(Number(order.id))) return;
+            try {
+                const response = await fetch(`/api/production/${order.id}/materials`, { headers: { Accept: 'application/json' } });
+                if (response.ok) materialReadiness.set(Number(order.id), await response.json());
+            } catch { /* El servidor conserva la validacion obligatoria al avanzar. */ }
+        }));
+    }
+
+    async function renderProduction() {
         const orders = store.orders.list();
-        const pending = orders.filter(o => ['Pendiente pago', 'Confirmado'].includes(statusOf(o)));
-        const active = orders.filter(o => ['En produccion', 'En producción', 'Listo', 'En camino'].includes(statusOf(o)));
-        const done = orders.filter(o => statusOf(o) === 'Entregado');
+        const productionOrders = orders.filter(o => ['Pendiente produccion', 'Pendiente producción', 'En produccion', 'En producción', 'Listo'].includes(statusOf(o)));
+        const pending = productionOrders.filter(o => ['Pendiente produccion', 'Pendiente producción'].includes(statusOf(o)));
+        const active = productionOrders.filter(o => ['En produccion', 'En producción'].includes(statusOf(o)));
+        const done = productionOrders.filter(o => statusOf(o) === 'Listo');
         const late = orders.filter(o => {
             const delivery = new Date(deliveryOf(o));
             delivery.setHours(0, 0, 0, 0);
-            return delivery < today && statusOf(o) !== 'Entregado';
+            return productionOrders.includes(o) && delivery < today && statusOf(o) !== 'Listo';
         });
 
         setText('prodPendingCount', pending.length);
@@ -170,52 +204,51 @@
         setText('prodActiveBadge', active.length);
         setText('prodDoneBadge', done.length);
 
+        await loadMaterialReadiness([...pending, ...active]);
+
         document.getElementById('prodPendingList').innerHTML = pending.map(o => ticket(o, 'pending')).join('') || '<div class="text-muted">No hay pedidos pendientes.</div>';
-        document.getElementById('prodActiveList').innerHTML = active.map(o => ticket(o, 'active')).join('') || '<div class="text-muted">No hay pedidos en produccion.</div>';
+        document.getElementById('prodActiveList').innerHTML = active.map(o => ticket(o, 'active')).join('') || '<div class="text-muted">No hay pedidos en producción.</div>';
         document.getElementById('prodDoneList').innerHTML = done.map(o => ticket(o, 'done')).join('') || '<div class="text-muted">No hay pedidos completados.</div>';
-        document.getElementById('productionSchedule').innerHTML = orders.slice(0, 5).map(scheduleRow).join('') || '<div class="text-muted">No hay programacion para hoy.</div>';
+        document.getElementById('productionSchedule').innerHTML = productionOrders.slice(0, 5).map(scheduleRow).join('') || '<div class="text-muted">No hay programacion para hoy.</div>';
     }
 
-    window.moveProductionOrder = (orderId, nextStatus) => {
-        store.orders.updateStatus(orderId, nextStatus).then(() => {
-            renderProduction();
-            app.toast.success(`Pedido #${orderId} actualizado.`);
-        }).catch(error => app.toast.error(error.message));
-    };
-
-    window.chargeProductionOrder = (orderId) => {
-        const order = store.orders.list().find(item => Number(item.id) === Number(orderId));
-        if (!order) {
-            app.toast.error('No se encontro el pedido para cobrar.');
-            return;
+    const productionActionsInFlight = new Set();
+    window.moveProductionOrder = orderId => {
+        if (productionActionsInFlight.has(Number(orderId))) return;
+        productionActionsInFlight.add(Number(orderId));
+        const actionButton = document.querySelector(`button[onclick="moveProductionOrder(${Number(orderId)})"]`);
+        if (actionButton) {
+            actionButton.disabled = true;
+            actionButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Actualizando…';
         }
-
-        const product = store.inventory.list().find(item => Number(item.id) === Number(order.productId));
-        const cartItem = {
-            productId: Number(order.productId),
-            name: product?.description || product?.item || order.producto || 'Pedido',
-            code: product?.code || product?.sku || `PED-${order.id}`,
-            unitPrice: Number(order.unitPrice || product?.price || order.total || 0),
-            quantity: Number(order.quantity || 1)
-        };
-
-        sessionStorage.setItem('bakesmart.pos.pendingOrder', JSON.stringify({
-            id: order.id,
-            customerName: order.customerName || order.cliente || '',
-            customerEmail: order.customerEmail || '',
-            paymentMethod: order.paymentMethod || 'Tarjeta',
-            total: Number(order.total || 0),
-            item: cartItem
-        }));
-        sessionStorage.setItem('bakesmart.pos.cart', JSON.stringify([cartItem]));
-        window.location.assign('/Pos/Cart?orderId=' + encodeURIComponent(order.id));
+        fetch(`/api/production/${orderId}/advance`, { method: 'POST', headers: { 'Content-Type': 'application/json' } }).then(async response => {
+            if (!response.ok) {
+                const error = await response.json().catch(() => null);
+                throw new Error(error?.message || 'No se pudo avanzar la producción.');
+            }
+            const result = await response.json();
+            const updatedOrder = store.orders.list().find(order => Number(order.id) === Number(orderId));
+            if (updatedOrder) {
+                updatedOrder.estado = result.status;
+                updatedOrder.status = result.status;
+            }
+            await renderProduction();
+            app.toast.success(`Pedido #${orderId} actualizado.`);
+            store.refresh({ keys: ['orders'], force: true }).then(renderProduction).catch(() => { });
+        }).catch(error => app.toast.error(error.message)).finally(() => productionActionsInFlight.delete(Number(orderId)));
     };
 
-    store.refresh().then(renderProduction).catch(error => app.toast.error(error.message));
+    store.refresh({ keys: ['orders'], force: true }).then(() => renderProduction()).catch(error => app.toast.error(error.message));
 })();
 </script>
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/production-index.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/production-page.css" asp-append-version="true" />
+    <style>
+        .production-custom-tag{display:inline-flex;align-items:center;gap:.35rem;margin-top:.5rem;padding:.28rem .55rem;border-radius:999px;background:#f8e8f4;color:#a1377e;font-size:.7rem;font-weight:800}
+        .production-material-state{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:.55rem;margin-top:.7rem;padding:.65rem .75rem;border:1px solid;border-radius:.8rem;font-size:.76rem}.production-material-state span{display:grid;gap:.1rem}.production-material-state small{line-height:1.35}.production-material-state a{font-weight:800;white-space:nowrap}.production-material-state.is-loading{color:var(--text-muted);border-color:var(--border);background:var(--surface-soft)}.production-material-state.is-danger{color:#9f2d4f;border-color:#efbfd0;background:#fff2f7}.production-material-state.is-warning{color:#825812;border-color:#efd79c;background:#fff9e8}.production-material-state.is-ready{color:#25704c;border-color:#bde2cd;background:#effbf4}.production-material-state.is-danger a,.production-material-state.is-warning a{color:inherit}
+        @@media(max-width:640px){.production-material-state{grid-template-columns:auto minmax(0,1fr)}.production-material-state a{grid-column:2}}
+    </style>
 }

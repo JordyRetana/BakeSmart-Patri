@@ -6,10 +6,17 @@
     var isAdmin = User?.IsInRole("Admin") ?? false;
     var isStaff = User?.IsInRole("Staff") ?? false;
     var isClient = User?.IsInRole("Cliente") ?? false;
+    var showStorefront = !isAuth || string.Equals(Context.Request.Query["vista"], "tienda", StringComparison.OrdinalIgnoreCase);
     var culture = new System.Globalization.CultureInfo("es-CR");
-    var products = Model.Products.Where(product => product.IsActive).ToList();
+    var products = Model.Products
+        .Where(product => product.IsActive)
+        .GroupBy(product => string.IsNullOrWhiteSpace(product.Code) ? $"id-{product.Id}" : product.Code.Trim(), StringComparer.OrdinalIgnoreCase)
+        .Select(group => group.OrderByDescending(product => product.Id).First())
+        .ToList();
     var heroProduct = products.FirstOrDefault();
     var categoryCards = Model.Categories
+        .GroupBy(category => category.Name.Trim().TrimEnd('s', 'S'), StringComparer.OrdinalIgnoreCase)
+        .Select(group => group.OrderByDescending(category => products.Count(product => product.Category == category.Name)).First())
         .Take(5)
         .Select(category => new
         {
@@ -18,7 +25,8 @@
         })
         .ToList();
     var offerProducts = products.Skip(1).Take(3).ToList();
-    var popularProducts = products.Take(5).ToList();
+    // La portada usa una fila editorial uniforme; el resto queda disponible en “Ver todos”.
+    var popularProducts = products.Take(4).ToList();
     var settings = ViewBag.HomeSettings as IReadOnlyDictionary<string, string> ?? new Dictionary<string, string>();
     string setting(string key, string fallback) => settings.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value) ? value : fallback;
     var heroEyebrow = setting("siteHeroEyebrow", "Especial de temporada");
@@ -37,7 +45,7 @@
         [
             new() { Icon = "fa-wand-magic-sparkles", Title = "Acabado artesanal", Text = "Cada creacion se prepara con atencion al detalle y una presentacion cuidada." },
             new() { Icon = "fa-leaf", Title = "Ingredientes seleccionados", Text = "Sabores equilibrados y productos pensados para disfrutar desde el primer bocado." },
-            new() { Icon = "fa-gift", Title = "Momentos memorables", Text = "Opciones para cumpleanos, eventos, regalos y cualquier ocasion especial." }
+            new() { Icon = "fa-gift", Title = "Momentos memorables", Text = "Opciones para cumpleaños, eventos, regalos y cualquier ocasión especial." }
         ];
     }
     var deliveryBlocks = HomeContentItem.Parse(settings, "siteDeliveryBlocks");
@@ -45,15 +53,15 @@
     {
         deliveryBlocks =
         [
-            new() { Icon = "fa-motorcycle", Title = "Entregas rapidas y seguras", Text = "Coordinamos cada pedido con cuidado." },
-            new() { Icon = "fa-clock", Title = "Atencion agil", Text = "Respuesta oportuna" },
+            new() { Icon = "fa-motorcycle", Title = "Entregas rápidas y seguras", Text = "Coordinamos cada pedido con cuidado." },
+            new() { Icon = "fa-clock", Title = "Atención ágil", Text = "Respuesta oportuna" },
             new() { Icon = "fa-shield-heart", Title = "Empaque seguro", Text = "Producto protegido" },
-            new() { Icon = "fa-face-smile", Title = "Satisfaccion", Text = "Servicio cercano" }
+            new() { Icon = "fa-face-smile", Title = "Satisfacción", Text = "Servicio cercano" }
         ];
     }
 }
 
-@if (!isAuth)
+@if (showStorefront)
 {
     <div class="storefront-page">
         <section class="storefront-hero">
@@ -108,7 +116,7 @@
                                      onerror="this.src='/img/products/producto-sin-imagen.svg';" />
                             </span>
                             <strong>@item.Category.Name</strong>
-                            <small>Ver mas</small>
+                            <small>Ver más</small>
                         </a>
                     }
                 </div>
@@ -138,7 +146,7 @@
                                     <p>@block.Text</p>
                                     @if (!string.IsNullOrWhiteSpace(block.LinkUrl))
                                     {
-                                        <a href="@block.LinkUrl">@(string.IsNullOrWhiteSpace(block.LinkText) ? "Ver mas" : block.LinkText) <i class="fas fa-arrow-right"></i></a>
+                                        <a href="@block.LinkUrl">@(string.IsNullOrWhiteSpace(block.LinkText) ? "Ver más" : block.LinkText) <i class="fas fa-arrow-right"></i></a>
                                     }
                                 </div>
                             </article>
@@ -233,9 +241,9 @@
         <section class="storefront-newsletter">
             <div class="container storefront-newsletter-grid">
                 <div><i class="fas fa-cake-candles"></i><span><strong>Recibe nuestras novedades</strong>Promociones, productos y fechas especiales.</span></div>
-                <form action="/Home/Contact" method="get">
-                    <label class="sr-only" for="newsletterEmail">Correo electronico</label>
-                    <input id="newsletterEmail" type="email" name="email" placeholder="Tu correo electronico" required />
+                <form id="newsletterForm">
+                    <label class="sr-only" for="newsletterEmail">Correo electrónico</label>
+                    <input id="newsletterEmail" type="email" name="email" placeholder="Tu correo electrónico" required />
                     <button type="submit">Suscribirme</button>
                 </form>
             </div>
@@ -248,10 +256,15 @@ else if (isClient)
         <div class="container">
             <span>Hola, @(User?.Identity?.Name ?? "Cliente")</span>
             <h1>Encuentra algo especial para tu proximo momento.</h1>
-            <p>Explora el catalogo, revisa tus pedidos y administra tu perfil desde un solo lugar.</p>
-            <div><a class="btn btn-primary" href="/Catalog">Explorar catalogo</a><a class="btn btn-outline" href="/Client">Mi espacio</a></div>
+            <p>Explora el catálogo, revisa tus pedidos y administra tu perfil desde un solo lugar.</p>
+            <div><a class="btn btn-primary" href="/Catalog">Explorar catálogo</a><a class="btn btn-outline" href="/Client">Mi espacio</a></div>
         </div>
     </section>
+    <nav class="home-role-links container" aria-label="Accesos del cliente">
+        <a href="/Client"><i class="fas fa-bag-shopping"></i><span><strong>Nuevo pedido</strong><small>Configura tu próxima compra</small></span></a>
+        <a href="/Client/Orders"><i class="fas fa-receipt"></i><span><strong>Mis pedidos</strong><small>Pagos, estados y detalles</small></span></a>
+        <a href="/Client/Track"><i class="fas fa-route"></i><span><strong>Seguimiento</strong><small>Consulta la ruta de entrega</small></span></a>
+    </nav>
 }
 else if (isAdmin || isStaff)
 {
@@ -263,6 +276,11 @@ else if (isAdmin || isStaff)
             <div><a class="btn btn-primary" href="/Dashboard">Ir al dashboard</a><a class="btn btn-outline" href="/Orders">Ver pedidos</a></div>
         </div>
     </section>
+    <nav class="home-role-links container" aria-label="Accesos operativos">
+        <a href="/Dashboard"><i class="fas fa-chart-line"></i><span><strong>Resumen</strong><small>Indicadores del negocio</small></span></a>
+        <a href="/Orders"><i class="fas fa-clipboard-list"></i><span><strong>Pedidos</strong><small>Gestiona el flujo operativo</small></span></a>
+        <a href="/Inventory"><i class="fas fa-boxes-stacked"></i><span><strong>Inventario</strong><small>Stock y movimientos</small></span></a>
+    </nav>
 }
 else
 {
@@ -273,13 +291,37 @@ else
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/home-storefront.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/home-page.css" asp-append-version="true" />
 }
 
 @section Scripts {
-    @if (!isAuth)
+    @if (showStorefront)
     {
         <script>
         (() => {
+            document.getElementById('newsletterForm')?.addEventListener('submit', async event => {
+                event.preventDefault();
+                const form = event.currentTarget;
+                const button = form.querySelector('button');
+                const emailInput = form.querySelector('input[name="email"]');
+                button.disabled = true;
+                try {
+                    const response = await fetch('/api/public/newsletter', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: emailInput.value })
+                    });
+                    const result = await response.json().catch(() => ({}));
+                    if (!response.ok) throw new Error(result.message || 'No fue posible completar la suscripción.');
+                    app.toast.success('Suscripción confirmada. Revise su correo.');
+                    form.reset();
+                } catch (error) {
+                    app.toast.error(error.message);
+                } finally {
+                    button.disabled = false;
+                }
+            });
+
             const email = () => (document.body.dataset.userEmail || '').trim().toLowerCase();
             const key = () => `bakesmart:favorites:${email()}`;
             const read = () => {
@@ -292,7 +334,7 @@ else
             };
             const requireLogin = () => {
                 if (email()) return true;
-                app.toast.warning('Inicia sesion para guardar favoritos.');
+                app.toast.warning('Inicia sesión para guardar favoritos.');
                 window.setTimeout(() => {
                     window.location.href = `/Account/Login?ReturnUrl=${encodeURIComponent(window.location.pathname)}`;
                 }, 650);

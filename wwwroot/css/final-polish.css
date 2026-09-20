@@ -92,7 +92,7 @@ body.app-body select option {
 
 .bs-select__menu {
     position: fixed !important;
-    z-index: 40000 !important;
+    z-index: 2147483002 !important;
     top: calc(100% + .35rem) !important;
     left: 0 !important;
     right: 0 !important;
@@ -114,9 +114,101 @@ body.app-body select option {
     z-index: 50000 !important;
 }
 
+/* POS mobile navigation: dedicated logo and menu columns, with a full usable drawer. */
+@media (max-width: 860px) {
+    .navbar-container {
+        grid-template-columns: max-content 42px minmax(0, 1fr) max-content !important;
+        gap: .55rem !important;
+    }
+
+    .navbar-container > .navbar-brand {
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+    }
+
+    .navbar-container > .mobile-nav-toggle {
+        grid-column: 2 !important;
+        grid-row: 1 !important;
+        margin: 0 !important;
+        position: static !important;
+    }
+
+    .navbar-container > .navbar-actions {
+        grid-column: 4 !important;
+        grid-row: 1 !important;
+    }
+
+    body.mobile-nav-open .navbar-menu {
+        top: 74px !important;
+        right: .5rem !important;
+        bottom: .5rem !important;
+        left: .5rem !important;
+        width: auto !important;
+        height: auto !important;
+        max-height: none !important;
+        border-radius: 18px !important;
+    }
+}
+
 .payment-modal__dialog,
 .pos-payment-modal__dialog {
     z-index: 50001 !important;
+}
+
+.payment-modal__dialog {
+    width: min(500px, calc(100vw - 2rem)) !important;
+    max-height: min(88vh, 760px) !important;
+    overflow: auto !important;
+    padding: 1.15rem !important;
+    border: 1px solid #e3d8ea !important;
+    border-radius: 14px !important;
+    background: #fff !important;
+    box-shadow: 0 28px 90px rgba(28, 20, 45, .32) !important;
+}
+
+.payment-modal__dialog::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 0 auto !important;
+    height: 5px !important;
+    border-radius: 14px 14px 0 0 !important;
+    background: linear-gradient(90deg, #7c3aed, #ec297b) !important;
+}
+
+.payment-modal__icon {
+    width: 46px !important;
+    height: 46px !important;
+    border-radius: 10px !important;
+    background: #f0e9ff !important;
+    color: #7c3aed !important;
+}
+
+.payment-modal__header h2 {
+    color: #17375d !important;
+    font-size: 1.25rem !important;
+}
+
+.payment-modal__amount {
+    border: 1px solid #e7deef !important;
+    border-radius: 10px !important;
+    background: linear-gradient(120deg, #f7f2ff, #fff8fc) !important;
+}
+
+.payment-modal__amount strong {
+    color: #17375d !important;
+}
+
+.payment-form .form-control,
+.payment-form .input {
+    min-height: 46px !important;
+    border-radius: 8px !important;
+    border-color: #dcd3e8 !important;
+}
+
+.payment-modal__note {
+    padding: .8rem !important;
+    border-radius: 10px !important;
+    background: #f8f4ff !important;
 }
 
 .bs-select__menu[hidden] {
@@ -142,6 +234,20 @@ body.app-body select option {
 .bs-select__option[aria-selected="true"] {
     color: #5d2390 !important;
     background: #f3edff !important;
+}
+
+.bs-select__option:disabled,
+.bs-select__option:disabled:hover {
+    color: #747987 !important;
+    background: #f5f5f9 !important;
+    cursor: not-allowed !important;
+    font-weight: 600 !important;
+}
+
+body.dark .bs-select__option:disabled,
+body.dark .bs-select__option:disabled:hover {
+    color: #aab3c5 !important;
+    background: #222c3d !important;
 }
 
 body.app-body input:not([type="checkbox"]):not([type="radio"]),
@@ -213,6 +319,13 @@ body.app-body textarea::placeholder {
 
 body[data-page="/"] .storefront-product-card {
     position: relative !important;
+}
+
+body[data-page="/account/register"] .auth-hero .auth-title,
+body[data-page="/account/register"] .auth-hero .auth-subtitle,
+body[data-page="/account/register"] .auth-hero .auth-benefits strong,
+body[data-page="/account/register"] .auth-hero .auth-benefits small {
+    color: #fff !important;
 }
 
 body[data-page="/"] .storefront-favorite-btn {
@@ -479,5 +592,1335 @@ body[data-page="/pos"] .pos-admin-block--credit .pos-payment-config-form .btn {
     body[data-page="/pos"] .pos-side-card,
     body[data-page="/pos"] .pos-admin-block--credit {
         grid-template-columns: 1fr !important;
+    }
+}
+
+/* POS cashier final layer: loaded after page CSS to avoid old/global POS rules flattening the redesign. */
+body[data-page="/pos"] .pos-page--cashier .pos-header {
+    min-height: 176px !important;
+    overflow: hidden !important;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 520px) !important;
+    padding: 1.45rem 1.55rem !important;
+    border: 1px solid rgba(222, 214, 235, .72) !important;
+    border-radius: 30px !important;
+    background: linear-gradient(120deg, rgba(24, 35, 64, .98), rgba(91, 43, 130, .95) 50%, rgba(198, 58, 133, .96)) !important;
+    box-shadow: 0 28px 70px rgba(38, 25, 60, .20) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-header::before {
+    opacity: .22 !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-title,
+body[data-page="/pos"] .pos-page--cashier .pos-title span,
+body[data-page="/pos"] .pos-page--cashier .pos-title i,
+body[data-page="/pos"] .pos-page--cashier .pos-subtitle,
+body[data-page="/pos"] .pos-page--cashier .pos-kicker {
+    color: #fff !important;
+    text-shadow: 0 12px 30px rgba(0, 0, 0, .28) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-title {
+    gap: .9rem !important;
+    font-size: clamp(2.55rem, 4vw, 4.35rem) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-title i {
+    width: 76px !important;
+    height: 76px !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 22px !important;
+    background: rgba(255, 255, 255, .16) !important;
+    border: 1px solid rgba(255, 255, 255, .24) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-search-box input {
+    min-height: 66px !important;
+    color: #1f2637 !important;
+    background: rgba(255, 255, 255, .98) !important;
+}
+
+/* POS hero contrast is theme-independent and applies to every authorized role. */
+body[data-page="/pos"] .pos-header .pos-title,
+body[data-page="/pos"] .pos-header .pos-title span,
+body[data-page="/pos"] .pos-header .pos-title i,
+body[data-page="/pos"] .pos-header .pos-subtitle,
+body[data-page="/pos"] .pos-header .pos-kicker {
+    color: #fff !important;
+    opacity: 1 !important;
+}
+
+body[data-page="/pos"] .pos-header .pos-subtitle {
+    color: rgba(255, 255, 255, .9) !important;
+}
+
+/* Checkout hero: prevent global page-header columns and dark-mode colors from
+   making the payment introduction overlap or lose contrast. */
+body[data-page="/pos/cart"] .pos-cart-hero {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 1rem !important;
+    background: linear-gradient(120deg, #eef6ff, #fff5fb) !important;
+}
+
+body.dark[data-page="/pos/cart"] .pos-cart-hero {
+    border-color: rgba(167, 139, 250, .28) !important;
+    background: linear-gradient(120deg, #17223a, #2a1d3d) !important;
+}
+
+body.dark[data-page="/pos/cart"] .pos-cart-hero::before {
+    background: linear-gradient(90deg, rgba(17, 24, 39, .96) 0 48%, rgba(17, 24, 39, .62) 66%, rgba(30, 24, 45, .92)) !important;
+}
+
+body.dark[data-page="/pos/cart"] .pos-cart-hero h1,
+body.dark[data-page="/pos/cart"] .pos-cart-hero p {
+    color: #f8fafc !important;
+}
+
+body.dark[data-page="/pos/cart"] .pos-cart-hero .eyebrow {
+    color: #c4b5fd !important;
+}
+
+@media (max-width: 850px) {
+    body[data-page="/pos/cart"] .pos-cart-hero {
+        grid-template-columns: 1fr !important;
+        align-items: start !important;
+    }
+
+body[data-page="/pos/cart"] .pos-cart-hero .btn {
+        width: fit-content !important;
+    }
+}
+
+/* Remove the hard grey rectangle that crossed the POS hero. */
+body[data-page="/pos"] .pos-header::before {
+    background:
+        radial-gradient(circle at 18% 20%, rgba(255, 255, 255, .14), transparent 32%),
+        linear-gradient(90deg, rgba(255, 255, 255, .025), rgba(255, 255, 255, .08)) !important;
+    opacity: 1 !important;
+}
+
+/* Compact bot launcher: icon only, separated from the mobile navigation. */
+#chat-toggle-btn {
+    width: 56px !important;
+    min-width: 56px !important;
+    height: 56px !important;
+    padding: 4px !important;
+    border-radius: 50% !important;
+}
+
+#chat-toggle-btn img {
+    width: 46px !important;
+    height: 46px !important;
+}
+
+.dropdown-toggle {
+    appearance: none;
+    border: 0;
+    font: inherit;
+}
+
+@media (max-width: 860px) {
+    .navbar-container > .mobile-nav-toggle {
+        display: inline-flex !important;
+        grid-column: 2 !important;
+        grid-row: 1 !important;
+        position: relative !important;
+        z-index: 6300 !important;
+    }
+
+    .navbar-container > .mobile-nav-toggle i {
+        color: #fff !important;
+    }
+
+    body.mobile-nav-open .navbar-menu {
+        top: 76px !important;
+        right: .75rem !important;
+        bottom: .75rem !important;
+        left: auto !important;
+        height: calc(100dvh - 88px) !important;
+        max-height: none !important;
+        width: min(360px, calc(100vw - 1.5rem)) !important;
+        border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border)) !important;
+        border-radius: 24px !important;
+        padding: 1rem !important;
+        box-shadow: 0 30px 80px rgba(15, 23, 42, .34) !important;
+        overflow-y: auto !important;
+        align-items: stretch !important;
+        justify-content: flex-start !important;
+    }
+
+    body.mobile-nav-open .navbar-menu .dropdown-toggle {
+        cursor: default !important;
+        pointer-events: none !important;
+    }
+
+    body.mobile-nav-open .navbar-menu .dropdown-toggle .fa-chevron-down {
+        display: none !important;
+    }
+
+    body.mobile-nav-open .navbar-menu .dropdown-menu {
+        position: static !important;
+        display: grid !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+        transform: none !important;
+        width: 100% !important;
+        max-height: none !important;
+        margin-top: .4rem !important;
+        gap: .25rem !important;
+    }
+
+    body.mobile-nav-open #chat-toggle-btn,
+    body.mobile-nav-open #chat-widget {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+
+    #chat-toggle-btn {
+        right: auto !important;
+        left: .8rem !important;
+        bottom: calc(.8rem + env(safe-area-inset-bottom)) !important;
+        z-index: 5800 !important;
+    }
+
+    #chat-widget {
+        right: .65rem !important;
+        left: .65rem !important;
+        bottom: calc(4.9rem + env(safe-area-inset-bottom)) !important;
+        width: auto !important;
+        max-width: none !important;
+        max-height: min(72dvh, 560px) !important;
+        z-index: 5800 !important;
+    }
+}
+
+/* Home popular products: editorial showcase aligned with the storefront language. */
+body[data-page="/"] .storefront-popular .storefront-product-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 1.45rem !important;
+    align-items: stretch !important;
+}
+
+body[data-page="/"] .storefront-popular .storefront-product-card {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 470px !important;
+    min-height: 0 !important;
+    background: linear-gradient(155deg, #ffffff 0%, #fbf7fd 100%) !important;
+    border: 1px solid #e4d7eb !important;
+    border-radius: 22px !important;
+    box-shadow: 0 16px 34px rgba(65, 38, 91, .11) !important;
+    overflow: hidden !important;
+}
+
+body[data-page="/"] .storefront-popular .storefront-product-card::after { display: none !important; }
+body[data-page="/"] .storefront-popular .storefront-product-card:hover { transform: translateY(-6px) !important; box-shadow: 0 24px 46px rgba(75, 41, 100, .18) !important; }
+body[data-page="/"] .storefront-popular .storefront-product-image { position: relative !important; inset: auto !important; align-self: center !important; width: calc(100% - 1.3rem) !important; aspect-ratio: auto !important; flex: 0 0 238px !important; height: 238px !important; margin: .65rem .65rem 0 !important; border-radius: 16px !important; overflow: hidden !important; }
+body[data-page="/"] .storefront-popular .storefront-product-image img { width: 100% !important; height: 100% !important; object-fit: cover !important; }
+body[data-page="/"] .storefront-popular .storefront-product-image::after { content: ""; position: absolute; inset: 45% 0 0; background: linear-gradient(180deg, transparent, rgba(37, 21, 48, .26)); }
+body[data-page="/"] .storefront-popular .storefront-product-body { display: flex !important; flex: 1 1 auto !important; width: 100% !important; min-height: 0 !important; box-sizing: border-box !important; flex-direction: column !important; align-items: center !important; text-align: center !important; gap: .42rem !important; padding: .85rem 1rem 1rem !important; color: #273044 !important; }
+body[data-page="/"] .storefront-popular .storefront-product-body small { width: fit-content; padding: .24rem .58rem; border-radius: 999px; background: #f1e8fb; color: var(--store-purple) !important; font-size: .68rem !important; font-weight: 800 !important; }
+body[data-page="/"] .storefront-popular .storefront-product-body h3 { display: flex !important; align-items: center !important; justify-content: center !important; width: 100% !important; min-height: 2.5em !important; margin: 0 !important; overflow-wrap: anywhere !important; color: #253758 !important; font-size: 1rem !important; line-height: 1.25 !important; }
+body[data-page="/"] .storefront-popular .storefront-rating { align-self: center !important; min-height: 1.2rem !important; line-height: 1 !important; }
+body[data-page="/"] .storefront-popular .storefront-product-body > strong { margin: 0 !important; color: #56318f !important; font-size: 1.2rem !important; line-height: 1.1 !important; }
+body[data-page="/"] .storefront-popular .storefront-product-body > a { display: flex !important; align-self: stretch !important; flex: 0 0 42px !important; box-sizing: border-box !important; align-items: center !important; justify-content: center !important; width: auto !important; min-height: 42px !important; margin-top: auto !important; padding: 0 .65rem !important; white-space: nowrap !important; border: 1px solid #7e45db !important; border-radius: 12px !important; background: linear-gradient(135deg, #7c3aed, #c13d84) !important; color: #fff !important; font-size: .78rem !important; }
+@media (max-width: 760px) { body[data-page="/"] .storefront-popular .storefront-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+
+@media (max-width: 760px) {
+    body[data-page="/marketing"] .marketing-table-wrap,
+    body[data-page="/marketing"] .table-container {
+        overflow: visible !important;
+        border: 0 !important;
+        background: transparent !important;
+    }
+
+    body[data-page="/marketing"] .marketing-page .table-container .marketing-customers-table,
+    body[data-page="/marketing"] .marketing-customers-table,
+    body[data-page="/marketing"] .marketing-customers-table tbody {
+        display: block !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        table-layout: auto !important;
+    }
+
+    body[data-page="/marketing"] .marketing-customers-table thead {
+        display: none !important;
+    }
+
+    body[data-page="/marketing"] .marketing-customers-table tbody {
+        display: grid !important;
+        gap: .8rem !important;
+    }
+
+    body[data-page="/marketing"] .marketing-customers-table tr {
+        position: relative !important;
+        display: block !important;
+        width: 100% !important;
+        padding: 1rem 1rem 1rem 3.35rem !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 18px !important;
+        background: var(--bg-card) !important;
+        box-shadow: var(--shadow-sm) !important;
+    }
+
+    body[data-page="/marketing"] .marketing-customers-table td {
+        display: block !important;
+        width: 100% !important;
+        padding: .2rem 0 !important;
+        border: 0 !important;
+        text-align: left !important;
+    }
+
+    body[data-page="/marketing"] .marketing-customers-table td:first-child {
+        position: absolute !important;
+        top: 1rem !important;
+        left: 1rem !important;
+        width: 22px !important;
+    }
+
+    body[data-page="/marketing"] .marketing-recipient {
+        width: 22px !important;
+        min-width: 22px !important;
+        height: 22px !important;
+        min-height: 22px !important;
+        max-height: 22px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    body[data-page="/marketing"] .marketing-customers-table .btn-sm {
+        width: 100% !important;
+        margin-top: .4rem !important;
+    }
+}
+
+/* Compact POS hero for every phone-sized layout, even when a browser reports a wide device scale. */
+@media (max-width: 900px) {
+    body[data-page="/pos"] .pos-page--cashier .page-header.pos-header,
+    body[data-page="/pos"] .pos-page--cashier .pos-header {
+        display: block !important;
+        min-height: 0 !important;
+        height: auto !important;
+        padding: 1rem !important;
+        overflow: hidden !important;
+    }
+
+    body[data-page="/pos"] .pos-header > div:first-child,
+    body[data-page="/pos"] .pos-header .pos-search-box {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    body[data-page="/pos"] .pos-header .pos-search-box { margin-top: .8rem !important; }
+    body[data-page="/pos"] .pos-header .pos-search-box input { height: 48px !important; min-height: 48px !important; }
+    body[data-page="/pos"] .pos-header .pos-subtitle { display: none !important; }
+
+    body[data-page="/pos"] .pos-header .pos-title {
+        display: flex !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        font-size: 1.65rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+body[data-page="/pos"] .pos-header .pos-title i { flex: 0 0 42px !important; width: 42px !important; height: 42px !important; }
+    body[data-page="/pos"] .pos-header .pos-kicker { display: none !important; }
+}
+
+body[data-page="/pos"] .pos-featured-products-header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: .25rem 0 .75rem;
+}
+body[data-page="/pos"] .pos-featured-products-header span { color: #7c3aed; font-size: .72rem; font-weight: 850; text-transform: uppercase; }
+body[data-page="/pos"] .pos-featured-products-header h3 { margin: .12rem 0 0; color: #233657; font-size: 1.1rem; }
+body[data-page="/pos"] .pos-featured-products-header small { color: #748094; }
+@media (max-width: 650px) { body[data-page="/pos"] .pos-featured-products-header { align-items: flex-start; flex-direction: column; gap: .2rem; } }
+
+/* Payment-method form: preserve readable labels instead of squeezing four controls into one row. */
+body[data-page="/pos"] .pos-payment-config-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: .75rem !important;
+}
+body[data-page="/pos"] .pos-payment-config-form .form-control {
+    min-width: 0 !important;
+    text-overflow: ellipsis;
+}
+body[data-page="/pos"] .pos-payment-config-form .btn {
+    grid-column: 1 / -1 !important;
+    min-height: 46px !important;
+}
+@media (max-width: 650px) { body[data-page="/pos"] .pos-payment-config-form { grid-template-columns: 1fr !important; } }
+
+@media (max-width: 600px) {
+    .navbar .navbar-brand-text {
+        display: none !important;
+    }
+
+    .navbar .navbar-container {
+        grid-template-columns: minmax(72px, 1fr) 42px max-content !important;
+    }
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-layout {
+    display: grid !important;
+    grid-template-columns: minmax(320px, 360px) minmax(0, 1fr) !important;
+    gap: 1.15rem !important;
+    align-items: start !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card {
+    position: sticky !important;
+    top: 1rem !important;
+    order: 1 !important;
+    display: block !important;
+    grid-template-columns: 1fr !important;
+    padding: 1rem !important;
+    border: 0 !important;
+    border-radius: 26px !important;
+    background: linear-gradient(180deg, #202842, #1a2138) !important;
+    box-shadow: 0 30px 70px rgba(23, 31, 53, .22) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-main-card {
+    order: 2 !important;
+    padding: 1.25rem !important;
+    border-radius: 26px !important;
+    background: linear-gradient(180deg, #ffffff, #fbf8ff) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-admin-block--cash {
+    padding: 1.2rem !important;
+    border: 1px solid rgba(226, 214, 235, .85) !important;
+    border-radius: 22px !important;
+    background: linear-gradient(180deg, #ffffff, #fffafd) !important;
+    box-shadow: 0 22px 56px rgba(16, 24, 40, .14) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-admin-block--credit,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-admin-block--payments,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-admin-block--sessions {
+    display: none !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-panel-title,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .session-status-value {
+    color: #1f2637 !important;
+    text-shadow: none !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .pos-panel-eyebrow,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .session-status-title,
+body[data-page="/pos"] .pos-page--cashier .pos-side-card .session-status-card .text-muted {
+    color: #7a8090 !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .session-status-card {
+    border: 1px solid #eee4f1 !important;
+    background: linear-gradient(135deg, #fff, #fff7fb) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-products-grid {
+    grid-template-columns: repeat(auto-fit, minmax(285px, 1fr)) !important;
+    gap: 1rem !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-product-card {
+    min-height: 260px !important;
+    border-radius: 20px !important;
+    box-shadow: 0 18px 46px rgba(36, 24, 55, .09) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-product-price-tag {
+    border-radius: 18px !important;
+    background: linear-gradient(135deg, #f4edff, #fff3fa) !important;
+}
+
+body[data-page="/pos"] .pos-page--cashier .pos-product-cart-btn {
+    border-radius: 18px !important;
+    box-shadow: 0 14px 28px rgba(124, 58, 237, .22) !important;
+}
+
+body[data-page^="/pos"] #chat-toggle-btn {
+    right: auto !important;
+    left: 1.15rem !important;
+    bottom: 1rem !important;
+}
+
+body[data-page^="/pos"] #chat-widget {
+    right: auto !important;
+    left: 1rem !important;
+    bottom: 5rem !important;
+}
+
+body[data-page^="/pos"] .pos-cart-fab {
+    right: 1.35rem !important;
+    left: auto !important;
+    bottom: 1.25rem !important;
+}
+
+body[data-page^="/pos"] .pos-cart-summary-panel {
+    right: 1.35rem !important;
+    left: auto !important;
+    bottom: 6.25rem !important;
+    width: min(460px, calc(100vw - 2rem)) !important;
+    border-radius: 24px !important;
+}
+
+@media (max-width: 1180px) {
+    body[data-page="/pos"] .pos-page--cashier .pos-layout {
+        grid-template-columns: 1fr !important;
+    }
+
+    body[data-page="/pos"] .pos-page--cashier .pos-side-card {
+        position: static !important;
+    }
+}
+
+/* Global theme repair layer. Keeps dark/light mode consistent across modules with older fixed colors. */
+html.dark-start,
+body.dark {
+    color-scheme: dark;
+}
+
+body.dark.app-body {
+    color: var(--text) !important;
+    background:
+        radial-gradient(circle at 12% 8%, rgba(139, 92, 246, .16), transparent 30%),
+        radial-gradient(circle at 86% 10%, rgba(236, 72, 153, .12), transparent 28%),
+        linear-gradient(180deg, #0f172a, #111827 48%, #0f172a) !important;
+}
+
+body.dark .app-background,
+body.dark .bg-grid,
+body.dark .cursor-glow {
+    opacity: .36 !important;
+}
+
+body.dark .navbar,
+body.dark .storefront-header,
+body.dark .storefront-main,
+body.dark .storefront-nav,
+body.dark .footer,
+body.dark .global-categories-sidebar,
+body.dark .user-dropdown,
+body.dark .dropdown-menu {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .24) !important;
+    background: linear-gradient(180deg, rgba(17, 24, 39, .98), rgba(15, 23, 42, .98)) !important;
+}
+
+body.dark .storefront-promo,
+body.dark .footer {
+    background: linear-gradient(135deg, #25164a, #3a1735) !important;
+}
+
+body.dark .navbar a,
+body.dark .navbar .dropdown-toggle,
+body.dark .storefront-nav a,
+body.dark .storefront-tools a,
+body.dark .storefront-brand,
+body.dark .storefront-brand span,
+body.dark .user-name,
+body.dark .user-role,
+body.dark .footer a,
+body.dark .footer li,
+body.dark .footer p {
+    color: #e5e7eb !important;
+}
+
+body.dark .page-shell,
+body.dark .dashboard-page,
+body.dark .client-dashboard,
+body.dark .storefront-page,
+body.dark .catalog-page,
+body.dark .login-page-shell,
+body.dark .register-page-shell {
+    color: #f8fafc !important;
+}
+
+body.dark .card,
+body.dark .page-header,
+body.dark .dashboard-panel,
+body.dark .dashboard-kpi,
+body.dark .dashboard-chart-card,
+body.dark .dashboard-alert,
+body.dark .dashboard-shortcuts a,
+body.dark .quick-order-card,
+body.dark .client-card,
+body.dark .catalog-card,
+body.dark .storefront-product-card,
+body.dark .product-tile,
+body.dark .product-tile__body,
+body.dark .inventory-panel,
+body.dark .inventory-card,
+body.dark .marketing-panel,
+body.dark .accounting-panel,
+body.dark .roles-panel,
+body.dark .users-panel,
+body.dark .orders-panel,
+body.dark .production-panel,
+body.dark .reports-panel,
+body.dark .settings-panel,
+body.dark .table-container,
+body.dark .smart-table-toolbar,
+body.dark .smart-table-dock,
+body.dark .payment-modal__dialog,
+body.dark .pos-payment-modal__dialog,
+body.dark .modal-content,
+body.dark .app-modal-card,
+body.dark .bs-select__menu,
+body.dark #chat-widget {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .28) !important;
+    background: linear-gradient(180deg, #1f2937, #111827) !important;
+    box-shadow: 0 22px 62px rgba(0, 0, 0, .26) !important;
+}
+
+body.dark .page-header,
+body.dark .dashboard-hero,
+body.dark .pos-header,
+body.dark .client-hero,
+body.dark .catalog-hero,
+body.dark .marketing-hero,
+body.dark .accounting-hero {
+    background:
+        linear-gradient(135deg, rgba(49, 46, 129, .58), rgba(112, 26, 117, .42)),
+        linear-gradient(180deg, #1f2937, #111827) !important;
+    border-color: rgba(167, 139, 250, .34) !important;
+}
+
+body.dark h1,
+body.dark h2,
+body.dark h3,
+body.dark h4,
+body.dark h5,
+body.dark h6,
+body.dark strong,
+body.dark label,
+body.dark .page-title,
+body.dark .section-title,
+body.dark .panel-title,
+body.dark .pos-panel-title,
+body.dark .pos-panel-title-sm,
+body.dark .dashboard-section-head h2,
+body.dark .dashboard-kpi strong,
+body.dark .product-tile__body h3,
+body.dark .storefront-product-card h3,
+body.dark .payment-modal__header h2,
+body.dark .pos-payment-modal__header h2 {
+    color: #f8fafc !important;
+    text-shadow: none !important;
+}
+
+body.dark p,
+body.dark small,
+body.dark span,
+body.dark .text-muted,
+body.dark .muted,
+body.dark .page-subtitle,
+body.dark .panel-eyebrow,
+body.dark .pos-panel-eyebrow,
+body.dark .dashboard-section-head span,
+body.dark .product-tile__body p,
+body.dark .storefront-product-card p,
+body.dark .pos-product-price-tag small {
+    color: #cbd5e1 !important;
+}
+
+body.dark .form-control,
+body.dark .input,
+body.dark input:not([type="checkbox"]):not([type="radio"]),
+body.dark textarea,
+body.dark select,
+body.dark .bs-select__button,
+body.dark .smart-table-search,
+body.dark .smart-table-page-size select {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .38) !important;
+    background: #0f172a !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .16) !important;
+}
+
+body.dark input::placeholder,
+body.dark textarea::placeholder,
+body.dark .form-control::placeholder {
+    color: #94a3b8 !important;
+}
+
+body.dark .bs-select__button i,
+body.dark .global-categories-close,
+body.dark .theme-toggle,
+body.dark .mobile-nav-toggle {
+    color: #ddd6fe !important;
+    border-color: rgba(167, 139, 250, .28) !important;
+    background: rgba(124, 58, 237, .16) !important;
+}
+
+body.dark .bs-select__option {
+    color: #f8fafc !important;
+    background: transparent !important;
+}
+
+body.dark .bs-select__option:hover,
+body.dark .bs-select__option[aria-selected="true"] {
+    color: #fff !important;
+    background: rgba(124, 58, 237, .24) !important;
+}
+
+body.dark .table,
+body.dark table {
+    color: #f8fafc !important;
+    background: transparent !important;
+}
+
+body.dark .table thead th,
+body.dark table thead th,
+body.dark .smart-table table thead th {
+    color: #e5e7eb !important;
+    border-color: rgba(148, 163, 184, .25) !important;
+    background: #0f172a !important;
+}
+
+body.dark .table tbody td,
+body.dark table tbody td,
+body.dark .smart-table table tbody td {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .18) !important;
+    background: rgba(15, 23, 42, .28) !important;
+}
+
+body.dark .table tbody tr:hover td,
+body.dark table tbody tr:hover td {
+    background: rgba(124, 58, 237, .14) !important;
+}
+
+body.dark .badge,
+body.dark .status-chip,
+body.dark .role-count,
+body.dark .smart-table-match,
+body.dark .smart-table-page {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .3) !important;
+    background: rgba(51, 65, 85, .86) !important;
+}
+
+body.dark .badge-primary,
+body.dark .smart-table-page.is-current {
+    color: #fff !important;
+    border-color: rgba(167, 139, 250, .45) !important;
+    background: linear-gradient(135deg, #7c3aed, #c83c86) !important;
+}
+
+body.dark .badge-success {
+    color: #a7f3d0 !important;
+    background: rgba(16, 185, 129, .2) !important;
+}
+
+body.dark .badge-warning {
+    color: #fde68a !important;
+    background: rgba(245, 158, 11, .2) !important;
+}
+
+body.dark .badge-danger {
+    color: #fecaca !important;
+    background: rgba(239, 68, 68, .2) !important;
+}
+
+body.dark .btn-outline,
+body.dark .btn-ghost {
+    color: #ddd6fe !important;
+    border-color: rgba(167, 139, 250, .42) !important;
+    background: rgba(124, 58, 237, .08) !important;
+}
+
+body.dark .btn-outline:hover,
+body.dark .btn-ghost:hover {
+    color: #fff !important;
+    background: rgba(124, 58, 237, .28) !important;
+}
+
+body.dark .pos-cart-summary-panel,
+body.dark .pos-cart-mini-line,
+body.dark .pos-cart-mini-total,
+body.dark .pos-cart-item,
+body.dark .pos-cart-totals,
+body.dark .payment-modal__amount,
+body.dark .pos-payment-modal__amount,
+body.dark .payment-modal__note,
+body.dark .pos-payment-modal__note {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .28) !important;
+    background: linear-gradient(180deg, #1f2937, #111827) !important;
+}
+
+body.dark .pos-product-card,
+body.dark .pos-products-list-panel,
+body.dark .pos-cart-checkout-card,
+body.dark .pos-cart-checkout-card--payment,
+body.dark .pos-page--cashier .pos-side-card .pos-admin-block--cash,
+body.dark .pos-page--cashier .session-status-card,
+body.dark .pos-page--cashier .pos-main-card {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .28) !important;
+    background: linear-gradient(180deg, #1f2937, #111827) !important;
+}
+
+body.dark .pos-product-price-tag,
+body.dark .pos-product-code,
+body.dark .pos-product-stock-chip,
+body.dark .pos-table-code,
+body.dark .global-category-option,
+body.dark .global-category-option span {
+    color: #ddd6fe !important;
+    border-color: rgba(167, 139, 250, .24) !important;
+    background: rgba(124, 58, 237, .16) !important;
+}
+
+body.dark .login-form-panel,
+body.dark .register-form-panel,
+body.dark .login-security-note,
+body.dark .register-security-note {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, .28) !important;
+    background: linear-gradient(180deg, #1f2937, #111827) !important;
+}
+
+body:not(.dark).app-body {
+    color-scheme: light;
+}
+
+body[data-page="/accounting"] #accReconStatus {
+    flex: 1 1 100% !important;
+    margin: -.15rem 0 0 calc(48px + .9rem) !important;
+    font-size: clamp(1.15rem, 1.35vw, 1.45rem) !important;
+    line-height: 1.08 !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    white-space: nowrap !important;
+}
+
+/* Final dark mode normalization for operational modules. */
+body.dark {
+    --ops-dark-card: #161f31;
+    --ops-dark-card-soft: #1f293d;
+    --ops-dark-line: rgba(167, 139, 250, .24);
+    --ops-dark-text: #f8fafc;
+    --ops-dark-muted: #cbd5e1;
+}
+
+body.dark .pos-page,
+body.dark .accounting-page,
+body.dark .marketing-page,
+body.dark .orders-page,
+body.dark .inventory-page,
+body.dark .production-page,
+body.dark .reports-page,
+body.dark .users-workspace,
+body.dark .roles-page {
+    color: var(--ops-dark-text) !important;
+}
+
+body.dark .pos-page .card,
+body.dark .pos-page .table-container,
+body.dark .accounting-page .card,
+body.dark .accounting-page .table-container,
+body.dark .marketing-page .card,
+body.dark .marketing-page .table-container,
+body.dark .orders-page .card,
+body.dark .inventory-page .card,
+body.dark .production-page .card,
+body.dark .users-workspace .card,
+body.dark .roles-page .card {
+    color: var(--ops-dark-text) !important;
+    border-color: var(--ops-dark-line) !important;
+    background: linear-gradient(180deg, var(--ops-dark-card-soft), var(--ops-dark-card)) !important;
+}
+
+body.dark .pos-page .page-header,
+body.dark .pos-page .pos-header,
+body.dark .accounting-page .page-header,
+body.dark .marketing-page .page-header,
+body.dark .orders-page .page-header,
+body.dark .inventory-page .page-header,
+body.dark .production-page .page-header {
+    color: var(--ops-dark-text) !important;
+    border-color: rgba(236, 72, 153, .26) !important;
+    background:
+        radial-gradient(circle at 78% 18%, rgba(236, 72, 153, .22), transparent 32%),
+        linear-gradient(135deg, #172033, #272047 52%, #3a173c) !important;
+}
+
+body.dark .pos-page .page-header *,
+body.dark .pos-page .pos-header *,
+body.dark .accounting-page .page-header *,
+body.dark .marketing-page .page-header *,
+body.dark .orders-page .page-header *,
+body.dark .inventory-page .page-header *,
+body.dark .production-page .page-header * {
+    color: inherit !important;
+}
+
+body.dark .pos-page .text-muted,
+body.dark .accounting-page .text-muted,
+body.dark .marketing-page .text-muted,
+body.dark .orders-page .text-muted,
+body.dark .inventory-page .text-muted,
+body.dark .production-page .text-muted,
+body.dark .users-workspace .text-muted,
+body.dark .roles-page .text-muted,
+body.dark .pos-page small,
+body.dark .accounting-page small,
+body.dark .marketing-page small {
+    color: var(--ops-dark-muted) !important;
+}
+
+body.dark .pos-page--cashier .pos-side-card,
+body.dark .pos-page--cashier .pos-side-card .pos-admin-block--cash,
+body.dark .pos-page--cashier .session-status-card,
+body.dark .pos-page--cashier .pos-main-card,
+body.dark .pos-page--cashier .pos-product-card,
+body.dark .pos-cart-summary-panel,
+body.dark .pos-cart-mini-line,
+body.dark .pos-cart-mini-total,
+body.dark .pos-cart-checkout-card,
+body.dark .pos-cart-totals,
+body.dark .pos-cart-item,
+body.dark .pos-payment-modal__dialog {
+    color: var(--ops-dark-text) !important;
+    border-color: var(--ops-dark-line) !important;
+    background: linear-gradient(180deg, #202b42, #151d2e) !important;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .34) !important;
+}
+
+body.dark .pos-product-price-tag,
+body.dark .pos-product-code,
+body.dark .pos-product-stock-chip,
+body.dark .pos-cart-mini-qty,
+body.dark .pos-payment-status,
+body.dark .accounting-reference-chip,
+body.dark .smart-table-dock {
+    color: #ede9fe !important;
+    border-color: rgba(167, 139, 250, .28) !important;
+    background: rgba(124, 58, 237, .16) !important;
+}
+
+body.dark .pos-page--cashier .pos-product-card h4,
+body.dark .pos-page--cashier .pos-product-price-tag strong,
+body.dark .pos-cart-mini-info strong,
+body.dark .pos-cart-mini-price,
+body.dark .pos-cart-totals strong,
+body.dark .pos-cart-totals .total-final strong,
+body.dark .pos-payment-modal__amount strong,
+body.dark .accounting-detail-cell strong,
+body.dark .accounting-account-cell,
+body.dark .marketing-page table td,
+body.dark .accounting-page table td {
+    color: var(--ops-dark-text) !important;
+}
+
+body.dark .form-control,
+body.dark .input,
+body.dark input:not([type="checkbox"]):not([type="radio"]),
+body.dark textarea,
+body.dark select,
+body.dark .bs-select__button {
+    color: var(--ops-dark-text) !important;
+    border-color: rgba(167, 139, 250, .28) !important;
+    background: #101827 !important;
+}
+
+body.dark .bs-select__menu {
+    color: var(--ops-dark-text) !important;
+    border-color: rgba(167, 139, 250, .28) !important;
+    background: #111827 !important;
+    box-shadow: 0 24px 58px rgba(0, 0, 0, .45) !important;
+}
+
+body.dark .bs-select__option {
+    color: var(--ops-dark-text) !important;
+}
+
+body.dark .bs-select__option:hover,
+body.dark .bs-select__option[aria-selected="true"] {
+    color: #fff !important;
+    background: linear-gradient(135deg, rgba(124, 58, 237, .48), rgba(200, 60, 134, .32)) !important;
+}
+
+body.dark .btn-outline,
+body.dark .btn-ghost,
+body.dark .pos-page .btn-outline,
+body.dark .accounting-page .btn-outline,
+body.dark .marketing-page .btn-outline {
+    color: #ede9fe !important;
+    border-color: rgba(167, 139, 250, .42) !important;
+    background: rgba(124, 58, 237, .12) !important;
+}
+
+body.dark .btn-outline:hover,
+body.dark .btn-ghost:hover,
+body.dark .pos-page .btn-outline:hover,
+body.dark .accounting-page .btn-outline:hover,
+body.dark .marketing-page .btn-outline:hover {
+    color: #fff !important;
+    background: linear-gradient(135deg, #7c3aed, #c83c86) !important;
+}
+
+/* Authoritative POS theme layer: applies to every POS role, not only Cajero. */
+body[data-page="/pos"] .pos-header::before,
+body[data-page="/pos"] .pos-header::after {
+    display: none !important;
+    content: none !important;
+}
+
+body.dark[data-page="/pos"] .pos-side-card,
+body.dark[data-page="/pos"] .pos-admin-block,
+body.dark[data-page="/pos"] .pos-admin-block--cash,
+body.dark[data-page="/pos"] .pos-admin-block--sessions,
+body.dark[data-page="/pos"] .pos-admin-block--payments,
+body.dark[data-page="/pos"] .pos-admin-block--credit,
+body.dark[data-page="/pos"] .session-status-card,
+body.dark[data-page="/pos"] .pos-session-row,
+body.dark[data-page="/pos"] .pos-sale-row,
+body.dark[data-page="/pos"] .payment-method-card {
+    color: #f8fafc !important;
+    border-color: rgba(167, 139, 250, .25) !important;
+    background: linear-gradient(180deg, #202b42, #151d2e) !important;
+    box-shadow: 0 18px 46px rgba(0, 0, 0, .22) !important;
+}
+
+body.dark[data-page="/pos"] .pos-panel-title,
+body.dark[data-page="/pos"] .pos-panel-title-sm,
+body.dark[data-page="/pos"] .session-status-value,
+body.dark[data-page="/pos"] .session-status-card strong,
+body.dark[data-page="/pos"] .pos-session-row strong,
+body.dark[data-page="/pos"] .pos-sale-row strong,
+body.dark[data-page="/pos"] .payment-method-name {
+    color: #f8fafc !important;
+}
+
+body.dark[data-page="/pos"] .pos-panel-eyebrow,
+body.dark[data-page="/pos"] .session-status-title,
+body.dark[data-page="/pos"] .session-status-card .text-muted,
+body.dark[data-page="/pos"] .pos-session-row .text-muted,
+body.dark[data-page="/pos"] .pos-sale-row .text-muted {
+    color: #cbd5e1 !important;
+}
+
+body.dark .dropdown-item:hover,
+body.dark .dropdown-item:focus,
+body.dark .dropdown-item.active {
+    color: #fff !important;
+    background: linear-gradient(135deg, rgba(124, 58, 237, .58), rgba(200, 60, 134, .42)) !important;
+}
+
+/* Client portal: eliminate light surfaces and low-contrast labels in night mode. */
+body.dark .tracking-timeline,
+body.dark .tracking-summary,
+body.dark .catalog-toolbar {
+    color: #f8fafc !important;
+    border-color: rgba(167, 139, 250, .25) !important;
+    background: linear-gradient(180deg, #202b42, #151d2e) !important;
+    box-shadow: 0 18px 46px rgba(0, 0, 0, .2) !important;
+}
+
+body.dark .tracking-summary.text-muted,
+body.dark .tracking-summary .text-muted,
+body.dark .tracking-timeline .text-muted {
+    color: #cbd5e1 !important;
+}
+
+body.dark .commerce-kicker {
+    color: #3b2712 !important;
+}
+
+body.dark .leaflet-control-zoom a {
+    color: #111827 !important;
+}
+
+/* Navigation profile: compact desktop control and clean icon-only mobile state. */
+.navbar .user-profile {
+    width: clamp(190px, 20vw, 224px) !important;
+    min-width: 190px !important;
+    min-height: 48px !important;
+    grid-template-columns: 36px minmax(0, 1fr) 24px !important;
+    gap: .55rem !important;
+    padding: .3rem .45rem .3rem .34rem !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 22px rgba(42, 28, 56, .06) !important;
+}
+
+.navbar .user-avatar {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: .9rem !important;
+}
+
+.navbar .user-name {
+    font-size: .82rem !important;
+    line-height: 1.15 !important;
+}
+
+.navbar .user-role {
+    margin-top: .12rem !important;
+    font-size: .68rem !important;
+}
+
+.navbar .user-chevron {
+    width: 24px !important;
+    height: 24px !important;
+    background: transparent !important;
+}
+
+@media (max-width: 860px) {
+    .navbar .navbar-container {
+        grid-template-columns: auto 44px minmax(96px, 1fr) !important;
+        gap: .55rem !important;
+    }
+
+    .navbar .navbar-actions {
+        width: auto !important;
+        min-width: 0 !important;
+        justify-self: end !important;
+        gap: .45rem !important;
+    }
+
+    .navbar .user-profile {
+        width: 44px !important;
+        min-width: 44px !important;
+        max-width: 44px !important;
+        min-height: 44px !important;
+        height: 44px !important;
+        grid-template-columns: 1fr !important;
+        padding: 4px !important;
+        border-radius: 14px !important;
+        overflow: hidden !important;
+    }
+
+    .navbar .user-info,
+    .navbar .user-chevron {
+        display: none !important;
+    }
+
+    .navbar .user-avatar {
+        width: 34px !important;
+        height: 34px !important;
+        margin: auto !important;
+        font-size: .86rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar .navbar-container {
+        width: calc(100% - 1rem) !important;
+        grid-template-columns: 44px 42px minmax(96px, 1fr) !important;
+        gap: .4rem !important;
+    }
+
+    .navbar .navbar-logo {
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 12px !important;
+    }
+
+    .navbar .theme-toggle {
+        width: 40px !important;
+        min-width: 40px !important;
+        height: 40px !important;
+    }
+}
+
+/* Account control: one clear visual language on desktop and mobile. */
+.navbar .user-profile {
+    width: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+    min-height: 48px !important;
+    height: 48px !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    padding: 5px !important;
+    border-radius: 14px !important;
+    background: linear-gradient(145deg, #ffffff, #f4effa) !important;
+    box-shadow: 0 8px 22px rgba(42, 28, 56, .08) !important;
+    overflow: hidden !important;
+}
+
+.navbar .user-profile:hover,
+.navbar .user-menu.user-menu-open .user-profile {
+    border-color: #a855f7 !important;
+    box-shadow: 0 10px 26px rgba(124, 58, 237, .18) !important;
+    transform: translateY(-1px) !important;
+}
+
+.navbar .user-info,
+.navbar .user-chevron {
+    display: none !important;
+}
+
+.navbar .user-avatar {
+    width: 36px !important;
+    height: 36px !important;
+    margin: auto !important;
+    border-radius: 11px !important;
+    font-size: .88rem !important;
+}
+
+body.dark .navbar .user-profile {
+    border-color: rgba(167, 139, 250, .3) !important;
+    background: linear-gradient(145deg, #252d43, #171e30) !important;
+}
+
+/* Mobile navigation: keep menus inside the viewport and use a compact account popover. */
+@media (max-width: 860px) {
+    html, body { overflow-x: hidden !important; }
+
+    body.mobile-nav-open .navbar-menu {
+        top: 74px !important;
+        right: .75rem !important;
+        bottom: auto !important;
+        left: .75rem !important;
+        width: auto !important;
+        height: auto !important;
+        max-height: calc(100dvh - 90px) !important;
+        box-sizing: border-box !important;
+    }
+
+    body.mobile-nav-open .navbar-menu .navbar-link,
+    body.mobile-nav-open .navbar-menu .dropdown {
+        display: flex !important;
+        width: 100% !important;
+    }
+
+    .storefront-tools .storefront-account .user-dropdown {
+        position: absolute !important;
+        top: calc(100% + .55rem) !important;
+        right: 0 !important;
+        bottom: auto !important;
+        left: auto !important;
+        width: min(300px, calc(100vw - 1rem)) !important;
+        max-height: min(70dvh, 420px) !important;
+        border-radius: 18px !important;
+        transform-origin: top right !important;
+    }
+}
+
+/* Final mobile POS navigation override. */
+@media (max-width: 860px) {
+    .navbar-container {
+        grid-template-columns: max-content 42px minmax(0, 1fr) max-content !important;
+        gap: .55rem !important;
+    }
+
+    .navbar-container > .navbar-brand { grid-column: 1 !important; grid-row: 1 !important; }
+    .navbar-container > .mobile-nav-toggle { grid-column: 2 !important; grid-row: 1 !important; margin: 0 !important; position: static !important; }
+    .navbar-container > .navbar-actions { grid-column: 4 !important; grid-row: 1 !important; }
+
+    body.mobile-nav-open .navbar-menu {
+        top: 74px !important;
+        right: .5rem !important;
+        bottom: .5rem !important;
+        left: .5rem !important;
+        width: auto !important;
+        height: auto !important;
+        max-height: none !important;
+        border-radius: 18px !important;
+    }
+}
+
+/* Keep the operational mobile bar simple: logo, menu trigger and actions never overlap. */
+@media (max-width: 860px) {
+    .navbar-container {
+        display: flex !important;
+        position: relative !important;
+        align-items: center !important;
+        min-height: 66px !important;
+        padding: .55rem .8rem !important;
+    }
+
+    .navbar-container > .navbar-brand {
+        display: flex !important;
+        flex: 0 0 48px !important;
+        width: 48px !important;
+        padding: 0 !important;
+    }
+
+    .navbar-container > .navbar-brand .navbar-brand-text { display: none !important; }
+
+    .navbar-container > .mobile-nav-toggle {
+        display: inline-flex !important;
+        flex: 0 0 42px !important;
+        width: 42px !important;
+        height: 42px !important;
+        margin-left: .6rem !important;
+        position: static !important;
+        transform: none !important;
+    }
+
+    .navbar-container > .navbar-actions {
+        display: flex !important;
+        width: auto !important;
+        margin-left: auto !important;
+    }
+
+    body.mobile-nav-open .navbar-menu {
+        position: fixed !important;
+        inset: 74px 0 0 0 !important;
+        width: 100% !important;
+        height: calc(100dvh - 74px) !important;
+        max-height: none !important;
+        margin: 0 !important;
+        padding: 1rem !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        overflow-y: auto !important;
+    }
+}
+
+/* POS header: on a phone the heading and search are normal vertical blocks. */
+@media (max-width: 760px) {
+    body[data-page="/pos"] .pos-page--cashier .page-header.pos-header,
+    body[data-page="/pos"] .pos-page--cashier .pos-header {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        grid-template-columns: none !important;
+        min-height: 0 !important;
+        height: auto !important;
+        padding: 1rem !important;
+        gap: .85rem !important;
+    }
+
+    body[data-page="/pos"] .pos-header > div,
+    body[data-page="/pos"] .pos-header .pos-search-box {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    body[data-page="/pos"] .pos-header .pos-search-box input {
+        display: block !important;
+        width: 100% !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        box-sizing: border-box !important;
+    }
+
+    body[data-page="/pos"] .pos-header .pos-title {
+        font-size: 1.7rem !important;
+        line-height: 1.12 !important;
+        white-space: normal !important;
+        overflow-wrap: normal !important;
+        word-break: normal !important;
     }
 }

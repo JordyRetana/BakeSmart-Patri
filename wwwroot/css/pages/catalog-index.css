@@ -51,6 +51,51 @@
     margin: 0 auto 2rem;
 }
 
+/* Mantiene el encabezado, buscador y catálogo dentro de la misma retícula. */
+body[data-page="/catalog"] .catalog-page-header,
+body[data-page="/catalog"] .catalog-page-content {
+    width: min(1480px, calc(100% - 2rem)) !important;
+    max-width: none !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+body[data-page="/catalog"] .catalog-page-header {
+    margin-top: 1.5rem !important;
+    margin-bottom: 1rem !important;
+}
+
+body[data-page="/catalog"] .catalog-page-content {
+    padding: 0 !important;
+}
+
+body[data-page="/catalog"] .catalog-toolbar {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 0 1.25rem !important;
+    padding: 1rem !important;
+}
+
+.storefront-cart-link { position: relative; }
+
+.storefront-cart-link [data-store-cart-count] {
+    position: absolute;
+    top: -.35rem;
+    right: -.45rem;
+    min-width: 1.35rem;
+    height: 1.35rem;
+    padding: 0 .3rem;
+    display: inline-grid;
+    place-items: center;
+    border: 2px solid var(--surface, #fff);
+    border-radius: 999px;
+    background: var(--secondary, #c83c86);
+    color: #fff;
+    font-size: .68rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
 .catalog-search-row {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) 56px auto;
@@ -125,7 +170,7 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 1rem;
-    padding: 1rem;
+    padding: .8rem 1rem;
     border-bottom: 1px solid var(--border);
 }
 
@@ -158,19 +203,19 @@
 .catalog-categories-sidebar__body {
     display: grid;
     align-content: start;
-    gap: .65rem;
+    gap: .45rem;
     overflow: auto;
-    padding: 1rem;
+    padding: .7rem 1rem 1rem;
 }
 
 .catalog-category-option {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    gap: .75rem;
+    gap: .6rem;
     align-items: center;
     width: 100%;
-    min-height: 74px;
-    padding: .8rem;
+    min-height: 56px;
+    padding: .55rem .65rem;
     text-align: left;
     color: var(--text);
     border: 1px solid var(--border);
@@ -188,13 +233,16 @@
 .catalog-category-option span {
     display: grid;
     place-items: center;
-    width: 42px;
-    height: 42px;
+    width: 34px;
+    height: 34px;
     color: var(--primary-dark);
     border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
     border-radius: 8px;
     background: color-mix(in srgb, var(--primary-light) 60%, var(--bg-card));
 }
+
+.catalog-category-option strong { font-size: .92rem; }
+.catalog-category-option small { margin-top: .05rem; font-size: .72rem; }
 
 .catalog-category-option strong,
 .catalog-category-option small {
@@ -272,6 +320,11 @@ body.catalog-sidebar-open {
     align-items: center;
     gap: .9rem;
     padding: 1rem;
+}
+
+.catalog-favorites-login[hidden],
+.catalog-favorites-empty[hidden] {
+    display: none !important;
 }
 
 .catalog-favorites-login > i,
@@ -462,6 +515,11 @@ body.catalog-sidebar-open {
 }
 
 @media (max-width: 520px) {
+    body[data-page="/catalog"] .catalog-page-header,
+    body[data-page="/catalog"] .catalog-page-content {
+        width: calc(100% - 1rem);
+    }
+
     .catalog-categories-sidebar {
         width: 100vw;
     }
@@ -477,4 +535,18 @@ body.catalog-sidebar-open {
         width: 50px !important;
         min-width: 50px !important;
     }
+}
+/* Marco fluido compartido por catálogo y favoritos. */
+.catalog-page{width:min(var(--page-shell-max),calc(100% - (var(--page-shell-gutter) * 2)))}
+
+body.dark .catalog-favorites-hero { background:linear-gradient(120deg,#26374a,#342644 58%,#392736); border-color:#4a5368; }
+body.dark .catalog-favorites-hero span { color:#d6b9ff; }
+body.dark .catalog-favorites-hero h1,body.dark .catalog-favorites-empty h2 { color:#f7f8fc; }
+body.dark .catalog-favorites-hero p,body.dark .catalog-favorites-empty p,body.dark .catalog-favorites-login p { color:#c5cfdd; }
+body.dark .catalog-favorites-empty,body.dark .catalog-favorites-login,body.dark .favorite-product-card { background:#202a39; border-color:#4a5368; }
+body.dark .favorite-product-card h2 { color:#f7f8fc; }
+body.dark .favorite-product-card p { color:#c5cfdd; }
+.catalog-products-grid .product-card {
+    content-visibility: auto;
+    contain-intrinsic-size: 520px;
 }

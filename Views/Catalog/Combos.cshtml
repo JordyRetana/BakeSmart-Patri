@@ -1,25 +1,61 @@
-@model BakeSmartPatri.Models.CatalogIndexViewModel
+@model IReadOnlyList<BakeSmartPatri.Data.SqlStore.ComboData>
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Combos";
     var culture = new System.Globalization.CultureInfo("es-CR");
-    var products = Model.Products.Where(product => product.IsActive).Take(6).ToList();
 }
+@section Styles { <link rel="stylesheet" href="~/css/pages/commerce-pages.css" asp-append-version="true" /> }
 <main class="commerce-page">
-    <header class="commerce-hero commerce-hero--combos"><div><span class="commerce-kicker">Ideas para compartir</span><h1>Combina tus productos favoritos</h1><p>Selecciona una propuesta y crea tu pedido con los productos disponibles.</p></div><i class="fas fa-box-open"></i></header>
+    <header class="commerce-hero commerce-hero--combos">
+        <div><span class="commerce-kicker">Ahorro para compartir</span><h1>Combos preparados para ti</h1><p>Agrega los productos del combo al carrito y revisa tu pedido antes de continuar.</p></div><i class="fas fa-box-open"></i>
+    </header>
     <section class="commerce-section">
-        <div class="commerce-section-title"><span></span><h2>Propuestas para celebrar</h2><span></span></div>
+        <div class="commerce-section-title"><span></span><h2>Combos disponibles</h2><span></span></div>
         <div class="commerce-combo-list">
-            @for (var index = 0; index < products.Count; index += 2)
+            @foreach (var combo in Model)
             {
-                var first = products[index];
-                var second = index + 1 < products.Count ? products[index + 1] : null;
-                var total = first.UnitPrice + (second?.UnitPrice ?? 0);
                 <article class="commerce-combo-tile">
-                    <div class="commerce-combo-images"><img src="@first.ImageUrl" alt="@first.AltText" />@if (second is not null) { <img src="@second.ImageUrl" alt="@second.AltText" /> }</div>
-                    <div><small>Combo sugerido</small><h2>@first.Name @(second is not null ? $"+ {second.Name}" : "")</h2><p>Arma una celebración con productos activos del catálogo.</p><strong>@total.ToString("C0", culture)</strong><a href="/Catalog">Elegir productos</a></div>
+                    <div class="commerce-combo-images">@foreach (var item in combo.Items.Take(3)) { <img src="@item.ImageUrl" alt="@item.Name" /> }</div>
+                    <div>
+                        <small>Ahorra @combo.Discount.ToString("C0", culture)</small><h2>@combo.Name</h2><p>@combo.Description</p>
+                        <ul>@foreach (var item in combo.Items) { <li>@item.Quantity.ToString("0.##") × @item.Name</li> }</ul>
+                        <del>@combo.RegularPrice.ToString("C0", culture)</del> <strong>@combo.SpecialPrice.ToString("C0", culture)</strong>
+                        <button type="button" class="commerce-combo-add" onclick="addCatalogCombo(@combo.Id)">Agregar al carrito</button>
+                    </div>
                 </article>
             }
+            @if (!Model.Any()) { <div class="client-empty-state"><i class="fas fa-box-open"></i><strong>No hay combos activos</strong><span>Pronto publicaremos nuevas opciones.</span></div> }
         </div>
     </section>
 </main>
+<script>
+    const catalogCombos = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(combo => new { id = combo.Id, name = combo.Name, specialPrice = combo.SpecialPrice, imageUrl = combo.ImageUrl, items = combo.Items.Select(item => new { productId = item.ProductId, quantity = item.Quantity, name = item.Name, unitPrice = item.UnitPrice }) })));
+    function addCatalogCombo(comboId) {
+        const combo = catalogCombos.find(row => Number(row.id) === Number(comboId));
+        if (!combo) return;
+        const email = (document.body.dataset.userEmail || '').trim().toLowerCase();
+        const key = `bakesmart:catalog-cart:${email || 'guest'}`;
+        let cart = [];
+        try { cart = JSON.parse(localStorage.getItem(key) || '[]'); } catch { cart = []; }
+        const existing = cart.find(row => row?.isCombo && Number(row.comboId) === Number(combo.id));
+        if (existing) {
+            existing.quantity = Number(existing.quantity || 0) + 1;
+        } else {
+            cart.push({
+                id: `combo-${combo.id}`,
+                comboId: Number(combo.id),
+                isCombo: true,
+                name: combo.name,
+                price: Number(combo.specialPrice || 0),
+                quantity: 1,
+                imageUrl: combo.imageUrl || null,
+                items: (combo.items || []).map(item => ({ productId: Number(item.productId), quantity: Number(item.quantity || 1), name: item.name }))
+            });
+        }
+        localStorage.setItem(key, JSON.stringify(cart));
+        window.dispatchEvent(new CustomEvent('bakesmart:cart-updated', {
+            detail: { count: cart.reduce((total, row) => total + Math.max(1, Number(row?.quantity || 1)), 0) }
+        }));
+        window.location.href = '/Catalog/Cart';
+    }
+</script>

@@ -10,7 +10,7 @@
     <div style="margin-bottom:1.25rem;">
         <a href="/Catalog" class="btn btn-outline btn-sm">
             <i class="fas fa-arrow-left"></i>
-            Volver al catalogo
+            Volver al catálogo
         </a>
     </div>
 
@@ -53,13 +53,16 @@
             </div>
 
             <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
-                <a href="/Orders/Create?product=@Model.Product.Id" class="btn btn-primary">
+                <button type="button" id="addDetailToCart" class="btn btn-primary">
                     <i class="fas fa-shopping-cart"></i>
-                    Crear pedido
-                </a>
+                    Agregar al carrito
+                </button>
+                <button type="button" id="detailFavorite" class="btn btn-outline" aria-pressed="false">
+                    <i class="far fa-heart" aria-hidden="true"></i> <span>Guardar favorito</span>
+                </button>
                 <a href="/Catalog" class="btn btn-outline">
                     <i class="fas fa-book-open"></i>
-                    Ver mas productos
+                    Ver más productos
                 </a>
             </div>
         </div>
@@ -90,9 +93,65 @@
 </div>
 
 <script>
+    (() => {
+        const button = document.getElementById('detailFavorite');
+        const productId = @Model.Product.Id;
+        const email = (document.body.dataset.userEmail || '').trim().toLowerCase();
+        const key = `bakesmart:favorites:${email}`;
+        const read = () => {
+            try { return new Set(JSON.parse(localStorage.getItem(key) || '[]').map(Number)); }
+            catch { return new Set(); }
+        };
+        const render = () => {
+            const selected = read().has(productId);
+            button.setAttribute('aria-pressed', String(selected));
+            button.querySelector('i').className = `${selected ? 'fas' : 'far'} fa-heart`;
+            button.querySelector('span').textContent = selected ? 'Quitar de favoritos' : 'Guardar favorito';
+        };
+        button.addEventListener('click', () => {
+            if (!email) {
+                window.location.href = `/Account/Login?ReturnUrl=${encodeURIComponent(window.location.pathname)}`;
+                return;
+            }
+            const ids = read();
+            if (ids.has(productId)) ids.delete(productId);
+            else ids.add(productId);
+            localStorage.setItem(key, JSON.stringify([...ids]));
+            render();
+            window.app?.toast?.success(ids.has(productId) ? 'Agregado a favoritos.' : 'Eliminado de favoritos.');
+        });
+        render();
+    })();
+
     function setMainImage(url) {
         document.getElementById('mainProductImage').src = url;
     }
+
+    document.getElementById('addDetailToCart').addEventListener('click', () => {
+        const email = (document.body.dataset.userEmail || '').trim().toLowerCase();
+        const key = `bakesmart:catalog-cart:${email || 'guest'}`;
+        const product = {
+            id: @Model.Product.Id,
+            name: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Product.Name)),
+            price: @Model.Product.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            quantity: 1
+        };
+        let cart = [];
+        try { cart = JSON.parse(localStorage.getItem(key) || '[]'); } catch { cart = []; }
+        const item = cart.find(row => Number(row.id) === product.id);
+        const available = Math.max(0, Math.floor(@Model.Product.Stock.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        if ((item?.quantity || 0) >= available) {
+            window.app?.toast?.warning(available ? `Solo quedan ${available} unidades disponibles.` : 'Este producto no tiene existencias disponibles.');
+            return;
+        }
+        if (item) item.quantity = Math.max(1, Number(item.quantity || 1) + 1);
+        else cart.push(product);
+        localStorage.setItem(key, JSON.stringify(cart));
+        window.dispatchEvent(new CustomEvent('bakesmart:cart-updated', {
+            detail: { count: cart.reduce((total, row) => total + Math.max(1, Number(row?.quantity || 1)), 0) }
+        }));
+        window.location.href = '/Catalog/Cart';
+    });
 </script>
 
 @section Styles {

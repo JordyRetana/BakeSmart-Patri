@@ -1,89 +1,204 @@
 .auth-page-shell {
-    width: min(1080px, calc(100% - 2rem));
+    width: min(1320px, calc(100% - 2rem));
     max-width: none;
-    margin: 2rem auto;
+    margin: 1rem auto 2rem;
     display: grid;
     gap: 1rem;
 }
 
-.auth-card,
-.auth-help-card {
-    width: 100%;
-}
-
 .register-card {
+    min-height: 500px;
     display: grid;
-    grid-template-columns: minmax(260px, .62fr) minmax(0, 1fr);
-    gap: 0;
+    grid-template-columns: .68fr 1.32fr;
     overflow: hidden;
-    padding: 0 !important;
-    border-radius: 8px;
+    border: 1px solid #e5dcea;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 22px 65px rgba(46, 30, 64, .12);
 }
 
 .auth-hero {
+    position: relative;
+    min-height: 100%;
     display: grid;
     align-content: center;
-    justify-items: center;
-    min-height: 100%;
-    margin: 0;
-    padding: 2rem;
-    text-align: center;
+    padding: clamp(1.6rem, 3vw, 2.6rem);
+    overflow: hidden;
     color: #fff;
     background:
-        linear-gradient(145deg, rgba(124, 58, 237, .96), rgba(200, 60, 134, .92)),
-        var(--gradient-primary);
+        radial-gradient(circle at 100% 100%, rgba(255, 145, 91, .92), transparent 22%),
+        radial-gradient(circle at 18% 22%, rgba(255, 255, 255, .12), transparent 14%),
+        linear-gradient(135deg, #7138e8 0%, #d22d89 56%, #ff6854 100%);
+    isolation: isolate;
+}
+
+.auth-hero::before,
+.auth-hero::after,
+.auth-hero-decor {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+}
+
+.auth-hero::before {
+    width: 220px;
+    height: 220px;
+    left: -92px;
+    bottom: -74px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .08);
+}
+
+.auth-hero::after {
+    width: 360px;
+    height: 360px;
+    right: -120px;
+    top: -160px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 50%;
+}
+
+.auth-hero-decor {
+    width: 112px;
+    height: 112px;
+    opacity: .52;
+    background-image: radial-gradient(rgba(255, 255, 255, .65) 1.5px, transparent 1.5px);
+    background-size: 16px 16px;
+}
+
+.auth-hero-decor--top {
+    left: 1.5rem;
+    top: 1.7rem;
+}
+
+.auth-hero-decor--bottom {
+    right: 1.5rem;
+    bottom: 1.8rem;
 }
 
 .auth-logo-wrap {
-    width: 78px;
-    height: 78px;
-    background: rgba(255, 255, 255, .18);
-    border: 1px solid rgba(255, 255, 255, .34);
-    border-radius: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 1rem;
-    box-shadow: var(--shadow-md);
+    width: 96px;
+    height: 96px;
+    display: grid;
+    place-items: center;
+    margin: 0 0 .9rem;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .14);
+    border: 1px solid rgba(255, 255, 255, .15);
+    box-shadow: inset 0 0 0 14px rgba(255, 255, 255, .08), 0 18px 45px rgba(54, 24, 86, .2);
 }
 
 .auth-logo-wrap i {
-    font-size: 2rem;
-    color: white;
+    color: #fff;
+    font-size: 2.45rem;
 }
 
 .auth-title {
     margin: 0;
     color: #fff;
-    font-size: 2rem;
-    line-height: 1.08;
+    font-size: clamp(2.1rem, 3vw, 2.7rem);
+    line-height: 1;
 }
 
 .auth-subtitle {
-    max-width: 28ch;
-    margin: .65rem auto 0;
-    color: rgba(255, 255, 255, .88) !important;
-    line-height: 1.55;
+    max-width: 33ch;
+    margin: .75rem 0 1.2rem;
+    color: rgba(255, 255, 255, .92);
+    font-size: .96rem;
+    line-height: 1.45;
+}
+
+.auth-benefits {
+    display: grid;
+    gap: .75rem;
+}
+
+.auth-benefits div {
+    display: grid;
+    grid-template-columns: 42px 1fr;
+    column-gap: .8rem;
+    align-items: center;
+}
+
+.auth-benefits span {
+    grid-row: span 2;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .17);
+}
+
+.auth-benefits div:nth-child(2) span {
+    background: rgba(255, 60, 141, .6);
+}
+
+.auth-benefits div:nth-child(3) span {
+    background: rgba(255, 126, 74, .7);
+}
+
+.auth-benefits strong {
+    color: #fff;
+    font-size: .86rem;
+}
+
+.auth-benefits small {
+    color: rgba(255, 255, 255, .86);
+    font-size: .73rem;
+}
+
+.register-form-panel {
+    padding: clamp(1.45rem, 2.5vw, 2.35rem);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: #fff;
+}
+
+.register-heading h1 {
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    margin: 0;
+    color: #27314a;
+    font-size: clamp(1.65rem, 2.5vw, 2.1rem);
+    line-height: 1.05;
+}
+
+.register-heading h1 i {
+    color: #27314a;
+    font-size: 1.1rem;
+}
+
+.register-heading p {
+    margin: .45rem 0 1.1rem;
+    color: #737b8d;
 }
 
 .auth-alert {
-    grid-column: 2;
-    margin: 1rem 1.25rem 0;
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    margin: 0 0 1rem;
     min-height: auto;
-    padding: .85rem 1rem;
-    border-radius: 8px;
+    padding: .9rem 1rem;
+    border: 1px solid #f3b8c3;
+    border-radius: 10px;
+    background: #fff0f0;
+    color: #a73b2f;
 }
 
 .register-form {
-    grid-column: 2;
-    padding: 1.25rem;
+    padding: 0;
     text-align: left;
 }
 
 .register-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
+    gap: .82rem 1rem;
 }
 
 .register-full {
@@ -93,23 +208,130 @@
 .input-label {
     display: flex;
     align-items: center;
-    gap: .4rem;
-    margin-bottom: .35rem;
-    color: var(--text);
-    font-size: .84rem;
-    font-weight: 800;
+    gap: .45rem;
+    margin-bottom: .32rem;
+    color: #27314a;
+    font-size: .8rem;
+    font-weight: 900;
 }
 
 .register-form .input {
     width: 100%;
-    min-height: 46px;
+    min-height: 42px;
+    padding: 0 .95rem;
+    border: 1px solid #dcd3e8;
     border-radius: 8px;
-    font-size: .95rem;
+    background: #fff;
+    color: #1f2937;
+    font-size: .9rem;
 }
 
+.password-field {
+    position: relative;
+}
+
+.password-field .input {
+    padding-right: 3rem;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: .65rem;
+    transform: translateY(-50%);
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #7f8797;
+    cursor: pointer;
+}
+
+.password-strength {
+    display: grid;
+    gap: .4rem;
+    margin: .8rem 0 1rem;
+}
+
+.password-strength__labels {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 1rem;
+    align-items: center;
+    color: #737b8d;
+    font-size: .73rem;
+}
+
+.password-strength__labels b:nth-of-type(1) { color: #ec267e; min-width: 44px; text-align: right; }
+.password-strength__labels b:nth-of-type(2) { color: #f59e0b; }
+.password-strength__labels b:nth-of-type(3) { color: #36a852; }
+
+.password-strength__bars {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .55rem;
+}
+
+.password-strength__bars span {
+    height: 4px;
+    border-radius: 999px;
+    background: #e7e1ea;
+}
+
+.password-strength__bars span:nth-child(1) { background: linear-gradient(90deg, #ef3c91, #f9b0cf); }
+.password-strength[data-level="empty"] .password-strength__bars span { background: #e7e1ea; }
+.password-strength[data-level="weak"] .password-strength__bars span:nth-child(1) { background: linear-gradient(90deg, #ef3c91, #f9b0cf); }
+.password-strength[data-level="medium"] .password-strength__bars span:nth-child(-n+2) { background: linear-gradient(90deg, #f59e0b, #fcd34d); }
+.password-strength[data-level="strong"] .password-strength__bars span { background: linear-gradient(90deg, #22c55e, #86efac); }
+.password-strength[data-level="medium"] .password-strength__labels b:nth-of-type(1) { color: #f59e0b; }
+.password-strength[data-level="strong"] .password-strength__labels b:nth-of-type(1) { color: #36a852; }
+
 .register-submit-btn {
-    margin-top: 1rem;
-    min-height: 50px;
+    min-height: 48px !important;
+    border-radius: 8px !important;
+}
+
+.register-phone-row {
+    display: flex;
+    align-items: stretch;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #dcd3e8;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.register-phone-row .input {
+    min-width: 0;
+    min-height: 42px;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+.register-phone-row select.input {
+    flex: 0 0 132px;
+    width: 132px;
+    font-weight: 800;
+    border-right: 1px solid #e6deee !important;
+}
+
+.register-phone-row input.input { flex: 1 1 auto; }
+
+.register-phone-row:focus-within {
+    border-color: #7b43e6;
+    box-shadow: 0 0 0 3px rgba(123, 67, 230, .12);
+}
+
+.register-phone-row + #registerPhoneHelp {
+    display: block;
+    margin-top: .42rem;
+    color: #69738a !important;
+    font-size: .78rem;
+    font-weight: 700;
 }
 
 .auth-help-card {
@@ -117,6 +339,11 @@
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
+    padding: .85rem 1.05rem;
+    border: 1px solid #e5dcea;
+    border-radius: 8px;
+    background: linear-gradient(120deg, #f5efff, #fff8fd);
+    box-shadow: 0 14px 45px rgba(46, 30, 64, .08);
 }
 
 .auth-help-row {
@@ -125,81 +352,322 @@
     align-items: center;
 }
 
-.auth-help-row i {
-    color: var(--primary);
-    font-size: 1.5rem;
-    flex-shrink: 0;
+.auth-help-row > i {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #fff;
+    color: #7c3aed;
+    font-size: 1.25rem;
+    box-shadow: 0 12px 30px rgba(124, 58, 237, .12);
 }
 
 .auth-help-row p {
     margin: 0;
+    color: #444b5e;
 }
 
 .auth-help-row p + p {
     margin-top: .25rem;
-    font-size: .875rem;
+    font-size: .88rem;
 }
 
-.auth-card:hover,
-.auth-help-card:hover {
-    transform: none;
-    box-shadow: var(--shadow-sm);
-    border-color: var(--border);
+body.dark .register-card,
+body.dark .register-form-panel {
+    background: #211e2b;
+    border-color: #3b3547;
 }
 
-.auth-card:hover::after,
-.auth-help-card:hover::after {
-    opacity: 0;
+body.dark .register-heading h1,
+body.dark .register-heading h1 i,
+body.dark .input-label {
+    color: #fff;
 }
 
-@media (max-width: 720px) {
-    .auth-page-shell {
-        margin: 1rem auto;
-        padding: 0 1rem;
-    }
-
+@media (max-width: 900px) {
     .register-card {
         grid-template-columns: 1fr;
     }
 
-    .auth-hero,
-    .auth-alert,
-    .register-form {
-        grid-column: auto;
-    }
-
     .auth-hero {
-        min-height: auto;
-        padding: 1.5rem;
+        min-height: 460px;
+    }
+}
+
+@media (max-width: 650px) {
+    .auth-page-shell {
+        width: calc(100% - 1rem);
+        margin: .75rem auto 2rem;
     }
 
-    .register-grid {
+    .register-grid,
+    .password-strength__labels {
         grid-template-columns: 1fr;
-    }
-
-    .register-full {
-        grid-column: auto;
     }
 
     .auth-help-card {
         align-items: stretch;
         flex-direction: column;
     }
-}
 
-@media (max-width: 430px) {
-    .auth-card,
-    .auth-help-card {
-        padding: 1rem !important;
-    }
-
-    .auth-logo-wrap {
-        width: 68px;
-        height: 68px;
-    }
-
-    .register-submit-btn,
     .auth-help-card .btn {
         width: 100%;
     }
+
+    .register-phone-row select.input { flex-basis: 120px; width: 120px; }
+}
+
+/* Page-specific overrides against older global auth rules. */
+body[data-page="/account/register"] .auth-page-shell.register-page {
+    width: min(1320px, calc(100% - 2rem)) !important;
+    place-items: stretch !important;
+}
+
+body[data-page="/account/register"] .register-card {
+    width: 100% !important;
+    max-width: none !important;
+    grid-template-columns: .68fr 1.32fr !important;
+    border-radius: 10px !important;
+}
+
+body[data-page="/account/register"] .auth-hero {
+    display: grid !important;
+    align-content: center !important;
+    justify-items: start !important;
+    padding: clamp(1.6rem, 3vw, 2.6rem) !important;
+    text-align: left !important;
+}
+
+body[data-page="/account/register"] .auth-hero .auth-title,
+body[data-page="/account/register"] .auth-hero .auth-subtitle,
+body[data-page="/account/register"] .auth-hero .auth-benefits strong,
+body[data-page="/account/register"] .auth-hero .auth-benefits small {
+    color: #fff !important;
+}
+
+body[data-page="/account/register"] .auth-hero .auth-logo-wrap {
+    margin-left: 0 !important;
+}
+
+/* Clear visual groups for the registration flow. */
+.register-section-title { display:flex; align-items:center; gap:.75rem; margin:.15rem 0 .2rem; padding:.75rem .85rem; border-radius:10px; background:linear-gradient(100deg,#f6f0ff,#fff7fb); }
+.register-section-title--access { margin-top:.35rem; }
+.register-section-title>span { width:36px; height:36px; display:grid; place-items:center; flex:0 0 36px; border-radius:9px; background:linear-gradient(135deg,#7c3aed,#d53f7b); color:#fff; }
+.register-section-title strong,.register-section-title small { display:block; }
+.register-section-title strong { color:#27314a; font-size:.86rem; }
+.register-section-title small { margin-top:.12rem; color:#747b8b; font-size:.72rem; }
+.register-form .input { border-radius:10px; background:#fdfcff; transition:border-color .18s ease,box-shadow .18s ease,background .18s ease; }
+.register-form .input:focus { border-color:#8b5cf6; background:#fff; box-shadow:0 0 0 3px rgba(124,58,237,.11); }
+.password-strength__labels { display:flex; justify-content:space-between; grid-template-columns:none; gap:.75rem; }
+.password-strength__labels b { min-width:76px !important; color:#7b7280 !important; text-align:right; }
+.password-strength[data-level="weak"] .password-strength__labels b { color:#ec267e !important; }
+.password-strength[data-level="medium"] .password-strength__labels b { color:#f59e0b !important; }
+.password-strength[data-level="strong"] .password-strength__labels b { color:#36a852 !important; }
+.password-strength__help { color:#7d8493; font-size:.7rem; line-height:1.45; }
+.register-submit-note { display:flex; justify-content:center; align-items:center; gap:.4rem; margin:.65rem 0 0; color:#777e8e; font-size:.72rem; }
+.auth-help-card--login { justify-content:center; padding:1rem; color:#5f6573; }
+.auth-help-card--login a { display:inline-flex; align-items:center; gap:.4rem; color:#6d35ba; font-weight:900; text-decoration:none; }
+body.dark .register-section-title { background:linear-gradient(100deg,#29223a,#2b202d); }
+body.dark .register-section-title strong { color:#fff; }
+body.dark .register-section-title small,body.dark .password-strength__help,body.dark .register-submit-note { color:#c8c2d0; }
+body.dark .auth-help-card--login { color:#d4cede; }
+body.dark .auth-help-card--login a { color:#c4b5fd; }
+
+/* Compact registration layout. */
+body[data-page="/account/register"] .auth-page-shell.register-page { width:min(1460px,calc(100% - 2.5rem)) !important; margin:.75rem auto 1.5rem !important; gap:.55rem; }
+body[data-page="/account/register"] .register-card { grid-template-columns:.65fr 1.35fr !important; min-height:0; }
+body[data-page="/account/register"] .auth-hero { padding:1.65rem !important; }
+body[data-page="/account/register"] .auth-logo-wrap { width:58px !important; height:58px !important; margin:0 0 .75rem !important; border-radius:16px !important; background:rgba(255,255,255,.18) !important; box-shadow:none !important; }
+body[data-page="/account/register"] .auth-logo-wrap i { display:block !important; color:#fff !important; font-size:1.35rem !important; }
+body[data-page="/account/register"] .auth-title { font-size:1.7rem; }
+body[data-page="/account/register"] .auth-subtitle { margin:.6rem 0 1rem; font-size:.84rem; }
+body[data-page="/account/register"] .auth-benefits { gap:.55rem; }
+body[data-page="/account/register"] .auth-benefits div { grid-template-columns:34px 1fr; column-gap:.65rem; }
+body[data-page="/account/register"] .auth-benefits span { width:32px; height:32px; }
+body[data-page="/account/register"] .auth-benefits strong { font-size:.76rem; }
+body[data-page="/account/register"] .auth-benefits small { font-size:.66rem; }
+body[data-page="/account/register"] .register-form-panel { padding:1.8rem 2.35rem; }
+body[data-page="/account/register"] .register-heading h1 { font-size:1.9rem; }
+body[data-page="/account/register"] .register-heading p { margin:.4rem 0 1rem; font-size:.86rem; }
+body[data-page="/account/register"] .register-grid { gap:.72rem .9rem; }
+body[data-page="/account/register"] .register-form .input { height:46px; min-height:46px; box-sizing:border-box; font-size:.88rem; }
+body[data-page="/account/register"] .input-label { font-size:.78rem; }
+body[data-page="/account/register"] .register-phone-row { height:46px; box-sizing:border-box; border:1px solid #dcd3e8 !important; border-radius:10px; box-shadow:none !important; }
+body[data-page="/account/register"] .register-phone-row .input { height:44px; min-height:44px; border:0 !important; outline:0 !important; box-shadow:none !important; }
+body[data-page="/account/register"] .register-phone-row select.input { flex-basis:112px; width:112px; border-right:1px solid #e6deee !important; }
+body[data-page="/account/register"] .register-phone-row:focus-within { border-color:#8b5cf6 !important; box-shadow:0 0 0 3px rgba(124,58,237,.11) !important; }
+body[data-page="/account/register"] .password-strength { margin:.6rem 0 .75rem; }
+body[data-page="/account/register"] .register-submit-btn { min-height:46px !important; }
+body[data-page="/account/register"] .password-field { height:46px; }
+body[data-page="/account/register"] .password-toggle { top:4px !important; right:4px !important; transform:none !important; width:36px !important; height:36px !important; min-height:36px !important; padding:0 !important; border:0 !important; box-shadow:none !important; z-index:2; }
+body[data-page="/account/register"] .auth-help-card--login { width:100%; height:42px !important; min-height:42px !important; max-height:42px !important; box-sizing:border-box; justify-self:stretch; justify-content:center; gap:.65rem; padding:0 1rem !important; border-radius:8px; background:#fff; box-shadow:0 8px 24px rgba(46,30,64,.05); font-size:.82rem; overflow:hidden; }
+body.dark[data-page="/account/register"] .register-phone-row { border-color:#4b3f61 !important; background:#111827; }
+body.dark[data-page="/account/register"] .register-phone-row select.input { border-right-color:#4b3f61 !important; }
+body.dark[data-page="/account/register"] .auth-help-card--login { background:#211e2b; border-color:#403649; }
+
+@media(max-width:900px){body[data-page="/account/register"] .register-card{grid-template-columns:1fr !important}body[data-page="/account/register"] .auth-hero{min-height:auto !important}.auth-benefits{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:650px){body[data-page="/account/register"] .register-form-panel{padding:1.2rem}body[data-page="/account/register"] .auth-benefits{grid-template-columns:1fr}.auth-help-card--login{border-radius:12px !important}}
+
+@media (max-width: 900px) {
+    body[data-page="/account/register"] .register-card {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Final scale and alignment pass. */
+@media (min-width: 901px) {
+    body[data-page="/account/register"] .auth-page-shell.register-page {
+        width: min(1520px, calc(100% - 2.5rem)) !important;
+        margin: 1rem auto 1.25rem !important;
+    }
+
+    body[data-page="/account/register"] .register-card {
+        min-height: 690px !important;
+        grid-template-columns: .66fr 1.34fr !important;
+    }
+
+    body[data-page="/account/register"] .auth-hero {
+        padding: 2.35rem !important;
+    }
+
+    body[data-page="/account/register"] .auth-logo-wrap {
+        width: 64px !important;
+        height: 64px !important;
+    }
+
+    body[data-page="/account/register"] .auth-title { font-size: 1.95rem; }
+    body[data-page="/account/register"] .auth-subtitle { font-size: .92rem; line-height: 1.5; }
+    body[data-page="/account/register"] .auth-benefits { gap: .72rem; }
+    body[data-page="/account/register"] .auth-benefits strong { font-size: .82rem; }
+    body[data-page="/account/register"] .auth-benefits small { font-size: .71rem; }
+
+    body[data-page="/account/register"] .register-form-panel {
+        padding: 2.5rem 3rem;
+    }
+
+    body[data-page="/account/register"] .register-heading h1 { font-size: 2.05rem; }
+    body[data-page="/account/register"] .register-heading p { font-size: .92rem; margin-bottom: 1.35rem; }
+    body[data-page="/account/register"] .register-grid { gap: 1rem 1.1rem; }
+    body[data-page="/account/register"] .input-label { font-size: .82rem; margin-bottom: .4rem; }
+    body[data-page="/account/register"] .register-form .input { height: 50px; min-height: 50px; font-size: .92rem; }
+    body[data-page="/account/register"] .password-field { height: 50px; }
+    body[data-page="/account/register"] .password-toggle { top: 7px !important; }
+    body[data-page="/account/register"] .register-submit-btn { min-height: 50px !important; }
+}
+
+body[data-page="/account/register"] .register-phone-row {
+    height: 50px;
+    align-items: center;
+}
+
+body[data-page="/account/register"] .register-phone-row .input {
+    height: 48px;
+    min-height: 48px;
+}
+
+body[data-page="/account/register"] .register-phone-row select.input {
+    align-self: center;
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: 48px;
+    text-align: center;
+    text-align-last: center;
+}
+
+body[data-page="/account/register"] .register-phone-row input.input {
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: normal;
+}
+
+body[data-page="/account/register"] .auth-help-card--login {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+body[data-page="/account/register"] .auth-help-card--login span,
+body[data-page="/account/register"] .auth-help-card--login a {
+    margin: 0;
+    line-height: 1;
+}
+
+@media (max-width: 650px) {
+    body[data-page="/account/register"] .auth-help-card--login {
+        height: 40px !important;
+        min-height: 40px !important;
+        max-height: 40px !important;
+        gap: .45rem;
+        padding: 0 .5rem !important;
+        font-size: .76rem;
+    }
+
+    body[data-page="/account/register"] .register-phone-row select.input {
+        flex-basis: 114px;
+        width: 114px;
+    }
+}
+
+/* Keep the registration hierarchy readable in dark mode. */
+body.dark[data-page="/account/register"] .register-card,
+body.dark[data-page="/account/register"] .register-form-panel {
+    background: #182334 !important;
+    border-color: #354158 !important;
+}
+
+body.dark[data-page="/account/register"] .register-heading h1,
+body.dark[data-page="/account/register"] .register-heading h1 i,
+body.dark[data-page="/account/register"] .input-label {
+    color: #f8fafc !important;
+}
+
+body.dark[data-page="/account/register"] .register-heading p,
+body.dark[data-page="/account/register"] .password-strength__labels span,
+body.dark[data-page="/account/register"] .password-strength__help,
+body.dark[data-page="/account/register"] .register-submit-note {
+    color: #b9c4d4 !important;
+}
+
+body.dark[data-page="/account/register"] .register-form .input,
+body.dark[data-page="/account/register"] .register-phone-row {
+    color: #eef2f7 !important;
+    border-color: #43506a !important;
+    background: #101827 !important;
+    box-shadow: none !important;
+}
+
+body.dark[data-page="/account/register"] .register-phone-row select.input {
+    border-right-color: #43506a !important;
+    background-color: #151d30 !important;
+}
+
+body.dark[data-page="/account/register"] .register-form .input:focus,
+body.dark[data-page="/account/register"] .register-phone-row:focus-within {
+    border-color: #9b6df2 !important;
+    box-shadow: 0 0 0 3px rgba(155, 109, 242, .2) !important;
+}
+
+body.dark[data-page="/account/register"] .password-strength__bars span {
+    background: #3b465b;
+}
+
+body.dark[data-page="/account/register"] .auth-help-card--login {
+    color: #cbd5e1 !important;
+    border-color: #3e4a60 !important;
+    background: #182334 !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .22) !important;
+}
+
+body.dark[data-page="/account/register"] .auth-help-card--login span {
+    color: #cbd5e1 !important;
+}
+
+body.dark[data-page="/account/register"] .auth-help-card--login a,
+body.dark[data-page="/account/register"] .auth-help-card--login a i {
+    color: #c4a7ff !important;
 }

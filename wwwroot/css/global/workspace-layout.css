@@ -497,3 +497,35 @@ p,
         white-space: normal;
     }
 }
+
+/* Phone safety net: avoid clipped dialogs, horizontal panels and excessive fixed areas. */
+@media (max-width: 760px) {
+    .modal-content,
+    .app-modal-card,
+    .modal-dialog {
+        width: calc(100vw - 1rem) !important;
+        max-width: calc(100vw - 1rem) !important;
+        max-height: calc(100dvh - 1rem) !important;
+        margin: .5rem auto !important;
+        overflow: auto !important;
+    }
+
+    .inventory-modal-form,
+    .quick-order-form,
+    .checkout-form,
+    .payment-form {
+        grid-template-columns: 1fr !important;
+    }
+
+    .inventory-modal-actions,
+    .quick-summary,
+    .catalog-cart-page__summary {
+        position: static !important;
+    }
+
+    .map-picker,
+    .leaflet-container,
+    #trackingMap {
+        max-width: 100% !important;
+    }
+}

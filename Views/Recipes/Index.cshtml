@@ -1,0 +1,108 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Recetas y materiales";
+    var canReview = User.IsInRole("Admin") || User.IsInRole("Supervisor") || User.IsInRole("EncargadoRecetas");
+}
+
+<main class="recipe-page page-shell">
+    <header class="recipe-hero">
+        <div>
+            <span class="recipe-eyebrow"><i class="fas fa-book-open"></i> Control de producción</span>
+            <h1>Recetas y materiales</h1>
+            <p>Defina qué consume cada producto. Solo las recetas aprobadas pueden pasar a producción.</p>
+        </div>
+        <div class="recipe-summary" aria-label="Resumen de recetas">
+            <span><strong id="recipeApproved">0</strong>Aprobadas</span>
+            <span><strong id="recipeReview">0</strong>En revisión</span>
+            <span><strong id="recipeMissing">0</strong>Sin receta</span>
+        </div>
+    </header>
+
+    <section class="recipe-workspace">
+        <aside class="card recipe-products">
+            <div class="recipe-section-head">
+                <div><small>Productos comestibles</small><h2>Seleccione un producto</h2></div>
+            </div>
+            <label class="recipe-search"><i class="fas fa-search"></i><input id="recipeSearch" type="search" placeholder="Buscar por nombre o código"></label>
+            <div id="recipeProductList" class="recipe-product-list"><p class="text-muted">Cargando productos…</p></div>
+        </aside>
+
+        <article class="card recipe-editor">
+            <div id="recipeEmpty" class="recipe-empty">
+                <i class="fas fa-mortar-pestle"></i><h2>Seleccione un producto</h2><p>Aquí podrá definir y validar su receta.</p>
+            </div>
+            <form id="recipeForm" hidden>
+                <div class="recipe-section-head recipe-editor-head">
+                    <div><small id="recipeCode">PRODUCTO</small><h2 id="recipeName">Receta</h2></div>
+                    <span id="recipeStatus" class="recipe-status">Sin receta</span>
+                </div>
+                <input id="recipeProductId" type="hidden">
+                <div class="recipe-fields">
+                    <label>Rendimiento<input id="recipeYield" type="number" min="0.0001" step="0.0001" required></label>
+                    <label>Unidad<select id="recipeUnit"><option>unidad</option><option>porción</option><option>kg</option><option>g</option><option>litro</option><option>ml</option></select></label>
+                    <label>Merma (%)<input id="recipeWaste" type="number" min="0" max="100" step="0.1" value="0"></label>
+                </div>
+                <label class="recipe-notes">Indicaciones<textarea id="recipeNotes" rows="2" placeholder="Temperatura, tiempo, montaje u observaciones importantes"></textarea></label>
+                <div class="recipe-ingredients-head"><div><small>Composición</small><h3>Ingredientes y cantidades</h3></div><button class="btn btn-outline btn-sm" id="addIngredient" type="button"><i class="fas fa-plus"></i> Agregar ingrediente</button></div>
+                <div id="ingredientRows" class="ingredient-rows"></div>
+                <div class="recipe-actions">
+                    <button class="btn btn-primary" type="submit" id="saveRecipe"><i class="fas fa-paper-plane"></i> Guardar y enviar a revisión</button>
+                    @if (canReview)
+                    {
+                        <button class="btn btn-outline" id="rejectRecipe" type="button"><i class="fas fa-rotate-left"></i> Solicitar cambios</button>
+                        <button class="btn btn-success" id="approveRecipe" type="button"><i class="fas fa-check"></i> Aprobar receta</button>
+                    }
+                </div>
+                <p id="recipeFeedback" class="recipe-feedback" role="status" aria-live="polite" hidden></p>
+            </form>
+        </article>
+    </section>
+</main>
+
+@section Styles {
+<link rel="stylesheet" href="~/css/pages/recipes-index.css" asp-append-version="true" />
+}
+
+@section Scripts {
+<script>
+(() => {
+    let products = [], options = [], selected = null;
+    const $ = id => document.getElementById(id);
+    const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const notify = (type, message) => {
+        const feedback = $('recipeFeedback');
+        feedback.textContent = message;
+        feedback.dataset.type = type;
+        feedback.hidden = false;
+        window.app?.toast?.[type]?.(message);
+    };
+    async function runAction(button, pendingText, action) {
+        const buttons = [...$('recipeForm').querySelectorAll('.recipe-actions button')];
+        const original = button.innerHTML;
+        buttons.forEach(item => item.disabled = true);
+        $('recipeForm').setAttribute('aria-busy', 'true');
+        $('recipeFeedback').hidden = true;
+        button.textContent = pendingText;
+        try { await action(); }
+        catch (error) { notify('error', error.message || 'No se pudo completar la operación.'); }
+        finally {
+            button.innerHTML = original;
+            buttons.forEach(item => item.disabled = false);
+            $('recipeForm').removeAttribute('aria-busy');
+        }
+    }
+    async function json(url, init) { const response = await fetch(url, init); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || 'No se pudo completar la operación.'); return data; }
+    function updateSummary(){ $('recipeApproved').textContent=products.filter(x=>x.status==='Aprobada').length; $('recipeReview').textContent=products.filter(x=>x.status==='En revision').length; $('recipeMissing').textContent=products.filter(x=>x.status==='Sin receta'||x.status==='Pendiente').length; }
+    function renderProducts(){ const q=$('recipeSearch').value.trim().toLowerCase(); const rows=products.filter(x=>`${x.name} ${x.code}`.toLowerCase().includes(q)); $('recipeProductList').innerHTML=rows.map(x=>`<button type="button" class="recipe-product ${selected===x.productId?'active':''}" data-id="${x.productId}"><span class="recipe-product__copy"><strong>${esc(x.name)}</strong><small>${esc(x.code)} · ${x.ingredientCount} ingrediente(s)</small></span><b>${esc(x.status)}</b></button>`).join('')||'<p class="text-muted">No hay coincidencias.</p>'; $('recipeProductList').querySelectorAll('button').forEach(b=>b.onclick=()=>openRecipe(Number(b.dataset.id))); updateSummary(); }
+    function optionMarkup(value){return `<option value="">Seleccione materia prima</option>`+options.map(x=>`<option value="${x.productId}" data-unit="${esc(x.unit)}" ${Number(value)===x.productId?'selected':''}>${esc(x.name)} · ${esc(x.stock)} ${esc(x.unit)}</option>`).join('')}
+    function addRow(item={}){ const row=document.createElement('div'); row.className='ingredient-row'; row.innerHTML=`<div><select class="ingredient-product" required>${optionMarkup(item.productId)}</select><span class="ingredient-stock"></span></div><input class="ingredient-quantity" type="number" min="0.0001" step="0.0001" value="${item.quantity??1}" aria-label="Cantidad" required><select class="ingredient-unit"><option>${esc(item.unit||'unidad')}</option><option>kg</option><option>g</option><option>litro</option><option>ml</option><option>unidad</option></select><button class="ingredient-remove" type="button" aria-label="Quitar"><i class="fas fa-trash"></i></button>`; const product=row.querySelector('.ingredient-product'), unit=row.querySelector('.ingredient-unit'), stock=row.querySelector('.ingredient-stock'); const sync=()=>{const opt=product.selectedOptions[0]; if(opt?.dataset.unit){unit.value=opt.dataset.unit;stock.textContent=`Disponible: ${options.find(x=>x.productId===Number(product.value))?.stock??0} ${opt.dataset.unit}`;window.app?.selects?.refresh?.(unit)}}; product.onchange=sync; row.querySelector('.ingredient-remove').onclick=()=>row.remove(); $('ingredientRows').appendChild(row); window.app?.selects?.enhance?.(product); window.app?.selects?.enhance?.(unit); sync(); }
+    async function openRecipe(id){ selected=id; renderProducts(); const data=await json(`/api/recipes/${id}`); const r=data.recipe; $('recipeEmpty').hidden=true; $('recipeForm').hidden=false; $('recipeProductId').value=r.productId; $('recipeCode').textContent=r.code; $('recipeName').textContent=r.name; $('recipeStatus').textContent=r.status; $('recipeStatus').dataset.status=String(r.status||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'-'); $('recipeYield').value=r.yieldQuantity; $('recipeUnit').value=r.yieldUnit; window.app?.selects?.refresh?.($('recipeUnit')); $('recipeWaste').value=r.wastePercent; $('recipeNotes').value=r.notes||''; $('ingredientRows').innerHTML=''; data.ingredients.forEach(addRow); if(!data.ingredients.length)addRow(); }
+    async function load(){ [products,options]=await Promise.all([json('/api/recipes'),json('/api/recipes/ingredients')]); renderProducts(); }
+    $('recipeSearch').oninput=renderProducts; $('addIngredient').onclick=()=>addRow();
+    $('recipeForm').onsubmit=event=>{event.preventDefault();runAction($('saveRecipe'),'Guardando receta…',async()=>{const ingredients=[...document.querySelectorAll('.ingredient-row')].map(row=>({productId:Number(row.querySelector('.ingredient-product').value),quantity:Number(row.querySelector('.ingredient-quantity').value),unit:row.querySelector('.ingredient-unit').value,optional:false}));await json('/api/recipes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:Number($('recipeProductId').value),yieldQuantity:Number($('recipeYield').value),yieldUnit:$('recipeUnit').value,wastePercent:Number($('recipeWaste').value),notes:$('recipeNotes').value,ingredients})});notify('success','Receta enviada a revisión.');await load();await openRecipe(selected)});};
+    async function review(approved){const button=$(approved?'approveRecipe':'rejectRecipe');await runAction(button,approved?'Aprobando receta…':'Solicitando cambios…',async()=>{await json(`/api/recipes/${selected}/review`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({approved})});notify('success',approved?'Receta aprobada.':'Se solicitaron cambios.');await load();await openRecipe(selected)});}
+    if($('approveRecipe'))$('approveRecipe').onclick=()=>review(true); if($('rejectRecipe'))$('rejectRecipe').onclick=()=>review(false);
+    load().catch(error=>notify('error',error.message));
+})();
+</script>
+}

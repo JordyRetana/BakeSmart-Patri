@@ -1,6 +1,6 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Bitacora del sistema";
+    ViewData["Title"] = "Bitácora del sistema";
 }
 
 @section Styles {
@@ -11,7 +11,7 @@
     <header class="audit-hero">
         <div>
             <span class="audit-eyebrow"><i class="fas fa-shield-halved"></i> Control centralizado</span>
-            <h1>Bitacora del sistema</h1>
+            <h1>Bitácora del sistema</h1>
             <p>Consulta cambios, accesos y operaciones realizadas dentro de BakeSmart Patri.</p>
         </div>
         <button id="auditRefresh" class="btn btn-primary" type="button">
@@ -41,8 +41,8 @@
                 <select id="auditPeriod">
                     <option value="all">Todo el historial</option>
                     <option value="today">Hoy</option>
-                    <option value="7">Ultimos 7 dias</option>
-                    <option value="30">Ultimos 30 dias</option>
+                    <option value="7">Últimos 7 días</option>
+                    <option value="30">Últimos 30 días</option>
                 </select>
             </label>
         </div>
@@ -50,11 +50,11 @@
         <div class="audit-table-card">
             <div class="audit-table-heading">
                 <div><h2>Registro de movimientos</h2><p id="auditResultCount">Cargando actividad...</p></div>
-                <span class="audit-live"><i></i> Datos de SQL Server</span>
+                <span class="audit-live"><i></i> Base de datos en línea</span>
             </div>
             <div class="audit-table-wrap">
                 <table>
-                    <thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Accion</th><th>Detalle</th></tr></thead>
+                    <thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr></thead>
                     <tbody id="auditRows"></tbody>
                 </table>
             </div>
@@ -70,8 +70,49 @@
     const search = document.getElementById('auditSearch');
     const type = document.getElementById('auditType');
     const period = document.getElementById('auditPeriod');
+    const costaRicaTimeZone = 'America/Costa_Rica';
+    const costaRicaDate = new Intl.DateTimeFormat('en-CA', {
+        timeZone: costaRicaTimeZone, year: 'numeric', month: '2-digit', day: '2-digit'
+    });
+    const formatDate = value => new Date(value).toLocaleDateString('es-CR', { timeZone: costaRicaTimeZone });
+    const formatTime = value => new Date(value).toLocaleTimeString('es-CR', {
+        timeZone: costaRicaTimeZone, hour: '2-digit', minute: '2-digit'
+    });
+    const dateKey = value => costaRicaDate.format(new Date(value));
     const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[char]));
     const label = value => String(value || 'SISTEMA').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+    const friendlyAction = (typeValue, detailValue) => {
+        const action = String(typeValue || 'SISTEMA').toUpperCase();
+        const detail = String(detailValue || '');
+        if (/\/Account\/Logout/i.test(detail)) return 'Cierre de sesión';
+        if (/\/Account\/Login/i.test(detail) || action === 'LOGIN') return 'Inicio de sesión';
+        if (/\/api\/payments\/paypal\/checkout/i.test(detail)) return 'Pago con PayPal';
+        if (/\/api\/orders(?:\/?$|\?)/i.test(detail)) return 'Creación de pedido';
+        if (/\/api\/orders\/\d+\/advance-delivery/i.test(detail)) return 'Avance de entrega';
+        if (/\/api\/production\/\d+\/advance/i.test(detail)) return 'Avance de producción';
+        if (action === 'OPERACION_API' || action === 'OPERACIÓN_API') return 'Operación del sistema';
+        return label(typeValue);
+    };
+    const friendlyDetail = value => {
+        const detail = String(value || '');
+        if (/^POST \/Account\/Logout$/i.test(detail)) return 'El usuario cerró su sesión de forma segura.';
+        if (/^POST \/Account\/Login$/i.test(detail)) return 'Se procesó el inicio de sesión del usuario.';
+        if (/^POST \/api\/payments\/paypal\/checkout$/i.test(detail)) return 'Se inició la validación segura de un pago con PayPal.';
+        if (/^POST \/api\/orders\/?$/i.test(detail)) return 'Se registró un nuevo pedido en el sistema.';
+        const production = detail.match(/^POST \/api\/production\/(\d+)\/advance$/i);
+        if (production) return `El pedido #${production[1]} avanzó al siguiente estado de producción.`;
+        const delivery = detail.match(/^POST \/api\/orders\/(\d+)\/advance-delivery$/i);
+        if (delivery) return `El pedido #${delivery[1]} avanzó en el proceso de entrega.`;
+        const apiCall = detail.match(/^(GET|POST|PUT|PATCH|DELETE) \/api\/(.+)$/i);
+        if (apiCall) {
+            const operation = ({ GET:'Se consultó', POST:'Se registró', PUT:'Se actualizó', PATCH:'Se actualizó', DELETE:'Se eliminó' })[apiCall[1].toUpperCase()];
+            const resource = apiCall[2].split(/[/?]/).filter(Boolean).filter(part => !/^\d+$/.test(part)).join(' ').replaceAll('-', ' ');
+            return `${operation} información de ${resource || 'la aplicación'}.`;
+        }
+        const internalCall = detail.match(/^(GET|POST|PUT|PATCH|DELETE) \/(.+)$/i);
+        if (internalCall) return 'Se realizó una operación interna de la aplicación.';
+        return detail;
+    };
 
     function categoryIcon(value) {
         const item = String(value || '');
@@ -87,7 +128,7 @@
         if (period.value === 'all') return true;
         const date = new Date(item.createdAt);
         const now = new Date();
-        if (period.value === 'today') return date.toDateString() === now.toDateString();
+        if (period.value === 'today') return dateKey(date) === dateKey(now);
         return date >= new Date(now.getTime() - Number(period.value) * 86400000);
     }
 
@@ -100,12 +141,11 @@
 
         document.getElementById('auditResultCount').textContent = `${filtered.length} movimientos encontrados`;
         rows.innerHTML = filtered.map(item => {
-            const date = new Date(item.createdAt);
             return `<tr>
-                <td><strong>${date.toLocaleDateString('es-CR')}</strong><span>${date.toLocaleTimeString('es-CR', { hour:'2-digit', minute:'2-digit' })}</span></td>
+                <td><strong>${formatDate(item.createdAt)}</strong><span>${formatTime(item.createdAt)}</span></td>
                 <td><div class="audit-user"><b>${esc(item.userName)}</b><small>${esc(item.userEmail)}</small></div></td>
-                <td><span class="audit-action"><i class="fas ${categoryIcon(item.type)}"></i>${esc(label(item.type))}</span></td>
-                <td>${esc(item.detail)}</td>
+                <td><span class="audit-action"><i class="fas ${categoryIcon(`${item.type} ${item.detail}`)}"></i>${esc(friendlyAction(item.type, item.detail))}</span></td>
+                <td>${esc(friendlyDetail(item.detail))}</td>
             </tr>`;
         }).join('') || '<tr><td colspan="4"><div class="audit-empty"><i class="fas fa-magnifying-glass"></i><strong>No hay movimientos para estos filtros</strong><span>Prueba otra busqueda o periodo.</span></div></td></tr>';
     }
@@ -116,12 +156,12 @@
         if (!response.ok) throw new Error('No fue posible cargar la bitacora.');
         logs = await response.json();
         const types = [...new Set(logs.map(item => item.type).filter(Boolean))].sort();
-        type.innerHTML = '<option value="">Todos los tipos</option>' + types.map(value => `<option value="${esc(value)}">${esc(label(value))}</option>`).join('');
-        const today = new Date().toDateString();
+        type.innerHTML = '<option value="">Todos los tipos</option>' + types.map(value => `<option value="${esc(value)}">${esc(friendlyAction(value, ''))}</option>`).join('');
+        const today = dateKey(new Date());
         document.getElementById('auditTotal').textContent = logs.length;
         document.getElementById('auditUsers').textContent = new Set(logs.map(item => item.userEmail)).size;
-        document.getElementById('auditToday').textContent = logs.filter(item => new Date(item.createdAt).toDateString() === today).length;
-        document.getElementById('auditLast').textContent = logs.length ? new Date(logs[0].createdAt).toLocaleTimeString('es-CR', { hour:'2-digit', minute:'2-digit' }) : 'Sin datos';
+        document.getElementById('auditToday').textContent = logs.filter(item => dateKey(item.createdAt) === today).length;
+        document.getElementById('auditLast').textContent = logs.length ? formatTime(logs[0].createdAt) : 'Sin datos';
         render();
     }
 

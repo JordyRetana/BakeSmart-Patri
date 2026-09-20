@@ -1,0 +1,35 @@
+.profile-page{width:min(1120px,calc(100% - 2rem));display:grid;gap:1.25rem}.profile-page .card,.profile-card{border-radius:20px!important;box-shadow:0 13px 34px rgba(48,30,62,.08)!important}.profile-page input,.profile-page select,.profile-page textarea{min-height:48px}@media(max-width:650px){.profile-page{width:calc(100% - 1rem)}.profile-page .card,.profile-card{padding:1.15rem!important}}
+body.dark .profile-page .card,body.dark .profile-card{background:#211d29!important;border-color:#403648!important;color:#f5f2f7}
+
+.profile-workspace-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;padding:.65rem;border:1px solid var(--border);border-radius:20px;background:var(--bg-card);box-shadow:0 12px 30px rgba(48,30,62,.07)}
+.profile-workspace-tab{min-height:68px;padding:.8rem 1rem;display:flex;align-items:center;gap:.8rem;border:1px solid transparent;border-radius:14px;background:transparent;color:var(--text);text-align:left;cursor:pointer}
+.profile-workspace-tab>i{width:42px;height:42px;display:grid;place-items:center;flex:0 0 42px;border-radius:12px;background:var(--primary-light);color:var(--primary)}
+.profile-workspace-tab span,.profile-workspace-tab strong,.profile-workspace-tab small{display:block}.profile-workspace-tab small{margin-top:.15rem;color:var(--text-muted)}
+.profile-workspace-tab.active{border-color:color-mix(in srgb,var(--primary) 30%,var(--border));background:linear-gradient(135deg,color-mix(in srgb,var(--primary-light) 82%,var(--bg-card)),color-mix(in srgb,var(--secondary) 8%,var(--bg-card)))}
+.profile-workspace-tab.active>i{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff}
+.profile-page[data-profile-section] .profile-grid{display:block}
+.profile-page[data-profile-section="personal"] .profile-grid>.profile-section:nth-child(2),.profile-page[data-profile-section="security"] .profile-grid>.profile-section:nth-child(1){display:none}
+.profile-page[data-profile-section] .profile-section{width:100%;max-width:none}
+body.dark .profile-workspace-tabs{background:#211d29;border-color:#403648}
+body.dark .profile-workspace-tab.active{background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(236,72,153,.14));border-color:rgba(196,181,253,.35)}
+@media(max-width:650px){.profile-workspace-tabs{grid-template-columns:1fr;padding:.45rem}.profile-workspace-tab{min-height:56px}}
+
+/* Complete dark theme for profile forms and actions. */
+body.dark .profile-page .profile-hero{background:#1c1925!important;border-color:#463a50!important}
+body.dark .profile-page .profile-hero__name{color:#fff!important}
+body.dark .profile-page .profile-hero__role,body.dark .profile-page .profile-hero__email{color:#d3cadb!important}
+body.dark .profile-page .profile-section{background:#1c1925!important;border-color:#463a50!important}
+body.dark .profile-page .profile-section__title,body.dark .profile-page .profile-label{color:#f8fafc!important}
+body.dark .profile-page .profile-section__sub{color:#b9c2d1!important}
+body.dark .profile-page .profile-input-wrap{background:#101827!important;border-color:#48536a!important}
+body.dark .profile-page .profile-input{color:#f8fafc!important;background:transparent!important;border-color:#48536a!important;box-shadow:none!important}
+body.dark .profile-page .profile-input::placeholder{color:#94a3b8!important}
+body.dark .profile-page .profile-input-wrap:focus-within{border-color:#9b6df2!important;box-shadow:0 0 0 3px rgba(155,109,242,.18)!important}
+body.dark .profile-page .profile-input-icon,body.dark .profile-page .profile-eye-btn{color:#bca7db!important}
+body.dark .profile-page .profile-input-wrap--disabled,body.dark .profile-page .profile-input:disabled{background:#252231!important;color:#a9a1b2!important}
+body.dark .profile-page .profile-input-badge{color:#d8cbed!important;background:#38294a!important;border-color:#5d4671!important}
+body.dark .profile-workspace-tab{color:#e8e3ed!important}
+body.dark .profile-workspace-tab small{color:#b9b1c2!important}
+body.dark .profile-workspace-tab:not(.active)>i{color:#c4a7ff!important;background:#30233f!important}
+body.dark .profile-page .btn-outline{color:#e9ddf8!important;background:#30233f!important;border-color:#5d4671!important}
+body.dark .profile-page .btn-outline:hover{color:#fff!important;background:#49305f!important;border-color:#8b5cf6!important}

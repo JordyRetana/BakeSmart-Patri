@@ -1,4 +1,6 @@
 :root {
+    --page-shell-max: 1600px;
+    --page-shell-gutter: clamp(.75rem, 2vw, 2rem);
     --primary: #8b5cf6;
     --primary-dark: #7c3aed;
     --primary-light: #ede9fe;

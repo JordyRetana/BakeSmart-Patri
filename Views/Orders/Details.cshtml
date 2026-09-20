@@ -2,6 +2,8 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Detalle de pedido";
     var orderId = ViewContext.RouteData.Values["id"]?.ToString() ?? "";
+    var paymentToStart = Context.Request.Query["pay"].ToString();
+    var orderJson = ViewData["OrderJson"]?.ToString() ?? "null";
 }
 
 <div class="page-shell order-details-page">
@@ -12,8 +14,8 @@
                 <div id="orderSubtitle" class="sub">Cargando informacion del pedido...</div>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                <a class="btn btn-secondary" href="/Orders/Edit/@orderId">Editar</a>
-                <a class="btn" href="/Orders">Volver</a>
+                <a class="btn btn-secondary" id="editOrderAction" href="/Orders/Edit/@orderId" style="display:none"><i class="fas fa-pen"></i> Modificar pedido</a>
+                <a class="btn" href="/Client/Orders">Volver a mis pedidos</a>
             </div>
         </div>
 
@@ -39,11 +41,16 @@
                 <div style="font-weight:950;">Productos</div>
                 <div id="orderProducts" class="muted" style="margin-top:8px;font-weight:700;line-height:1.6;">-</div>
             </div>
+            <div class="card soft" id="orderCustomizationCard" hidden>
+                <div style="font-weight:950;"><i class="fas fa-wand-magic-sparkles" style="color:var(--secondary);"></i> Personalización solicitada</div>
+                <div id="orderCustomization" class="muted" style="margin-top:8px;font-weight:700;line-height:1.7;white-space:pre-line;"></div>
+            </div>
             <div class="card soft">
                 <div style="font-weight:950;">Acciones</div>
-                <div class="muted" style="margin-top:8px;font-weight:700;line-height:1.6;">Actualiza estado, fecha y notas desde editar.</div>
+                <div class="muted" style="margin-top:8px;font-weight:700;line-height:1.6;">@(User.IsInRole("Cliente") ? "Consulta el avance y la ubicación de tu entrega." : "Actualiza estado, fecha y notas desde editar.")</div>
                 <div style="margin-top:12px;">
-                    <a class="btn btn-secondary" href="/Production">Ver produccion</a>
+                    <a class="btn btn-secondary" href="@(User.IsInRole("Cliente") ? $"/Client/Track?id={orderId}" : "/Production")">@(User.IsInRole("Cliente") ? "Ver seguimiento" : "Ver producción")</a>
+                    <span id="securePaymentAction"></span>
                 </div>
             </div>
         </div>
@@ -51,12 +58,13 @@
 </div>
 
 <script>
-    (() => {
+    window.addEventListener('DOMContentLoaded', () => {
         const orderId = Number('@orderId');
+        const serverOrder = @Html.Raw(orderJson);
+        const paymentToStart = '@paymentToStart';
         const money = value => `₡${Number(value || 0).toLocaleString('es-CR')}`;
 
-        window.BakeSmartStore.refresh().then(() => {
-            const order = window.BakeSmartStore.orders.list().find(row => Number(row.id) === orderId);
+        const renderOrder = order => {
             if (!order) {
                 document.getElementById('orderSubtitle').textContent = 'No se encontro el pedido solicitado.';
                 return;
@@ -65,13 +73,54 @@
             document.getElementById('orderTitle').textContent = `Pedido #${order.id}`;
             document.getElementById('orderSubtitle').textContent = `${order.cliente || order.customerName || '-'} - ${order.paymentMethod || '-'}`;
             document.getElementById('orderStatus').textContent = order.estado || order.status || '-';
+            const status = String(order.estado || order.status || '').toLowerCase();
+            document.getElementById('editOrderAction').style.display = ['producci', 'listo', 'camino', 'entregado'].some(value => status.includes(value)) ? 'none' : '';
             document.getElementById('orderDelivery').textContent = order.entrega || order.deliveryDate || '-';
             document.getElementById('orderTotal').textContent = money(order.total);
             document.getElementById('orderProducts').textContent = order.producto || order.products || 'Sin detalle';
-        }).catch(error => {
+            if (order.isCustomOrder || String(order.notes || '').includes('Tipo de encargo')) {
+                document.getElementById('orderCustomizationCard').hidden = false;
+                document.getElementById('orderCustomization').textContent = String(order.notes || 'Pedido personalizado');
+            }
+            if (paymentToStart) openSecurePayment(paymentToStart);
+        };
+        if (serverOrder) {
+            renderOrder(serverOrder);
+            return;
+        }
+        window.BakeSmartStore.refresh().then(() => renderOrder(window.BakeSmartStore.orders.list().find(row => Number(row.id) === orderId))).catch(error => {
             document.getElementById('orderSubtitle').textContent = error.message;
         });
-    })();
+    });
+
+    async function openSecurePayment(method) {
+        const isPayPal = String(method).toLowerCase().includes('paypal');
+        if (!isPayPal) return;
+        const paymentAction = document.getElementById('securePaymentAction');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-primary';
+        button.innerHTML = '<i class="fab fa-paypal"></i> Pagar con PayPal';
+        paymentAction.replaceChildren(button);
+        const begin = async () => {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abriendo pago seguro…';
+            try {
+                const response = await fetch('/api/payments/paypal/checkout', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderIds: [Number('@orderId')] })
+                });
+                const result = await response.json();
+                if (!response.ok || !result.url) throw new Error(result.message || 'No se pudo iniciar el pago seguro.');
+                window.location.assign(result.url);
+            } catch (error) {
+                app.toast.error(error.message || 'No se pudo iniciar el pago seguro.');
+                button.disabled = false;
+                button.innerHTML = '<i class="fab fa-paypal"></i> Reintentar PayPal';
+            }
+        };
+        button.addEventListener('click', begin);
+        await begin();
+    }
 </script>
 
 @section Styles {

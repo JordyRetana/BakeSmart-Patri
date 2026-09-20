@@ -16,8 +16,11 @@
     }
 
     .production-date-chip {
-        display: flex;
-        gap: 1rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .55rem;
+        padding: .72rem 1rem;
+        white-space: nowrap;
     }
 
     .production-content {

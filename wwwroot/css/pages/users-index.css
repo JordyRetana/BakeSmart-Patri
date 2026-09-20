@@ -135,6 +135,21 @@
     gap: .45rem;
     justify-content: flex-end;
 }
+.users-security-enabled,.users-security-pending { margin-top:.3rem !important; font-weight:800; }
+.users-security-enabled { color:#2f855a !important; }
+.users-security-pending { color:#b66a05 !important; }
+.users-security-action { width:34px; min-width:34px; padding:0 !important; color:#7138df; }
+.users-security-form { display:grid; gap:.85rem; }
+.users-security-form > p { margin:0; color:var(--text-light); line-height:1.5; }
+.users-security-form label { display:grid; gap:.35rem; color:var(--text); font-size:.82rem; font-weight:800; }
+.users-security-warning { display:flex; align-items:center; gap:.85rem; padding:.85rem; border:1px solid color-mix(in srgb,#f59e0b 38%,var(--border)); border-radius:10px; background:color-mix(in srgb,#f59e0b 9%,var(--bg-card)); }
+.users-security-warning > i { color:#d97706; font-size:1.25rem; }
+.users-security-warning p,.users-security-warning strong,.users-security-warning span { display:block; margin:0; }
+.users-security-warning span { margin-top:.15rem; color:var(--text-light); font-size:.78rem; }
+.users-security-form-actions { display:flex; justify-content:flex-end; gap:.6rem; margin-top:.25rem; }
+body.dark .users-security-enabled { color:#86efac !important; }
+body.dark .users-security-pending { color:#fcd34d !important; }
+body.dark .users-security-action { color:#c4b5fd; border-color:#5b4a78; }
 
 .users-role-list {
     display: grid;
@@ -190,6 +205,35 @@
     font-weight: 800;
 }
 
+.users-form label.users-test-account {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 12px 0;
+}
+
+.users-form .users-test-account input[type="checkbox"] {
+    appearance: auto;
+    display: inline-block;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    accent-color: #7c3aed;
+}
+
+.users-test-account span { display: block; }
+.users-test-account small {
+    display: block;
+    margin-top: 3px;
+    font-weight: 400;
+    font-size: .875rem;
+}
+
 .users-form-full {
     grid-column: 1 / -1;
 }
@@ -224,4 +268,262 @@
     .users-form-actions {
         display: grid;
     }
+
+    .users-security-form-actions { display:grid; grid-template-columns:1fr; }
+    .users-security-form-actions .btn { width:100%; }
+    .users-row-actions { flex-wrap:wrap; max-width:150px; }
+}
+.users-client-group {
+    margin-top: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.users-client-group > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.15rem;
+    cursor: pointer;
+    font-weight: 800;
+    background: color-mix(in srgb, var(--primary) 7%, var(--bg-card));
+}
+
+.users-client-group > summary::marker { display: none; }
+.users-client-group[open] > summary { border-bottom: 1px solid var(--border); }
+
+/* Users directory: balanced density and consistent dark surfaces. */
+@media (min-width: 1081px) {
+    .users-layout { grid-template-columns:minmax(0,1fr) 300px; gap:1.15rem; }
+}
+
+.users-table-card { padding:1.15rem !important; }
+.users-roles-card { padding:1rem !important; }
+.users-table-scroll { border:1px solid var(--border); border-radius:10px; }
+.users-table { width:100%; min-width:850px; table-layout:fixed; }
+.users-table th,.users-table td { padding:.82rem .7rem !important; vertical-align:middle; }
+.users-table th:nth-child(1){width:27%}.users-table th:nth-child(2){width:21%}.users-table th:nth-child(3){width:14%}.users-table th:nth-child(4){width:11%}.users-table th:nth-child(5){width:11%}.users-table th:nth-child(6){width:16%}
+.users-table td:first-child small,.users-table td:nth-child(2) span,.users-table td:nth-child(2) small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.users-created-at { white-space:nowrap; font-variant-numeric:tabular-nums; }
+.users-row-actions { align-items:center; flex-wrap:nowrap; white-space:nowrap; }
+.users-row-actions .btn { min-height:36px; }
+.users-role-list { gap:.72rem; }
+.users-role-chip { padding:.9rem; background:color-mix(in srgb,var(--primary) 3%,var(--bg-card)); }
+.users-role-chip b { min-width:38px; height:32px; }
+.users-client-group { border-radius:10px; }
+
+body.dark .users-table-card,
+body.dark .users-roles-card,
+body.dark .users-kpis article,
+body.dark .users-hero { background:#1d1a26 !important; border-color:#453a52 !important; }
+body.dark .users-table-scroll { border-color:#42506a !important; background:#152033 !important; }
+body.dark .users-table thead th { color:#dbeafe !important; background:#101827 !important; border-color:#344158 !important; }
+body.dark .users-table tbody td { color:#e5e7eb !important; background:#172235 !important; border-color:#344158 !important; }
+body.dark .users-table tbody tr:hover td { background:#1c2940 !important; }
+body.dark .users-table td small { color:#aebbd0 !important; }
+body.dark .users-role-chip { background:#17141e !important; border-color:#493c55 !important; }
+body.dark .users-role-chip strong { color:#f8fafc !important; }
+body.dark .users-role-chip span { color:#b9c4d4 !important; }
+body.dark .users-role-chip b { color:#d8b4fe !important; background:#352548 !important; border-color:#624678 !important; }
+body.dark .users-client-group { border-color:#453a52; }
+body.dark .users-client-group > summary { color:#f8fafc !important; background:#251d32 !important; }
+body.dark .users-row-actions .btn { color:#eadcff !important; background:#352747 !important; border-color:#584269 !important; }
+body.dark .users-row-actions .btn:hover { background:#49305f !important; border-color:#8b5cf6 !important; }
+
+@media(max-width:1280px) and (min-width:1081px){
+    .users-layout{grid-template-columns:minmax(0,1fr) 270px}
+    .users-table{min-width:820px}
+    .users-table th,.users-table td{padding:.72rem .55rem !important}
+}
+
+/* The users directory must stay inside its card. The global smart-table rules use
+   a wide minimum intended for accounting reports, which made this page scroll. */
+.users-page .users-table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.users-page .users-table.smart-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+}
+
+.users-page .users-table th,
+.users-page .users-table td {
+    min-width: 0;
+}
+
+.users-page .users-table th:nth-child(1) { width: 25%; }
+.users-page .users-table th:nth-child(2) { width: 21%; }
+.users-page .users-table th:nth-child(3) { width: 14%; }
+.users-page .users-table th:nth-child(4) { width: 12%; }
+.users-page .users-table th:nth-child(5) { width: 11%; }
+.users-page .users-table th:nth-child(6) { width: 17%; }
+
+.users-page .users-table td:first-child,
+.users-page .users-table td:nth-child(2) {
+    overflow: hidden;
+}
+
+.users-page .users-row-actions {
+    display: flex;
+    width: 100%;
+    gap: .35rem;
+}
+
+.users-page .users-row-actions .btn {
+    min-width: 34px;
+    min-height: 34px;
+    padding: .45rem .58rem !important;
+    font-size: .72rem;
+}
+
+.users-page .smart-table-toolbar {
+    padding: .65rem;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--primary) 3%, var(--bg-card));
+    box-shadow: none;
+}
+
+.users-page .smart-table-search {
+    width: min(420px, 100%);
+    min-height: 40px;
+    border-radius: 9px;
+}
+
+.users-page .smart-table-search input {
+    font-size: .8rem;
+}
+
+.users-page .smart-table-dock {
+    min-height: 48px;
+    padding: .45rem .65rem;
+    box-shadow: none;
+}
+
+.users-page .smart-table-page-size {
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.users-page .smart-table-page-size span {
+    display: inline-block;
+    min-width: max-content;
+}
+
+.users-page .smart-table-page-size select {
+    width: 66px !important;
+    min-width: 66px !important;
+    min-height: 36px !important;
+    padding: .4rem 2rem .4rem .7rem !important;
+}
+
+@media (max-width: 1360px) {
+    .users-layout,
+    .users-layout:first-child {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    .users-role-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-height: none;
+        overflow: visible;
+    }
+}
+
+@media (max-width: 760px) {
+    .users-page { gap: .75rem; }
+    .users-table-card,
+    .users-roles-card { padding: .75rem !important; }
+    .users-section-head { margin-bottom: .65rem; }
+    .users-section-head h2 { font-size: 1.45rem; }
+
+    .users-page .smart-table-toolbar {
+        gap: .55rem;
+        margin-bottom: .6rem;
+        padding: .55rem;
+    }
+
+    .users-page .smart-table-toolbar-meta {
+        justify-content: stretch;
+    }
+
+    .users-page .smart-table-match {
+        width: 100%;
+        justify-content: center;
+        padding: .42rem .6rem;
+    }
+
+    .users-page .users-table-scroll {
+        max-height: none;
+        overflow: visible;
+        border: 0;
+        background: transparent !important;
+    }
+
+    .users-page .users-table.smart-table tbody {
+        gap: .65rem !important;
+    }
+
+    .users-page .users-table.smart-table tbody tr:not(.smart-row-hidden) {
+        padding: .35rem .7rem !important;
+        border-radius: 12px !important;
+        box-shadow: none !important;
+    }
+
+    .users-page .users-table.smart-table tbody td {
+        grid-template-columns: 78px minmax(0, 1fr) !important;
+        min-height: 38px !important;
+        padding: .48rem 0 !important;
+        gap: .55rem !important;
+        text-align: left !important;
+    }
+
+    .users-page .users-table.smart-table tbody td > :where(strong, span, small, div) {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .users-page .users-table td:first-child small,
+    .users-page .users-table td:nth-child(2) span,
+    .users-page .users-table td:nth-child(2) small {
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .users-page .users-row-actions {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr) 40px;
+        max-width: none;
+        gap: .45rem;
+    }
+
+    .users-page .users-row-actions .btn {
+        width: 100%;
+        min-height: 38px;
+        margin: 0;
+    }
+
+    .users-page .smart-table-dock,
+    .users-page .smart-table-dock.is-compact {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: .55rem;
+        padding: .5rem;
+    }
+
+    .users-page .smart-table-pagination {
+        justify-content: center;
+        overflow: visible;
+    }
+
+    .users-page .smart-table-page-size {
+        justify-self: start;
+    }
+
+    .users-role-list { grid-template-columns: 1fr; }
+    .users-client-group { margin-top: .75rem; }
 }

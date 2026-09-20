@@ -1,0 +1,9 @@
+/* Evita cuadros vacíos si una configuración antigua aún guarda un nombre de ícono retirado. */
+.fa-sparkles::before { content: "\f0d0"; }
+.fa-shield-heart::before { content: "\f132"; }
+.fa-face-smile::before { content: "\f118"; }
+.fa-wand-magic-sparkles::before { content: "\e2ca"; }
+.fa-truck-field::before { content: "\e58a"; }
+.fa-money-bill-transfer::before { content: "\e528"; }
+.fa-kitchen-set::before { content: "\e51a"; }
+.fa-map-location-dot::before { content: "\f5a0"; }

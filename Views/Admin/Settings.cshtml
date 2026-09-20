@@ -20,6 +20,7 @@
         <button type="button" class="settings-module-tab" data-settings-tab="home"><i class="fas fa-house"></i><span>Inicio</span></button>
         <button type="button" class="settings-module-tab" data-settings-tab="benefits"><i class="fas fa-star"></i><span>Beneficios</span></button>
         <button type="button" class="settings-module-tab" data-settings-tab="delivery"><i class="fas fa-truck-fast"></i><span>Entrega</span></button>
+        <button type="button" class="settings-module-tab" data-settings-tab="combos"><i class="fas fa-box-open"></i><span>Combos</span></button>
         <button type="button" class="settings-module-tab" data-settings-tab="contact"><i class="fas fa-address-card"></i><span>Contacto</span></button>
     </nav>
 
@@ -34,17 +35,17 @@
             <div class="grid grid-2 settings-grid">
                 <div>
                     <label>IVA (%)</label>
-                    <input class="form-control" name="iva" type="number" min="0" max="1" step="0.01" />
-                    <small class="text-muted">Ej: 0.13 para 13%</small>
+                    <input class="form-control" name="iva" type="number" min="0" max="100" step="0.1" />
+                    <small class="text-muted">Escriba 13 para aplicar 13%.</small>
                 </div>
                 <div>
                     <label>Descuento cliente frecuente (%)</label>
-                    <input class="form-control" name="frequentCustomerDiscount" type="number" min="0" max="1" step="0.01" />
-                    <small class="text-muted">Ej: 0.05 para 5%</small>
+                    <input class="form-control" name="frequentCustomerDiscount" type="number" min="0" max="100" step="0.5" />
+                    <small class="text-muted">Escriba 5 para aplicar 5%.</small>
                 </div>
                 <div class="settings-toggle-card">
                     <div>
-                        <label>Richie con catalogo en vivo</label>
+                        <label>Richie con catálogo en vivo</label>
                         <small class="text-muted">Activa si el bot puede consultar Azure para responder productos, precios y stock.</small>
                     </div>
                     <label class="settings-switch">
@@ -53,8 +54,6 @@
                     </label>
                 </div>
             </div>
-        </section>
-
             <div class="settings-subsection">
                 <h3>Ubicación del negocio</h3>
                 <p class="text-muted">Busca o selecciona en el mapa el origen de entregas y pedidos.</p>
@@ -145,7 +144,9 @@
             </div>
             <p class="text-muted">Estos bloques alimentan la sección de ventajas del pedido.</p>
             <div id="benefitBlocksEditor" class="settings-block-editor"></div>
-            <button type="button" class="btn btn-outline" id="addBenefitBlock"><i class="fas fa-plus"></i> Agregar beneficio</button>
+            <div class="settings-editor-actions">
+                <button type="button" class="btn btn-outline" id="addBenefitBlock"><i class="fas fa-plus"></i> Agregar beneficio</button>
+            </div>
         </section>
 
         <section class="settings-module-panel" data-settings-panel="delivery">
@@ -183,6 +184,23 @@
             </div>
         </section>
 
+        <section class="settings-module-panel" data-settings-panel="combos">
+            <div class="settings-panel-heading"><div><span>Ofertas</span><h3>Combos del catálogo y POS</h3></div></div>
+            <p class="text-muted">Cree el combo usando productos vendibles existentes. Se conservarán productos, cantidades, imágenes, precio especial y descuento.</p>
+            <input type="hidden" id="comboId" />
+            <div class="grid grid-3 settings-grid">
+                <div><label>Nombre</label><input class="form-control" id="comboName" placeholder="Ej. Combo cumpleaños" /></div>
+                <div><label>Precio especial</label><input class="form-control" id="comboPrice" type="number" min="0.01" step="0.01" /></div>
+                <div><label>Descripción</label><input class="form-control" id="comboDescription" /></div>
+            </div>
+            <div id="comboProductEditor" class="settings-combo-products"></div>
+            <div class="settings-combo-actions">
+                <button type="button" class="btn btn-outline" id="clearCombo"><i class="fas fa-eraser"></i> Limpiar</button>
+                <button type="button" class="btn btn-primary" id="saveCombo"><i class="fas fa-save"></i> Guardar combo</button>
+            </div>
+            <div class="settings-subsection"><h3>Combos configurados</h3><div id="settingsComboList" class="settings-combo-list"></div></div>
+        </section>
+
         <div class="settings-save-bar">
             <button type="submit" class="btn btn-primary">
                 <i class="fas fa-save"></i> Guardar configuración
@@ -195,6 +213,8 @@
     .settings-admin-page {
         display: grid;
         gap: 1rem;
+        width: 100%;
+        max-width: none;
     }
 
     .settings-admin-header {
@@ -223,7 +243,7 @@
 
     .settings-module-tabs {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: .75rem;
         padding: .75rem;
         border: 1px solid var(--border);
@@ -236,11 +256,12 @@
         min-height: 58px;
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         gap: .55rem;
         border: 1px solid transparent;
         border-radius: 10px;
-        background: transparent;
+        padding: .7rem .85rem;
+        background: var(--bg);
         color: var(--text-muted);
         font-weight: 800;
         cursor: pointer;
@@ -250,11 +271,19 @@
         border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
         background: color-mix(in srgb, var(--primary) 10%, var(--surface));
         color: var(--primary);
+        box-shadow: inset 4px 0 0 var(--primary);
     }
 
+    .settings-module-tab i { width:34px;height:34px;display:grid;place-items:center;flex:0 0 34px;border-radius:10px;background:color-mix(in srgb,var(--primary) 10%,var(--surface)); }
+
     .settings-page-card {
-        max-width: 1220px;
+        width: 100%;
+        max-width: none;
         padding: 1.5rem;
+    }
+
+    .settings-module-panel[data-settings-panel="general"] > .settings-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .settings-module-panel {
@@ -409,12 +438,22 @@
         margin-bottom: 1rem;
     }
 
+    .settings-editor-actions {
+        display: flex;
+        align-items: center;
+        padding: .25rem 0 .75rem;
+        background: var(--surface);
+        position: relative;
+        z-index: 1;
+    }
+
     .settings-block-card {
         border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 1rem;
+        border-radius: 18px;
+        padding: 1.15rem;
         background: var(--surface);
         box-shadow: var(--shadow-sm);
+        overflow: hidden;
     }
 
     .settings-block-card header {
@@ -440,14 +479,116 @@
 
     .settings-block-layout {
         display: grid;
-        grid-template-columns: 260px minmax(0, 1fr);
-        gap: 1rem;
+        grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
+        gap: 1.2rem;
+    }
+
+    .settings-block-image {
+        min-width: 0;
+    }
+
+    .settings-block-image > img {
+        box-shadow: 0 10px 28px rgba(43, 28, 76, .1);
+    }
+
+    .settings-block-media-actions {
+        display: flex;
+        gap: .65rem;
+        margin-top: .75rem;
+    }
+
+    .settings-block-media-actions .btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .settings-image-library {
+        position: relative;
+        margin-top: .65rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--primary) 3%, var(--surface));
+    }
+
+    .settings-image-library > summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .6rem;
+        min-height: 44px;
+        padding: .65rem .8rem;
+        color: var(--text);
+        font-size: .82rem;
+        font-weight: 800;
+        cursor: pointer;
+        list-style: none;
+    }
+
+    .settings-image-library > summary::-webkit-details-marker { display: none; }
+    .settings-image-library > summary::after {
+        content: '\f078';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        color: var(--primary);
+        transition: transform .18s ease;
+    }
+    .settings-image-library[open] > summary::after { transform: rotate(180deg); }
+
+    .settings-image-gallery {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: .5rem;
+        max-height: 236px;
+        overflow: auto;
+        padding: 0 .7rem .7rem;
+        scrollbar-width: thin;
+    }
+
+    .settings-image-choice {
+        position: relative;
+        min-width: 0;
+        aspect-ratio: 1 / .82;
+        padding: 0;
+        overflow: hidden;
+        border: 2px solid transparent;
+        border-radius: 10px;
+        background: var(--surface-muted);
+        cursor: pointer;
+    }
+
+    .settings-image-choice img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .settings-image-choice.active {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
+    }
+
+    .settings-image-choice.active::after {
+        content: '\f00c';
+        position: absolute;
+        right: 5px;
+        bottom: 5px;
+        display: grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: #fff;
+        font-family: 'Font Awesome 6 Free';
+        font-size: .68rem;
+        font-weight: 900;
     }
 
     .settings-block-fields {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 1rem;
+        gap: .9rem 1rem;
+        align-content: start;
     }
 
     .settings-block-fields .wide {
@@ -456,7 +597,7 @@
 
     .settings-icon-picker {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(46px, 1fr));
+        grid-template-columns: repeat(8, minmax(38px, 1fr));
         gap: .45rem;
     }
 
@@ -479,8 +620,8 @@
         display: flex;
         gap: 1rem;
         justify-content: flex-end;
-        position: sticky;
-        bottom: 1rem;
+        position: static;
+        margin-top: 1.25rem;
         background: var(--surface);
         padding: 1rem;
         border: 1px solid var(--border);
@@ -489,6 +630,28 @@
         z-index: 5;
     }
 
+    .settings-combo-products { display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:.85rem;margin:1rem 0; }
+    .settings-combo-product { display:grid;grid-template-columns:72px minmax(0,1fr) 82px;gap:.8rem;align-items:center;min-height:96px;padding:.75rem;border:1px solid var(--border);border-radius:14px;background:var(--bg);cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease,background .18s ease; }
+    .settings-combo-product:hover { border-color:color-mix(in srgb,var(--primary) 45%,var(--border));box-shadow:0 6px 18px rgba(70,36,110,.08); }
+    .settings-combo-product:has(input[type="checkbox"]:checked) { border-color:var(--primary);background:color-mix(in srgb,var(--primary) 8%,var(--bg));box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 12%,transparent); }
+    .settings-combo-product img { width:72px;height:72px;object-fit:cover;border-radius:11px; }
+    .settings-combo-product__name { display:grid;min-width:0;gap:.25rem; }
+    .settings-combo-product__select { display:flex;align-items:flex-start;gap:.55rem;min-width:0; }
+    .settings-combo-checkbox { appearance:none;width:21px;height:21px;flex:0 0 21px;margin:0;border:2px solid color-mix(in srgb,var(--primary) 62%,var(--border));border-radius:7px;background:var(--surface);display:grid;place-content:center;cursor:pointer; }
+    .settings-combo-checkbox::after { content:'✓';color:#fff;font-size:.76rem;font-weight:900;transform:scale(0);transition:transform .15s ease; }
+    .settings-combo-checkbox:checked { background:linear-gradient(135deg,var(--primary),var(--secondary));border-color:transparent; }
+    .settings-combo-checkbox:checked::after { transform:scale(1); }
+    .settings-combo-product__name strong { display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.28;font-size:.92rem; }
+    .settings-combo-product__name small { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.74rem;color:var(--text-muted); }
+    .settings-combo-product > .form-control { min-height:46px;text-align:center;font-weight:800; }
+    .settings-combo-actions { display:flex;justify-content:flex-end;gap:.65rem; }
+    .settings-combo-list { display:grid;gap:.65rem; }
+    .settings-combo-card { display:flex;align-items:center;gap:.8rem;padding:.8rem;border:1px solid var(--border);border-radius:14px;background:var(--bg); }
+    .settings-combo-card img { width:58px;height:58px;object-fit:cover;border-radius:9px; }
+    .settings-combo-card > div { min-width:0;flex:1;display:grid;gap:.2rem; }
+    .settings-combo-card > div strong,.settings-combo-card > div small { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .settings-combo-card__actions { display:flex;gap:.45rem; }
+
     @@media (max-width: 920px) {
         .settings-module-tabs {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -496,6 +659,10 @@
 
         .settings-hero-editor,
         .settings-block-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .settings-module-panel[data-settings-panel="general"] > .settings-grid {
             grid-template-columns: 1fr;
         }
     }
@@ -511,6 +678,14 @@
 
         .settings-image-actions {
             grid-template-columns: 1fr;
+        }
+
+        .settings-block-card header {
+            align-items: flex-start;
+        }
+
+        .settings-icon-picker {
+            grid-template-columns: repeat(5, minmax(40px, 1fr));
         }
     }
 </style>
@@ -535,22 +710,22 @@
                 'fa-cake-candles','fa-cookie-bite','fa-ice-cream','fa-bread-slice','fa-mug-hot',
                 'fa-gift','fa-star','fa-heart','fa-wand-magic-sparkles','fa-leaf',
                 'fa-motorcycle','fa-truck-fast','fa-clock','fa-shield-heart','fa-face-smile',
-                'fa-bag-shopping','fa-percent','fa-fire','fa-sparkles','fa-store'
+                'fa-bag-shopping','fa-percent','fa-fire','fa-wand-magic-sparkles','fa-store'
             ];
             const defaults = {
                 home: [
-                    { id: newId(), active: true, icon: 'fa-cake-candles', title: 'Queques personalizados', text: 'Crea pedidos especiales para cumpleanos, eventos y regalos.', imageUrl: '/img/products/cake-red-velvet.jpg', linkText: 'Ver queques', linkUrl: '/Catalog?category=Queques' }
+                    { id: newId(), active: true, icon: 'fa-cake-candles', title: 'Queques personalizados', text: 'Crea pedidos especiales para cumpleaños, eventos y regalos.', imageUrl: '/img/products/cake-red-velvet.jpg', linkText: 'Ver queques', linkUrl: '/Catalog?category=Queques' }
                 ],
                 benefits: [
-                    { id: newId(), active: true, icon: 'fa-wand-magic-sparkles', title: 'Acabado artesanal', text: 'Cada creacion se prepara con atencion al detalle y una presentacion cuidada.' },
+                    { id: newId(), active: true, icon: 'fa-wand-magic-sparkles', title: 'Acabado artesanal', text: 'Cada creación se prepara con atención al detalle y una presentación cuidada.' },
                     { id: newId(), active: true, icon: 'fa-leaf', title: 'Ingredientes seleccionados', text: 'Sabores equilibrados y productos pensados para disfrutar desde el primer bocado.' },
-                    { id: newId(), active: true, icon: 'fa-gift', title: 'Momentos memorables', text: 'Opciones para cumpleanos, eventos, regalos y cualquier ocasion especial.' }
+                    { id: newId(), active: true, icon: 'fa-gift', title: 'Momentos memorables', text: 'Opciones para cumpleaños, eventos, regalos y cualquier ocasión especial.' }
                 ],
                 delivery: [
-                    { id: newId(), active: true, icon: 'fa-motorcycle', title: 'Entregas rapidas y seguras', text: 'Coordinamos cada pedido con cuidado.' },
-                    { id: newId(), active: true, icon: 'fa-clock', title: 'Atencion agil', text: 'Respuesta oportuna' },
+                    { id: newId(), active: true, icon: 'fa-motorcycle', title: 'Entregas rápidas y seguras', text: 'Coordinamos cada pedido con cuidado.' },
+                    { id: newId(), active: true, icon: 'fa-clock', title: 'Atención ágil', text: 'Respuesta oportuna' },
                     { id: newId(), active: true, icon: 'fa-shield-heart', title: 'Empaque seguro', text: 'Producto protegido' },
-                    { id: newId(), active: true, icon: 'fa-face-smile', title: 'Satisfaccion', text: 'Servicio cercano' }
+                    { id: newId(), active: true, icon: 'fa-face-smile', title: 'Satisfacción', text: 'Servicio cercano' }
                 ]
             };
             const content = { home: [], benefits: [], delivery: [] };
@@ -616,9 +791,28 @@
                 ].join('');
             }
 
+            function renderImagePicker(selected = '') {
+                const images = [...new Set(['/img/products/producto-sin-imagen.svg', ...(catalogOptions.images || [])].filter(Boolean))];
+                return `
+                    <details class="settings-image-library">
+                        <summary><span><i class="fas fa-images"></i> Elegir de la galer&iacute;a</span></summary>
+                        <div class="settings-image-gallery">
+                            ${images.map((url, index) => `
+                                <button type="button"
+                                        class="settings-image-choice ${url === selected ? 'active' : ''}"
+                                        data-action="select-image"
+                                        data-url="${escapeAttr(url)}"
+                                        title="Imagen ${index + 1}">
+                                    <img src="${escapeAttr(url)}" alt="Imagen ${index + 1}" loading="lazy" onerror="this.src='/img/products/producto-sin-imagen.svg';" />
+                                </button>
+                            `).join('')}
+                        </div>
+                    </details>`;
+            }
+
             function renderLinkOptions(selected = '') {
                 const options = [
-                    { value: '/Catalog', label: 'Catalogo completo' },
+                    { value: '/Catalog', label: 'Catálogo completo' },
                     { value: '/Catalog/Offers', label: 'Ofertas' },
                     { value: '/Catalog/New', label: 'Novedades' },
                     { value: '/Catalog/Combos', label: 'Combos' },
@@ -659,13 +853,13 @@
                         <div class="settings-block-layout">
                             <div class="settings-block-image">
                                 <img src="${escapeAttr(item.imageUrl || '/img/products/producto-sin-imagen.svg')}" alt="Vista previa" onerror="this.src='/img/products/producto-sin-imagen.svg';" />
-                                <div class="settings-image-actions" style="margin-top:.75rem;">
+                                <div class="settings-block-media-actions">
                                     <label class="btn btn-outline btn-sm">
-                                        <i class="fas fa-upload"></i> Subir
+                                        <i class="fas fa-upload"></i> Subir nueva
                                         <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-action="upload-image" hidden />
                                     </label>
-                                    <select class="form-control" data-action="select-image">${renderImageOptions(item.imageUrl)}</select>
                                 </div>
+                                ${renderImagePicker(item.imageUrl)}
                             </div>
                             <div class="settings-block-fields">
                                 <div>
@@ -682,7 +876,7 @@
                                 </div>
                                 <div>
                                     <label>Texto del boton</label>
-                                    <input class="form-control" data-field="linkText" value="${escapeAttr(item.linkText)}" placeholder="Ver mas" />
+                                    <input class="form-control" data-field="linkText" value="${escapeAttr(item.linkText)}" placeholder="Ver más" />
                                 </div>
                                 <div>
                                     <label>Icono</label>
@@ -740,11 +934,6 @@
                         return;
                     }
 
-                    if (event.target.dataset.action === 'select-image') {
-                        context.item.imageUrl = event.target.value;
-                        context.card.querySelector('.settings-block-image img').src = context.item.imageUrl || '/img/products/producto-sin-imagen.svg';
-                    }
-
                     if (event.target.dataset.action === 'select-link') {
                         context.item.linkUrl = event.target.value;
                     }
@@ -770,8 +959,18 @@
                     if (!context) return;
 
                     if (event.target.closest('[data-action="remove"]')) {
-                        content[context.type].splice(Number(context.card.dataset.index), 1);
-                        renderEditor(context.type);
+                        const label = context.item?.title || `este ${editors[context.type].label}`;
+                        app.modal.create({
+                            title: 'Eliminar elemento',
+                            message: `¿Desea eliminar “${label}”? Esta acción se aplicará al guardar la configuración.`,
+                            confirmText: 'Sí, eliminar',
+                            cancelText: 'Conservar',
+                            onConfirm: () => {
+                                content[context.type].splice(Number(context.card.dataset.index), 1);
+                                renderEditor(context.type);
+                                app.toast.info('Elemento eliminado. Guarde la configuración para publicar el cambio.');
+                            }
+                        });
                         return;
                     }
 
@@ -781,6 +980,15 @@
                         context.card.querySelectorAll('.settings-icon-option').forEach(button => button.classList.remove('active'));
                         iconButton.classList.add('active');
                         context.card.querySelector('header i').className = `fas ${context.item.icon}`;
+                        return;
+                    }
+
+                    const imageButton = event.target.closest('[data-action="select-image"]');
+                    if (imageButton) {
+                        context.item.imageUrl = imageButton.dataset.url || '';
+                        context.card.querySelector('.settings-block-image > img').src = context.item.imageUrl || '/img/products/producto-sin-imagen.svg';
+                        context.card.querySelectorAll('.settings-image-choice').forEach(button => button.classList.toggle('active', button === imageButton));
+                        imageButton.closest('details')?.removeAttribute('open');
                     }
                 });
             });
@@ -824,7 +1032,11 @@
                         input.checked = value === undefined ? true : ['true', '1', 'si', 'yes', 'on'].includes(String(value).toLowerCase());
                         return;
                     }
-                    if (input && value !== undefined) input.value = value;
+                    if (input && value !== undefined) {
+                        input.value = ['iva', 'frequentCustomerDiscount'].includes(key)
+                            ? String(Number(value || 0) * 100)
+                            : value;
+                    }
                 });
 
                 setHeroImage(form.querySelector('[name="siteHeroImageUrl"]').value || '/img/products/cupcakes-decorados.jpg');
@@ -872,7 +1084,11 @@
                     if (key === 'originLatitude') value = String(mapValues.lat ?? '');
                     if (key === 'originLongitude') value = String(mapValues.lng ?? '');
                     if (key === 'botUseDatabase') value = form.querySelector('[name="botUseDatabase"]').checked ? 'true' : 'false';
-                    if (value !== null) settings[key] = value;
+                    if (value !== null) {
+                        settings[key] = ['iva', 'frequentCustomerDiscount'].includes(key)
+                            ? String(Math.min(Math.max(Number(value || 0), 0), 100) / 100)
+                            : value;
+                    }
                 });
 
                 settings.siteHomeBlocks = JSON.stringify(content.home.map(normalizeItem));
@@ -905,7 +1121,95 @@
                 return escapeHtml(value);
             }
 
-            loadSettings().catch(error => app.toast.error(error.message));
+            function renderComboProducts(combo = null) {
+                const selected = new Map((combo?.items || []).map(item => [Number(item.productId), Number(item.quantity)]));
+                document.getElementById('comboProductEditor').innerHTML = BakeSmartStore.inventory.sellable().map(product => `
+                    <label class="settings-combo-product">
+                        <img src="${escapeAttr(product.imageUrl || '/img/products/producto-sin-imagen.svg')}" alt="" />
+                        <span class="settings-combo-product__name">
+                            <span class="settings-combo-product__select"><input class="settings-combo-checkbox" type="checkbox" data-combo-product="${product.id}" ${selected.has(Number(product.id)) ? 'checked' : ''} /> <strong title="${escapeAttr(product.description || product.item)}">${escapeHtml(product.description || product.item)}</strong></span>
+                            <small>${escapeHtml(product.code || product.sku)} · ${app.utils.formatCurrency(product.price)}</small>
+                        </span>
+                        <input class="form-control" type="number" min="1" step="1" value="${selected.get(Number(product.id)) || 1}" data-combo-quantity="${product.id}" aria-label="Cantidad" />
+                    </label>`).join('');
+            }
+
+            function renderComboList() {
+                const combos = BakeSmartStore.combos.list();
+                document.getElementById('settingsComboList').innerHTML = combos.map(combo => `
+                    <article class="settings-combo-card">
+                        <img src="${escapeAttr(combo.imageUrl || combo.items?.[0]?.imageUrl || '/img/products/producto-sin-imagen.svg')}" alt="" />
+                        <div><strong>${escapeHtml(combo.name)}</strong><small>${combo.items.length} producto(s) · ${app.utils.formatCurrency(combo.specialPrice)} · ahorro ${app.utils.formatCurrency(combo.discount)}</small></div>
+                        <span class="badge ${combo.active ? 'badge-success' : 'badge-warning'}">${combo.active ? 'Activo' : 'Inactivo'}</span>
+                        <span class="settings-combo-card__actions">
+                            <button type="button" class="btn btn-outline btn-sm" onclick="editSettingsCombo(${combo.id})"><i class="fas fa-pen"></i></button>
+                            <button type="button" class="btn btn-ghost btn-sm" onclick="toggleSettingsCombo(${combo.id})">${combo.active ? 'Pausar' : 'Activar'}</button>
+                            <button type="button" class="btn btn-ghost btn-sm" onclick="deleteSettingsCombo(${combo.id})" aria-label="Eliminar combo"><i class="fas fa-trash"></i></button>
+                        </span>
+                    </article>`).join('') || '<p class="text-muted">Todavía no hay combos configurados.</p>';
+            }
+
+            function clearComboEditor() {
+                document.getElementById('comboId').value = '';
+                document.getElementById('comboName').value = '';
+                document.getElementById('comboPrice').value = '';
+                document.getElementById('comboDescription').value = '';
+                renderComboProducts();
+            }
+
+            window.editSettingsCombo = id => {
+                const combo = BakeSmartStore.combos.list().find(item => Number(item.id) === Number(id));
+                if (!combo) return;
+                document.getElementById('comboId').value = combo.id;
+                document.getElementById('comboName').value = combo.name;
+                document.getElementById('comboPrice').value = combo.specialPrice;
+                document.getElementById('comboDescription').value = combo.description || '';
+                renderComboProducts(combo);
+            };
+            window.toggleSettingsCombo = async id => { await BakeSmartStore.combos.toggle(id); renderComboList(); };
+            window.deleteSettingsCombo = id => {
+                const combo = BakeSmartStore.combos.list().find(item => Number(item.id) === Number(id));
+                app.modal.create({
+                    title: 'Eliminar combo',
+                    message: `¿Desea eliminar “${combo?.name || 'este combo'}”? Se quitará de Configuración, Catálogo y Punto de Venta.`,
+                    confirmText: 'Sí, eliminar',
+                    cancelText: 'Conservar combo',
+                    onConfirm: async () => {
+                        try {
+                            await BakeSmartStore.combos.remove(id);
+                            clearComboEditor();
+                            renderComboList();
+                            app.toast.success('Combo eliminado correctamente.');
+                        } catch (error) { app.toast.error(error.message); }
+                    }
+                });
+            };
+            document.getElementById('clearCombo').addEventListener('click', clearComboEditor);
+            document.getElementById('saveCombo').addEventListener('click', async () => {
+                const items = [...document.querySelectorAll('[data-combo-product]:checked')].map(input => ({
+                    productId: Number(input.dataset.comboProduct),
+                    quantity: Number(document.querySelector(`[data-combo-quantity="${input.dataset.comboProduct}"]`).value || 1)
+                }));
+                const firstProduct = BakeSmartStore.inventory.sellable().find(product => Number(product.id) === Number(items[0]?.productId));
+                try {
+                    await BakeSmartStore.combos.save({
+                        id: document.getElementById('comboId').value,
+                        name: document.getElementById('comboName').value,
+                        description: document.getElementById('comboDescription').value,
+                        specialPrice: document.getElementById('comboPrice').value,
+                        imageUrl: firstProduct?.imageUrl || null,
+                        isActive: true,
+                        items
+                    });
+                    app.toast.success('Combo guardado correctamente.');
+                    clearComboEditor();
+                    renderComboList();
+                } catch (error) { app.toast.error(error.message); }
+            });
+
+            Promise.all([loadSettings(), BakeSmartStore.refresh({ keys: ['inventory', 'combos'], force: true })])
+                .then(() => { clearComboEditor(); renderComboList(); })
+                .catch(error => app.toast.error(error.message));
         })();
     </script>
 }

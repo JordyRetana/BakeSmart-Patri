@@ -112,6 +112,8 @@ CREATE TABLE dbo.Usuarios
     Phone nvarchar(40) NULL,
     PasswordHash nvarchar(300) NOT NULL,
     AddressLine nvarchar(300) NULL,
+    ProfileLatitude decimal(10,6) NULL,
+    ProfileLongitude decimal(10,6) NULL,
     IsActive bit NOT NULL CONSTRAINT DF_Users_IsActive DEFAULT 1,
     CreatedAt datetime2(0) NOT NULL CONSTRAINT DF_Users_CreatedAt DEFAULT SYSUTCDATETIME()
 );

@@ -1,17 +1,17 @@
 @section Styles {
-    <link rel="stylesheet" href="~/css/pages/accounting-index.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/accounting-index.css?v=20260806-accounting-layout-3" />
 }
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Contabilidad";
 }
 
-<div class="page-shell accounting-page">
+<div class="page-shell accounting-page" data-accounting-workspace="operations">
     <div class="page-header accounting-header">
         <div>
             <h1 class="accounting-title">
                 <i class="fas fa-calculator"></i>
-                Contabilidad básica
+                Contabilidad y libro diario
             </h1>
             <p class="text-muted accounting-subtitle">
                 Registra gastos, pagos a proveedores, conciliación y cierre diario con trazabilidad.
@@ -21,25 +21,43 @@
 
     <div class="grid grid-4 accounting-kpi-grid">
         <div class="card accounting-kpi-card">
-            <div class="text-muted">Asientos</div>
-            <h2 id="accEntriesCount"></h2>
+            <span class="accounting-kpi-icon"><i class="fas fa-book-open"></i></span>
+            <div>
+                <div class="text-muted">Asientos</div>
+                <h2 id="accEntriesCount"></h2>
+            </div>
         </div>
 
         <div class="card accounting-kpi-card">
-            <div class="text-muted">Gastos</div>
-            <h2 id="accExpensesCount"></h2>
+            <span class="accounting-kpi-icon accounting-kpi-icon--expense"><i class="fas fa-receipt"></i></span>
+            <div>
+                <div class="text-muted">Gastos</div>
+                <h2 id="accExpensesCount"></h2>
+            </div>
         </div>
 
         <div class="card accounting-kpi-card">
-            <div class="text-muted">Pagos a proveedores</div>
-            <h2 id="accPaymentsCount"></h2>
+            <span class="accounting-kpi-icon accounting-kpi-icon--supplier"><i class="fas fa-truck-field"></i></span>
+            <div>
+                <div class="text-muted">Pagos a proveedores</div>
+                <h2 id="accPaymentsCount"></h2>
+            </div>
         </div>
 
         <div class="card accounting-kpi-card">
-            <div class="text-muted">Conciliación</div>
-            <h2 id="accReconStatus"></h2>
+            <span class="accounting-kpi-icon accounting-kpi-icon--reconcile"><i class="fas fa-scale-balanced"></i></span>
+            <div>
+                <div class="text-muted">Conciliación</div>
+                <h2 id="accReconStatus"></h2>
+            </div>
         </div>
     </div>
+
+    <nav class="accounting-workspace-tabs" aria-label="Áreas de contabilidad">
+        <button type="button" class="accounting-workspace-tab active" data-accounting-tab="operations" aria-selected="true"><i class="fas fa-pen-to-square"></i><span><strong>Movimientos</strong><small>Gastos, devoluciones y proveedores</small></span></button>
+        <button type="button" class="accounting-workspace-tab" data-accounting-tab="close" aria-selected="false"><i class="fas fa-scale-balanced"></i><span><strong>Conciliación</strong><small>Revisión y cierre contable</small></span></button>
+        <button type="button" class="accounting-workspace-tab" data-accounting-tab="journal" aria-selected="false"><i class="fas fa-book-open"></i><span><strong>Libro diario</strong><small>Asientos y balances</small></span></button>
+    </nav>
 
     <div class="accounting-main-grid">
         <aside class="card accounting-actions-card">
@@ -63,8 +81,22 @@
                     </div>
 
                     <div class="accounting-form-block">
-                        <label>Cuenta contable</label>
-                        <input class="form-control" name="account" placeholder="Ej. Gastos operativos" required />
+                        <label>Cuenta de gasto (Debe)</label>
+                        <select class="form-control" name="account" required>
+                            <option value="5-01">5-01 · Gastos operativos</option>
+                            <option value="5-02">5-02 · Insumos y materiales</option>
+                            <option value="5-03">5-03 · Servicios y alquileres</option>
+                            <option value="5-04">5-04 · Mercadeo y publicidad</option>
+                        </select>
+                    </div>
+
+                    <div class="accounting-form-block">
+                        <label>Medio de salida (Haber)</label>
+                        <select class="form-control" name="method">
+                            <option>Efectivo</option>
+                            <option>SINPE</option>
+                            <option>PayPal</option>
+                        </select>
                     </div>
 
                     <button class="btn btn-primary accounting-submit-btn" type="submit">
@@ -74,7 +106,18 @@
                 </form>
             </div>
 
-            <div class="hr"></div>
+            <div class="accounting-block">
+                <div class="accounting-section-header"><div>
+                    <span class="accounting-eyebrow">Devoluciones</span>
+                    <h3 class="accounting-section-title">Crear nota de crédito</h3>
+                </div></div>
+                <p class="text-muted">Seleccione una venta reciente. El sistema revierte inventario y registra el asiento contable automáticamente.</p>
+                <form id="accountingCreditNoteForm" class="accounting-form">
+                    <div class="accounting-form-block"><label>Venta</label><select class="form-control" name="saleId" id="accountingCreditSale" required><option value="">Cargando ventas…</option></select></div>
+                    <div class="accounting-form-block"><label>Motivo</label><input class="form-control" name="reason" minlength="5" placeholder="Motivo de la devolución" required /></div>
+                    <button class="btn btn-outline accounting-submit-btn" type="submit"><i class="fas fa-rotate-left"></i> Registrar nota de crédito</button>
+                </form>
+            </div>
 
             <div class="accounting-block">
                 <div class="accounting-section-header">
@@ -96,16 +139,19 @@
                     </div>
 
                     <div class="accounting-form-block">
-                        <label>Cuenta contable</label>
-                        <input class="form-control" name="account" placeholder="Ej. Cuentas por pagar" required />
+                        <label>Cuenta por pagar (Debe)</label>
+                        <select class="form-control" name="account" required>
+                            <option value="2-01">2-01 · Cuentas por pagar a proveedores</option>
+                            <option value="2-02">2-02 · Obligaciones comerciales</option>
+                        </select>
                     </div>
 
                     <div class="accounting-form-block">
-                        <label>Método de pago</label>
+                        <label>Medio de salida (Haber)</label>
                         <select class="form-control" name="method">
-                            <option>Transferencia</option>
+                            <option>Efectivo</option>
                             <option>SINPE</option>
-                            <option>Tarjeta</option>
+                            <option>PayPal</option>
                         </select>
                     </div>
 
@@ -116,28 +162,33 @@
                 </form>
             </div>
 
-            <div class="hr"></div>
-
-            <div class="accounting-section-header">
-                <div>
-                    <span class="accounting-eyebrow">Cierre</span>
-                    <h3 class="accounting-section-title">Control diario</h3>
+            <div class="accounting-close-panel">
+                <div class="accounting-section-header">
+                    <div>
+                        <span class="accounting-eyebrow">Cierre</span>
+                        <h3 class="accounting-section-title">Control diario</h3>
+                    </div>
                 </div>
-            </div>
-            <div class="accounting-action-buttons">
-                <button class="btn btn-primary" id="accReconcileBtn" type="button">
-                    <i class="fas fa-scale-balanced"></i>
-                    Conciliar operaciones
-                </button>
-                <select class="form-control" id="accCloseType" aria-label="Tipo de cierre">
-                    <option value="DIARIO">Diario</option>
-                    <option value="SEMANAL">Semanal</option>
-                    <option value="MENSUAL">Mensual</option>
-                </select>
-                <button class="btn btn-outline" id="accCloseBtn" type="button">
-                    <i class="fas fa-calendar-check"></i>
-                    Generar cierre
-                </button>
+                <div class="accounting-action-buttons">
+                    <p class="text-muted" style="grid-column:1/-1;margin:0;line-height:1.55;">
+                        La conciliación compara cada venta del POS con su asiento contable. Si falta un asiento o sus montos no cuadran, lo repara y muestra cuántos registros revisó, corrigió y dejó con diferencias.
+                    </p>
+                    <button class="btn btn-primary" id="accReconcileBtn" type="button">
+                        <i class="fas fa-scale-balanced"></i>
+                        Conciliar operaciones
+                    </button>
+                    <select class="form-control" id="accCloseType" aria-label="Tipo de cierre">
+                        <option value="DIARIO">Diario</option>
+                        <option value="SEMANAL">Semanal</option>
+                        <option value="MENSUAL">Mensual</option>
+                    </select>
+                    <button class="btn btn-outline" id="accCloseBtn" type="button">
+                        <i class="fas fa-calendar-check"></i>
+                        Generar cierre
+                    </button>
+                </div>
+                <div class="accounting-close-result" id="accReconcileResult" hidden></div>
+                <div class="accounting-close-result" id="accCloseResult" hidden></div>
             </div>
         </aside>
 
@@ -155,6 +206,8 @@
                         <tr>
                             <th>ID</th>
                             <th>Tipo</th>
+                            <th>Detalle</th>
+                            <th>Referencia</th>
                             <th>Cuenta</th>
                             <th>Debe</th>
                             <th>Haber</th>
@@ -172,8 +225,30 @@
 @section Scripts {
     <script>
         (() => {
+            const accountingPage = document.querySelector('.accounting-page');
+            const selectAccountingWorkspace = tab => {
+                const selected = ['operations', 'close', 'journal'].includes(tab) ? tab : 'operations';
+                accountingPage.dataset.accountingWorkspace = selected;
+                document.querySelectorAll('[data-accounting-tab]').forEach(button => {
+                    const active = button.dataset.accountingTab === selected;
+                    button.classList.toggle('active', active);
+                    button.setAttribute('aria-selected', String(active));
+                });
+                try { sessionStorage.setItem('bakesmart:accounting-workspace', selected); } catch (_) { }
+            };
+            document.querySelectorAll('[data-accounting-tab]').forEach(button => button.addEventListener('click', () => selectAccountingWorkspace(button.dataset.accountingTab)));
+            try { selectAccountingWorkspace(sessionStorage.getItem('bakesmart:accounting-workspace') || 'operations'); } catch (_) { selectAccountingWorkspace('operations'); }
+
             let pageInitialized = false;
             let reconStatus = 'Pendiente';
+
+            const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
 
             async function render() {
                 await BakeSmartStore.accounting.refresh();
@@ -190,22 +265,34 @@
                     const typeClass =
                         e.type === 'VENTA' ? 'type-sale' :
                         e.type === 'PAGO_PROVEEDOR' ? 'type-supplier' :
+                        e.type === 'GASTO' ? 'type-expense' :
                         '';
 
                     const typeLabel = e.type === 'PAGO_PROVEEDOR'
                         ? 'Pago proveedor'
+                        : e.type === 'GASTO'
+                        ? 'Gasto'
                         : e.type;
+
+                    const detail = escapeHtml(e.detail || 'Sin detalle');
+                    const account = escapeHtml(e.account || 'Sin cuenta');
 
                     return `
                         <tr>
-                            <td>${e.id}</td>
+                            <td>#${e.id}</td>
                             <td>
                                 <span class="accounting-type-badge ${typeClass}">
-                                    ${typeLabel}
+                                    ${escapeHtml(typeLabel)}
                                 </span>
                             </td>
-                            <td class="accounting-account-cell" title="${e.account}">
-                                ${e.account}
+                            <td class="accounting-detail-cell" title="${detail}">
+                                <strong>${detail}</strong>
+                            </td>
+                            <td>
+                                <span class="accounting-reference-chip">${escapeHtml(e.referenceTable || 'Registro')} #${e.referenceId || e.id}</span>
+                            </td>
+                            <td class="accounting-account-cell" title="${account}">
+                                ${account}
                             </td>
                             <td>${app.utils.formatCurrency(e.debit)}</td>
                             <td>${app.utils.formatCurrency(e.credit)}</td>
@@ -219,14 +306,46 @@
                     `;
                 }).join('') || `
                     <tr>
-                        <td colspan="7" class="text-center text-muted">No hay asientos registrados.</td>
+                        <td colspan="9" class="text-center text-muted">No hay asientos registrados.</td>
                     </tr>
                 `;
             }
 
+            async function loadCreditNoteSales() {
+                const sales = await BakeSmartStore.pos.recentSales();
+                const select = document.getElementById('accountingCreditSale');
+                const available = sales.filter(sale => !sale.hasCreditNote);
+                select.innerHTML = '<option value="">Seleccione una venta</option>' + available.map(sale =>
+                    `<option value="${sale.saleId}">#${sale.saleId} · ${escapeHtml(sale.customer || 'Cliente general')} · ${app.utils.formatCurrency(sale.total)}</option>`
+                ).join('');
+                if (!available.length) select.innerHTML = '<option value="">No hay ventas disponibles</option>';
+                select.selectedIndex = 0;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            document.getElementById('accountingCreditNoteForm').addEventListener('submit', async event => {
+                event.preventDefault();
+                const button = event.target.querySelector('button[type="submit"]');
+                button.disabled = true;
+                try {
+                    const data = Object.fromEntries(new FormData(event.target).entries());
+                    const result = await BakeSmartStore.pos.creditNote(data);
+                    event.target.reset();
+                    const creditCode = `NC-${new Date().getUTCFullYear()}-${String(result.id).padStart(6, '0')}`;
+                    app.toast.success(`Nota de crédito ${creditCode} registrada. Este código puede utilizarse en el POS.`);
+                    await Promise.all([render(), loadCreditNoteSales()]);
+                } catch (error) {
+                    app.toast.error(error.message);
+                } finally {
+                    button.disabled = false;
+                }
+            });
+
             document.getElementById('expenseForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
-
+                const button = e.target.querySelector('button[type="submit"]');
+                if (button?.disabled) return;
+                if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
                 try {
                     await BakeSmartStore.accounting.addExpense(Object.fromEntries(new FormData(e.target).entries()));
                     e.target.reset();
@@ -234,12 +353,16 @@
                     await render();
                 } catch (error) {
                     app.toast.error(error.message);
+                } finally {
+                    if (button) { button.disabled = false; button.removeAttribute('aria-busy'); }
                 }
             });
 
             document.getElementById('supplierPaymentForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
-
+                const button = e.target.querySelector('button[type="submit"]');
+                if (button?.disabled) return;
+                if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
                 try {
                     await BakeSmartStore.accounting.addSupplierPayment(Object.fromEntries(new FormData(e.target).entries()));
                     e.target.reset();
@@ -247,35 +370,57 @@
                     await render();
                 } catch (error) {
                     app.toast.error(error.message);
+                } finally {
+                    if (button) { button.disabled = false; button.removeAttribute('aria-busy'); }
                 }
             });
 
             document.getElementById('accReconcileBtn').addEventListener('click', async () => {
                 try {
+                    const button = document.getElementById('accReconcileBtn');
+                    button.disabled = true;
                     const result = await BakeSmartStore.accounting.reconcile();
                     reconStatus = result.status;
-                    app.toast.info(`Conciliación completada: ${result.reviewed} revisadas, ${result.issues} diferencias.`);
+                    const resultEl = document.getElementById('accReconcileResult');
+                    resultEl.hidden = false;
+                    resultEl.innerHTML = `
+                        <strong>${escapeHtml(result.status)}</strong>
+                        <span>${result.reviewed} ventas revisadas · ${result.generated || 0} asientos reparados · ${result.issues} diferencias pendientes.</span>
+                    `;
+                    app.toast.info(`Conciliación completada: ${result.reviewed} revisadas, ${result.generated || 0} reparadas, ${result.issues} diferencias.`);
                     await render();
                 } catch (error) {
                     app.toast.error(error.message);
+                } finally {
+                    document.getElementById('accReconcileBtn').disabled = false;
                 }
             });
 
             document.getElementById('accCloseBtn').addEventListener('click', async () => {
                 try {
                     const closeType = document.getElementById('accCloseType').value;
+                    const button = document.getElementById('accCloseBtn');
+                    button.disabled = true;
                     const result = await BakeSmartStore.accounting.dailyClose(closeType);
+                    const resultEl = document.getElementById('accCloseResult');
+                    resultEl.hidden = false;
+                    resultEl.innerHTML = `
+                        <strong>Cierre ${escapeHtml(result.type || closeType)} #${result.closeId} creado.</strong>
+                        <span>Operación registrada en bitácora y lista para reportería.</span>
+                    `;
                     app.toast.success(`Cierre ${result.type || closeType} #${result.closeId} creado.`);
                     await render();
                 } catch (error) {
                     app.toast.error(error.message);
+                } finally {
+                    document.getElementById('accCloseBtn').disabled = false;
                 }
             });
 
             function initializePage() {
                 if (pageInitialized) return;
                 pageInitialized = true;
-                render().catch(error => app.toast.error(error.message));
+                Promise.all([render(), loadCreditNoteSales()]).catch(error => app.toast.error(error.message));
             }
 
             app.page.ready(initializePage);

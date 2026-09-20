@@ -26,9 +26,10 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/account-profile.css?v=20260625-v1" />
+    <link rel="stylesheet" href="~/css/pages/profile-page.css" asp-append-version="true" />
 }
 
-<div class="page-shell profile-page">
+<div class="page-shell profile-page" id="accountProfilePage" data-profile-section="personal">
 
     @if (!string.IsNullOrWhiteSpace(successMsg))
     {
@@ -60,6 +61,17 @@
         </div>
     </div>
 
+    <nav class="profile-workspace-tabs" aria-label="Secciones del perfil">
+        <button type="button" class="profile-workspace-tab active" data-profile-section-tab="personal" aria-selected="true">
+            <i class="fas fa-user-pen"></i>
+            <span><strong>Datos y entrega</strong><small>Información personal y ubicación</small></span>
+        </button>
+        <button type="button" class="profile-workspace-tab" data-profile-section-tab="security" aria-selected="false">
+            <i class="fas fa-shield-halved"></i>
+            <span><strong>Seguridad</strong><small>Contraseña y acceso a la cuenta</small></span>
+        </button>
+    </nav>
+
     <div class="profile-grid">
         @* Datos personales *@
         <section class="card profile-section">
@@ -69,7 +81,7 @@
                 </div>
                 <div>
                     <h2 class="profile-section__title">Informacion personal</h2>
-                    <p class="profile-section__sub">Actualiza tu nombre, telefono y direccion</p>
+                    <p class="profile-section__sub">Actualiza tu nombre, teléfono y dirección</p>
                 </div>
             </div>
 
@@ -98,7 +110,7 @@
                 </div>
 
                 <div class="profile-field">
-                    <label class="profile-label">Correo electronico</label>
+                    <label class="profile-label">Correo electrónico</label>
                     <div class="profile-input-wrap profile-input-wrap--disabled">
                         <i class="fas fa-envelope profile-input-icon"></i>
                         <input class="profile-input" type="email" value="@email" disabled />
@@ -135,15 +147,15 @@
             </form>
         </section>
 
-        @* Cambiar contrasena *@
+        @* Cambiar contraseña *@
         <section class="card profile-section">
             <div class="profile-section__head">
                 <div class="profile-section__icon profile-section__icon--purple">
                     <i class="fas fa-lock"></i>
                 </div>
                 <div>
-                    <h2 class="profile-section__title">Cambiar contrasena</h2>
-                    <p class="profile-section__sub">Usa minimo 8 caracteres</p>
+                    <h2 class="profile-section__title">Cambiar contraseña</h2>
+                    <p class="profile-section__sub">Usa 12 caracteres, mayúscula, minúscula, número y símbolo</p>
                 </div>
             </div>
 
@@ -153,13 +165,27 @@
                 <input type="hidden" name="lastName"  value="@lastName"  />
                 <input type="hidden" name="phone"     value="@phone"     />
                 <input type="hidden" name="address" id="passwordFormAddress" value="@address" />
+                <input type="hidden" name="customerAddressId" value="@(addressId?.ToString() ?? "")" />
+                <input type="hidden" name="addressLabel" value="@addressLabel" />
+                <input type="hidden" name="latitude" value="@latitude" />
+                <input type="hidden" name="longitude" value="@longitude" />
 
                 <div class="profile-field">
-                    <label class="profile-label" for="newPassword">Nueva contrasena</label>
+                    <label class="profile-label" for="currentPassword">Contraseña actual</label>
+                    <div class="profile-input-wrap">
+                        <i class="fas fa-shield-halved profile-input-icon"></i>
+                        <input class="profile-input" type="password" id="currentPassword" name="currentPassword"
+                               placeholder="Contraseña actual" required autocomplete="current-password" />
+                        <button type="button" class="profile-eye-btn" onclick="togglePass('currentPassword', this)"><i class="fas fa-eye"></i></button>
+                    </div>
+                </div>
+
+                <div class="profile-field">
+                    <label class="profile-label" for="newPassword">Nueva contraseña</label>
                     <div class="profile-input-wrap">
                         <i class="fas fa-lock profile-input-icon"></i>
                         <input class="profile-input" type="password" id="newPassword" name="newPassword"
-                               placeholder="********" minlength="8" />
+                               placeholder="********" minlength="12" />
                         <button type="button" class="profile-eye-btn" onclick="togglePass('newPassword', this)">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -167,11 +193,11 @@
                 </div>
 
                 <div class="profile-field">
-                    <label class="profile-label" for="confirmPassword">Confirmar contrasena</label>
+                    <label class="profile-label" for="confirmPassword">Confirmar contraseña</label>
                     <div class="profile-input-wrap">
                         <i class="fas fa-lock profile-input-icon"></i>
                         <input class="profile-input" type="password" id="confirmPassword" name="confirmPassword"
-                               placeholder="********" minlength="8" />
+                               placeholder="********" minlength="12" />
                         <button type="button" class="profile-eye-btn" onclick="togglePass('confirmPassword', this)">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -184,8 +210,11 @@
                 </div>
 
                 <div class="profile-form__actions">
+                    <a href="/Account/Security" class="btn btn-primary profile-save-btn">
+                        <i class="fas fa-mobile-screen-button"></i> Configurar verificación en dos pasos
+                    </a>
                     <button type="submit" class="btn btn-outline profile-save-btn" id="btnChangePass" disabled>
-                        <i class="fas fa-key"></i> Cambiar contrasena
+                        <i class="fas fa-key"></i> Cambiar contraseña
                     </button>
                 </div>
             </form>
@@ -199,6 +228,20 @@
 let profileMapPicker;
 
 document.addEventListener('DOMContentLoaded', async () => {
+    const profilePage = document.getElementById('accountProfilePage');
+    const selectProfileSection = section => {
+        const selected = ['personal', 'security'].includes(section) ? section : 'personal';
+        profilePage.dataset.profileSection = selected;
+        document.querySelectorAll('[data-profile-section-tab]').forEach(button => {
+            const active = button.dataset.profileSectionTab === selected;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-selected', String(active));
+        });
+        try { sessionStorage.setItem('bakesmart:account-profile-section', selected); } catch (_) { }
+    };
+    document.querySelectorAll('[data-profile-section-tab]').forEach(button => button.addEventListener('click', () => selectProfileSection(button.dataset.profileSectionTab)));
+    try { selectProfileSection(sessionStorage.getItem('bakesmart:account-profile-section') || 'personal'); } catch (_) { selectProfileSection('personal'); }
+
     profileMapPicker = await BakeSmartMapPicker.create('profileMapPicker', {
         label: document.getElementById('addressLabel').value,
         address: document.getElementById('address').value,

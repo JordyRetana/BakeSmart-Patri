@@ -112,7 +112,7 @@
 
     observe() {
       this.observer = new MutationObserver(() => this.scheduleRender());
-      this.observer.observe(this.body, { childList: true, subtree: true, characterData: true });
+      this.observer.observe(this.body, { childList: true });
     }
 
     scheduleRender() {
@@ -130,6 +130,17 @@
 
     isMessageRow(row) {
       return row.cells.length === 1 && row.cells[0].colSpan > 1;
+    }
+
+    annotateRows(rows) {
+      const headings = Array.from(this.table.tHead?.rows[0]?.cells || [])
+        .map((cell) => cell.textContent.trim() || "Dato");
+      rows.forEach((row) => {
+        if (this.isMessageRow(row) || row.dataset.smartIgnore) return;
+        Array.from(row.cells).forEach((cell, index) => {
+          cell.dataset.label = headings[index] || `Dato ${index + 1}`;
+        });
+      });
     }
 
     pageItems(totalPages) {
@@ -163,6 +174,7 @@
 
     render() {
       const rows = this.getRows();
+      this.annotateRows(rows);
       const messageRows = rows.filter((row) => this.isMessageRow(row));
       const dataRows = rows.filter((row) => !this.isMessageRow(row));
       const matches = dataRows.filter((row) => !this.query || normalize(row.innerText).includes(this.query));
@@ -203,6 +215,7 @@
     if (!(table instanceof HTMLTableElement)) return;
     if (table.dataset.smartTable === "off" || table.dataset.smartTableReady === "true") return;
     if (!table.tHead || !table.tBodies.length) return;
+    if (table.tBodies[0].rows.length > 80) return;
     instances.set(table, new SmartTable(table));
   }
 
@@ -213,12 +226,6 @@
 
   function init() {
     scan(document);
-    const pageObserver = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
-        if (node instanceof HTMLElement) scan(node);
-      }));
-    });
-    pageObserver.observe(document.body, { childList: true, subtree: true });
   }
 
   if (document.readyState === "loading") {

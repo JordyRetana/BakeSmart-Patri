@@ -1,17 +1,28 @@
 (function () {
     const cache = new Map();
+    const pendingReads = new Map();
     let posSessionsCache = [];
     let activeSessionCache = null;
     let refreshAllPromise = null;
+    let refreshAllKeySignature = "";
     let refreshAllCompletedAt = 0;
     const refreshAllTtlMs = 15000;
     const persistentCacheTtlMs = 5 * 60 * 1000;
 
-    async function request(url, options = {}) {
+    function request(url, options = {}) {
+        const shareRead = Object.keys(options).length === 0;
+        if (!shareRead) return sendRequest(url, options);
+        if (pendingReads.has(url)) return pendingReads.get(url);
+        const pending = sendRequest(url, options).finally(() => pendingReads.delete(url));
+        pendingReads.set(url, pending);
+        return pending;
+    }
+
+    async function sendRequest(url, options = {}) {
         const method = String(options.method || "GET").toUpperCase();
         const shouldTimeout = method === "GET";
         const controller = shouldTimeout ? new AbortController() : null;
-        const timeout = controller ? window.setTimeout(() => controller.abort(), 8000) : null;
+        const timeout = controller ? window.setTimeout(() => controller.abort(), 10000) : null;
 
         let response;
         try {
@@ -51,7 +62,7 @@
 
     function readPersistent(key) {
         try {
-            const raw = sessionStorage.getItem(persistentKey(key));
+            const raw = localStorage.getItem(persistentKey(key)) || sessionStorage.getItem(persistentKey(key));
             if (!raw) return null;
             const entry = JSON.parse(raw);
             if (!entry || Date.now() - Number(entry.time || 0) > persistentCacheTtlMs) return null;
@@ -63,7 +74,9 @@
 
     function writePersistent(key, data) {
         try {
-            sessionStorage.setItem(persistentKey(key), JSON.stringify({ time: Date.now(), data }));
+            const payload = JSON.stringify({ time: Date.now(), data });
+            localStorage.setItem(persistentKey(key), payload);
+            sessionStorage.setItem(persistentKey(key), payload);
         } catch { }
     }
 
@@ -86,35 +99,63 @@
             return cachedData;
         }
 
-        const data = await request(url);
-        return publish(key, data);
+        try {
+            const data = await request(url);
+            return publish(key, data);
+        } catch (error) {
+            if (cachedData != null) return publish(key, cachedData);
+            return publish(key, fallback);
+        }
     }
 
     function cached(key, fallback = []) {
-        return cache.has(key) ? cache.get(key) : fallback;
+        if (cache.has(key)) return cache.get(key);
+        const persisted = readPersistent(key);
+        if (persisted != null) {
+            cache.set(key, persisted);
+            return persisted;
+        }
+        return fallback;
+    }
+
+    function isOpenSession(session) {
+        const status = normalizeStatus(session?.status);
+        return status.startsWith("abiert") || status === "open" || status === "activo" || status === "activa";
+    }
+
+    function setPosSessions(data) {
+        posSessionsCache = Array.isArray(data) ? data : [];
+        activeSessionCache =
+            posSessionsCache.find(s => isOpenSession(s) && !s.closedAt) ||
+            posSessionsCache.find(isOpenSession) ||
+            null;
+        return posSessionsCache;
     }
 
     async function loadPosSessions(options = {}) {
         const force = Boolean(options.force);
         const cachedSessions = readPersistent("posSessions");
         if (!force && cachedSessions) {
-            posSessionsCache = cachedSessions;
-            activeSessionCache = posSessionsCache.find(s => normalizeStatus(s.status).startsWith("abiert")) || null;
+            setPosSessions(cachedSessions);
             request("/api/pos/sessions")
                 .then(data => {
-                    posSessionsCache = publish("posSessions", data);
-                    activeSessionCache = posSessionsCache.find(s => normalizeStatus(s.status).startsWith("abiert")) || null;
+                    publish("posSessions", data);
+                    setPosSessions(data);
                 })
                 .catch(() => { });
             return posSessionsCache;
         }
 
         try {
-            posSessionsCache = publish("posSessions", await request("/api/pos/sessions"));
-            activeSessionCache = posSessionsCache.find(s => normalizeStatus(s.status).startsWith("abiert")) || null;
+            const sessions = await request("/api/pos/sessions");
+            publish("posSessions", sessions);
+            setPosSessions(sessions);
         } catch {
-            posSessionsCache = [];
-            activeSessionCache = null;
+            if (cachedSessions) {
+                setPosSessions(cachedSessions);
+            } else {
+                setPosSessions([]);
+            }
         }
         return posSessionsCache;
     }
@@ -137,6 +178,7 @@
         inventoryMovements: options => load("inventoryMovements", "/api/inventory/movements", [], options),
         customers: options => load("customers", "/api/customers", [], options),
         promotions: options => load("promotions", "/api/promotions", [], options),
+        combos: options => load("combos", "/api/combos", [], options),
         users: options => load("users", "/api/users", [], options),
         roles: options => load("roles", "/api/roles", [], options),
         posConfig: options => load("posConfig", "/api/pos/config", {}, options),
@@ -148,7 +190,7 @@
         const page = String(document.body?.dataset?.page || location.pathname || "").toLowerCase();
         const keys = new Set(["orders", "inventory", "posConfig"]);
 
-        if (page.startsWith("/pos")) keys.add("customers");
+        if (page.startsWith("/pos")) ["customers", "promotions", "combos"].forEach(key => keys.add(key));
         if (page.startsWith("/client")) keys.add("customers");
         if (page.startsWith("/orders")) keys.add("customers");
         if (page.startsWith("/marketing")) ["customers", "promotions"].forEach(key => keys.add(key));
@@ -157,8 +199,8 @@
         if (page.startsWith("/roles")) keys.add("roles");
         if (page.startsWith("/accounting")) keys.add("accounting");
         if (page.startsWith("/audit")) keys.add("logs");
-        if (page.startsWith("/reports")) ["customers", "inventoryMovements", "accounting"].forEach(key => keys.add(key));
-        if (page.startsWith("/admin")) ["customers", "promotions", "users", "roles", "accounting"].forEach(key => keys.add(key));
+        if (page.startsWith("/reports")) ["customers", "inventoryMovements", "accounting", "users"].forEach(key => keys.add(key));
+        if (page.startsWith("/admin")) ["customers", "promotions", "combos", "users", "roles", "accounting"].forEach(key => keys.add(key));
 
         return [...keys];
     }
@@ -167,18 +209,21 @@
         const force = options === true || Boolean(options.force);
         const now = Date.now();
         const keys = Array.isArray(options.keys) ? options.keys : refreshKeysForCurrentPage();
-        if (!force && refreshAllPromise) return refreshAllPromise;
+        const keySignature = keys.slice().sort().join("|");
+        if (!force && refreshAllPromise && refreshAllKeySignature === keySignature) return refreshAllPromise;
         if (!force && keys.every(key => cache.has(key)) && now - refreshAllCompletedAt < refreshAllTtlMs) {
             return Promise.resolve([]);
         }
 
         const missingOrForcedKeys = force ? keys : keys.filter(key => !cache.has(key) || now - refreshAllCompletedAt >= refreshAllTtlMs);
+        refreshAllKeySignature = keySignature;
         refreshAllPromise = Promise.allSettled(missingOrForcedKeys.map(key => {
             const loader = loaders[key];
             return loader ? loader({ force }) : null;
         }).filter(Boolean)).finally(() => {
             refreshAllCompletedAt = Date.now();
             refreshAllPromise = null;
+            refreshAllKeySignature = "";
         });
 
         return refreshAllPromise;
@@ -199,17 +244,31 @@
         URL.revokeObjectURL(url);
     }
 
-    const api = {
+    const productImageFor = product => {
+        const direct = product?.imageUrl || product?.image || product?.photo || product?.imagePath || product?.ImageUrl;
+        if (direct) return direct;
+
+        const text = `${product?.code || product?.sku || ""} ${product?.description || product?.item || ""} ${product?.category || ""}`.toLowerCase();
+        if (text.includes("gal") || text.includes("galleta")) return "/img/products/galletas-decoradas.jpg";
+        if (text.includes("cup") || text.includes("cupcake")) return "/img/products/cupcakes-decorados.jpg";
+        if (text.includes("red") || text.includes("velvet")) return "/img/products/cake-red-velvet.jpg";
+        if (text.includes("cheese") || text.includes("frutos")) return "/img/products/cheesecake-frutos-rojos.jpg";
+        if (text.includes("brown")) return "/img/products/brownie-gourmet.jpg";
+        if (text.includes("past") || text.includes("queque") || text.includes("cake")) return "/img/products/pastel-decorado.jpg";
+        return "/img/products/producto-sin-imagen.svg";
+    };
+
+        const api = {
         refresh: refreshAll,
         refreshClient() {
             return Promise.allSettled([
-                load("orders", "/api/orders"),
-                load("inventory", "/api/inventory"),
+                load("orders", "/api/orders", [], { force: true }),
+                load("inventory", "/api/inventory/catalog", [], { force: true }),
                 load("posConfig", "/api/pos/config", {})
             ]);
         },
         async refreshPos() {
-            await loadPosSessions();
+            await loadPosSessions({ force: true });
             window.dispatchEvent(new CustomEvent("bakesmart:data-ready", { detail: { key: "posSessions" } }));
         },
 
@@ -272,10 +331,11 @@
             list() {
                 const trackingSteps = ["Pendiente pago", "Confirmado", "En produccion", "Listo", "En camino", "Entregado"];
                 const stepFor = status => {
-                    const normalized = String(status || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                    const index = trackingSteps.findIndex(step => step === normalized);
+                    const normalized = String(status || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+                    if (normalized.includes("entregad") || normalized.includes("finaliz")) return trackingSteps.length - 1;
+                    const index = trackingSteps.findIndex(step => step.toLowerCase() === normalized);
                     return index >= 0 ? index : 0;
-                };
+        };
 
                 return cached("orders").map(order => ({
                     ...order,
@@ -333,7 +393,8 @@
                     description: product.description || product.item,
                     unit: product.unit || product.unidad,
                     minStock: product.minStock ?? product.min,
-                    productType: product.productType || product.type || ""
+                    productType: product.productType || product.type || "",
+                    imageUrl: productImageFor(product)
                 }));
             },
             sellable() {
@@ -349,6 +410,16 @@
         },
         customers: {
             list() { return cached("customers"); },
+            matchForPos(nameValue, emailValue) {
+                const name = String(nameValue || "").trim().toLowerCase();
+                const email = String(emailValue || "").trim().toLowerCase();
+                if (!name && !email) return null;
+                return this.list().find(customer => {
+                    const matchesName = !name || String(customer.fullName || customer.name || "").trim().toLowerCase() === name;
+                    const matchesEmail = !email || String(customer.email || "").trim().toLowerCase() === email;
+                    return matchesName && matchesEmail;
+                }) || null;
+            },
             search(query) {
                 const q = String(query || "").toLowerCase();
                 return cached("customers").filter(customer =>
@@ -359,12 +430,40 @@
                 );
             },
             async addFrequent(id) {
-                await request(`/api/customers/${id}/frequent`, { method: "POST", body: JSON.stringify({}) });
-                return load("customers", "/api/customers", [], { force: true });
+                const result = await request(`/api/customers/${id}/frequent`, { method: "POST", body: JSON.stringify({}) });
+                const rows = cached("customers");
+                const customer = rows.find(item => Number(item.id) === Number(id));
+                if (customer) customer.frequent = Boolean(result.frequent);
+                publish("customers", rows);
+                return result;
             }
         },
         marketing: {
             promotions() { return cached("promotions"); },
+            posPromotions(customer) {
+                const parts = new Intl.DateTimeFormat("en-US", {
+                    timeZone: "America/Costa_Rica", year: "numeric", month: "2-digit", day: "2-digit"
+                }).formatToParts(new Date());
+                const datePart = name => parts.find(part => part.type === name)?.value || "";
+                const today = `${datePart("year")}-${datePart("month")}-${datePart("day")}`;
+                return this.promotions()
+                    .filter(promotion => promotion.active
+                        && (!promotion.startDate || promotion.startDate <= today)
+                        && (!promotion.endDate || promotion.endDate >= today)
+                        && String(promotion.name || "").trim().toLowerCase() !== "cliente frecuente")
+                    .map(promotion => ({
+                        ...promotion,
+                        eligible: !(promotion.customerIds || []).length
+                            || Boolean(customer && promotion.customerIds.map(Number).includes(Number(customer.id)))
+                    }));
+            },
+            suggestedPosPromotion(customer, promotions) {
+                if (!customer) return "";
+                const assigned = promotions
+                    .filter(promotion => promotion.eligible && (promotion.customerIds || []).length)
+                    .sort((left, right) => Number(right.discount || 0) - Number(left.discount || 0));
+                return assigned.length ? String(assigned[0].id) : customer.frequent ? "frequent" : "";
+            },
             async addPromotion(input = {}) {
                 const result = await request("/api/promotions", {
                     method: "POST",
@@ -373,8 +472,10 @@
                         name: input.name || "",
                         startDate: input.startDate,
                         endDate: input.endDate,
-                        discount: Number(input.discount || 0),
-                        isActive: input.isActive !== false
+                        discount: Number(input.discount || 0) / 100,
+                        isActive: input.isActive !== false,
+                        productIds: input.productIds || [],
+                        customerIds: input.customerIds || []
                     })
                 });
                 await load("promotions", "/api/promotions", [], { force: true });
@@ -395,6 +496,33 @@
                 });
             }
         },
+        combos: {
+            list() { return cached("combos"); },
+            async save(input = {}) {
+                const result = await request("/api/combos", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        id: input.id ? Number(input.id) : null,
+                        name: input.name || "",
+                        description: input.description || "",
+                        specialPrice: Number(input.specialPrice || 0),
+                        imageUrl: input.imageUrl || null,
+                        isActive: input.isActive !== false,
+                        items: (input.items || []).map(item => ({ productId: Number(item.productId), quantity: Number(item.quantity || 1) }))
+                    })
+                });
+                await load("combos", "/api/combos", [], { force: true });
+                return result;
+            },
+            async toggle(id) {
+                await request(`/api/combos/${id}/toggle`, { method: "POST", body: JSON.stringify({}) });
+                return load("combos", "/api/combos", [], { force: true });
+            },
+            async remove(id) {
+                await request(`/api/combos/${id}`, { method: "DELETE" });
+                return load("combos", "/api/combos", [], { force: true });
+            }
+        },
         users: {
             list() { return cached("users"); },
             async save(input = {}) {
@@ -406,7 +534,8 @@
                     phone: input.phone || "",
                     address: input.address || "",
                     role: input.role || "Cliente",
-                    password: input.password || ""
+                    password: input.password || "",
+                    isTestAccount: input.isTestAccount === true
                 };
 
                 const result = await request("/api/users", { method: "POST", body: JSON.stringify(payload) });
@@ -417,6 +546,14 @@
                 await request(`/api/users/${id}/toggle`, { method: "POST", body: JSON.stringify({}) });
                 const rows = await load("users", "/api/users", [], { force: true });
                 return rows.find(user => Number(user.id) === Number(id));
+            },
+            async resetTwoFactor(id, password, code) {
+                const result = await request(`/api/users/${id}/reset-two-factor`, {
+                    method: "POST",
+                    body: JSON.stringify({ password, code })
+                });
+                await load("users", "/api/users", [], { force: true });
+                return result;
             }
         },
         roles: {
@@ -447,7 +584,8 @@
                         description: product.description || product.item,
                         name: product.description || product.item,
                         price: product.price,
-                        stock: product.stock
+                        stock: product.stock,
+                        imageUrl: productImageFor(product)
                     }));
             },
             async openSession(amount = 0) {
@@ -493,20 +631,28 @@
                 if (!session) throw new Error("Debe abrir caja antes de confirmar ventas.");
 
                 const items = Array.isArray(input.items) ? input.items : [];
-                if (!items.length) throw new Error("Agregue productos al carrito antes de cobrar.");
+                const combos = Array.isArray(input.combos) ? input.combos : [];
+                if (!items.length && !combos.length) throw new Error("Agregue productos o combos al carrito antes de cobrar.");
 
                 const products = api.inventory.list();
-                const subtotal = items.reduce((sum, item) => {
+                const subtotalProducts = items.reduce((sum, item) => {
                     const product = products.find(row => Number(row.id) === Number(item.productId));
                     return sum + Number(product?.price || 0) * Number(item.quantity || 0);
                 }, 0);
-                const customer = api.customers.list().find(row =>
-                    (input.customerEmail && String(row.email || "").toLowerCase() === String(input.customerEmail).toLowerCase()) ||
-                    (input.customerName && String(row.fullName || "").toLowerCase() === String(input.customerName).toLowerCase())
-                );
-                const manualDiscountRate = Math.min(Math.max(Number(input.discountRate || 0), 0), 1);
-                const frequentDiscountRate = customer?.frequent ? Math.min(Math.max(Number(api.pos.config().frequentCustomerDiscount || 0), 0), 1) : 0;
-                const discountRate = Math.min(manualDiscountRate + frequentDiscountRate, 1);
+                const subtotalCombos = combos.reduce((sum, selection) => {
+                    const combo = api.combos.list().find(row => Number(row.id) === Number(selection.comboId) && row.active);
+                    return sum + Number(combo?.specialPrice || 0) * Number(selection.quantity || 0);
+                }, 0);
+                const subtotal = subtotalProducts + subtotalCombos;
+                const customer = api.customers.matchForPos(input.customerName, input.customerEmail);
+                const normalizeDiscountRate = (value) => {
+                    const numeric = Number(value || 0);
+                    if (!Number.isFinite(numeric) || numeric <= 0) return 0;
+                    return Math.min(numeric > 1 ? numeric / 100 : numeric, 1);
+                };
+                const manualDiscountRate = normalizeDiscountRate(input.discountRate);
+                const frequentDiscountRate = input.promotionId === 'frequent' && customer?.frequent ? Math.min(Math.max(Number(api.pos.config().frequentCustomerDiscount || 0), 0), 1) : 0;
+                const discountRate = Math.max(manualDiscountRate, frequentDiscountRate);
                 const taxRate = Number(api.pos.config().iva || 0);
                 const discountedSubtotal = Math.max(0, subtotal - subtotal * discountRate);
                 const tax = discountedSubtotal * taxRate;
@@ -518,21 +664,27 @@
                     customerPhone: input.customerPhone || null,
                     paymentMethod: input.paymentMethod || "Efectivo",
                     subtotal,
-                    discount: subtotal * discountRate,
+                    discount: subtotal * manualDiscountRate,
                     tax,
                     total,
                     notes: null,
+                    creditNoteCode: input.creditNoteCode || null,
+                    promotionId: input.promotionId && input.promotionId !== 'frequent' ? Number(input.promotionId) : null,
+                    applyFrequentDiscount: input.promotionId === 'frequent',
                     items: items.map(item => ({
                         productId: item.productId,
                         quantity: item.quantity,
                         unitPrice: products.find(row => Number(row.id) === Number(item.productId))?.price || 0
-                    }))
+                    })),
+                    combos: combos.map(combo => ({ comboId: Number(combo.comboId), quantity: Number(combo.quantity || 1) }))
                 };
 
                 const result = await request("/api/pos/sell", { method: "POST", body: JSON.stringify(saleInput) });
-                await loadPosSessions();
-                await load("inventory", "/api/inventory", [], { force: true });
-                await load("inventoryMovements", "/api/inventory/movements", [], { force: true });
+                Promise.allSettled([
+                    loadPosSessions(),
+                    load("inventory", "/api/inventory", [], { force: true }),
+                    load("inventoryMovements", "/api/inventory/movements", [], { force: true })
+                ]);
                 return result;
             }
         },
@@ -548,10 +700,10 @@
                     body: JSON.stringify({
                         description: input.description || "",
                         amount: Number(input.amount || 0),
-                        account: input.account || ""
+                        account: input.account || "",
+                        method: input.method || "Efectivo"
                     })
                 });
-                await api.accounting.refresh();
                 return result;
             },
             async addSupplierPayment(input = {}) {
@@ -564,7 +716,6 @@
                         method: input.method || ""
                     })
                 });
-                await api.accounting.refresh();
                 return result;
             },
             async reconcile() {
@@ -582,8 +733,15 @@
                 return request(`/api/reports/${type}${params.toString() ? `?${params}` : ""}`);
             },
             sales() { return { rows: [], totalIncome: 0, totalTransactions: 0 }; },
-            inventory() { return { rows: cached("inventory"), lowStock: cached("inventory").filter(x => Number(x.stock) <= Number(x.min)).length, negativeStock: 0 }; },
-            users() { return { rows: cached("users"), activeUsers: cached("users").filter(x => x.active).length }; },
+            inventory() {
+                const rows = cached("inventory");
+                return {
+                    rows,
+                    lowStock: rows.filter(x => (x.active ?? x.isActive ?? x.activo) && Number(x.stock) <= Number(x.minStock ?? x.min ?? 0)).length,
+                    negativeStock: rows.filter(x => Number(x.stock) < 0).length
+                };
+            },
+            users() { return { rows: cached("users"), activeUsers: cached("users").filter(x => x.active ?? x.isActive ?? x.activo).length }; },
             promotions() { return { rows: cached("promotions"), activePromotions: cached("promotions").filter(x => x.active).length }; },
             cashClosures() { return { rows: [], totalSales: 0 }; },
             orders() { return { rows: cached("orders"), totalOrders: cached("orders").length }; },
@@ -595,8 +753,8 @@
         geo: {
             origin() {
                 const config = cached("posConfig", {});
-                const defaultLat = 9.9281;
-                const defaultLng = -84.0907;
+                const defaultLat = 9.9142;
+                const defaultLng = -84.0734;
                 const lat = Number(config.originLatitude);
                 const lng = Number(config.originLongitude);
                 return {
@@ -604,8 +762,8 @@
                     address: config.originAddress || "",
                     city: "San Jose",
                     country: "Costa Rica",
-                    lat: Number.isFinite(lat) ? lat : defaultLat,
-                    lng: Number.isFinite(lng) ? lng : defaultLng
+                    lat: Number.isFinite(lat) && lat !== 0 ? lat : defaultLat,
+                    lng: Number.isFinite(lng) && lng !== 0 ? lng : defaultLng
                 };
             },
             presets() {

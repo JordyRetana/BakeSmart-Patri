@@ -1,3 +1,5 @@
+@using BakeSmartPatri.Data
+@inject SqlStore SqlStore
 @{
     var title = ViewData["Title"] as string ?? "BakeSmart Patri";
     var isAuth = User?.Identity?.IsAuthenticated ?? false;
@@ -7,7 +9,11 @@
     var isCashier = User?.IsInRole("Cajero") ?? false;
     var isBaker = User?.IsInRole("Repostero") ?? false;
     var isSupervisor = User?.IsInRole("Supervisor") ?? false;
-    var isOperational = isAdmin || isStaff || isCashier || isBaker || isSupervisor;
+    var isRecipeManager = User?.IsInRole("EncargadoRecetas") ?? false;
+    var isOperational = isAdmin || isStaff || isCashier || isBaker || isSupervisor || isRecipeManager;
+    var userEmail = User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+        ?? User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+        ?? string.Empty;
 
     string userInitials = "U";
     string userName = "Usuario";
@@ -16,7 +22,9 @@
         : isCashier ? "Cajero"
         : isBaker ? "Repostero"
         : isSupervisor ? "Supervisor"
+        : isRecipeManager ? "Encargado de recetas"
         : "Cliente";
+    string userProfileIcon = isClient ? "fa-user" : "fa-user-tie";
 
     if (isAuth && User?.Identity?.Name != null)
     {
@@ -29,21 +37,36 @@
     var currentPath = Context.Request.Path.ToString().ToLower();
     var showStorefrontHeader = !isAuth || isClient;
     var enablePageLoader = false;
+    IReadOnlyDictionary<string, string> siteSettings;
+    try
+    {
+        siteSettings = await SqlStore.SettingsDictionaryAsync();
+    }
+    catch
+    {
+        siteSettings = new Dictionary<string, string>();
+    }
+    string siteSetting(string key, string fallback) => siteSettings.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value) ? value.Trim() : fallback;
+    var sitePhone = siteSetting("sitePhone", "+506 8888-8888");
+    var siteEmail = siteSetting("siteEmail", "info@bakesmart.com");
+    var siteAddress = siteSetting("siteAddress", "San José, Costa Rica");
+    var sitePhoneHref = "tel:" + new string(sitePhone.Where(char.IsDigit).ToArray());
 }
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@title - BakeSmart Patri | Reposteria Inteligente</title>
-    <meta name="description" content="BakeSmart Patri - Sistema de gestion para reposterias. Pedidos, produccion, inventario y mas." />
+    <title>@title - BakeSmart Patri | Repostería Inteligente</title>
+    <meta name="description" content="BakeSmart Patri - Sistema de gestión para reposterías. Pedidos, producción, inventario y más." />
     <link rel="icon" type="image/png" href="~/img/logo.png" asp-append-version="true" />
     <link rel="apple-touch-icon" href="~/img/logo.png" asp-append-version="true" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    @* 6.7 incluye los íconos usados por la aplicación (SINPE, producción, mapas y paneles). *@
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" referrerpolicy="no-referrer" />
     <script>
         try {
             const savedTheme = localStorage.getItem('bakesmart.theme');
@@ -55,8 +78,22 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/global/workspace-layout.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/global/smart-tables.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/global/icon-fallbacks.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/final-polish.css?v=20260810-popular-text-v4" />
+    <link rel="stylesheet" href="~/css/pages/ui-fixes.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/global/quality-pass.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/global/modern-experience.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
-    <link rel="stylesheet" href="~/css/final-polish.css" asp-append-version="true" />
+    @if (isOperational)
+    {
+        <link rel="stylesheet" href="~/css/global/operational-workspace.css" asp-append-version="true" />
+    }
+    else
+    {
+        <link rel="stylesheet" href="~/css/global/public-spacing.css" asp-append-version="true" />
+    }
+    <link rel="stylesheet" href="~/css/global/responsive-hardening.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/global/theme-consistency.css" asp-append-version="true" />
     <style>
         
         @@keyframes slideIn {
@@ -109,7 +146,7 @@
         }
     </style>
 </head>
-<body class="app-body page-ready" data-page="@currentPath" data-user-email="@(User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "")">
+<body class="app-body page-ready @(isOperational ? "operational-shell" : "public-shell")" data-page="@currentPath" data-user-email="@userEmail" data-user-authenticated="@isAuth.ToString().ToLowerInvariant()">
     @if (enablePageLoader)
     {
         <div id="pageLoader" class="page-loader" aria-hidden="true">
@@ -158,7 +195,7 @@
                     {
                         <div class="user-menu storefront-account" id="userMenu">
                             <button type="button" class="storefront-account__toggle user-profile" id="userMenuToggle" aria-haspopup="true" aria-expanded="false">
-                                <span class="user-avatar">@userInitials</span>
+                                <span class="user-avatar" aria-hidden="true"><i class="fas @userProfileIcon"></i></span>
                                 <span class="user-info">
                                     <span class="user-name">@userName</span>
                                     <span class="user-role">Cliente</span>
@@ -168,7 +205,7 @@
 
                             <div class="user-dropdown storefront-account__menu" id="userDropdown" role="menu" hidden>
                                 <div class="user-dropdown-head">
-                                    <span class="user-avatar user-avatar-sm">@userInitials</span>
+                                    <span class="user-avatar user-avatar-sm" aria-hidden="true"><i class="fas @userProfileIcon"></i></span>
                                     <span>
                                         <strong>@userName</strong>
                                         <small>Perfil de cliente</small>
@@ -181,6 +218,10 @@
                                 <a class="user-dropdown-item" href="/Client/Orders" role="menuitem">
                                     <i class="fas fa-box-open"></i>
                                     <span>Mis pedidos</span>
+                                </a>
+                                <a class="user-dropdown-item" href="/Catalog/Favorites" role="menuitem">
+                                    <i class="fas fa-heart"></i>
+                                    <span>Favoritos</span>
                                 </a>
                                 <div class="user-dropdown-divider"></div>
                                 <form method="post" action="/Account/Logout" class="user-dropdown-form">
@@ -198,13 +239,13 @@
                         <a href="/Account/Login"><i class="far fa-user"></i><span>Mi cuenta</span></a>
                         <a href="/Catalog/Favorites"><i class="far fa-heart"></i><span>Favoritos</span></a>
                     }
-                    <a href="/Catalog?cart=open"><i class="fas fa-cart-shopping"></i><span>Carrito</span></a>
+                    <a href="/Catalog/Cart" data-store-cart-link class="storefront-cart-link"><i class="fas fa-cart-shopping"></i><span>Carrito</span><b data-store-cart-count hidden>0</b></a>
                     <button class="storefront-theme theme-toggle" type="button" onclick="window.app.theme.toggle()" aria-label="Cambiar tema"><i class="fas fa-moon"></i></button>
                 </div>
             </div>
             <nav class="storefront-nav" aria-label="Navegación principal">
                 <div class="container storefront-nav-inner">
-                    <a class="storefront-category-link" href="/Catalog?categories=open" data-open-global-categories><i class="fas fa-bars"></i> Todas las categorias</a>
+                    <a class="storefront-category-link" href="/Catalog?categories=open" data-open-global-categories><i class="fas fa-bars"></i> Todas las categorías</a>
                     <div class="storefront-nav-links">
                         <a href="/">Inicio</a><a href="/Catalog">Productos</a><a href="/Catalog/Offers">Ofertas</a><a href="/Catalog/New">Novedades</a><a href="/Catalog/Combos">Combos</a><a href="/Home/About">Nosotros</a><a href="/Home/Contact">Contacto</a>
                         @if (isClient) { <a href="/Client">Mi panel</a> }
@@ -257,15 +298,18 @@
 
                 @if (isAuth && isOperational)
                 {
+                    <a class="navbar-link" data-nav href="/?vista=tienda">
+                        <i class="fas fa-house" style="margin-right: 0.25rem;"></i> Inicio
+                    </a>
                     <a class="navbar-link" data-nav href="/Dashboard">
                         <i class="fas fa-chart-line" style="margin-right: 0.25rem;"></i> Dashboard
                     </a>
 
                     <div class="dropdown">
-                        <span class="dropdown-toggle">
+                        <button class="dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
                             <i class="fas fa-store" style="margin-right: 0.25rem;"></i> Operación
                             <i class="fas fa-chevron-down" style="font-size: 0.75rem; margin-left: 0.25rem;"></i>
-                        </span>
+                        </button>
                         <div class="dropdown-menu">
                             @if (isAdmin || isStaff || isSupervisor || isCashier)
                             {
@@ -300,13 +344,13 @@
                             @if (isAdmin || isStaff || isSupervisor)
                             {
                                 <a class="dropdown-item" href="/Audit">
-                                    <i class="fas fa-clock-rotate-left" style="width: 20px; margin-right: 0.5rem;"></i> Bitacora
+                                    <i class="fas fa-clock-rotate-left" style="width: 20px; margin-right: 0.5rem;"></i> Bitácora
                                 </a>
                             }
                             @if (isAdmin || isStaff)
                             {
                                 <a class="dropdown-item" href="/Admin/Settings">
-                                    <i class="fas fa-sliders" style="width: 20px; margin-right: 0.5rem;"></i> Configuracion
+                                    <i class="fas fa-sliders" style="width: 20px; margin-right: 0.5rem;"></i> Configuración
                                 </a>
                             }
                             @if (isAdmin)
@@ -322,7 +366,7 @@
                                     <i class="fas fa-calculator" style="width: 20px; margin-right: 0.5rem;"></i> Contabilidad
                                 </a>
                                 <a class="dropdown-item" href="/Marketing">
-                                    <i class="fas fa-megaphone" style="width: 20px; margin-right: 0.5rem;"></i> Marketing
+                                    <i class="fas fa-bullhorn" style="width: 20px; margin-right: 0.5rem;"></i> Marketing
                                 </a>
                             }
                         </div>
@@ -339,7 +383,7 @@
                 {
                     <div class="user-menu" id="userMenu">
                         <button type="button" class="user-profile" id="userMenuToggle" aria-haspopup="true" aria-expanded="false">
-                            <span class="user-avatar">@userInitials</span>
+                            <span class="user-avatar" aria-hidden="true"><i class="fas @userProfileIcon"></i></span>
                             <span class="user-info">
                                 <span class="user-name">@userName</span>
                                 @if (!isClient)
@@ -356,7 +400,7 @@
 
                         <div class="user-dropdown" id="userDropdown" role="menu" hidden>
                             <div class="user-dropdown-head">
-                                <span class="user-avatar user-avatar-sm">@userInitials</span>
+                                <span class="user-avatar user-avatar-sm" aria-hidden="true"><i class="fas @userProfileIcon"></i></span>
                                 <span>
                                     <strong>@userName</strong>
                                     <small>@(isClient ? "Perfil de cliente" : userRoleLabel)</small>
@@ -367,6 +411,21 @@
                                 <i class="fas fa-user-pen"></i>
                                 <span>Mi perfil</span>
                             </a>
+
+                            @if (isClient)
+                            {
+                                <a class="user-dropdown-item" href="/Catalog/Favorites" role="menuitem">
+                                    <i class="fas fa-heart"></i>
+                                    <span>Favoritos</span>
+                                </a>
+                            }
+                            @if (isAdmin || isSupervisor || isBaker || isRecipeManager)
+                            {
+                                <a class="user-dropdown-item" href="/Recipes" role="menuitem">
+                                    <i class="fas fa-book-open"></i>
+                                    <span>Recetas</span>
+                                </a>
+                            }
 
                             <div class="user-dropdown-divider"></div>
 
@@ -408,9 +467,9 @@
                     Transformando la gestión de reposterías con tecnología inteligente y diseño moderno.
                 </p>
                 <div style="display: flex; gap: 1rem;">
-                    <a href="#" style="color: white; font-size: 1.25rem;"><i class="fab fa-facebook"></i></a>
-                    <a href="#" style="color: white; font-size: 1.25rem;"><i class="fab fa-instagram"></i></a>
-                    <a href="#" style="color: white; font-size: 1.25rem;"><i class="fab fa-whatsapp"></i></a>
+                    <a href="/Home/About" aria-label="Conocer BakeSmart Patri" style="color: white; font-size: 1.25rem;"><i class="fab fa-facebook"></i></a>
+                    <a href="/Catalog" aria-label="Ver productos BakeSmart Patri" style="color: white; font-size: 1.25rem;"><i class="fab fa-instagram"></i></a>
+                    <a href="@sitePhoneHref" aria-label="Contactar por WhatsApp o teléfono" style="color: white; font-size: 1.25rem;"><i class="fab fa-whatsapp"></i></a>
                 </div>
             </div>
 
@@ -437,9 +496,9 @@
             <div>
                 <h4 class="footer-title">Contacto</h4>
                 <ul class="footer-links">
-                    <li><i class="fas fa-phone" style="width: 20px; margin-right: 0.5rem;"></i> +506 8888-8888</li>
-                    <li><i class="fas fa-envelope" style="width: 20px; margin-right: 0.5rem;"></i> info@bakesmart.com</li>
-                    <li><i class="fas fa-map-marker-alt" style="width: 20px; margin-right: 0.5rem;"></i> San José, Costa Rica</li>
+                    <li><i class="fas fa-phone" style="width: 20px; margin-right: 0.5rem;"></i> <a href="@sitePhoneHref">@sitePhone</a></li>
+                    <li><i class="fas fa-envelope" style="width: 20px; margin-right: 0.5rem;"></i> <a href="mailto:@siteEmail">@siteEmail</a></li>
+                    <li><i class="fas fa-map-marker-alt" style="width: 20px; margin-right: 0.5rem;"></i> @siteAddress</li>
                     <li><i class="fas fa-clock" style="width: 20px; margin-right: 0.5rem;"></i> Lun-Vie: 8am - 6pm</li>
                 </ul>
             </div>
@@ -457,15 +516,15 @@
     <aside class="global-categories-sidebar" id="globalCategoriesSidebar" aria-hidden="true" aria-labelledby="globalCategoriesTitle">
         <div class="global-categories-sidebar__header">
             <div>
-                <span>Catalogo</span>
-                <h2 id="globalCategoriesTitle">Todas las categorias</h2>
+                <span>Catálogo</span>
+                <h2 id="globalCategoriesTitle">Todas las categorías</h2>
             </div>
-            <button class="global-categories-close" type="button" id="globalCategoriesClose" aria-label="Cerrar categorias">
+            <button class="global-categories-close" type="button" id="globalCategoriesClose" aria-label="Cerrar categorías">
                 <i class="fas fa-xmark"></i>
             </button>
         </div>
         <div class="global-categories-sidebar__body" id="globalCategoriesList">
-            <div class="global-categories-loading">Cargando categorias...</div>
+            <div class="global-categories-loading">Cargando categorías...</div>
         </div>
     </aside>
 
@@ -492,16 +551,16 @@
                 if (loaded) return;
                 try {
                     const response = await fetch('/api/catalog/options');
-                    if (!response.ok) throw new Error('No se pudieron cargar las categorias.');
+                    if (!response.ok) throw new Error('No se pudieron cargar las categorías.');
                     const contentType = response.headers.get('content-type') || '';
-                    if (!contentType.includes('application/json')) throw new Error('El catalogo devolvio una respuesta invalida.');
+                    if (!contentType.includes('application/json')) throw new Error('El catálogo devolvió una respuesta inválida.');
                     const data = await response.json();
                     const categories = data.categories || [];
                     const products = data.products || [];
                     list.innerHTML = `
                         <a class="global-category-option global-category-option--active" href="/Catalog">
                             <span><i class="fas fa-th-large"></i></span>
-                            <strong>Todas las categorias</strong>
+                            <strong>Todas las categorías</strong>
                             <small>${products.length} productos</small>
                         </a>
                         ${categories.map(category => {
@@ -550,6 +609,16 @@
             window.BakeSmartOpenCategories = openGlobalCategories;
         })();
     </script>
+    <script>
+        (() => {
+            const currentUserEmail = () => (document.body.dataset.userEmail || '').trim().toLowerCase();
+            const cartKey = identity => `bakesmart:catalog-cart:${(identity || 'guest').trim().toLowerCase()}`;
+
+            document.querySelectorAll('[data-store-cart-link]').forEach(link => {
+                link.setAttribute('href', '/Catalog/Cart');
+            });
+        })();
+    </script>
 
     
     @await RenderSectionAsync("Scripts", required: false)
@@ -560,8 +629,10 @@
         bottom: 20px;
         right: 20px;
         z-index: 999999;
-        width: 56px;
-        height: 56px;
+        width: 80px !important;
+        min-width: 80px !important;
+        height: 80px !important;
+        padding: 5px !important;
         border-radius: 50%;
         background: linear-gradient(135deg, var(--primary, #d6336c), var(--secondary, #9c36b5));
         border: none;
@@ -575,6 +646,21 @@
         transition: transform 0.2s ease;
         }
 
+        #chat-toggle-btn img {
+        width: 70px !important;
+        height: 70px !important;
+        object-fit: cover;
+        border-radius: 50%;
+        }
+
+        body[data-page^="/pos"] #chat-toggle-btn img,
+        body[data-page="/catalog"] #chat-toggle-btn img {
+        width: 48px !important;
+        height: 48px !important;
+        flex: none;
+        object-fit: cover;
+        }
+
         #chat-toggle-btn:hover {
         transform: scale(1.08);
         }
@@ -584,8 +670,8 @@
         bottom: 90px;
         right: 20px;
         z-index: 999999;
-        width: 320px;
-        max-width: 90vw;
+        width: clamp(410px, 30vw, 540px);
+        max-width: calc(100vw - 32px);
         isolation: isolate;
         background: #fff;
         border-radius: 16px;
@@ -631,7 +717,7 @@
         }
 
         #chat-box {
-        height: 360px;
+        height: clamp(460px, 62vh, 700px);
         overflow-y: auto;
         padding: 12px;
         background: #f7f5f8;
@@ -644,7 +730,7 @@
         max-width: 80%;
         padding: 8px 12px;
         border-radius: 14px;
-        font-size: 13.5px;
+        font-size: 15px;
         line-height: 1.4;
         }
 
@@ -680,9 +766,13 @@
         flex: 1;
         border: none;
         padding: 12px;
-        font-size: 13.5px;
+        font-size: 15px;
         outline: none;
         }
+
+        body.dark #chat-input-row { background:#202735 !important; border-color:#465067 !important; }
+        body.dark #chat-input { color:#f5f7fb !important; background:#151c29 !important; border-color:#4b536b !important; caret-color:#d9b8ff; }
+        body.dark #chat-input::placeholder { color:#aeb9cb !important; opacity:1; }
 
         #chat-send {
         border: none;
@@ -694,47 +784,76 @@
         }
 
         body[data-page^="/pos"] #chat-toggle-btn {
-        bottom: 96px;
+        right: auto;
+        left: 20px;
+        bottom: 20px;
         }
 
         body[data-page^="/pos"] #chat-widget {
-        bottom: 166px;
+        right: auto;
+        left: 20px;
+        bottom: 90px;
         }
 
         body[data-page="/catalog"] #chat-toggle-btn {
-        bottom: 104px;
+        right: auto;
+        left: 20px;
+        bottom: 20px;
+        }
+
+        .chat-products { align-self:stretch; background:#fff; border:1px solid #eadff1; border-radius:12px; padding:10px; font-size:12px; color:#29344d; }
+        .chat-products-scroll { max-height:170px; overflow:auto; margin-top:7px; }
+        .chat-products table { width:100%; border-collapse:collapse; font-size:11px; }
+        .chat-products th,.chat-products td { padding:7px 4px; text-align:left; border-bottom:1px solid #f0eaf4; }
+        .chat-products button,.chat-action-link { border:0; border-radius:8px; padding:6px 8px; background:linear-gradient(90deg,#7c3aed,#c44587); color:#fff; font-weight:800; cursor:pointer; text-decoration:none; }
+        .chat-action-link { align-self:flex-start; margin-top:4px; font-size:12px; }
+        .chat-cart-actions { display:flex; gap:8px; flex-wrap:wrap; align-self:flex-start; }
+        .chat-cart-actions button { border:0; border-radius:8px; padding:8px 10px; background:linear-gradient(90deg,#7c3aed,#c44587); color:#fff; font-weight:800; cursor:pointer; font-size:12px; }
+        .chat-cart-actions button:last-child { background:#fff; color:#6d3da1; border:1px solid #d9c7ee; }
+
+        @@media (max-width: 700px) {
+        #chat-widget { width:calc(100vw - 20px); max-width:none; bottom:78px; right:10px; left:10px; }
+        #chat-box { height:min(56vh,480px); padding:10px; }
+        .msg { max-width:92%; font-size:14px; }
+        .chat-products { font-size:12px; }
         }
 
         body[data-page="/catalog"] #chat-widget {
-        bottom: 174px;
+        right: auto;
+        left: 20px;
+        bottom: 90px;
         }
 
         @@media (max-width: 650px) {
         body[data-page^="/pos"] #chat-toggle-btn {
-        right: 14px;
-        bottom: 88px;
+        right: auto;
+        left: 14px;
+        bottom: 14px;
         }
 
         body[data-page^="/pos"] #chat-widget {
-        right: 10px;
-        bottom: 154px;
+        right: auto;
+        left: 10px;
+        bottom: 84px;
         width: calc(100vw - 20px);
         }
 
         body[data-page="/catalog"] #chat-toggle-btn {
-        right: 14px;
-        bottom: 100px;
+        right: auto;
+        left: 14px;
+        bottom: 14px;
         }
 
         body[data-page="/catalog"] #chat-widget {
-        right: 10px;
-        bottom: 166px;
+        right: auto;
+        left: 10px;
+        bottom: 84px;
         width: calc(100vw - 20px);
         }
         }
     </style>
 
-    <button id="chat-toggle-btn" aria-label="Abrir chat"><img src="~/img/richie-bot.png" alt="" /><span>Richie</span></button>
+    <button id="chat-toggle-btn" type="button" aria-label="Abrir asistente Richie" aria-expanded="false" aria-controls="chat-widget"><img src="~/img/richie-bot.png" alt="" /></button>
 
     <div id="chat-widget">
         <div id="chat-header">
@@ -758,47 +877,263 @@
         const box = document.getElementById('chat-box');
         const input = document.getElementById('chat-input');
         const sendBtn = document.getElementById('chat-send');
+        const historyKey = 'bakesmart:richie-history-v2';
+        const transcriptKey = 'bakesmart:richie-transcript-v2';
+        const widgetStateKey = 'bakesmart:richie-widget-open-v2';
+        const legacyKeys = ['bakesmart:richie-history', 'bakesmart:richie-transcript', 'bakesmart:richie-widget-open'];
+        legacyKeys.forEach(key => {
+        sessionStorage.removeItem(key);
+        localStorage.removeItem(key);
+        });
+        const isUnsafeTechnicalText = value => {
+        const text = String(value || '');
+        return text.length > 1400 || /(?:<!doctype|<\/?html|<\/?head|<\/?body|<\/?script|box\.appendChild|function\s+addNavigation|const\s+typingEl|window\.location\.pathname)/i.test(text);
+        };
+        const safeChatText = value => isUnsafeTechnicalText(value)
+        ? 'Richie no pudo procesar esa respuesta. Intenta nuevamente en un momento.'
+        : String(value || '');
+        let history = [];
+        let transcript = [];
+        let requestedQuantity = 1;
+
+        // Keep the conversation when navigating in this tab, including login.
+        // A full refresh deliberately starts a fresh conversation.
+        const navigation = performance.getEntriesByType('navigation')[0];
+        if (navigation?.type === 'reload') {
+        sessionStorage.removeItem(historyKey);
+        sessionStorage.removeItem(transcriptKey);
+        sessionStorage.removeItem(widgetStateKey);
+        localStorage.removeItem(historyKey);
+        }
+
+        try {
+        const saved = JSON.parse(sessionStorage.getItem(historyKey) || '[]');
+        history = Array.isArray(saved) ? saved.slice(-10) : [];
+        } catch { history = []; }
+
+        try {
+        const savedTranscript = JSON.parse(sessionStorage.getItem(transcriptKey) || '[]');
+        transcript = Array.isArray(savedTranscript) ? savedTranscript.slice(-30) : [];
+        } catch { transcript = []; }
+
+        function saveHistory() {
+        sessionStorage.setItem(historyKey, JSON.stringify(history.slice(-10)));
+        sessionStorage.setItem(transcriptKey, JSON.stringify(transcript.slice(-30)));
+        }
+
+        function renderMessage(role, text) {
+        const div = document.createElement('div');
+        div.className = 'msg ' + role;
+        div.textContent = safeChatText(text);
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+        return div;
+        }
+
+        function restoreConversation() {
+        // Never render stale technical content that may have been left by an older
+        // chatbot build in this tab's session storage.
+        const isSafeTranscriptItem = item => !isUnsafeTechnicalText(item?.text);
+        transcript = transcript.filter(isSafeTranscriptItem);
+        history = history.filter(item => !isUnsafeTechnicalText(item?.content));
+        saveHistory();
+        transcript.forEach(item => renderMessage(item.role, item.text));
+        if (sessionStorage.getItem(widgetStateKey) === 'true' && transcript.length) {
+        widget.classList.add('open');
+        toggleBtn.setAttribute('aria-expanded', 'true');
+        }
+        }
+
+        restoreConversation();
 
         toggleBtn.addEventListener('click', () => {
         widget.classList.toggle('open');
+        toggleBtn.setAttribute('aria-expanded', widget.classList.contains('open') ? 'true' : 'false');
+        sessionStorage.setItem(widgetStateKey, String(widget.classList.contains('open')));
         if (widget.classList.contains('open') && box.children.length === 0) {
         addMsg('bot', 'Hola, soy Richie 🧁 ¿Buscamos algo dulce para hoy?');
         }
         });
 
+        document.addEventListener('pointerdown', event => {
+        if (!widget.classList.contains('open')) return;
+        if (widget.contains(event.target) || toggleBtn.contains(event.target)) return;
+        widget.classList.remove('open');
+        toggleBtn.setAttribute('aria-expanded', 'false');
+        sessionStorage.setItem(widgetStateKey, 'false');
+        });
+
         function addMsg(role, text) {
-        const div = document.createElement('div');
-        div.className = 'msg ' + role;
-        div.textContent = text;
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
+        const normalizedText = safeChatText(text);
+        const div = renderMessage(role, normalizedText);
+        if (role !== 'typing') {
+        transcript.push({ role, text: normalizedText });
+        saveHistory();
+        }
         return div;
+        }
+
+        const money = value => `₡${Number(value || 0).toLocaleString('es-CR')}`;
+        function askToContinueShopping(products) {
+        const actions = document.createElement('div');
+        actions.className = 'chat-cart-actions';
+        actions.innerHTML = '<button type="button" data-chat-continue>Agregar mas productos</button><button type="button" data-chat-cart>Ver carrito</button>';
+        actions.addEventListener('click', event => {
+        if (event.target.closest('[data-chat-continue]')) {
+        actions.remove();
+        addMsg('bot', 'Claro, aqui tienes nuevamente los productos disponibles.');
+        addProductTable(products);
+        return;
+        }
+        if (event.target.closest('[data-chat-cart]')) window.location.assign('/Catalog/Cart');
+        });
+        box.appendChild(actions);
+        box.scrollTop = box.scrollHeight;
+        }
+
+        function addProductTable(products) {
+        if (!Array.isArray(products) || !products.length) return;
+        const card = document.createElement('div'); card.className = 'chat-products';
+        const rows = products.map(p => `<tr><td>${String(p.name || '').replace(/[&<>"']/g, '')}</td><td>${money(p.price)}</td><td><button data-chat-add="${Number(p.id)}" data-name="${String(p.name || '').replace(/"/g,'') }" data-price="${Number(p.price)}">Agregar</button></td></tr>`).join('');
+        card.innerHTML = `<strong>Productos disponibles</strong><div class="chat-products-scroll"><table><thead><tr><th>Producto</th><th>Precio</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+        card.addEventListener('click', event => {
+            const button = event.target.closest('[data-chat-add]');
+            if (!button) return;
+
+            const product = {
+                id: Number(button.dataset.chatAdd),
+                name: button.dataset.name,
+                price: Number(button.dataset.price)
+            };
+            const qty = Math.max(1, requestedQuantity);
+            const addToCart = () => {
+                const email = (document.body.dataset.userEmail || '').trim().toLowerCase();
+                const key = `bakesmart:catalog-cart:${email || 'guest'}`;
+                let cart = [];
+                try { cart = JSON.parse(localStorage.getItem(key) || '[]'); } catch { }
+
+                const item = cart.find(x => Number(x.id) === product.id && !x.isCombo);
+                if (item) item.quantity = Number(item.quantity || 0) + qty;
+                else cart.push({ ...product, quantity: qty });
+
+                localStorage.setItem(key, JSON.stringify(cart));
+                window.dispatchEvent(new CustomEvent('bakesmart:cart-updated', {
+                    detail: { count: cart.reduce((total, row) => total + Math.max(1, Number(row?.quantity || 1)), 0) }
+                }));
+                card.remove();
+                const cartQuantity = cart.reduce((total, cartItem) => total + Number(cartItem.quantity || 0), 0);
+                const cartTotal = cart.reduce((total, cartItem) => total + Number(cartItem.price || 0) * Number(cartItem.quantity || 0), 0);
+                addMsg('bot', `${qty} × ${product.name} se agregaron. Carrito actual: ${cartQuantity} producto(s) por ${money(cartTotal)}.`);
+                askToContinueShopping(products);
+            };
+
+            app.modal.create({
+                title: 'Agregar al carrito',
+                message: `${qty} × ${product.name} serían ${money(product.price * qty)}. ¿Deseas agregarlos al carrito?`,
+                confirmText: 'Agregar al carrito',
+                cancelText: 'Cancelar',
+                onConfirm: addToCart
+            });
+        });
+        box.appendChild(card); box.scrollTop = box.scrollHeight;
+        }
+        function addNavigation(action) {
+        if (!action?.url || !action?.label) return; const link=document.createElement('a'); link.className='chat-action-link'; link.href=action.url; link.textContent=action.label; box.appendChild(link); box.scrollTop=box.scrollHeight;
+        }
+
+        function isAffirmative(value) {
+        return /^(si|sí|dale|ok|okay|claro|continuar|quiero|por favor|sipi)\b/i.test(value.trim());
+        }
+
+        function lastAssistantAskedForLogin() {
+        const previous = [...history].reverse().find(item => item.role === 'assistant');
+        return previous && /(inicia|iniciar|inicie).*sesion|sesión.*inicia/i.test(previous.content);
+        }
+
+        function requestsLogin(value) {
+        return /\b(login|iniciar\s+sesi[oó]n|inicie\s+sesi[oó]n|entrar\s+a\s+mi\s+cuenta|acceder\s+a\s+mi\s+cuenta)\b/i.test(value);
+        }
+
+        function offerLogin() {
+        addMsg('bot', 'Claro. Cuando estés listo, usa este botón para iniciar sesión y continuar.');
+        addNavigation({
+        label: 'Ir a iniciar sesión',
+        url: `/Account/Login?ReturnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`
+        });
         }
 
         async function send() {
         const msg = input.value.trim();
         if (!msg) return;
         input.value = '';
+        requestedQuantity = Number((msg.match(/\b(\d+)\b/) || [])[1] || 1);
         addMsg('user', msg);
+
+        if (requestsLogin(msg)) {
+        history.push({ role: 'user', content: msg });
+        saveHistory();
+        offerLogin();
+        return;
+        }
+
+        if (isAffirmative(msg) && lastAssistantAskedForLogin()) {
+        history.push({ role: 'user', content: msg });
+        saveHistory();
+        offerLogin();
+        return;
+        }
         const typingEl = addMsg('typing', 'Richie esta decorando la respuesta... 🍰');
 
         try {
         const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg })
+        body: JSON.stringify({ message: msg, history, page: window.location.pathname })
         });
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) throw new Error('Respuesta no válida del asistente.');
         const data = await res.json();
         typingEl.remove();
-        addMsg('bot', data.reply);
+        if (!res.ok) throw new Error(data.message || 'Richie no pudo responder.');
+        const reply = safeChatText(data.reply);
+        history.push({ role: 'user', content: msg }, { role: 'assistant', content: reply });
+        saveHistory();
+        addMsg('bot', reply);
+        addProductTable(data.products);
+        addNavigation(data.navigation);
         } catch (err) {
         typingEl.remove();
-        addMsg('bot', 'Uy, se me cayo un poquito de merengue 🍰 Proba de nuevo en un momento.');
+        addMsg('bot', 'No puedo responder desde el chat en este momento. Puedes revisar los productos disponibles en el catálogo.');
+        addNavigation({ label: 'Ver catálogo', url: '/Catalog' });
         }
         }
 
         sendBtn.addEventListener('click', send);
         input.addEventListener('keypress', e => { if (e.key === 'Enter') send(); });
+        })();
+    </script>
+    <script>
+        (() => {
+            const email = (document.body.dataset.userEmail || '').trim().toLowerCase() || 'guest';
+            const storageKey = `bakesmart:catalog-cart:${email}`;
+            const countItems = () => {
+                try {
+                    const items = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                    return Array.isArray(items)
+                        ? items.reduce((total, item) => total + Math.max(1, Number(item?.quantity || 1)), 0)
+                        : 0;
+                } catch { return 0; }
+            };
+            const renderCount = explicitCount => {
+                const count = Number.isFinite(Number(explicitCount)) ? Number(explicitCount) : countItems();
+                document.querySelectorAll('[data-store-cart-count]').forEach(badge => {
+                    badge.textContent = String(count);
+                    badge.hidden = count <= 0;
+                });
+            };
+            window.addEventListener('bakesmart:cart-updated', event => renderCount(event.detail?.count));
+            window.addEventListener('storage', event => { if (event.key === storageKey) renderCount(); });
+            renderCount();
         })();
     </script>
 </body>

@@ -17,6 +17,7 @@
 bin/
 obj/
 .data-protection/
+.bakesmart-data-protection/
 
 # Mono auto generated files
 mono_crash.*
@@ -289,6 +290,7 @@ FakesAssemblies/
 # Node.js Tools for Visual Studio
 .ntvs_analysis.dat
 node_modules/
+.vercel/
 
 # Visual Studio 6 build log
 *.plg
@@ -410,3 +412,4 @@ Database/Migrate-To-Azure.local.ps1
 Database/exports/
 .migration-temp/
 Publish-Main.local.ps1
+.env*

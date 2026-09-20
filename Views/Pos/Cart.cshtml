@@ -4,7 +4,8 @@
 }
 
 <div class="page-shell pos-cart-page">
-    <div class="page-header">
+    <div class="page-header pos-cart-hero">
+        <img class="pos-cart-hero__image" id="checkoutHeroImage" src="/img/products/producto-sin-imagen.svg" alt="Producto del pedido" />
         <div>
             <div class="eyebrow"><i class="fas fa-cash-register"></i> Punto de venta</div>
             <h1>Finalizar venta</h1>
@@ -28,7 +29,7 @@
             <div id="checkoutCartItems" class="pos-cart-list"></div>
         </section>
 
-        <aside class="card pos-cart-checkout-card">
+        <aside class="card pos-cart-checkout-card pos-cart-checkout-card--payment">
             <div class="pos-panel-header">
                 <div>
                     <div class="pos-panel-eyebrow">Cliente y cobro</div>
@@ -39,24 +40,30 @@
             <form id="checkoutCartForm" class="pos-checkout-form">
                 <div class="pos-form-block">
                     <label>Cliente</label>
-                    <input class="form-control" name="customerName" id="checkoutCustomerName" list="checkoutCustomerOptions" placeholder="Buscar cliente o escribir manualmente" />
-                    <datalist id="checkoutCustomerOptions"></datalist>
+                    <div class="pos-input-shell"><i class="fas fa-user"></i><input class="form-control pos-customer-input" name="customerName" id="checkoutCustomerName" autocomplete="off" placeholder="Buscar cliente o escribir manualmente" required /></div>
                 </div>
                 <div class="pos-form-block">
                     <label>Correo</label>
-                    <input class="form-control" name="customerEmail" placeholder="correo@cliente.com" />
+                    <div class="pos-input-shell"><i class="fas fa-envelope"></i><input class="form-control" type="email" name="customerEmail" placeholder="correo@cliente.com" required /></div>
                 </div>
                 <div class="pos-form-block">
                     <label>Telefono</label>
-                    <input class="form-control" name="customerPhone" placeholder="Telefono" />
+                    <div class="pos-input-shell"><i class="fas fa-phone"></i><input class="form-control" name="customerPhone" placeholder="Telefono" required /></div>
                 </div>
                 <div class="pos-form-block">
                     <label>Metodo de pago</label>
-                    <select class="form-control" name="paymentMethod" id="checkoutPaymentMethod"></select>
+                    <select class="form-control pos-payment-select" name="paymentMethod" id="checkoutPaymentMethod"></select>
+                </div>
+                <div class="pos-form-block">
+                    <label>Promocion configurada</label>
+                    <select class="form-control" name="promotionId" id="checkoutPromotion">
+                        <option value="">Sin promocion</option>
+                    </select>
+                    <small class="text-muted">Los beneficios exclusivos se habilitan al seleccionar al cliente correspondiente.</small>
                 </div>
                 <div class="pos-form-block">
                     <label>Descuento adicional</label>
-                    <input class="form-control" type="number" min="0" step="0.01" name="discountRate" value="0" />
+                    <div class="pos-input-shell"><i class="fas fa-tag"></i><input class="form-control" type="number" min="0" step="0.01" name="discountRate" value="0" /></div>
                 </div>
 
                 <div id="checkoutTotals" class="pos-cart-totals"></div>
@@ -87,29 +94,30 @@
             <span>Total a cobrar</span>
             <strong id="posPaymentTotal">0</strong>
         </div>
+        <div class="pos-payment-status" id="posPaymentStatus" aria-live="polite">
+            <span class="pos-payment-status__icon"><i class="fas fa-lock"></i></span>
+            <div>
+                <strong>Pasarela lista</strong>
+                <small>Seleccione el metodo y confirme el cobro.</small>
+            </div>
+        </div>
         <form id="posPaymentForm" class="pos-payment-form">
             <label>
                 <span>Metodo</span>
                 <select class="form-control" name="method" id="posGatewayMethod">
-                    <option>Tarjeta</option>
                     <option>SINPE</option>
                     <option>Efectivo</option>
-                    <option>Transferencia</option>
                 </select>
             </label>
             <label>
                 <span id="posGatewayReferenceLabel">Referencia o titular</span>
                 <input class="form-control" name="holder" id="posGatewayReference" placeholder="Nombre, SINPE o referencia" required />
             </label>
-            <label class="pos-card-field">
-                <span>Numero de tarjeta</span>
-                <input class="form-control" name="card" inputmode="numeric" maxlength="19" placeholder="4242 4242 4242 4242" />
-            </label>
-            <div class="pos-payment-form__grid pos-card-field">
-                <label><span>Vence</span><input class="form-control" name="expiry" maxlength="5" placeholder="MM/AA" /></label>
-                <label><span>CVV</span><input class="form-control" name="cvv" inputmode="numeric" maxlength="4" placeholder="123" /></label>
+            <p class="pos-payment-modal__note">SINPE y efectivo se registran para validación del negocio.</p>
+            <div class="pos-payment-status" aria-disabled="true">
+                <span class="pos-payment-status__icon"><i class="fas fa-credit-card"></i></span>
+                <div><strong>Pago con datáfono: próximamente disponible</strong><small>Esta terminal no registra ni aprueba cobros todavía.</small></div>
             </div>
-            <p class="pos-payment-modal__note">Simulacion de pasarela: valida datos minimos y registra el cobro en el sistema.</p>
             <button class="btn btn-primary pos-submit-btn" type="submit" id="posPaymentConfirmBtn">
                 <i class="fas fa-lock"></i>
                 Aprobar cobro
@@ -123,7 +131,15 @@
         (() => {
             const store = BakeSmartStore;
             const fmt = app.utils.formatCurrency;
-            let cart = JSON.parse(sessionStorage.getItem('bakesmart.pos.cart') || '[]');
+            function readCartSnapshot() {
+                try {
+                    return JSON.parse(sessionStorage.getItem('bakesmart.pos.cart') || localStorage.getItem('bakesmart.pos.cart') || '[]');
+                } catch {
+                    return [];
+                }
+            }
+
+            let cart = readCartSnapshot();
 
             const itemsEl = document.getElementById('checkoutCartItems');
             const countEl = document.getElementById('checkoutCartCount');
@@ -135,26 +151,45 @@
             const gatewayReferenceLabel = document.getElementById('posGatewayReferenceLabel');
             const gatewayReference = document.getElementById('posGatewayReference');
             const paymentConfirmBtn = document.getElementById('posPaymentConfirmBtn');
+            const paymentStatus = document.getElementById('posPaymentStatus');
+            const checkoutHeroImage = document.getElementById('checkoutHeroImage');
             let pendingOrder = null;
             let pendingTotals = null;
 
             function saveCart() {
-                sessionStorage.setItem('bakesmart.pos.cart', JSON.stringify(cart));
+                const payload = JSON.stringify(cart);
+                try { sessionStorage.setItem('bakesmart.pos.cart', payload); } catch { }
+                try { localStorage.setItem('bakesmart.pos.cart', payload); } catch { }
             }
 
             function renderCustomers() {
-                document.getElementById('checkoutCustomerOptions').innerHTML = store.customers.list().map(customer => `
-                            <option value="${customer.fullName || customer.name || ''}">
-                                ${customer.email || customer.phone || 'Cliente registrado'}
-                            </option>
-                        `).join('');
+                app.customerPicker.attach(
+                    document.getElementById('checkoutCustomerName'),
+                    () => store.customers.list(),
+                    customer => {
+                        form.customerEmail.value = customer.email || '';
+                        form.customerPhone.value = customer.phone || '';
+                        renderPromotions();
+                        renderCart();
+                    }
+                );
             }
 
             function renderPayments() {
-                document.getElementById('checkoutPaymentMethod').innerHTML = store.pos.config().paymentMethods
-                    .filter(method => method.active)
-                    .map(method => `<option value="${method.name}">${method.name}</option>`)
-                    .join('');
+                const methods = ['Efectivo', 'SINPE', 'Nota de crédito'];
+                const options = methods.map(name => `<option value="${name}">${name}</option>`).join('');
+                const checkoutPaymentMethod = document.getElementById('checkoutPaymentMethod');
+                const previousCheckoutMethod = checkoutPaymentMethod.value;
+                const previousGatewayMethod = gatewayMethod.value;
+                checkoutPaymentMethod.innerHTML = options;
+                gatewayMethod.innerHTML = options;
+                checkoutPaymentMethod.value = methods.includes(previousCheckoutMethod) ? previousCheckoutMethod : methods[0];
+                gatewayMethod.value = methods.includes(previousGatewayMethod) ? previousGatewayMethod : checkoutPaymentMethod.value;
+                app.selects?.enhanceAll?.();
+                app.selects?.refresh?.(checkoutPaymentMethod);
+                app.selects?.refresh?.(gatewayMethod);
+                checkoutPaymentMethod.dispatchEvent(new Event('change', { bubbles: true }));
+                gatewayMethod.dispatchEvent(new Event('change', { bubbles: true }));
             }
 
             function readPendingOrder() {
@@ -168,6 +203,7 @@
                 if (!pendingOrder) return;
                 form.customerName.value = pendingOrder.customerName || '';
                 form.customerEmail.value = pendingOrder.customerEmail || '';
+                form.customerPhone.value = pendingOrder.customerPhone || '';
                 if (pendingOrder.paymentMethod) {
                     form.paymentMethod.value = pendingOrder.paymentMethod;
                     form.paymentMethod.dispatchEvent(new Event('change', { bubbles: true }));
@@ -175,20 +211,34 @@
             }
 
             function selectedCustomer() {
-                const email = String(form.customerEmail.value || '').trim().toLowerCase();
-                const name = String(form.customerName.value || '').trim().toLowerCase();
-                return store.customers.list().find(row =>
-                    (email && String(row.email || '').trim().toLowerCase() === email) ||
-                    (name && String(row.fullName || row.name || '').trim().toLowerCase() === name)
-                );
+                return store.customers.matchForPos(form.customerName.value, form.customerEmail.value);
             }
 
-            function currentDiscountBreakdown() {
-                const manual = Math.min(Math.max(Number(form.discountRate?.value || 0), 0), 1);
+            function normalizeDiscountRate(value) {
+                const numeric = Number(value || 0);
+                if (!Number.isFinite(numeric) || numeric <= 0) return 0;
+                return Math.min(numeric > 1 ? numeric / 100 : numeric, 1);
+            }
+
+            function currentDiscountBreakdown(subtotal) {
+                const manual = normalizeDiscountRate(form.discountRate?.value);
                 const customer = selectedCustomer();
-                const frequent = customer?.frequent ? Math.min(Math.max(Number(store.pos.config().frequentCustomerDiscount || 0), 0), 1) : 0;
-                const totalRate = Math.min(manual + frequent, 1);
-                return { manual, frequent, totalRate, customer };
+                const frequent = document.getElementById('checkoutPromotion').value === 'frequent' && customer?.frequent ? Math.min(Math.max(Number(store.pos.config().frequentCustomerDiscount || 0), 0), 1) : 0;
+                const promotion = store.marketing.promotions().find(row => String(row.id) === document.getElementById('checkoutPromotion').value);
+                const eligibleIds = new Set((promotion?.productIds || []).map(Number));
+                const promotionBase = promotion ? cart.reduce((sum, item) => {
+                    if (!eligibleIds.size) return sum + Number(item.quantity) * Number(item.unitPrice);
+                    if (!item.isCombo) return sum + (eligibleIds.has(Number(item.productId)) ? Number(item.quantity) * Number(item.unitPrice) : 0);
+                    const combo = comboFor(item);
+                    const regular = (combo?.items || []).reduce((value, component) => value + Number(component.unitPrice) * Number(component.quantity), 0);
+                    const eligible = (combo?.items || []).filter(component => eligibleIds.has(Number(component.productId))).reduce((value, component) => value + Number(component.unitPrice) * Number(component.quantity), 0);
+                    return sum + Number(item.quantity) * Number(item.unitPrice) * (regular > 0 ? eligible / regular : 0);
+                }, 0) : 0;
+                const promotionAmount = promotionBase * Number(promotion?.discount || 0);
+                const manualAmount = subtotal * manual;
+                const frequentAmount = subtotal * frequent;
+                const discountAmount = Math.max(manualAmount, frequentAmount, promotionAmount);
+                return { manual, frequent, promotion, promotionAmount, discountAmount, totalRate: subtotal > 0 ? discountAmount / subtotal : 0, customer };
             }
 
             function remainingStock(productId) {
@@ -197,41 +247,101 @@
                 return Math.max(0, Number(product?.stock || 0) - Number(item?.quantity || 0));
             }
 
+            function renderPromotions() {
+                const select = document.getElementById('checkoutPromotion');
+                const customer = selectedCustomer();
+                const customerKey = customer ? `${customer.id}:${Boolean(customer.frequent)}` : '';
+                const selected = select.value;
+                const rows = store.marketing.posPromotions(customer);
+                select.replaceChildren(new Option('Sin promoción', ''));
+                if (customer?.frequent) select.add(new Option(`Cliente frecuente · ${Math.round(Number(store.pos.config().frequentCustomerDiscount || 0) * 100)}%`, 'frequent'));
+                rows.forEach(promotion => {
+                    const label = `${promotion.name} · ${Math.round(Number(promotion.discount || 0) * 100)}%${promotion.eligible ? '' : ' · Solo clientes asignados'}`;
+                    const option = new Option(label, String(promotion.id));
+                    option.disabled = !promotion.eligible;
+                    select.add(option);
+                });
+                const suggested = store.marketing.suggestedPosPromotion(customer, rows);
+                const preserved = selected === '' || (selected === 'frequent' ? Boolean(customer?.frequent) : rows.some(row => row.eligible && String(row.id) === selected));
+                select.value = select.dataset.customerKey === customerKey && preserved ? selected : suggested;
+                select.dataset.customerKey = customerKey;
+                app.selects?.refresh?.(select);
+            }
+
+            function itemKey(item) {
+                return item?.isCombo ? `combo-${item.comboId}` : String(item?.productId);
+            }
+
+            function comboFor(item) {
+                return item?.isCombo ? store.combos.list().find(row => Number(row.id) === Number(item.comboId)) : null;
+            }
+
+            function remainingItemStock(item) {
+                const combo = comboFor(item);
+                if (!combo) return remainingStock(item.productId);
+                const availability = (combo.items || []).map(component => {
+                    const product = store.inventory.list().find(row => Number(row.id) === Number(component.productId));
+                    const used = cart.reduce((sum, row) => {
+                        if (!row.isCombo) return sum + (Number(row.productId) === Number(component.productId) ? Number(row.quantity || 0) : 0);
+                        const rowComponent = comboFor(row)?.items?.find(value => Number(value.productId) === Number(component.productId));
+                        return sum + Number(row.quantity || 0) * Number(rowComponent?.quantity || 0);
+                    }, 0);
+                    return Math.floor((Number(product?.stock || 0) - used) / Math.max(1, Number(component.quantity || 1)));
+                });
+                return Math.max(0, availability.length ? Math.min(...availability) : 0);
+            }
+
             function renderCart() {
                 countEl.textContent = `${cart.length} producto${cart.length === 1 ? '' : 's'}`;
 
                 if (!cart.length) {
-                    itemsEl.innerHTML = `<div class="pos-cart-mini-empty"><i class="fas fa-basket-shopping"></i><strong>Carrito vacio</strong><span>Vuelva al POS para agregar productos.</span></div>`;
+                    if (checkoutHeroImage) checkoutHeroImage.src = '/img/products/producto-sin-imagen.svg';
+                    itemsEl.innerHTML = `<div class="pos-cart-mini-empty"><i class="fas fa-basket-shopping"></i><strong>Carrito vacío</strong><span>Vuelva al POS para agregar productos.</span></div>`;
                     totalsEl.innerHTML = '';
                     return;
                 }
 
-                itemsEl.innerHTML = cart.map(item => `
+                const firstProduct = store.inventory.list().find(row => Number(row.id) === Number(cart[0]?.productId) || String(row.code || '').toLowerCase() === String(cart[0]?.code || '').toLowerCase());
+                const firstImage = cart[0]?.imageUrl || comboFor(cart[0])?.imageUrl || firstProduct?.imageUrl || '/img/products/producto-sin-imagen.svg';
+                if (checkoutHeroImage) checkoutHeroImage.src = firstImage;
+
+                itemsEl.innerHTML = cart.map(item => {
+                    const key = itemKey(item);
+                    const combo = comboFor(item);
+                    const inventoryProduct = store.inventory.list().find(row => Number(row.id) === Number(item.productId) || String(row.code || '').toLowerCase() === String(item.code || '').toLowerCase());
+                    const imageUrl = item.imageUrl || combo?.imageUrl || item.image || item.photo || inventoryProduct?.imageUrl || inventoryProduct?.image || '/img/products/producto-sin-imagen.svg';
+                    const composition = combo?.items?.map(component => `${component.quantity}× ${component.name}`).join(' · ');
+                    return `
                             <div class="pos-cart-item">
+                                <img class="pos-cart-item-image" src="${imageUrl}" alt="${item.name}" />
+                                <div class="pos-cart-item-body">
                                 <div class="pos-cart-item-header">
                                     <div>
                                         <strong>${item.name}</strong>
-                                        <div class="text-muted" style="font-size:.82rem;">${item.code} - ${fmt(item.unitPrice)} c/u · ${remainingStock(item.productId)} disponibles</div>
+                                        ${composition ? `<div class="text-muted" style="font-size:.78rem;">Incluye ${composition}</div>` : ''}
+                                        <div class="text-muted" style="font-size:.82rem;">${item.code} · ${fmt(item.unitPrice)} c/u · ${remainingItemStock(item)} adicionales disponibles</div>
                                     </div>
-                                    <button class="btn btn-ghost btn-sm" type="button" onclick="removeCheckoutItem(${item.productId})">
+                                    <button class="btn btn-ghost btn-sm" type="button" onclick='removeCheckoutItem(${JSON.stringify(key)})'>
                                         <i class="fas fa-trash-can"></i>
                                     </button>
                                 </div>
                                 <div class="pos-cart-item-footer">
                                     <div class="pos-cart-actions">
-                                        <button class="btn btn-outline btn-sm" type="button" onclick="changeCheckoutQty(${item.productId}, -1)"><i class="fas fa-minus"></i></button>
+                                        <button class="btn btn-outline btn-sm" type="button" onclick='changeCheckoutQty(${JSON.stringify(key)}, -1)'><i class="fas fa-minus"></i></button>
                                         <span style="font-weight:800;min-width:24px;text-align:center;">${item.quantity}</span>
-                                        <button class="btn btn-outline btn-sm" type="button" onclick="changeCheckoutQty(${item.productId}, 1)" ${remainingStock(item.productId) <= 0 ? 'disabled' : ''}><i class="fas fa-plus"></i></button>
+                                        <button class="btn btn-outline btn-sm" type="button" onclick='changeCheckoutQty(${JSON.stringify(key)}, 1)' ${remainingItemStock(item) <= 0 ? 'disabled' : ''}><i class="fas fa-plus"></i></button>
                                     </div>
                                     <strong style="color:var(--primary);">${fmt(item.quantity * item.unitPrice)}</strong>
                                 </div>
+                                </div>
                             </div>
-                        `).join('');
+                        `;
+                }).join('');
 
                 const subtotal = cart.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-                const discountBreakdown = currentDiscountBreakdown();
+                const discountBreakdown = currentDiscountBreakdown(subtotal);
                 const discountRate = discountBreakdown.totalRate;
-                const discount = subtotal * discountRate;
+                const discount = discountBreakdown.discountAmount;
                 const discountedSubtotal = Math.max(0, subtotal - discount);
                 const tax = discountedSubtotal * Number(store.pos.config().iva || 0);
                 const total = pendingOrder?.total ? Number(pendingOrder.total) : discountedSubtotal + tax;
@@ -241,6 +351,7 @@
                             <div class="pos-total-row"><span>Subtotal</span><strong>${fmt(subtotal)}</strong></div>
                             ${discountBreakdown.frequent > 0 ? `<div class="pos-total-row"><span>Cliente frecuente ${Math.round(discountBreakdown.frequent * 100)}%</span><strong>Aplica</strong></div>` : `<div class="pos-total-row"><span>Cliente frecuente</span><strong>0%</strong></div>`}
                             ${discountBreakdown.manual > 0 ? `<div class="pos-total-row"><span>Descuento adicional ${Math.round(discountBreakdown.manual * 100)}%</span><strong>Aplica</strong></div>` : ''}
+                            ${discountBreakdown.promotion ? `<div class="pos-total-row"><span>${discountBreakdown.promotion.name}</span><strong>-${fmt(discountBreakdown.promotionAmount)}</strong></div>` : ''}
                             ${discount > 0 ? `<div class="pos-total-row"><span>Descuento total ${Math.round(discountRate * 100)}%</span><strong>-${fmt(discount)}</strong></div>` : ''}
                             <div class="pos-total-row"><span>IVA</span><strong>${fmt(tax)}</strong></div>
                             <div class="hr"></div>
@@ -250,14 +361,15 @@
 
             function shouldShowCardFields(method) {
                 const value = String(method || '').toLowerCase();
-                return value.includes('tarjeta');
+                return false;
             }
 
             function syncGatewayFields() {
                 const show = shouldShowCardFields(gatewayMethod.value);
                 document.querySelectorAll('.pos-card-field').forEach(field => {
                     field.hidden = !show;
-                    field.style.display = show ? '' : 'none';
+                    field.classList.toggle('is-hidden', !show);
+                    field.style.setProperty('display', show ? '' : 'none', 'important');
                     field.querySelectorAll('input').forEach(input => {
                         input.disabled = !show;
                         input.required = show;
@@ -268,36 +380,53 @@
                 const method = String(gatewayMethod.value || '').toLowerCase();
                 if (method.includes('efectivo')) {
                     gatewayReferenceLabel.textContent = 'Recibido por';
-                    gatewayReference.placeholder = 'Nombre de quien recibe el efectivo';
+                    gatewayReference.placeholder = 'Opcional: nombre de quien recibe';
                     gatewayReference.required = false;
                 } else if (method.includes('sinpe')) {
                     gatewayReferenceLabel.textContent = 'Referencia SINPE';
                     gatewayReference.placeholder = 'Telefono o comprobante SINPE';
                     gatewayReference.required = true;
-                } else if (method.includes('transfer')) {
-                    gatewayReferenceLabel.textContent = 'Referencia de transferencia';
-                    gatewayReference.placeholder = 'Numero de comprobante o banco';
+                } else if (method.includes('nota de cr')) {
+                    gatewayReferenceLabel.textContent = 'Código de nota de crédito';
+                    gatewayReference.placeholder = 'NC-2026-000001';
                     gatewayReference.required = true;
                 } else {
-                    gatewayReferenceLabel.textContent = 'Titular de la tarjeta';
-                    gatewayReference.placeholder = 'Nombre del titular';
+                    gatewayReferenceLabel.textContent = 'Referencia del pago';
+                    gatewayReference.placeholder = 'Referencia o detalle del cobro';
                     gatewayReference.required = true;
                 }
+            }
+
+            function setPaymentStatus(state, title, message, icon) {
+                paymentModal.dataset.state = state;
+                paymentStatus.innerHTML = `
+                    <span class="pos-payment-status__icon"><i class="fas ${icon}"></i></span>
+                    <div>
+                        <strong>${title}</strong>
+                        <small>${message}</small>
+                    </div>
+                `;
             }
 
             function openPaymentModal() {
                 if (paymentModal.parentElement !== document.body) {
                     document.body.appendChild(paymentModal);
                 }
-                const method = form.paymentMethod.value || 'Tarjeta';
-                gatewayMethod.value = String(method).toLowerCase().includes('sinpe') ? 'SINPE'
-                    : String(method).toLowerCase().includes('efectivo') ? 'Efectivo'
-                        : String(method).toLowerCase().includes('transfer') ? 'Transferencia'
-                            : 'Tarjeta';
+                const selectedMethod = form.paymentMethod.value || gatewayMethod.options[0]?.value || 'Efectivo';
+                const method = String(selectedMethod).toLowerCase();
+                const normalizedMethod = method.includes('sinpe') ? 'SINPE'
+                    : method.includes('nota de cr') ? 'Nota de crédito'
+                    : method.includes('efectivo') ? 'Efectivo'
+                    : 'Efectivo';
+                gatewayMethod.value = [...gatewayMethod.options].some(option => option.value === normalizedMethod)
+                    ? normalizedMethod
+                    : selectedMethod;
                 document.getElementById('posPaymentTotal').textContent = fmt(pendingTotals?.total || 0);
                 paymentForm.holder.value = form.customerName.value || '';
                 gatewayMethod.dispatchEvent(new Event('change', { bubbles: true }));
+                app.selects?.refresh?.(gatewayMethod);
                 syncGatewayFields();
+                setPaymentStatus('ready', 'Pasarela lista', 'Seleccione el metodo y confirme el cobro.', 'fa-lock');
                 paymentModal.hidden = false;
             }
 
@@ -307,21 +436,21 @@
                 syncGatewayFields();
             }
 
-            window.changeCheckoutQty = (productId, delta) => {
-                const item = cart.find(row => Number(row.productId) === Number(productId));
+            window.changeCheckoutQty = (key, delta) => {
+                const item = cart.find(row => itemKey(row) === String(key));
                 if (!item) return;
-                if (delta > 0 && remainingStock(productId) <= 0) {
+                if (delta > 0 && remainingItemStock(item) <= 0) {
                     app.toast.warning('La cantidad supera el stock disponible.');
                     return;
                 }
                 item.quantity += delta;
-                if (item.quantity <= 0) cart = cart.filter(row => Number(row.productId) !== Number(productId));
+                if (item.quantity <= 0) cart = cart.filter(row => itemKey(row) !== String(key));
                 saveCart();
                 renderCart();
             };
 
-            window.removeCheckoutItem = (productId) => {
-                cart = cart.filter(row => Number(row.productId) !== Number(productId));
+            window.removeCheckoutItem = (key) => {
+                cart = cart.filter(row => itemKey(row) !== String(key));
                 saveCart();
                 renderCart();
             };
@@ -333,12 +462,14 @@
                 if (!selected) return;
                 form.customerEmail.value = selected.email || '';
                 form.customerPhone.value = selected.phone || '';
+                renderPromotions();
                 renderCart();
             });
 
             form.discountRate.addEventListener('input', renderCart);
-            form.customerEmail.addEventListener('input', renderCart);
-            form.customerName.addEventListener('input', renderCart);
+            form.customerEmail.addEventListener('input', () => { renderPromotions(); renderCart(); });
+            form.customerName.addEventListener('input', () => { renderPromotions(); renderCart(); });
+            document.getElementById('checkoutPromotion').addEventListener('change', renderCart);
 
             async function completeCheckout(paymentData) {
                 try {
@@ -347,20 +478,24 @@
                     if (!cart.length) throw new Error('Agregue productos al carrito antes de cobrar.');
 
                     if (pendingOrder) {
-                        await store.orders.markPaid(pendingOrder.id, paymentData.method || form.paymentMethod.value || 'Tarjeta');
+                        await store.orders.markPaid(pendingOrder.id, paymentData.method || form.paymentMethod.value || 'Efectivo');
                         sessionStorage.removeItem('bakesmart.pos.pendingOrder');
                     } else {
                         await store.pos.sell({
                             ...Object.fromEntries(new FormData(form).entries()),
                             paymentMethod: paymentData.method || form.paymentMethod.value,
-                            items: cart.map(item => ({ productId: item.productId, quantity: item.quantity }))
+                            creditNoteCode: String(paymentData.method || '').toLowerCase().includes('nota de cr') ? paymentData.holder : null,
+                            items: cart.filter(item => !item.isCombo).map(item => ({ productId: Number(item.productId), quantity: Number(item.quantity) })),
+                            combos: cart.filter(item => item.isCombo).map(item => ({ comboId: Number(item.comboId), quantity: Number(item.quantity) }))
                         });
                     }
 
                     cart = [];
                     saveCart();
-                    app.toast.success(pendingOrder ? 'Pago del pedido confirmado.' : 'Venta registrada correctamente.');
-                    app.navigation.navigate(pendingOrder ? '/Production' : '/Pos');
+                    return {
+                        message: pendingOrder ? 'Pago del pedido confirmado.' : 'Venta registrada correctamente.',
+                        redirectUrl: pendingOrder ? '/Production' : '/Pos'
+                    };
                 } catch (error) {
                     app.toast.error(error.message);
                     throw error;
@@ -371,6 +506,10 @@
                 event.preventDefault();
                 try {
                     if (!cart.length) throw new Error('Agregue productos al carrito antes de cobrar.');
+                    if (!form.reportValidity()) {
+                        app.toast.error('Complete los datos del cliente antes de cobrar.');
+                        return;
+                    }
                     openPaymentModal();
                 } catch (error) {
                     app.toast.error(error.message);
@@ -382,33 +521,56 @@
 
             paymentForm.addEventListener('submit', async event => {
                 event.preventDefault();
+                if (paymentForm.dataset.processing === 'true') return;
                 const data = Object.fromEntries(new FormData(paymentForm).entries());
-                if (shouldShowCardFields(data.method)) {
-                    const digits = String(data.card || '').replace(/\D/g, '');
-                    if (digits.length < 12 || !data.expiry || !data.cvv) {
-                        app.toast.error('Complete los datos de tarjeta para aprobar el cobro.');
-                        return;
-                    }
+                const method = String(data.method || gatewayMethod.value || '').trim();
+                data.method = method;
+                if (!method) {
+                    app.toast.error('Seleccione un metodo de pago.');
+                    return;
+                }
+                if (method.toLowerCase().includes('sinpe') && !String(data.holder || '').trim()) {
+                    app.toast.error('Complete la referencia del pago.');
+                    gatewayReference.focus();
+                    return;
+                }
+                if (method.toLowerCase().includes('nota de cr') && !String(data.holder || '').trim()) {
+                    app.toast.error('Ingrese el código de la nota de crédito.');
+                    gatewayReference.focus();
+                    return;
                 }
 
                 try {
+                    paymentForm.dataset.processing = 'true';
                     paymentConfirmBtn.disabled = true;
-                    await completeCheckout(data);
-                    closePaymentModal();
+                    paymentConfirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando cobro';
+                    setPaymentStatus('processing', 'Procesando pago', 'Validando datos y registrando el movimiento contable.', 'fa-spinner fa-spin');
+                    const result = await completeCheckout(data);
+                    setPaymentStatus('success', 'Pago aprobado', 'La venta quedo registrada y el inventario fue actualizado.', 'fa-circle-check');
+                    app.toast.success(result.message);
+                    window.setTimeout(() => {
+                        window.location.assign(result.redirectUrl);
+                    }, 900);
                 } catch {
                     // completeCheckout already reports the error.
+                    setPaymentStatus('error', 'No se pudo aprobar', 'Revise los datos del pago e intente nuevamente.', 'fa-triangle-exclamation');
                 } finally {
-                    paymentConfirmBtn.disabled = false;
+                    paymentForm.dataset.processing = 'false';
+                    if (paymentModal.dataset.state !== 'success') {
+                        paymentConfirmBtn.disabled = false;
+                        paymentConfirmBtn.innerHTML = '<i class="fas fa-lock"></i> Aprobar cobro';
+                    }
                 }
             });
 
             async function initializeCheckout() {
                 try {
                     await store.pos.sessions();
-                    await store.refresh();
+                    await store.refresh({ keys: ['inventory', 'customers', 'posConfig', 'promotions', 'combos'], force: true });
                     renderCustomers();
                     renderPayments();
                     readPendingOrder();
+                    renderPromotions();
                     renderCart();
                 } catch (error) {
                     app.toast.error(error.message);
@@ -421,5 +583,6 @@
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/pages/pos-index.css" asp-append-version="true" />
+    <link rel="stylesheet" href="/css/pages/pos-index.css?v=checkout-redesign-20260718b" />
+    <link rel="stylesheet" href="~/css/pages/pos-page.css" asp-append-version="true" />
 }

@@ -6,6 +6,72 @@
 
     const app = window.app || (window.app = {});
 
+    app.customerPicker = {
+        attach(input, itemsProvider, onSelect) {
+            if (!input) return;
+            input.removeAttribute('list');
+            input.setAttribute('autocomplete', 'off');
+            const host = input.closest('.pos-input-shell, .pos-form-block') || input.parentElement;
+            host.classList.add('customer-picker-host');
+            let menu = host.querySelector('.customer-picker-menu');
+            if (!menu) {
+                menu = document.createElement('div');
+                menu.className = 'customer-picker-menu';
+                menu.hidden = true;
+                host.appendChild(menu);
+            }
+            input._customerItemsProvider = itemsProvider;
+            input._customerOnSelect = onSelect;
+            if (input.dataset.customerPickerReady === 'true') return;
+            input.dataset.customerPickerReady = 'true';
+            let activeIndex = -1;
+            const items = () => (input._customerItemsProvider?.() || []).filter(Boolean);
+            const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+            const render = () => {
+                const query = input.value.trim().toLowerCase();
+                if (query.length < 2) {
+                    menu.hidden = true;
+                    menu.innerHTML = '';
+                    menu._matches = [];
+                    return;
+                }
+                const matches = items().filter(customer => `${customer.fullName || customer.name || ''} ${customer.email || ''} ${customer.phone || ''}`.toLowerCase().includes(query)).slice(0, 8);
+                activeIndex = -1;
+                menu.innerHTML = matches.map((customer, index) => `<button type="button" class="customer-picker-option" data-customer-index="${index}"><span class="customer-picker-avatar"><i class="fas fa-user"></i></span><span><strong>${escape(customer.fullName || customer.name || 'Cliente')}</strong><small>${escape(customer.email || customer.phone || 'Cliente registrado')}</small></span></button>`).join('') || `<div class="customer-picker-empty"><strong>Usar “${escape(input.value)}”</strong><small>Se guardará como cliente escrito manualmente.</small></div>`;
+                menu._matches = matches;
+                menu.hidden = false;
+            };
+            const choose = index => {
+                const customer = menu._matches?.[index];
+                if (!customer) return;
+                input.value = customer.fullName || customer.name || '';
+                menu.hidden = true;
+                input._customerOnSelect?.(customer, input);
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+            input.addEventListener('focus', render);
+            input.addEventListener('input', render);
+            input.addEventListener('keydown', event => {
+                const options = Array.from(menu.querySelectorAll('.customer-picker-option'));
+                if (event.key === 'Escape') { menu.hidden = true; return; }
+                if (!['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key) || menu.hidden || !options.length) return;
+                event.preventDefault();
+                if (event.key === 'Enter' && activeIndex >= 0) { choose(activeIndex); return; }
+                activeIndex = event.key === 'ArrowUp' ? Math.max(0, activeIndex - 1) : Math.min(options.length - 1, activeIndex + 1);
+                options.forEach((option, index) => option.classList.toggle('active', index === activeIndex));
+                options[activeIndex]?.scrollIntoView({ block: 'nearest' });
+            });
+            menu.addEventListener('mousedown', event => event.preventDefault());
+            menu.addEventListener('click', event => {
+                const option = event.target.closest('[data-customer-index]');
+                if (option) choose(Number(option.dataset.customerIndex));
+            });
+            document.addEventListener('pointerdown', event => {
+                if (!host.contains(event.target)) menu.hidden = true;
+            });
+        }
+    };
+
     app.nav = {
         markActive() {
             const path = (location.pathname || "/").toLowerCase();
@@ -27,59 +93,6 @@
 
             menu.classList.add('mobile-nav-drawer');
             menu.setAttribute('aria-hidden', 'true');
-
-            if (!$('#mobileNavRuntimeFix')) {
-                const style = document.createElement('style');
-                style.id = 'mobileNavRuntimeFix';
-                style.textContent = `
-                    @media (max-width: 860px) {
-                        .navbar-container > .mobile-nav-toggle { display: none !important; }
-                        .mobile-nav-fab {
-                            display: inline-flex !important;
-                            position: fixed !important;
-                            align-items: center !important;
-                            justify-content: center !important;
-                            width: 56px !important;
-                            height: 56px !important;
-                            right: 1rem !important;
-                            bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
-                            z-index: 6200 !important;
-                            color: #fff !important;
-                            border: 0 !important;
-                            border-radius: 18px !important;
-                            background: linear-gradient(135deg, #7c3aed, #db2777) !important;
-                            box-shadow: 0 22px 46px rgba(139, 92, 246, .34) !important;
-                        }
-                        body.mobile-nav-open .mobile-nav-fab {
-                            transform: translateY(-2px) scale(.96) !important;
-                            box-shadow: 0 16px 36px rgba(139, 92, 246, .28) !important;
-                        }
-                        body.mobile-nav-open .mobile-nav-drawer {
-                            left: auto !important;
-                            right: .75rem !important;
-                            top: auto !important;
-                            bottom: calc(4.75rem + env(safe-area-inset-bottom)) !important;
-                            width: min(350px, calc(100vw - 1.5rem)) !important;
-                            max-height: min(62dvh, 420px) !important;
-                            height: auto !important;
-                            border-radius: 20px !important;
-                            padding: .72rem !important;
-                        }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-
-            if (!$('.mobile-nav-fab')) {
-                const fab = document.createElement('button');
-                fab.type = 'button';
-                fab.className = 'mobile-nav-toggle mobile-nav-fab';
-                fab.setAttribute('aria-controls', 'navbarMenu');
-                fab.setAttribute('aria-expanded', 'false');
-                fab.setAttribute('aria-label', 'Abrir navegación');
-                fab.innerHTML = '<i class="fas fa-bars"></i>';
-                document.body.appendChild(fab);
-            }
 
             const toggles = $$('.mobile-nav-toggle');
             if (!toggles.length) return;
@@ -107,7 +120,7 @@
                 if (!document.body.classList.contains('mobile-nav-open')) return;
                 const target = event.target;
                 if (target.closest('a') && target.closest('#navbarMenu')) {
-                    setTimeout(() => setOpen(false), 200);
+                    setOpen(false);
                     return;
                 }
                 if (target.closest('#navbarMenu, .mobile-nav-toggle')) return;
@@ -129,9 +142,11 @@
         },
 
         load() {
-            const saved = localStorage.getItem(this.key);
+            let saved = null;
+            try { saved = localStorage.getItem(this.key); } catch (_) { }
+            const useDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-            if (saved === 'dark') {
+            if (useDark) {
                 document.body.classList.add('dark');
                 document.documentElement.classList.add('dark-start');
                 this.updateIcon('dark');
@@ -146,7 +161,7 @@
             document.body.classList.toggle('dark');
             const isDark = document.body.classList.contains('dark');
             document.documentElement.classList.toggle('dark-start', isDark);
-            localStorage.setItem(this.key, isDark ? 'dark' : 'light');
+            try { localStorage.setItem(this.key, isDark ? 'dark' : 'light'); } catch (_) { }
             this.updateIcon(isDark ? 'dark' : 'light');
 
             app.toast.show(
@@ -160,15 +175,16 @@
         },
 
         updateIcon(mode) {
-            const themeBtn = $('.btn-ghost i.fa-moon, .btn-ghost i.fa-sun, .storefront-theme i.fa-moon, .storefront-theme i.fa-sun');
-            if (themeBtn) {
+            $$('.theme-toggle i, .storefront-theme i').forEach(themeBtn => {
                 themeBtn.className = mode === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-            }
+            });
         },
 
         setupSystemListener() {
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-                this.load();
+                let saved = null;
+                try { saved = localStorage.getItem(this.key); } catch (_) { }
+                if (!saved) this.load();
             });
         }
     };
@@ -499,9 +515,33 @@
             app.copy?.init?.();
         },
 
-        confirm() {
-            if (this._onConfirm) this._onConfirm();
-            this.close();
+        async confirm() {
+            const callback = this._onConfirm;
+            if (!callback) return;
+
+            // Consume the callback before executing it so a second click can
+            // never repeat a destructive or expensive operation.
+            this._onConfirm = null;
+            const button = document.querySelector('#modalContainer button[onclick="app.modal.confirm()"]');
+            const originalHtml = button?.innerHTML;
+            if (button) {
+                button.disabled = true;
+                button.setAttribute('aria-busy', 'true');
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando…';
+            }
+
+            try {
+                await Promise.resolve(callback());
+                this.close();
+            } catch (error) {
+                this._onConfirm = callback;
+                if (button) {
+                    button.disabled = false;
+                    button.removeAttribute('aria-busy');
+                    button.innerHTML = originalHtml || 'Confirmar';
+                }
+                app.toast?.error?.(error?.message || 'No se pudo completar la acción.');
+            }
         },
 
         cancel() {
@@ -1182,23 +1222,8 @@
     app.selects = {
         init() {
             this.enhanceAll();
-            if (this._observer) return;
-            this._observer = new MutationObserver(mutations => {
-                const shouldEnhance = mutations.some(mutation =>
-                    Array.from(mutation.addedNodes || []).some(node => {
-                        if (node.nodeType !== 1 || node.closest?.('.bs-select')) return false;
-                        return node.matches?.('select:not([multiple]):not([size])') ||
-                            node.querySelector?.('select:not([multiple]):not([size])');
-                    })
-                );
-                if (!shouldEnhance || this._enhanceScheduled) return;
-                this._enhanceScheduled = true;
-                requestAnimationFrame(() => {
-                    this._enhanceScheduled = false;
-                    this.enhanceAll();
-                });
-            });
-            this._observer.observe(document.body, { childList: true, subtree: true });
+            if (this._eventsReady) return;
+            this._eventsReady = true;
             document.addEventListener('click', event => {
                 if (!event.target.closest('.bs-select') && !event.target.closest('.bs-select__menu')) this.closeAll();
             });
@@ -1206,15 +1231,28 @@
                 if (event.key === 'Escape') this.closeAll();
             });
             window.addEventListener('resize', () => this.closeAll(), { passive: true });
-            window.addEventListener('scroll', () => this.closeAll(), { passive: true, capture: true });
+            window.addEventListener('scroll', event => {
+                // Scrolling the options must not dismiss the control before selection.
+                if (event.target instanceof Element && event.target.closest('.bs-select__menu')) return;
+                this.closeAll();
+            }, { passive: true, capture: true });
         },
 
         enhanceAll() {
             $$('select:not([multiple]):not([size])').forEach(select => this.enhance(select));
         },
 
+        refresh(select) {
+            const wrapper = select?.closest?.('.bs-select');
+            if (wrapper?._bsSelectRender) wrapper._bsSelectRender();
+        },
+
         enhance(select) {
-            if (!select || select.dataset.bsSelectReady === 'true' || select.closest('.bs-select')) return;
+            if (!select) return;
+            if (select.dataset.bsSelectReady === 'true' || select.closest('.bs-select')) {
+                this.refresh(select);
+                return;
+            }
             select.dataset.bsSelectReady = 'true';
 
             const wrapper = document.createElement('div');
@@ -1245,25 +1283,33 @@
             const render = () => {
                 label.textContent = select.options[select.selectedIndex]?.text || select.getAttribute('placeholder') || 'Seleccionar';
                 menu.innerHTML = '';
-                [...select.options].forEach(option => {
+                [...select.options].forEach((option, index) => {
                     const item = document.createElement('button');
                     item.type = 'button';
                     item.className = 'bs-select__option';
                     item.setAttribute('role', 'option');
                     item.setAttribute('aria-selected', option.selected ? 'true' : 'false');
                     item.dataset.value = option.value;
+                    item.dataset.index = String(index);
                     item.textContent = option.text;
                     if (option.disabled) item.disabled = true;
                     item.addEventListener('click', event => {
                         event.preventDefault();
-                        select.value = option.value;
+                        const nextIndex = Number(item.dataset.index);
+                        if (Number.isInteger(nextIndex) && select.options[nextIndex]) {
+                            select.selectedIndex = nextIndex;
+                        } else {
+                            select.value = item.dataset.value || option.value;
+                        }
+                        select.dispatchEvent(new Event('input', { bubbles: true }));
                         select.dispatchEvent(new Event('change', { bubbles: true }));
-                        this.close(wrapper);
                         render();
+                        this.close(wrapper);
                     });
                     menu.appendChild(item);
                 });
             };
+            wrapper._bsSelectRender = render;
 
             button.addEventListener('click', event => {
                 event.preventDefault();
@@ -1302,7 +1348,8 @@
                 menu.style.setProperty('right', 'auto', 'important');
                 menu.style.setProperty('bottom', 'auto', 'important');
                 menu.style.setProperty('max-height', `${maxHeight}px`, 'important');
-                menu.style.setProperty('z-index', '40000', 'important');
+                const modalParent = wrapper.closest('.pos-payment-modal, .payment-modal, .modal, [role="dialog"]');
+                menu.style.setProperty('z-index', modalParent ? '2147483002' : '40000', 'important');
 
                 const measuredHeight = Math.min(menu.scrollHeight || maxHeight, maxHeight);
                 const top = openAbove

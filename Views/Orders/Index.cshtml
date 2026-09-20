@@ -5,6 +5,7 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/orders-index.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/orders-page.css" asp-append-version="true" />
 }
 
 <div class="page-shell orders-page">
@@ -12,7 +13,7 @@
         <div>
             <h1 class="orders-title">
                 <i class="fas fa-clipboard-list"></i>
-                Gestion de pedidos
+                Gestión de pedidos
             </h1>
             <p class="text-muted orders-subtitle">
                 Controla pedidos de web, POS y tienda desde un flujo operativo conectado al seguimiento.
@@ -25,10 +26,10 @@
                 <option value="Todos">Todos los estados</option>
                 <option>Pendiente pago</option>
                 <option>Confirmado</option>
-                <option>En produccion</option>
+                <option value="Pendiente produccion">Pendiente de producción</option>
+                <option value="En produccion">En producción</option>
                 <option>Listo</option>
                 <option>En camino</option>
-                <option>Entregado</option>
             </select>
         </div>
     </div>
@@ -43,7 +44,7 @@
             <h2 id="ordersPending">0</h2>
         </div>
         <div class="card orders-kpi-card">
-            <span>En produccion</span>
+            <span>En producción</span>
             <h2 id="ordersProduction">0</h2>
         </div>
         <div class="card orders-kpi-card">
@@ -72,6 +73,15 @@
             </div>
         </aside>
     </div>
+
+    <details class="card orders-delivered-card">
+        <summary>
+            <span><i class="fas fa-circle-check"></i> Pedidos entregados</span>
+            <strong id="ordersDeliveredCount" class="orders-count-pill">0</strong>
+        </summary>
+        <p class="text-muted">Historial de pedidos finalizados. No aparecen en la bandeja operativa.</p>
+        <div id="ordersDeliveredList" class="orders-list orders-delivered-list"></div>
+    </details>
 </div>
 
 @section Scripts {
@@ -82,7 +92,9 @@
     const list = document.getElementById('ordersList');
     const detail = document.getElementById('ordersDetail');
     const visibleCount = document.getElementById('ordersVisibleCount');
-    const statuses = ['Pendiente pago', 'Confirmado', 'En produccion', 'Listo', 'En camino', 'Entregado'];
+    const deliveredList = document.getElementById('ordersDeliveredList');
+    const deliveredCount = document.getElementById('ordersDeliveredCount');
+    const statuses = ['Pendiente pago', 'Confirmado', 'Pendiente produccion', 'En produccion', 'Listo', 'En camino', 'Entregado'];
     let orders = [];
     let activeOrderId = null;
     let pageInitialized = false;
@@ -106,6 +118,7 @@
 
     function normalizeStatus(value) {
         const text = normalizeText(value);
+        if (text.includes('pendiente') && text.includes('produccion')) return 'Pendiente produccion';
         if (text.includes('pendiente')) return 'Pendiente pago';
         if (text.includes('confirmado')) return 'Confirmado';
         if (text.includes('produccion')) return 'En produccion';
@@ -119,10 +132,18 @@
         return Math.max(0, statuses.indexOf(normalizeStatus(value)));
     }
 
+    function displayStatus(value) {
+        const normalized = normalizeStatus(value);
+        if (normalized === 'En produccion') return 'En producción';
+        if (normalized === 'Pendiente produccion') return 'Pendiente de producción';
+        return normalized;
+    }
+
     function getStatusClass(value) {
         switch (normalizeStatus(value)) {
             case 'Pendiente pago': return 'status-pending';
             case 'Confirmado': return 'status-confirmed';
+            case 'Pendiente produccion': return 'status-confirmed';
             case 'En produccion': return 'status-production';
             case 'Listo': return 'status-ready';
             case 'En camino': return 'status-route';
@@ -146,6 +167,8 @@
             quantity: Number(o.quantity || 1),
             unitPrice: Number(o.unitPrice || 0),
             producto: o.producto || '',
+            notes: o.notes || '',
+            isCustomOrder: Boolean(o.isCustomOrder || String(o.notes || '').includes('Tipo de encargo')),
             address: o.address || '',
             createdAt: o.createdAt || o.entrega || new Date().toISOString()
         };
@@ -160,24 +183,17 @@
     function filteredOrders() {
         const q = search.value.trim().toLowerCase();
         const st = normalizeStatus(status.value);
-        return orders.filter(o =>
+        return orders.filter(o => o.status !== 'Entregado' &&
             (!q || o.customerName.toLowerCase().includes(q) || o.customerEmail.toLowerCase().includes(q) || String(o.id).includes(q)) &&
             (status.value === 'Todos' || o.status === st)
         );
     }
 
-    function nextStatus(order) {
-        return statuses[Math.min(statusIndex(order.status) + 1, statuses.length - 1)];
-    }
-
     function nextActionLabel(order) {
         if (order.paymentStatus !== 'Pagado') return 'Cobrar pedido';
-        if (order.status === 'Pendiente pago') return 'Confirmar pedido';
-        if (order.status === 'Confirmado') return 'Enviar a produccion';
-        if (order.status === 'En produccion') return 'Marcar listo';
-        if (order.status === 'Listo') return 'Enviar pedido';
-        if (order.status === 'En camino') return 'Marcar entregado';
-        return 'Pedido cerrado';
+        if (order.status === 'Confirmado') return 'Enviar a producción';
+        if (['Pendiente produccion', 'En produccion'].includes(order.status)) return 'Ver en Producción';
+        return '';
     }
 
     function renderProgress(order) {
@@ -187,7 +203,7 @@
                 ${statuses.map((step, index) => `
                     <span class="${index < current ? 'is-done' : index === current ? 'is-current' : ''}" title="${clean(step)}">
                         <i class="fas ${index < current ? 'fa-check' : index === current ? 'fa-circle' : 'fa-minus'}"></i>
-                        <em>${clean(step)}</em>
+                        <em>${clean(displayStatus(step))}</em>
                     </span>
                 `).join('')}
             </div>
@@ -205,13 +221,14 @@
                         <b>${app.utils.formatCurrency(o.total)}</b>
                     </span>
                     <span class="orders-list-sub">${clean(o.producto || 'Pedido sin detalle')}</span>
+                    ${o.isCustomOrder ? '<span class="orders-custom-tag"><i class="fas fa-wand-magic-sparkles"></i> Personalizado</span>' : ''}
                     <span class="orders-list-meta">
                         <small>${clean(o.channel)}</small>
                         <small>${new Date(o.deliveryDate).toLocaleDateString('es-CR')}</small>
                         <small>${clean(o.paymentStatus)}</small>
                     </span>
                 </span>
-                <span class="orders-status-badge ${getStatusClass(o.status)}">${clean(o.status)}</span>
+                <span class="orders-status-badge ${getStatusClass(o.status)}">${clean(displayStatus(o.status))}</span>
             </button>
         `).join('') || `
             <div class="orders-empty-list">
@@ -220,6 +237,29 @@
                 <span>Ajusta la busqueda o cambia el estado.</span>
             </div>
         `;
+    }
+
+    function renderDelivered() {
+        const delivered = orders.filter(order => order.status === 'Entregado');
+        deliveredCount.textContent = delivered.length;
+        deliveredList.innerHTML = delivered.map(o => `
+            <button type="button" class="orders-list-item" onclick="selectOrder(${o.id})">
+                <span class="orders-list-icon"><i class="fas fa-circle-check"></i></span>
+                <span class="orders-list-main">
+                    <span class="orders-list-top">
+                        <strong>#${o.id} - ${clean(o.customerName)}</strong>
+                        <b>${app.utils.formatCurrency(o.total)}</b>
+                    </span>
+                    <span class="orders-list-sub">${clean(o.producto || 'Pedido sin detalle')}</span>
+                    ${o.isCustomOrder ? '<span class="orders-custom-tag"><i class="fas fa-wand-magic-sparkles"></i> Personalizado</span>' : ''}
+                </span>
+                <span class="orders-status-badge status-delivered">Entregado</span>
+            </button>
+        `).join('') || `
+            <div class="orders-empty-list">
+                <i class="fas fa-box-open"></i>
+                <strong>No hay pedidos entregados</strong>
+            </div>`;
     }
 
     function cleanupDetailSelectMenus() {
@@ -248,7 +288,7 @@
                     <h3>${clean(order.customerName)}</h3>
                     <p>${clean(order.customerEmail || 'Sin correo registrado')}</p>
                 </div>
-                <span class="orders-status-badge ${getStatusClass(order.status)}">${clean(order.status)}</span>
+                <span class="orders-status-badge ${getStatusClass(order.status)}">${clean(displayStatus(order.status))}</span>
             </div>
 
             ${renderProgress(order)}
@@ -265,25 +305,26 @@
                 <strong>${clean(order.producto || 'Sin detalle')}</strong>
             </div>
 
+            ${order.isCustomOrder ? `<div class="orders-detail-block orders-customization-block"><span><i class="fas fa-wand-magic-sparkles"></i> Personalización solicitada</span><strong>${clean(order.notes || 'Pedido personalizado: revisar detalles del encargo.')}</strong></div>` : ''}
+
             <div class="orders-detail-block">
-                <span>Direccion de entrega</span>
-                <strong>${clean(order.address || 'Sin direccion registrada')}</strong>
+                <span>Dirección de entrega</span>
+                <strong>${clean(order.address || 'Sin dirección registrada')}</strong>
             </div>
 
             <div class="orders-detail-actions">
-                <label>
-                    <span>Actualizar estado</span>
-                    <select onchange="changeStatus(${order.id}, this.value)" class="form-control">
-                        ${statuses.map(s => `<option ${s === order.status ? 'selected' : ''}>${s}</option>`).join('')}
-                    </select>
-                </label>
-                <button class="btn btn-primary" onclick="advanceOrder(${order.id})" ${order.status === 'Entregado' ? 'disabled' : ''}>
-                    <i class="fas fa-arrow-right"></i> ${clean(nextActionLabel(order))}
-                </button>
                 ${order.paymentStatus !== 'Pagado'
-                    ? `<button class="btn btn-outline" onclick="chargeOrder(${order.id})"><i class="fas fa-credit-card"></i> Cobrar</button>`
-                    : `<a class="btn btn-outline" href="/Client/Track" data-full-reload><i class="fas fa-route"></i> Ver seguimiento</a>`}
-                <button class="btn btn-ghost orders-danger" onclick="deleteOrder(${order.id})">
+                    ? `<button class="btn btn-primary" onclick="chargeOrder(${order.id})"><i class="fas fa-credit-card"></i> Cobrar pedido</button>`
+                    : order.status === 'Confirmado'
+                        ? `<button class="btn btn-primary" onclick="sendOrderToProduction(${order.id}, this)"><i class="fas fa-kitchen-set"></i> Enviar a producción</button>`
+                        : order.status === 'Listo'
+                            ? `<button class="btn btn-primary" onclick="advanceDelivery(${order.id}, this)"><i class="fas fa-truck-fast"></i> Enviar a entrega</button>`
+                            : order.status === 'En camino'
+                                ? `<button class="btn btn-primary" onclick="advanceDelivery(${order.id}, this)"><i class="fas fa-circle-check"></i> Marcar entregado</button>`
+                                : nextActionLabel(order)
+                                    ? `<a class="btn btn-primary" href="/Production" data-full-reload><i class="fas fa-kitchen-set"></i> ${clean(nextActionLabel(order))}</a>`
+                                    : ''}
+                <button class="btn btn-ghost orders-danger" onclick="deleteOrder(${order.id}, this)">
                     <i class="fas fa-trash-can"></i> Eliminar pedido
                 </button>
             </div>
@@ -303,92 +344,133 @@
         }
 
         renderList(rows);
+        renderDelivered();
         renderDetail(rows.find(o => Number(o.id) === Number(activeOrderId)));
     }
 
-    async function saveStatus(id, value) {
-        const normalized = normalizeStatus(value);
-        const response = await fetch(`/api/orders/${id}/status`, {
+    const orderActionsInFlight = new Set();
+
+    window.advanceDelivery = async (id, button) => {
+        if (orderActionsInFlight.has(Number(id))) return;
+        orderActionsInFlight.add(Number(id));
+        const originalContent = button?.innerHTML;
+        if (button) {
+            button.disabled = true;
+            button.setAttribute('aria-busy', 'true');
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando…';
+        }
+        try {
+            let location = {};
+            if (navigator.geolocation) {
+                try {
+                    const position = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true,
+                        timeout: 2500,
+                        maximumAge: 60000
+                    }));
+                    const accuracy = Number(position.coords.accuracy);
+                    if (Number.isFinite(accuracy) && accuracy <= 120) {
+                        location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+                    } else {
+                        app.toast.info('El dispositivo reportó una ubicación aproximada; se avanzará el pedido sin mostrar una posición inexacta.');
+                    }
+                } catch {
+                    app.toast.info('Se avanzará el pedido sin ubicación en vivo. Puede habilitar la ubicación precisa para registrar el recorrido.');
+                }
+            }
+            const response = await fetch(`/api/orders/${id}/advance-delivery`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(location)
+            });
+            const result = await response.json().catch(() => null);
+            if (!response.ok) throw new Error(result?.message || 'No se pudo avanzar la entrega.');
+            const changed = orders.find(order => Number(order.id) === Number(id));
+            if (changed) changed.status = result.status;
+            activeOrderId = id;
+            render();
+            app.toast.success(result.status === 'Entregado' ? `Pedido #${id} entregado.` : `Pedido #${id} enviado a entrega.`);
+            loadOrders().then(render).catch(() => { });
+        } catch (error) {
+            app.toast.error(error.message);
+        } finally {
+            orderActionsInFlight.delete(Number(id));
+            if (button?.isConnected) {
+                button.disabled = false;
+                button.removeAttribute('aria-busy');
+                button.innerHTML = originalContent;
+            }
+        }
+    };
+
+    async function sendToProduction(id) {
+        const response = await fetch(`/api/orders/${id}/send-production`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: normalized })
+            headers: { 'Content-Type': 'application/json' }
         });
-        if (!response.ok) throw new Error(await response.text());
-        await loadOrders();
+        if (!response.ok) {
+            const text = await response.text();
+            let message = text || 'No se pudo enviar el pedido a Producción.';
+            try {
+                const payload = JSON.parse(text);
+                message = payload?.detail
+                    ? `${payload.message || 'No se pudo enviar el pedido a Producción.'} Detalle: ${payload.detail}`
+                    : payload?.message || message;
+            } catch { }
+            throw new Error(message);
+        }
+        const changed = orders.find(order => Number(order.id) === Number(id));
+        if (changed) changed.status = 'Pendiente produccion';
         activeOrderId = id;
         render();
-
-        if (normalized === 'En camino') {
-            app.toast.info('Ruta activada: el cliente ya puede ver el pedido en el mapa.');
-        } else if (normalized === 'Entregado') {
-            app.toast.success('Pedido entregado y seguimiento cerrado.');
-        } else {
-            app.toast.success(`Pedido #${id} actualizado a ${normalized}.`);
-        }
+        app.toast.success(`Pedido #${id} enviado a Producción.`);
+        loadOrders().then(render).catch(() => { });
     }
 
     window.selectOrder = (id) => {
         activeOrderId = id;
+        const selected = orders.find(order => Number(order.id) === Number(id));
+        if (selected?.status === 'Entregado') {
+            renderDetail(selected);
+            return;
+        }
         render();
     };
 
-    window.changeStatus = async (id, value) => {
+    window.sendOrderToProduction = async (id, button) => {
+        if (button?.dataset.busy === 'true') return;
         try {
-            await saveStatus(id, value);
+            if (button) { button.dataset.busy = 'true'; button.disabled = true; button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando…'; }
+            await sendToProduction(id);
         } catch (error) {
             app.toast.error(error.message);
-        }
-    };
-
-    window.advanceOrder = async (id) => {
-        const order = orders.find(item => Number(item.id) === Number(id));
-        if (!order) return;
-        if (order.paymentStatus !== 'Pagado') {
-            chargeOrder(id);
-            return;
-        }
-        try {
-            await saveStatus(id, nextStatus(order));
-        } catch (error) {
-            app.toast.error(error.message);
+        } finally {
+            if (button?.isConnected) { button.dataset.busy = 'false'; button.disabled = false; button.innerHTML = '<i class="fas fa-kitchen-set"></i> Enviar a producción'; }
         }
     };
 
     window.chargeOrder = (id) => {
-        const order = orders.find(item => Number(item.id) === Number(id));
-        if (!order) return;
-
-        const cartItem = {
-            productId: Number(order.productId),
-            name: order.producto || 'Pedido',
-            code: `PED-${order.id}`,
-            unitPrice: Number(order.unitPrice || order.total || 0),
-            quantity: Number(order.quantity || 1)
-        };
-
-        sessionStorage.setItem('bakesmart.pos.pendingOrder', JSON.stringify({
-            id: order.id,
-            customerName: order.customerName || '',
-            customerEmail: order.customerEmail || '',
-            paymentMethod: order.paymentMethod || 'Tarjeta',
-            total: Number(order.total || 0),
-            item: cartItem
-        }));
-        sessionStorage.setItem('bakesmart.pos.cart', JSON.stringify([cartItem]));
-        window.location.assign('/Pos/Cart?orderId=' + encodeURIComponent(order.id));
+        window.location.assign('/Orders/Checkout/' + encodeURIComponent(id));
     };
 
     window.deleteOrder = (id) => {
-        if (!confirm(`Eliminar pedido #${id}? Esto lo quitara del cliente, rastreo y flujo operativo.`)) return;
-
-        fetch(`/api/orders/${id}`, { method: 'DELETE' })
-            .then(async response => {
-                if (!response.ok) throw new Error(await response.text());
-                await loadOrders();
-                app.toast.success(`Pedido #${id} eliminado.`);
-                render();
-            })
-            .catch(error => app.toast.error(error.message));
+        app.modal.create({
+            title: `Eliminar pedido #${id}`,
+            message: 'Esta acción quitará el pedido del cliente, del rastreo y del flujo operativo.',
+            confirmText: 'Sí, eliminar',
+            cancelText: 'Conservar pedido',
+            onConfirm: async () => {
+                try {
+                    const response = await fetch(`/api/orders/${id}`, { method: 'DELETE' });
+                    if (!response.ok) throw new Error(await response.text());
+                    await loadOrders();
+                    app.toast.success(`Pedido #${id} eliminado.`);
+                    render();
+                } catch (error) {
+                    app.toast.error(error.message);
+                }
+            }
+        });
     };
 
     search.addEventListener('input', render);

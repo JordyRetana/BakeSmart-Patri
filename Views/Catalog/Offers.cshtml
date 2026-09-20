@@ -3,7 +3,10 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Ofertas";
     var culture = new System.Globalization.CultureInfo("es-CR");
+    var discounts = ViewBag.OfferDiscounts as Dictionary<int, decimal> ?? new();
+    var offeredProducts = Model.Products.Where(product => product.IsActive && discounts.ContainsKey(product.Id)).Take(12).ToArray();
 }
+@section Styles { <link rel="stylesheet" href="~/css/pages/commerce-pages.css" asp-append-version="true" /> }
 
 <main class="commerce-page">
     <header class="commerce-hero commerce-hero--offers">
@@ -14,12 +17,18 @@
     <section class="commerce-section">
         <div class="commerce-section-title"><span></span><h2>Especiales de BakeSmart Patri</h2><span></span></div>
         <div class="commerce-offer-list">
-            @foreach (var product in Model.Products.Where(product => product.IsActive).Take(6))
+            @foreach (var product in offeredProducts)
             {
+                var discount = discounts[product.Id];
+                var offerPrice = product.UnitPrice * (1 - discount);
                 <article class="commerce-offer-tile">
-                    <div><small>@product.Category</small><h2>@product.Name</h2><p>@product.Description</p><strong>@product.UnitPrice.ToString("C0", culture)</strong><a href="/Catalog/Details/@product.Id">Ver producto</a></div>
+                    <div><small>@product.Category · @(discount.ToString("P0", culture)) de descuento</small><h2>@product.Name</h2><p>@product.Description</p><del>@product.UnitPrice.ToString("C0", culture)</del><strong>@offerPrice.ToString("C0", culture)</strong><a href="/Catalog/Details/@product.Id">Ver producto</a></div>
                     <img src="@product.ImageUrl" alt="@product.AltText" onerror="this.src='/img/products/producto-sin-imagen.svg';" />
                 </article>
+            }
+            @if (offeredProducts.Length == 0)
+            {
+                <div class="commerce-empty-state"><i class="fas fa-tags"></i><h2>No hay ofertas vigentes</h2><p>Cuando se active una promoción aparecerá aquí con su precio final.</p><a class="btn btn-primary" href="/Catalog">Ver catálogo</a></div>
             }
         </div>
     </section>
