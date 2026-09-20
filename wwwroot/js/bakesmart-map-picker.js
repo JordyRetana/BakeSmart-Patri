@@ -221,7 +221,11 @@
                 iconAnchor: [17, 34]
             });
 
-            this.marker = L.marker([center.lat, center.lng], { draggable: true, icon }).addTo(this.map);
+            this.marker = L.marker([center.lat, center.lng], {
+                draggable: true,
+                icon,
+                opacity: isValidCoordinate(this.values.lat, this.values.lng) ? 1 : 0
+            }).addTo(this.map);
 
             this.marker.on('dragend', () => this.handleMarkerMoved());
             this.map.on('click', (event) => {
@@ -273,10 +277,14 @@
             if (lat !== undefined) this.values.lat = lat;
             if (lng !== undefined) this.values.lng = lng;
 
-            if (this.marker && isValidCoordinate(this.values.lat, this.values.lng)) {
-                const point = L.latLng(Number(this.values.lat), Number(this.values.lng));
-                this.marker.setLatLng(point);
-                this.map.setView(point, Math.max(this.map.getZoom(), 14));
+            if (this.marker) {
+                const hasPoint = isValidCoordinate(this.values.lat, this.values.lng);
+                this.marker.setOpacity(hasPoint ? 1 : 0);
+                if (hasPoint) {
+                    const point = L.latLng(Number(this.values.lat), Number(this.values.lng));
+                    this.marker.setLatLng(point);
+                    this.map.setView(point, Math.max(this.map.getZoom(), 14));
+                }
             }
             this.syncInputs();
             this.clearError();
@@ -337,6 +345,7 @@
 
         async handleMarkerMoved(updateAddress = true) {
             this.clearApproximatePosition();
+            this.marker.setOpacity(1);
             const { lat, lng } = this.marker.getLatLng();
             this.values.lat = Number(lat.toFixed(6));
             this.values.lng = Number(lng.toFixed(6));

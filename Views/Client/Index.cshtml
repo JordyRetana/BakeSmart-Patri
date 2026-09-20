@@ -590,8 +590,8 @@
         }
         const origin = BakeSmartStore.geo.origin();
         try { addressPicker = await BakeSmartMapPicker.create('quickMapPicker', {
-        lat: currentProfile?.latitude || origin.lat,
-        lng: currentProfile?.longitude || origin.lng,
+        lat: document.getElementById('quickLat').value || null,
+        lng: document.getElementById('quickLng').value || null,
         address: currentProfile?.address || '',
         onChange: values => {
         manualAddressInput.value = values.address || manualAddressInput.value || '';
@@ -608,14 +608,17 @@
         submitAfterAddress = continueAfterSelection;
         savedAddressChoice.hidden = !hasSavedAddress();
         savedAddressText.textContent = currentProfile?.address || 'Sin dirección guardada';
-        manualAddressInput.value = currentProfile?.address || '';
+        const selectedAddress = document.getElementById('quickAddress').value || currentProfile?.address || '';
+        const selectedLat = document.getElementById('quickLat').value || null;
+        const selectedLng = document.getElementById('quickLng').value || null;
+        manualAddressInput.value = selectedAddress;
         addressModal.hidden = false;
         await ensureAddressPicker();
         if (addressPicker) {
         addressPicker.setValues({
-        address: currentProfile?.address || '',
-        lat: currentProfile?.latitude || BakeSmartStore.geo.origin().lat,
-        lng: currentProfile?.longitude || BakeSmartStore.geo.origin().lng
+        address: selectedAddress,
+        lat: selectedLat,
+        lng: selectedLng
         });
         requestAnimationFrame(() => addressPicker.map?.invalidateSize?.());
         setTimeout(() => addressPicker.map?.invalidateSize?.(), 250);

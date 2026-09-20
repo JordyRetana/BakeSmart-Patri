@@ -17,8 +17,11 @@ public sealed partial class SqlStore
     private const int CommandTimeoutSeconds = 10;
     private const int MaxTransientAttempts = 3;
     private static readonly SemaphoreSlim InventoryLotsSchemaLock = new(1, 1);
+    private static readonly SemaphoreSlim ProfileCoordinatesSchemaLock = new(1, 1);
     private static bool _mySqlInventoryLotsReady;
     private static bool _sqlServerInventoryLotsReady;
+    private static bool _mySqlProfileCoordinatesReady;
+    private static bool _sqlServerProfileCoordinatesReady;
     private readonly IConfiguration _configuration;
 
     public SqlStore(IConfiguration configuration)
@@ -4623,8 +4626,44 @@ public sealed partial class SqlStore
         return bool.TryParse(value.Trim().Trim('\uFEFF'), out var parsed) ? parsed : fallback;
     }
 
+    private async Task EnsureProfileCoordinatesSchemaAsync()
+    {
+        if (UseMySql ? _mySqlProfileCoordinatesReady : _sqlServerProfileCoordinatesReady) return;
+        await ProfileCoordinatesSchemaLock.WaitAsync();
+        try
+        {
+            if (UseMySql)
+            {
+                if (_mySqlProfileCoordinatesReady) return;
+                foreach (var column in new[] { "ProfileLatitude", "ProfileLongitude" })
+                {
+                    var exists = Convert.ToInt32(await ScalarAsync(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Usuarios' AND COLUMN_NAME = @Column;",
+                        new SqlParameter("@Column", column)) ?? 0);
+                    if (exists == 0)
+                        await ExecuteAsync($"ALTER TABLE Usuarios ADD COLUMN {column} decimal(10,6) NULL;");
+                }
+                _mySqlProfileCoordinatesReady = true;
+            }
+            else
+            {
+                if (_sqlServerProfileCoordinatesReady) return;
+                await ExecuteAsync("""
+                    IF COL_LENGTH('dbo.Usuarios', 'ProfileLatitude') IS NULL ALTER TABLE dbo.Usuarios ADD ProfileLatitude decimal(10,6) NULL;
+                    IF COL_LENGTH('dbo.Usuarios', 'ProfileLongitude') IS NULL ALTER TABLE dbo.Usuarios ADD ProfileLongitude decimal(10,6) NULL;
+                    """);
+                _sqlServerProfileCoordinatesReady = true;
+            }
+        }
+        finally
+        {
+            ProfileCoordinatesSchemaLock.Release();
+        }
+    }
+
     public async Task<ProfileData?> GetProfileAsync(string email)
     {
+        await EnsureProfileCoordinatesSchemaAsync();
         var sql = UseMySql
             ? """
             SELECT
@@ -4637,12 +4676,12 @@ public sealed partial class SqlStore
                 ca.CustomerAddressId,
                 ca.Label AS AddressLabel,
                 COALESCE(ca.AddressLine, u.AddressLine) AS DefaultAddressLine,
-                ca.Latitude,
-                ca.Longitude,
+                COALESCE(ca.Latitude, u.ProfileLatitude) AS Latitude,
+                COALESCE(ca.Longitude, u.ProfileLongitude) AS Longitude,
                 COALESCE(c.IsFrequent, 0) AS IsFrequent
             FROM Usuarios u
             INNER JOIN Roles r ON r.RoleId = u.RoleId
-            LEFT JOIN Clientes c ON c.UserId = u.UserId
+            LEFT JOIN Clientes c ON c.UserId = u.UserId OR (c.UserId IS NULL AND LOWER(c.Email) = LOWER(u.Email))
             LEFT JOIN (
                 SELECT d.CustomerId, d.CustomerAddressId, d.Label, d.AddressLine, d.Latitude, d.Longitude
                 FROM DireccionesCliente d
@@ -4666,12 +4705,12 @@ public sealed partial class SqlStore
                 ca.CustomerAddressId,
                 ca.Label AS AddressLabel,
                 COALESCE(ca.AddressLine, u.AddressLine) AS DefaultAddressLine,
-                ca.Latitude,
-                ca.Longitude,
+                COALESCE(ca.Latitude, u.ProfileLatitude) AS Latitude,
+                COALESCE(ca.Longitude, u.ProfileLongitude) AS Longitude,
                 CAST(COALESCE(c.IsFrequent, 0) AS bit) AS IsFrequent
             FROM dbo.Usuarios u
             INNER JOIN dbo.Roles r ON r.RoleId = u.RoleId
-            LEFT JOIN dbo.Clientes c ON c.UserId = u.UserId
+            LEFT JOIN dbo.Clientes c ON c.UserId = u.UserId OR (c.UserId IS NULL AND LOWER(c.Email) = LOWER(u.Email))
             OUTER APPLY (
                 SELECT TOP 1 CustomerAddressId, Label, AddressLine, Latitude, Longitude
                 FROM dbo.DireccionesCliente
@@ -4839,6 +4878,7 @@ public sealed partial class SqlStore
 
     public async Task UpdateProfileAsync(string email, ProfileInput input)
     {
+        await EnsureProfileCoordinatesSchemaAsync();
         if (UseMySql)
         {
             await using var connection = CreateConnection();
@@ -4852,6 +4892,8 @@ public sealed partial class SqlStore
                         LastName = @LastName,
                         Phone = @Phone,
                         AddressLine = @AddressLine,
+                        ProfileLatitude = @Latitude,
+                        ProfileLongitude = @Longitude,
                         PasswordHash = CASE WHEN NULLIF(@PasswordHash, '') IS NULL THEN PasswordHash ELSE @PasswordHash END
                     WHERE LOWER(Email) = LOWER(@Email);
                     """,
@@ -4860,12 +4902,14 @@ public sealed partial class SqlStore
                     new SqlParameter("@LastName", input.LastName.Trim()),
                     new SqlParameter("@Phone", (object?)input.Phone?.Trim() ?? DBNull.Value),
                     new SqlParameter("@AddressLine", (object?)input.Address?.Trim() ?? DBNull.Value),
+                    new SqlParameter("@Latitude", (object?)input.Latitude ?? DBNull.Value),
+                    new SqlParameter("@Longitude", (object?)input.Longitude ?? DBNull.Value),
                     new SqlParameter("@PasswordHash", string.IsNullOrWhiteSpace(input.NewPassword) ? "" : HashPassword(input.NewPassword)));
 
                 var customerId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
                     SELECT c.CustomerId
                     FROM Clientes c
-                    INNER JOIN Usuarios u ON u.UserId = c.UserId
+                    INNER JOIN Usuarios u ON c.UserId = u.UserId OR (c.UserId IS NULL AND LOWER(c.Email) = LOWER(u.Email))
                     WHERE LOWER(u.Email) = LOWER(@Email)
                     LIMIT 1;
                     """, new SqlParameter("@Email", email)) ?? 0);
@@ -4939,11 +4983,15 @@ public sealed partial class SqlStore
                 LastName    = @LastName,
                 Phone       = @Phone,
                 AddressLine = @AddressLine,
+                ProfileLatitude = @Latitude,
+                ProfileLongitude = @Longitude,
                 PasswordHash = CASE WHEN NULLIF(@PasswordHash, N'') IS NULL THEN PasswordHash ELSE @PasswordHash END
             WHERE LOWER(Email) = LOWER(@Email);
 
             DECLARE @CustomerId int;
-            SELECT @CustomerId = CustomerId FROM dbo.Clientes WHERE UserId = (SELECT UserId FROM dbo.Usuarios WHERE LOWER(Email) = LOWER(@Email));
+            SELECT @CustomerId = c.CustomerId FROM dbo.Clientes c
+            INNER JOIN dbo.Usuarios u ON c.UserId = u.UserId OR (c.UserId IS NULL AND LOWER(c.Email) = LOWER(u.Email))
+            WHERE LOWER(u.Email) = LOWER(@Email);
 
             IF @CustomerId IS NOT NULL AND NULLIF(@AddressLine, N'') IS NOT NULL
             BEGIN
@@ -5004,7 +5052,7 @@ public sealed partial class SqlStore
                 ca.IsDefault
             FROM DireccionesCliente ca
             INNER JOIN Clientes c ON c.CustomerId = ca.CustomerId
-            INNER JOIN Usuarios u ON u.UserId = c.UserId
+            INNER JOIN Usuarios u ON u.UserId = c.UserId OR (c.UserId IS NULL AND LOWER(c.Email) = LOWER(u.Email))
             WHERE LOWER(u.Email) = LOWER(@Email) AND ca.IsDefault = 1
             ORDER BY ca.CustomerAddressId DESC
             LIMIT 1;
@@ -5019,7 +5067,7 @@ public sealed partial class SqlStore
                 ca.IsDefault
             FROM dbo.DireccionesCliente ca
             INNER JOIN dbo.Clientes c ON c.CustomerId = ca.CustomerId
-            INNER JOIN dbo.Usuarios u ON u.UserId = c.UserId
+            INNER JOIN dbo.Usuarios u ON u.UserId = c.UserId OR (c.UserId IS NULL AND LOWER(c.Email) = LOWER(u.Email))
             WHERE LOWER(u.Email) = LOWER(@Email) AND ca.IsDefault = 1
             ORDER BY ca.CustomerAddressId DESC;
             """;
@@ -5041,7 +5089,7 @@ public sealed partial class SqlStore
                 ca.IsDefault
             FROM DireccionesCliente ca
             INNER JOIN Clientes c ON c.CustomerId = ca.CustomerId
-            INNER JOIN Usuarios u ON u.UserId = c.UserId
+            INNER JOIN Usuarios u ON u.UserId = c.UserId OR (c.UserId IS NULL AND LOWER(c.Email) = LOWER(u.Email))
             WHERE LOWER(u.Email) = LOWER(@Email)
             ORDER BY ca.IsDefault DESC, ca.CustomerAddressId DESC;
             """
@@ -5055,7 +5103,7 @@ public sealed partial class SqlStore
                 ca.IsDefault
             FROM dbo.DireccionesCliente ca
             INNER JOIN dbo.Clientes c ON c.CustomerId = ca.CustomerId
-            INNER JOIN dbo.Usuarios u ON u.UserId = c.UserId
+            INNER JOIN dbo.Usuarios u ON u.UserId = c.UserId OR (c.UserId IS NULL AND LOWER(c.Email) = LOWER(u.Email))
             WHERE LOWER(u.Email) = LOWER(@Email) AND ca.Status = N'Activa'
             ORDER BY ca.IsDefault DESC, ca.CustomerAddressId DESC;
             """;
@@ -5142,9 +5190,9 @@ public sealed partial class SqlStore
             )
             BEGIN
                 SELECT
-                    @DestLat = COALESCE(@DestLat, Latitude),
-                    @DestLng = COALESCE(@DestLng, Longitude),
-                    @DestLabel = COALESCE(NULLIF(@Address, N''), AddressLine)
+                    @DestLat = COALESCE(Latitude, @DestLat),
+                    @DestLng = COALESCE(Longitude, @DestLng),
+                    @DestLabel = AddressLine
                 FROM dbo.DireccionesCliente
                 WHERE CustomerAddressId = @ResolvedAddressId;
             END
@@ -5801,10 +5849,9 @@ public sealed partial class SqlStore
                 await using var addressReader = await addressCommand.ExecuteReaderAsync();
                 if (await addressReader.ReadAsync())
                 {
-                    destinationLat ??= addressReader.GetNullableDecimal("Latitude");
-                    destinationLng ??= addressReader.GetNullableDecimal("Longitude");
-                    if (string.IsNullOrWhiteSpace(input.Address))
-                        destinationLabel = addressReader.GetNullableString("AddressLine") ?? destinationLabel;
+                    destinationLat = addressReader.GetNullableDecimal("Latitude") ?? destinationLat;
+                    destinationLng = addressReader.GetNullableDecimal("Longitude") ?? destinationLng;
+                    destinationLabel = addressReader.GetNullableString("AddressLine") ?? destinationLabel;
                 }
             }
 

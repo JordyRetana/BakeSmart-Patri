@@ -187,7 +187,6 @@
 
     async function initOrderMap() {
         await BakeSmartStore.refresh();
-        const config = BakeSmartStore.pos.config();
         try { orderCustomerProfile = await BakeSmartStore.loadProfile(); } catch (_) { orderCustomerProfile = null; }
 
         if (orderCustomerProfile) {
@@ -200,8 +199,8 @@
 
         orderMapPicker = await BakeSmartMapPicker.create('orderMapPicker', {
             address: '',
-            lat: config.originLatitude,
-            lng: config.originLongitude,
+            lat: null,
+            lng: null,
             onChange(values) {
                 document.getElementById('direccion').value = values.address || '';
                 document.getElementById('latitudEntrega').value = values.lat ?? '';
