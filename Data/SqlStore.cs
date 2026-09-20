@@ -5695,10 +5695,12 @@ public sealed partial class SqlStore
             DECLARE @FrequentDiscountRate decimal(18,4) = TRY_CAST((SELECT SettingValue FROM dbo.ConfiguracionesAplicacion WHERE SettingKey = N'frequentCustomerDiscount') AS decimal(18,4));
             DECLARE @PromotionDiscountRate decimal(18,4) = COALESCE((
                 SELECT MAX(DiscountRate)
-                FROM dbo.Promociones
-                WHERE PromotionId = @PromotionId
-                  AND IsActive = 1
+                FROM dbo.Promociones p
+                WHERE p.PromotionId = @PromotionId
+                  AND p.IsActive = 1
                   AND CAST(SYSUTCDATETIME() AS date) BETWEEN StartDate AND EndDate
+                  AND (LOWER(LTRIM(RTRIM(p.Name))) <> N'cliente frecuente'
+                       OR EXISTS (SELECT 1 FROM dbo.Clientes c WHERE c.CustomerId = @CustomerId AND c.IsFrequent = 1))
                   AND (NOT EXISTS (SELECT 1 FROM dbo.PromocionesClientes pc WHERE pc.PromotionId = @PromotionId)
                        OR EXISTS (SELECT 1 FROM dbo.PromocionesClientes pc WHERE pc.PromotionId = @PromotionId AND pc.CustomerId = @CustomerId))
             ), 0);
@@ -6002,6 +6004,8 @@ public sealed partial class SqlStore
                     WHERE p.PromotionId = @PromotionId
                       AND p.IsActive = 1
                       AND DATE(UTC_TIMESTAMP()) BETWEEN p.StartDate AND p.EndDate
+                      AND (LOWER(TRIM(p.Name)) <> 'cliente frecuente'
+                           OR EXISTS (SELECT 1 FROM Clientes c WHERE c.CustomerId = @CustomerId AND c.IsFrequent = 1))
                       AND (NOT EXISTS (SELECT 1 FROM PromocionesClientes pc WHERE pc.PromotionId = p.PromotionId)
                            OR EXISTS (SELECT 1 FROM PromocionesClientes pc WHERE pc.PromotionId = p.PromotionId AND pc.CustomerId = @CustomerId));
                     """, new SqlParameter("@PromotionId", input.PromotionId.Value), new SqlParameter("@CustomerId", customerId)) ?? 0m)

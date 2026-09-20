@@ -397,16 +397,23 @@
                 const products = getProducts();
                 document.querySelectorAll('.pos-promotion-select').forEach(select => {
                     const form = select.closest('form');
-                    const email = form?.querySelector('[name="customerEmail"]')?.value?.trim().toLowerCase();
-                    const name = form?.querySelector('[name="customerName"]')?.value?.trim().toLowerCase();
-                    const customer = store.customers.list().find(item => (email && String(item.email).toLowerCase() === email) || (name && String(item.fullName).toLowerCase() === name));
-                    const promotions = store.marketing.promotions().filter(x => x.active
-                        && new Date(`${x.startDate}T00:00:00`) <= new Date()
-                        && new Date(`${x.endDate}T23:59:59`) >= new Date()
-                        && (!x.customerIds?.length || (customer && x.customerIds.map(Number).includes(Number(customer.id)))));
+                    const customer = store.customers.matchForPos(form?.querySelector('[name="customerName"]')?.value, form?.querySelector('[name="customerEmail"]')?.value);
+                    const customerKey = customer ? `${customer.id}:${Boolean(customer.frequent)}` : '';
+                    const promotions = store.marketing.posPromotions(customer);
                     const selected = select.value;
-                    select.innerHTML = '<option value="">Sin promoción</option>' + (customer?.frequent ? `<option value="frequent">Cliente frecuente · ${Math.round(Number(store.pos.config().frequentCustomerDiscount || 0) * 100)}%</option>` : '') + promotions.map(p => `<option value="${p.id}">${p.name} · ${(Number(p.discount) * 100).toFixed(0)}%</option>`).join('');
-                    select.value = (selected === 'frequent' && customer?.frequent) || promotions.some(p => String(p.id) === selected) ? selected : '';
+                    select.replaceChildren(new Option('Sin promoción', ''));
+                    if (customer?.frequent) select.add(new Option(`Cliente frecuente · ${Math.round(Number(store.pos.config().frequentCustomerDiscount || 0) * 100)}%`, 'frequent'));
+                    promotions.forEach(promotion => {
+                        const label = `${promotion.name} · ${Math.round(Number(promotion.discount || 0) * 100)}%${promotion.eligible ? '' : ' · Solo clientes asignados'}`;
+                        const option = new Option(label, String(promotion.id));
+                        option.disabled = !promotion.eligible;
+                        select.add(option);
+                    });
+                    const suggested = store.marketing.suggestedPosPromotion(customer, promotions);
+                    const preserved = selected === '' || (selected === 'frequent' ? Boolean(customer?.frequent) : promotions.some(promotion => promotion.eligible && String(promotion.id) === selected));
+                    select.value = select.dataset.customerKey === customerKey && preserved ? selected : suggested;
+                    select.dataset.customerKey = customerKey;
+                    app.selects?.refresh?.(select);
                     select.dispatchEvent(new Event('change', { bubbles: true }));
                 });
 
@@ -1090,6 +1097,9 @@
 
             document.querySelectorAll('.pos-customer-input').forEach(input => {
                 input.addEventListener('change', () => { applyCustomerSelection(input); renderSummary(); });
+            });
+            document.querySelectorAll('#posCheckoutForm [name="customerEmail"], #posCheckoutFormDesktop [name="customerEmail"]').forEach(input => {
+                input.addEventListener('change', renderSummary);
             });
 
             async function renderAll() {

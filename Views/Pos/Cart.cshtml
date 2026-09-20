@@ -59,7 +59,7 @@
                     <select class="form-control" name="promotionId" id="checkoutPromotion">
                         <option value="">Sin promocion</option>
                     </select>
-                    <small class="text-muted">Solo se muestran beneficios vigentes para el cliente seleccionado.</small>
+                    <small class="text-muted">Los beneficios exclusivos se habilitan al seleccionar al cliente correspondiente.</small>
                 </div>
                 <div class="pos-form-block">
                     <label>Descuento adicional</label>
@@ -211,12 +211,7 @@
             }
 
             function selectedCustomer() {
-                const email = String(form.customerEmail.value || '').trim().toLowerCase();
-                const name = String(form.customerName.value || '').trim().toLowerCase();
-                return store.customers.list().find(row =>
-                    (email && String(row.email || '').trim().toLowerCase() === email) ||
-                    (name && String(row.fullName || row.name || '').trim().toLowerCase() === name)
-                );
+                return store.customers.matchForPos(form.customerName.value, form.customerEmail.value);
             }
 
             function normalizeDiscountRate(value) {
@@ -254,17 +249,22 @@
 
             function renderPromotions() {
                 const select = document.getElementById('checkoutPromotion');
-                const selected = select.value;
                 const customer = selectedCustomer();
-                const today = new Date().toISOString().slice(0, 10);
-                const rows = store.marketing.promotions().filter(promotion => promotion.active
-                    && (!promotion.startDate || promotion.startDate <= today)
-                    && (!promotion.endDate || promotion.endDate >= today)
-                    && (!(promotion.customerIds || []).length || (customer && promotion.customerIds.map(Number).includes(Number(customer.id)))));
-                select.innerHTML = '<option value="">Sin promoción</option>' + (customer?.frequent ? `<option value="frequent">Cliente frecuente · ${Math.round(Number(store.pos.config().frequentCustomerDiscount || 0) * 100)}%</option>` : '') + rows.map(promotion =>
-                    `<option value="${promotion.id}">${promotion.name} · ${Math.round(Number(promotion.discount || 0) * 100)}%</option>`
-                ).join('');
-                select.value = (selected === 'frequent' && customer?.frequent) || rows.some(row => String(row.id) === selected) ? selected : '';
+                const customerKey = customer ? `${customer.id}:${Boolean(customer.frequent)}` : '';
+                const selected = select.value;
+                const rows = store.marketing.posPromotions(customer);
+                select.replaceChildren(new Option('Sin promoción', ''));
+                if (customer?.frequent) select.add(new Option(`Cliente frecuente · ${Math.round(Number(store.pos.config().frequentCustomerDiscount || 0) * 100)}%`, 'frequent'));
+                rows.forEach(promotion => {
+                    const label = `${promotion.name} · ${Math.round(Number(promotion.discount || 0) * 100)}%${promotion.eligible ? '' : ' · Solo clientes asignados'}`;
+                    const option = new Option(label, String(promotion.id));
+                    option.disabled = !promotion.eligible;
+                    select.add(option);
+                });
+                const suggested = store.marketing.suggestedPosPromotion(customer, rows);
+                const preserved = selected === '' || (selected === 'frequent' ? Boolean(customer?.frequent) : rows.some(row => row.eligible && String(row.id) === selected));
+                select.value = select.dataset.customerKey === customerKey && preserved ? selected : suggested;
+                select.dataset.customerKey = customerKey;
                 app.selects?.refresh?.(select);
             }
 
@@ -462,8 +462,8 @@
             });
 
             form.discountRate.addEventListener('input', renderCart);
-            form.customerEmail.addEventListener('input', renderCart);
-            form.customerName.addEventListener('input', renderCart);
+            form.customerEmail.addEventListener('input', () => { renderPromotions(); renderCart(); });
+            form.customerName.addEventListener('input', () => { renderPromotions(); renderCart(); });
             document.getElementById('checkoutPromotion').addEventListener('change', renderCart);
 
             async function completeCheckout(paymentData) {

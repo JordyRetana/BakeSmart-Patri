@@ -236,6 +236,20 @@ body.app-body select option {
     background: #f3edff !important;
 }
 
+.bs-select__option:disabled,
+.bs-select__option:disabled:hover {
+    color: #747987 !important;
+    background: #f5f5f9 !important;
+    cursor: not-allowed !important;
+    font-weight: 600 !important;
+}
+
+body.dark .bs-select__option:disabled,
+body.dark .bs-select__option:disabled:hover {
+    color: #aab3c5 !important;
+    background: #222c3d !important;
+}
+
 body.app-body input:not([type="checkbox"]):not([type="radio"]),
 body.app-body textarea,
 body.app-body .form-control,
