@@ -29,6 +29,12 @@
             const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
             const render = () => {
                 const query = input.value.trim().toLowerCase();
+                if (query.length < 2) {
+                    menu.hidden = true;
+                    menu.innerHTML = '';
+                    menu._matches = [];
+                    return;
+                }
                 const matches = items().filter(customer => `${customer.fullName || customer.name || ''} ${customer.email || ''} ${customer.phone || ''}`.toLowerCase().includes(query)).slice(0, 8);
                 activeIndex = -1;
                 menu.innerHTML = matches.map((customer, index) => `<button type="button" class="customer-picker-option" data-customer-index="${index}"><span class="customer-picker-avatar"><i class="fas fa-user"></i></span><span><strong>${escape(customer.fullName || customer.name || 'Cliente')}</strong><small>${escape(customer.email || customer.phone || 'Cliente registrado')}</small></span></button>`).join('') || `<div class="customer-picker-empty"><strong>Usar “${escape(input.value)}”</strong><small>Se guardará como cliente escrito manualmente.</small></div>`;
