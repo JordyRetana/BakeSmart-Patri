@@ -1122,11 +1122,10 @@
             async function initializePos() {
                 renderAll();
                 try {
-                    await Promise.allSettled([
-                        store.refresh({ keys: ['inventory', 'customers', 'posConfig', 'promotions', 'combos'], force: true }),
-                        store.refreshPos()
-                    ]);
-                    renderAll();
+                    store.refresh({ keys: ['inventory', 'customers', 'posConfig', 'promotions', 'combos'] })
+                        .then(renderAll).catch(error => app.toast.error(error.message || 'No se pudo actualizar el catálogo del POS.'));
+                    await store.refreshPos();
+                    renderSessionPanel();
 
                     if (permissions.canManageCreditNotes) {
                         store.pos.recentSales()

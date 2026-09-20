@@ -913,6 +913,7 @@
 
         const data = Object.fromEntries(new FormData(paymentForm).entries());
         if (String(data.method || '').toLowerCase().includes('nota de cr')) {
+        if (pendingPayment.orderIds.length !== 1) { app.toast.error('La nota de crédito se aplica a un pedido por vez desde Mis pedidos.'); return; }
         const code = String(data.creditNoteCode || '').trim();
         if (!code) { app.toast.error('Ingrese el código de la nota de crédito.'); return; }
         try {

@@ -3959,6 +3959,11 @@ public sealed partial class SqlStore
                 WHERE o.OrderId=@OrderId AND LOWER(ep.Name)='pagado';
                 """, new SqlParameter("@OrderId", orderId)) ?? 0) > 0;
             if (alreadyPaid) throw new InvalidOperationException("El pedido ya se encuentra pagado.");
+            var cancelled = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
+                SELECT COUNT(1) FROM Pedidos o INNER JOIN EstadosPedido os ON os.OrderStatusId=o.OrderStatusId
+                WHERE o.OrderId=@OrderId AND LOWER(os.Name)='cancelado';
+                """, new SqlParameter("@OrderId", orderId)) ?? 0) > 0;
+            if (cancelled) throw new InvalidOperationException("No se puede pagar un pedido cancelado.");
 
             var noteId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
                 SELECT CreditNoteId FROM NotasCreditoPOS
@@ -3966,6 +3971,18 @@ public sealed partial class SqlStore
                 LIMIT 1 FOR UPDATE;
                 """, new SqlParameter("@Code", normalizedCode)) ?? 0);
             if (noteId <= 0) throw new InvalidOperationException("La nota de crédito no existe o ya fue utilizada.");
+            var ownerMatches = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
+                SELECT COUNT(1) FROM NotasCreditoPOS n
+                INNER JOIN Ventas v ON v.SaleId=n.SaleId
+                INNER JOIN Pedidos sourceOrder ON sourceOrder.OrderId=v.OrderId
+                INNER JOIN Clientes sourceCustomer ON sourceCustomer.CustomerId=sourceOrder.CustomerId
+                INNER JOIN Pedidos targetOrder ON targetOrder.OrderId=@OrderId
+                INNER JOIN Clientes targetCustomer ON targetCustomer.CustomerId=targetOrder.CustomerId
+                WHERE n.CreditNoteId=@NoteId AND sourceCustomer.CustomerId=targetCustomer.CustomerId
+                  AND LOWER(targetCustomer.Email)=LOWER(@Email);
+                """, new SqlParameter("@NoteId", noteId), new SqlParameter("@OrderId", orderId),
+                new SqlParameter("@Email", userEmail ?? string.Empty)) ?? 0) > 0;
+            if (!ownerMatches) throw new InvalidOperationException("La nota de crédito no pertenece a esta cuenta.");
             var balance = Convert.ToDecimal(await ScalarInTransactionAsync(connection, transaction,
                 "SELECT COALESCE(RemainingAmount, Amount) FROM NotasCreditoPOS WHERE CreditNoteId=@Id;",
                 new SqlParameter("@Id", noteId)) ?? 0m);
