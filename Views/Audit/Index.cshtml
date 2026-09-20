@@ -70,6 +70,15 @@
     const search = document.getElementById('auditSearch');
     const type = document.getElementById('auditType');
     const period = document.getElementById('auditPeriod');
+    const costaRicaTimeZone = 'America/Costa_Rica';
+    const costaRicaDate = new Intl.DateTimeFormat('en-CA', {
+        timeZone: costaRicaTimeZone, year: 'numeric', month: '2-digit', day: '2-digit'
+    });
+    const formatDate = value => new Date(value).toLocaleDateString('es-CR', { timeZone: costaRicaTimeZone });
+    const formatTime = value => new Date(value).toLocaleTimeString('es-CR', {
+        timeZone: costaRicaTimeZone, hour: '2-digit', minute: '2-digit'
+    });
+    const dateKey = value => costaRicaDate.format(new Date(value));
     const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[char]));
     const label = value => String(value || 'SISTEMA').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
     const friendlyAction = (typeValue, detailValue) => {
@@ -119,7 +128,7 @@
         if (period.value === 'all') return true;
         const date = new Date(item.createdAt);
         const now = new Date();
-        if (period.value === 'today') return date.toDateString() === now.toDateString();
+        if (period.value === 'today') return dateKey(date) === dateKey(now);
         return date >= new Date(now.getTime() - Number(period.value) * 86400000);
     }
 
@@ -132,9 +141,8 @@
 
         document.getElementById('auditResultCount').textContent = `${filtered.length} movimientos encontrados`;
         rows.innerHTML = filtered.map(item => {
-            const date = new Date(item.createdAt);
             return `<tr>
-                <td><strong>${date.toLocaleDateString('es-CR')}</strong><span>${date.toLocaleTimeString('es-CR', { hour:'2-digit', minute:'2-digit' })}</span></td>
+                <td><strong>${formatDate(item.createdAt)}</strong><span>${formatTime(item.createdAt)}</span></td>
                 <td><div class="audit-user"><b>${esc(item.userName)}</b><small>${esc(item.userEmail)}</small></div></td>
                 <td><span class="audit-action"><i class="fas ${categoryIcon(`${item.type} ${item.detail}`)}"></i>${esc(friendlyAction(item.type, item.detail))}</span></td>
                 <td>${esc(friendlyDetail(item.detail))}</td>
@@ -149,11 +157,11 @@
         logs = await response.json();
         const types = [...new Set(logs.map(item => item.type).filter(Boolean))].sort();
         type.innerHTML = '<option value="">Todos los tipos</option>' + types.map(value => `<option value="${esc(value)}">${esc(friendlyAction(value, ''))}</option>`).join('');
-        const today = new Date().toDateString();
+        const today = dateKey(new Date());
         document.getElementById('auditTotal').textContent = logs.length;
         document.getElementById('auditUsers').textContent = new Set(logs.map(item => item.userEmail)).size;
-        document.getElementById('auditToday').textContent = logs.filter(item => new Date(item.createdAt).toDateString() === today).length;
-        document.getElementById('auditLast').textContent = logs.length ? new Date(logs[0].createdAt).toLocaleTimeString('es-CR', { hour:'2-digit', minute:'2-digit' }) : 'Sin datos';
+        document.getElementById('auditToday').textContent = logs.filter(item => dateKey(item.createdAt) === today).length;
+        document.getElementById('auditLast').textContent = logs.length ? formatTime(logs[0].createdAt) : 'Sin datos';
         render();
     }
 
