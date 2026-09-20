@@ -697,7 +697,7 @@
                 const rows = cached("inventory");
                 return {
                     rows,
-                    lowStock: rows.filter(x => Number(x.stock) <= Number(x.minStock ?? x.min ?? 0)).length,
+                    lowStock: rows.filter(x => (x.active ?? x.isActive ?? x.activo) && Number(x.stock) <= Number(x.minStock ?? x.min ?? 0)).length,
                     negativeStock: rows.filter(x => Number(x.stock) < 0).length
                 };
             },
