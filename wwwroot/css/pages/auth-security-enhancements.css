@@ -19,6 +19,8 @@
 .security-password-field span { font-weight: 800; color: var(--text); }
 .security-password-hint { margin: 0; color: var(--muted); font-size: .85rem; text-align: left; }
 .password-setup-card > p:not(.security-eyebrow) { color: var(--muted); line-height: 1.55; }
+body.dark .security-form-error { background:#4b252b; color:#ffd4d9; }
+body.dark .security-manual summary { color:#d9baff; }
 @media (max-width: 700px) {
     .security-setup-grid { grid-template-columns: 1fr; }
     .security-qr-panel { width: min(320px, 100%); margin: auto; }
