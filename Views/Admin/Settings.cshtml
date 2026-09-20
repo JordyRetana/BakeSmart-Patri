@@ -1291,7 +1291,9 @@
                 }
                 button.disabled = true;
                 try {
-                    await BakeSmartStore.marketing.addPromotion({ id: document.getElementById('offerId').value, name, discount, startDate, endDate, productIds, customerIds: [], isActive: true });
+                    const id = document.getElementById('offerId').value;
+                    const previous = BakeSmartStore.marketing.promotions().find(item => Number(item.id) === Number(id));
+                    await BakeSmartStore.marketing.addPromotion({ id, name, discount, startDate, endDate, productIds, customerIds: [], isActive: previous ? previous.active : true });
                     clearOfferEditor(); renderOfferList(); app.toast.success('Oferta guardada. Se mostrará durante sus fechas de vigencia.');
                 } catch (error) { app.toast.error(error.message); }
                 finally { button.disabled = false; }
