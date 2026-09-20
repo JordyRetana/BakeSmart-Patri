@@ -3,6 +3,8 @@ body.dark .pos-page .card,body.dark .pos-hero{background:#211d29!important;borde
 /* The cart trigger is hidden while the summary is open, so the summary can
    sit at the same bottom edge instead of hovering above the product grid. */
 body[data-page="/pos"] #posCartPanel.pos-cart-open{bottom:1rem!important;max-height:calc(100dvh - 2rem)!important}
+body[data-page="/pos"] .pos-cart-fab #posCartFabCount[hidden]{display:none!important}
+body[data-page="/pos"] .pos-cart-fab #posCartFabCount:not([hidden]){color:#4c1d95!important;background:#fff!important;border:2px solid #4c1d95!important;line-height:1!important}
 @media(max-width:650px){body[data-page="/pos"] #posCartPanel.pos-cart-open{bottom:calc(.75rem + env(safe-area-inset-bottom))!important;max-height:calc(100dvh - 1.5rem - env(safe-area-inset-bottom))!important}}
 /* Customer and payment fields share the card; totals follow below instead of
    reserving an empty sidebar that squeezes email and customer suggestions. */
