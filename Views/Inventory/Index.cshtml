@@ -26,7 +26,9 @@
                 <input id="inventorySearch" class="form-control" placeholder="Buscar por código o descripción" />
             </div>
             <select id="inventoryTypeFilter" class="form-control inventory-type-filter">
-                <option value="todos" selected>Materia prima y empaques</option>
+                <option value="todos" selected>Todos los productos</option>
+                <option value="operativo">Materia prima y empaques</option>
+                <option value="Producto terminado">Productos terminados</option>
                 <option value="Materia prima">Solo materia prima</option>
                 <option value="Empaque">Solo empaques</option>
                 <option value="Insumo operativo">Solo insumos operativos</option>
@@ -371,9 +373,7 @@
                     fetch('/api/inventory').then(r => r.json()),
                     fetch('/api/inventory/movements').then(r => r.json())
                 ]);
-                products = inventoryRows
-                    .map(normalizeProduct)
-                    .filter(product => product.type !== 'Producto terminado');
+                products = inventoryRows.map(normalizeProduct);
                 movements = movementRows;
             }
 
@@ -495,7 +495,7 @@
                 const all = products;
                 document.getElementById('invTotal').textContent = all.length;
                 document.getElementById('invActive').textContent = all.filter(x => x.active).length;
-                document.getElementById('invLow').textContent = all.filter(x => Number(x.stock) <= Number(x.minStock ?? 5)).length;
+                document.getElementById('invLow').textContent = all.filter(x => x.active && Number(x.stock) <= Number(x.minStock ?? 5)).length;
                 document.getElementById('invRaw').textContent = all.filter(x => x.type === 'Materia prima').length;
 
                 refreshCategoriesIfNeeded();
@@ -550,10 +550,12 @@
                             </span>
                         </td>
                         <td class="text-right inventory-row-actions">
-                            <button class="btn btn-outline btn-sm" onclick="editProduct(${p.id})" style="font-size:.75rem;"><i class="fas fa-pen"></i></button>
-                            <button class="btn btn-ghost btn-sm" onclick="toggleProduct(${p.id})" style="color:${p.active ? 'var(--warning)' : 'var(--success)'};font-size:.75rem;">
-                                ${p.active ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>'}
-                            </button>
+                            ${p.type === 'Producto terminado'
+                                ? '<a class="btn btn-outline btn-sm" href="/Inventory/Products" aria-label="Administrar productos terminados"><i class="fas fa-arrow-up-right-from-square"></i></a>'
+                                : `<button class="btn btn-outline btn-sm" onclick="editProduct(${p.id})" aria-label="Editar producto" style="font-size:.75rem;"><i class="fas fa-pen"></i></button>
+                                   <button class="btn btn-ghost btn-sm" onclick="toggleProduct(${p.id})" aria-label="Cambiar estado del producto" style="color:${p.active ? 'var(--warning)' : 'var(--success)'};font-size:.75rem;">
+                                     ${p.active ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>'}
+                                   </button>`}
                         </td>
                     </tr>
                 `}).join('') || `

@@ -212,7 +212,8 @@
     }
 
     async function renderDashboard() {
-        paintDashboard();
+        let latestDashboard = { kpis: [] };
+        paintDashboard(latestDashboard);
 
         const dashboardRequest = fetch('/api/dashboard')
             .then(response => response.ok ? response.json() : { kpis: [] })
@@ -223,11 +224,11 @@
         if (canInventory) refreshKeys.push('inventory');
         if (@(canPos ? "true" : "false")) refreshKeys.push('posConfig');
         BakeSmartStore.refresh({ keys: refreshKeys })
-            .then(() => paintDashboard())
+            .then(() => paintDashboard(latestDashboard))
             .catch(() => { });
 
-        const dashboard = await dashboardRequest;
-        paintDashboard(dashboard);
+        latestDashboard = await dashboardRequest;
+        paintDashboard(latestDashboard);
     }
 
     renderDashboard().catch(error => {
