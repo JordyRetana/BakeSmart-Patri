@@ -1,6 +1,6 @@
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/pages/client-track.css?v=20260920-summary-cards" />
+    <link rel="stylesheet" href="~/css/pages/client-track.css?v=20260920-summary-full-width" />
     <link rel="stylesheet" href="~/css/pages/tracking-page.css" asp-append-version="true" />
 }
 @{
@@ -77,10 +77,6 @@
             <div id="deliveryMap" class="delivery-map"></div>
         </div>
 
-        <div class="card track-summary-card">
-            <h3 class="track-section-title track-summary-title">Resumen logístico</h3>
-            <div id="trackingSummary" class="tracking-summary text-muted"></div>
-        </div>
         </div>
 
         <div class="card track-progress-card">
@@ -90,6 +86,11 @@
                 </div>
                 <div id="trackingTimeline" class="tracking-timeline"></div>
         </div>
+    </div>
+
+    <div class="card track-summary-card track-summary-card--wide">
+        <h3 class="track-section-title track-summary-title">Resumen logístico</h3>
+        <div id="trackingSummary" class="tracking-summary text-muted"></div>
     </div>
 </div>
 
