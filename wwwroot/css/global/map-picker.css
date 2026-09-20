@@ -100,6 +100,15 @@
     display: block;
 }
 
+.map-picker-use-approximate[hidden] {
+    display: none !important;
+}
+
+.map-picker-use-approximate {
+    align-self: flex-start;
+    margin-top: .35rem;
+}
+
 .map-picker__error.is-notice {
     color: #7c5a14;
     background: #fffbeb;
