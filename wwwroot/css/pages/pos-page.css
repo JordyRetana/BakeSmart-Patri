@@ -4,6 +4,12 @@ body.dark .pos-page .card,body.dark .pos-hero{background:#211d29!important;borde
    sit at the same bottom edge instead of hovering above the product grid. */
 body[data-page="/pos"] #posCartPanel.pos-cart-open{bottom:1rem!important;max-height:calc(100dvh - 2rem)!important}
 @media(max-width:650px){body[data-page="/pos"] #posCartPanel.pos-cart-open{bottom:calc(.75rem + env(safe-area-inset-bottom))!important;max-height:calc(100dvh - 1.5rem - env(safe-area-inset-bottom))!important}}
+/* Customer and payment fields share the card; totals follow below instead of
+   reserving an empty sidebar that squeezes email and customer suggestions. */
+body[data-page="/pos/cart"] .pos-cart-checkout-card--payment .pos-checkout-form{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+body[data-page="/pos/cart"] .pos-cart-checkout-card--payment .pos-cart-totals{grid-column:1/-1!important;grid-row:auto!important}
+body[data-page="/pos/cart"] .pos-cart-checkout-card--payment .pos-submit-btn{grid-column:1/-1!important}
+@media(max-width:760px){body[data-page="/pos/cart"] .pos-cart-checkout-card--payment .pos-checkout-form{grid-template-columns:1fr!important}}
 /* Navegación del espacio POS: un flujo visible a la vez. */
 body[data-page="/pos"] .pos-workspace-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem;padding:.65rem;border:1px solid var(--border);border-radius:18px;background:var(--bg-card);box-shadow:0 14px 34px rgba(48,29,63,.08)}
 body[data-page="/pos"] .pos-workspace-tab{min-height:68px;padding:.7rem 1rem;display:flex;align-items:center;justify-content:flex-start;gap:.75rem;border:1px solid transparent;border-radius:13px;background:transparent;color:var(--text);cursor:pointer;text-align:left;transition:.18s ease}
