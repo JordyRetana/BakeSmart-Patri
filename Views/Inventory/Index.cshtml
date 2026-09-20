@@ -512,8 +512,8 @@
                     if (selectedType === 'operativo') matchesType = p.type !== 'Producto terminado';
                     else if (selectedType !== 'todos') matchesType = p.type === selectedType;
                     let matchesStock = true;
-                    if (selectedStock === 'bajo') matchesStock = stockNum <= minNum;
-                    else if (selectedStock === 'critico') matchesStock = stockNum === 0;
+                    if (selectedStock === 'bajo') matchesStock = p.active && stockNum <= minNum;
+                    else if (selectedStock === 'critico') matchesStock = p.active && stockNum === 0;
                     else if (selectedStock === 'disponible') matchesStock = stockNum > 0;
                     return matchesQuery && matchesCategory && matchesType && matchesStock;
                 });
