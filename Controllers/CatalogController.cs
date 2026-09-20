@@ -43,7 +43,9 @@ namespace BakeSmartPatri.Controllers
             var discounts = new Dictionary<int, decimal>();
             foreach (var promotion in JsonSerializer.SerializeToElement(await promotionsTask).EnumerateArray())
             {
-                if (!promotion.GetProperty("active").GetBoolean() || promotion.GetProperty("customerIds").GetArrayLength() > 0) continue;
+                if (!promotion.GetProperty("active").GetBoolean()
+                    || promotion.GetProperty("customerIds").GetArrayLength() > 0
+                    || string.Equals(promotion.GetProperty("name").GetString()?.Trim(), "Cliente frecuente", StringComparison.OrdinalIgnoreCase)) continue;
                 if (DateTime.TryParse(promotion.GetProperty("startDate").GetString(), out var start) && start.Date > today) continue;
                 if (DateTime.TryParse(promotion.GetProperty("endDate").GetString(), out var end) && end.Date < today) continue;
                 var rate = promotion.GetProperty("discount").GetDecimal();

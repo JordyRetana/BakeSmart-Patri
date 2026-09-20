@@ -1245,7 +1245,8 @@
             }
 
             function renderOfferList() {
-                const offers = BakeSmartStore.marketing.promotions().filter(item => !(item.customerIds || []).length);
+                const offers = BakeSmartStore.marketing.promotions().filter(item =>
+                    !(item.customerIds || []).length && String(item.name || '').trim().toLowerCase() !== 'cliente frecuente');
                 document.getElementById('settingsOfferList').innerHTML = offers.map(offer => `
                     <article class="settings-combo-card">
                         <div><strong>${escapeHtml(offer.name)}</strong><small>${offer.startDate} – ${offer.endDate} · ${Math.round(Number(offer.discount) * 100)}% · ${(offer.productIds || []).length || 'Todos los'} productos</small></div>
