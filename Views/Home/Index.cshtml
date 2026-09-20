@@ -24,7 +24,8 @@
             Product = products.FirstOrDefault(product => product.Category == category.Name)
         })
         .ToList();
-    var offerProducts = products.Skip(1).Take(3).ToList();
+    var offerDiscounts = ViewBag.HomeOfferDiscounts as Dictionary<int, decimal> ?? new();
+    var offerProducts = products.Where(product => offerDiscounts.ContainsKey(product.Id)).Take(3).ToList();
     // La portada usa una fila editorial uniforme; el resto queda disponible en “Ver todos”.
     var popularProducts = products.Take(4).ToList();
     var settings = ViewBag.HomeSettings as IReadOnlyDictionary<string, string> ?? new Dictionary<string, string>();
@@ -156,6 +157,8 @@
             </section>
         }
 
+        @if (offerProducts.Count > 0)
+        {
         <section class="storefront-section storefront-offers" id="ofertas">
             <div class="container">
                 <div class="storefront-heading">
@@ -168,9 +171,9 @@
                     {
                         <article class="storefront-offer-card">
                             <div class="storefront-offer-copy">
-                                <span>@product.Category</span>
+                                <span>@product.Category · @offerDiscounts[product.Id].ToString("P0", culture) de descuento</span>
                                 <h3>@product.Name</h3>
-                                <strong>@product.UnitPrice.ToString("C0", culture)</strong>
+                                <strong>@(product.UnitPrice * (1 - offerDiscounts[product.Id])).ToString("C0", culture)</strong>
                                 <a href="/Catalog/Details/@product.Id">Ver oferta</a>
                             </div>
                             <img src="@product.ImageUrl" alt="@product.AltText" width="420" height="240" loading="lazy" decoding="async" onerror="this.src='/img/products/producto-sin-imagen.svg';" />
@@ -179,6 +182,7 @@
                 </div>
             </div>
         </section>
+        }
 
         <section class="storefront-section storefront-popular" id="populares">
             <div class="container">

@@ -200,7 +200,11 @@ body.dark.operational-shell .page-header {
 body.dark.operational-shell .table thead th { background: rgba(48, 40, 58, .95); }
 body.dark.operational-shell .inventory-actions,
 body.dark.operational-shell .orders-filters,
-body.dark.operational-shell .marketing-search-box { background: rgba(25, 23, 32, .6); }
+body.dark.operational-shell .marketing-search-box {
+    background: #211e2b !important;
+    border-color: #51465d !important;
+    color: #f7f4fb;
+}
 
 @media (max-width: 760px) {
     .operational-shell .page-shell { width: calc(100% - 1rem); padding-block: .65rem 2.5rem; }
