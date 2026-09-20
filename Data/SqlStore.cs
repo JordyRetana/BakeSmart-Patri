@@ -5346,6 +5346,17 @@ public sealed partial class SqlStore
             IF EXISTS (SELECT 1 FROM dbo.Clientes WHERE CustomerId = @CustomerId AND IsFrequent = 1)
                 SET @EffectiveDiscount = ROUND(@Subtotal * @FrequentDiscountRate, 2);
 
+            DECLARE @PublicOfferRate decimal(18,4) = COALESCE((
+                SELECT MAX(p.DiscountRate) FROM dbo.Promociones p
+                WHERE p.IsActive = 1 AND @Today BETWEEN p.StartDate AND p.EndDate
+                  AND LOWER(LTRIM(RTRIM(p.Name))) <> N'cliente frecuente'
+                  AND NOT EXISTS (SELECT 1 FROM dbo.PromocionesClientes pc WHERE pc.PromotionId = p.PromotionId)
+                  AND (NOT EXISTS (SELECT 1 FROM dbo.ProductosPromocion pp WHERE pp.PromotionId = p.PromotionId)
+                       OR EXISTS (SELECT 1 FROM dbo.ProductosPromocion pp WHERE pp.PromotionId = p.PromotionId AND pp.ProductId = @ProductId))
+            ), 0);
+            SET @EffectiveDiscount = IIF(ROUND(@Subtotal * @PublicOfferRate, 2) > @EffectiveDiscount,
+                ROUND(@Subtotal * @PublicOfferRate, 2), @EffectiveDiscount);
+
             DECLARE @DiscountedSubtotal decimal(18,2) = @Subtotal - @EffectiveDiscount;
             DECLARE @EffectiveTax decimal(18,2) = ROUND(@DiscountedSubtotal * @TaxRate, 2);
             DECLARE @EffectiveTotal decimal(18,2) = @DiscountedSubtotal + @EffectiveTax;
@@ -5387,6 +5398,7 @@ public sealed partial class SqlStore
             new SqlParameter("@Email", input.Email.Trim().ToLowerInvariant()),
             new SqlParameter("@Phone", (object?)input.Phone?.Trim() ?? DBNull.Value),
             new SqlParameter("@ProductId", input.ProductId),
+            new SqlParameter("@Today", DateTime.UtcNow.AddHours(-6).Date),
             new SqlParameter("@Quantity", input.Quantity),
             new SqlParameter("@UnitPrice", input.UnitPrice),
             new SqlParameter("@Subtotal", input.Subtotal),
@@ -5997,6 +6009,15 @@ public sealed partial class SqlStore
                 "SELECT IsFrequent FROM Clientes WHERE CustomerId = @CustomerId;",
                 new SqlParameter("@CustomerId", customerId)) ?? 0) == 1;
             var discount = isFrequent ? Math.Round(subtotal * config.FrequentDiscountRate, 2, MidpointRounding.AwayFromZero) : 0m;
+            var offerRate = Convert.ToDecimal(await ScalarInTransactionAsync(connection, transaction, """
+                SELECT COALESCE(MAX(p.DiscountRate), 0) FROM Promociones p
+                WHERE p.IsActive = 1 AND @Today BETWEEN p.StartDate AND p.EndDate
+                  AND LOWER(TRIM(p.Name)) <> 'cliente frecuente'
+                  AND NOT EXISTS (SELECT 1 FROM PromocionesClientes pc WHERE pc.PromotionId = p.PromotionId)
+                  AND (NOT EXISTS (SELECT 1 FROM ProductosPromocion pp WHERE pp.PromotionId = p.PromotionId)
+                       OR EXISTS (SELECT 1 FROM ProductosPromocion pp WHERE pp.PromotionId = p.PromotionId AND pp.ProductId = @ProductId));
+                """, new SqlParameter("@Today", DateTime.UtcNow.AddHours(-6).Date), new SqlParameter("@ProductId", input.ProductId)) ?? 0m);
+            discount = Math.Max(discount, Math.Round(subtotal * offerRate, 2, MidpointRounding.AwayFromZero));
             var tax = Math.Round((subtotal - discount) * config.IvaRate, 2, MidpointRounding.AwayFromZero);
             var total = Math.Round(subtotal - discount + tax, 2, MidpointRounding.AwayFromZero);
 
