@@ -2254,10 +2254,30 @@ public sealed partial class SqlStore
             var customerTable = UseMySql ? "PromocionesClientes" : "dbo.PromocionesClientes";
             await ExecuteInTransactionAsync(connection, transaction, $"DELETE FROM {productTable} WHERE PromotionId = @PromotionId;", new SqlParameter("@PromotionId", promotionId));
             await ExecuteInTransactionAsync(connection, transaction, $"DELETE FROM {customerTable} WHERE PromotionId = @PromotionId;", new SqlParameter("@PromotionId", promotionId));
-            foreach (var productId in products)
-                await ExecuteInTransactionAsync(connection, transaction, $"INSERT INTO {productTable} (PromotionId, ProductId) VALUES (@PromotionId, @ProductId);", new SqlParameter("@PromotionId", promotionId), new SqlParameter("@ProductId", productId));
-            foreach (var customerId in customers)
-                await ExecuteInTransactionAsync(connection, transaction, $"INSERT INTO {customerTable} (PromotionId, CustomerId) VALUES (@PromotionId, @CustomerId);", new SqlParameter("@PromotionId", promotionId), new SqlParameter("@CustomerId", customerId));
+            if (products.Length > 0)
+            {
+                var productParameters = new List<SqlParameter> { new("@PromotionId", promotionId) };
+                var productValues = products.Select((productId, index) =>
+                {
+                    productParameters.Add(new SqlParameter($"@ProductId{index}", productId));
+                    return $"(@PromotionId, @ProductId{index})";
+                });
+                await ExecuteInTransactionAsync(connection, transaction,
+                    $"INSERT INTO {productTable} (PromotionId, ProductId) VALUES {string.Join(",", productValues)};",
+                    productParameters.ToArray());
+            }
+            if (customers.Length > 0)
+            {
+                var customerParameters = new List<SqlParameter> { new("@PromotionId", promotionId) };
+                var customerValues = customers.Select((customerId, index) =>
+                {
+                    customerParameters.Add(new SqlParameter($"@CustomerId{index}", customerId));
+                    return $"(@PromotionId, @CustomerId{index})";
+                });
+                await ExecuteInTransactionAsync(connection, transaction,
+                    $"INSERT INTO {customerTable} (PromotionId, CustomerId) VALUES {string.Join(",", customerValues)};",
+                    customerParameters.ToArray());
+            }
             await transaction.CommitAsync();
         }
         catch

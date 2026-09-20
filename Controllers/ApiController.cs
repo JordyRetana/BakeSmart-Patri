@@ -570,13 +570,14 @@ public class ApiController : Controller
             if (recipients.Count > 50)
                 return BadRequest(new { message = "Puede enviar una campaña a un máximo de 50 clientes por operación." });
 
-            foreach (var recipient in recipients)
+            var subject = string.IsNullOrWhiteSpace(request.Subject) ? "Promoción Repostería Patri" : request.Subject;
+            foreach (var batch in recipients.Chunk(5))
             {
-                await _emailService.SendAsync(
+                await Task.WhenAll(batch.Select(recipient => _emailService.SendAsync(
                     recipient.Email,
                     recipient.FullName,
-                    string.IsNullOrWhiteSpace(request.Subject) ? "Promoción Repostería Patri" : request.Subject,
-                    request.Message);
+                    subject,
+                    request.Message)));
             }
 
             var campaign = request with { CustomerIds = recipients.Select(recipient => recipient.CustomerId).ToArray() };

@@ -308,7 +308,9 @@
 
             document.getElementById('promotionForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
-
+                const button = e.target.querySelector('button[type="submit"]');
+                if (button?.disabled) return;
+                if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
                 try {
                     const data = Object.fromEntries(new FormData(e.target).entries());
                     data.productIds = [...e.target.querySelectorAll('[name="promotionProduct"]:checked')].map(input => Number(input.value));
@@ -320,12 +322,16 @@
                     await render();
                 } catch (error) {
                     app.toast.error(error.message);
+                } finally {
+                    if (button) { button.disabled = false; button.removeAttribute('aria-busy'); }
                 }
             });
 
             document.getElementById('campaignForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
-
+                const button = e.target.querySelector('button[type="submit"]');
+                if (button?.disabled) return;
+                if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
                 try {
                     await BakeSmartStore.marketing.sendCampaign({
                         ...Object.fromEntries(new FormData(e.target).entries()),
@@ -336,6 +342,8 @@
                     app.toast.success('Comunicación enviada a todos los clientes con correo.');
                 } catch (error) {
                     app.toast.error(error.message);
+                } finally {
+                    if (button) { button.disabled = false; button.removeAttribute('aria-busy'); }
                 }
             });
 
