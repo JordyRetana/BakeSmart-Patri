@@ -134,9 +134,6 @@
 .operational-shell .accounting-page .accounting-block { padding: 1.25rem; }
 
 /* Richie no debe cubrir acciones críticas ni cifras en los espacios operativos. */
-.operational-shell #chat-toggle-btn,
-.operational-shell #chat-widget { display: none !important; }
-
 /* Los indicadores reaccionan con sutileza para que el panel se sienta vivo. */
 .operational-shell .dashboard-kpi,
 .operational-shell .audit-kpis article,
