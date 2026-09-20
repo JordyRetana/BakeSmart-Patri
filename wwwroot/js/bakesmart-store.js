@@ -424,8 +424,12 @@
                 );
             },
             async addFrequent(id) {
-                await request(`/api/customers/${id}/frequent`, { method: "POST", body: JSON.stringify({}) });
-                return load("customers", "/api/customers", [], { force: true });
+                const result = await request(`/api/customers/${id}/frequent`, { method: "POST", body: JSON.stringify({}) });
+                const rows = cached("customers");
+                const customer = rows.find(item => Number(item.id) === Number(id));
+                if (customer) customer.frequent = Boolean(result.frequent);
+                publish("customers", rows);
+                return result;
             }
         },
         marketing: {
@@ -658,6 +662,7 @@
                     tax,
                     total,
                     notes: null,
+                    creditNoteCode: input.creditNoteCode || null,
                     promotionId: input.promotionId && input.promotionId !== 'frequent' ? Number(input.promotionId) : null,
                     applyFrequentDiscount: input.promotionId === 'frequent',
                     items: items.map(item => ({
@@ -669,7 +674,7 @@
                 };
 
                 const result = await request("/api/pos/sell", { method: "POST", body: JSON.stringify(saleInput) });
-                await Promise.allSettled([
+                Promise.allSettled([
                     loadPosSessions(),
                     load("inventory", "/api/inventory", [], { force: true }),
                     load("inventoryMovements", "/api/inventory/movements", [], { force: true })
@@ -693,7 +698,6 @@
                         method: input.method || "Efectivo"
                     })
                 });
-                await api.accounting.refresh();
                 return result;
             },
             async addSupplierPayment(input = {}) {
@@ -706,7 +710,6 @@
                         method: input.method || ""
                     })
                 });
-                await api.accounting.refresh();
                 return result;
             },
             async reconcile() {

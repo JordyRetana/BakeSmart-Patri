@@ -546,3 +546,7 @@ body.dark .catalog-favorites-hero p,body.dark .catalog-favorites-empty p,body.da
 body.dark .catalog-favorites-empty,body.dark .catalog-favorites-login,body.dark .favorite-product-card { background:#202a39; border-color:#4a5368; }
 body.dark .favorite-product-card h2 { color:#f7f8fc; }
 body.dark .favorite-product-card p { color:#c5cfdd; }
+.catalog-products-grid .product-card {
+    content-visibility: auto;
+    contain-intrinsic-size: 520px;
+}
