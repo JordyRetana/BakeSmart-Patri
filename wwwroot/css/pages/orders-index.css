@@ -440,3 +440,9 @@ body.dark .orders-count-pill { background:#39294f; border-color:#6b4c8a; color:#
 body.dark .orders-custom-tag { background:#4a2942; color:#ffd3ef; }
 body.dark .orders-customization-block { background:linear-gradient(90deg,#382638,#272337); }
 body.dark .orders-customization-block span { color:#ffc5e7 !important; }
+body.dark .orders-status-badge.status-pending { background:#4b3619; border-color:#a77a2d; color:#ffe3a0; }
+body.dark .orders-status-badge.status-confirmed { background:#1c3958; border-color:#3977b4; color:#c9e7ff; }
+body.dark .orders-status-badge.status-production { background:#39275a; border-color:#7654ba; color:#e3d2ff; }
+body.dark .orders-status-badge.status-ready { background:#174733; border-color:#28865d; color:#b9f5d5; }
+body.dark .orders-status-badge.status-route { background:#16454c; border-color:#298796; color:#c4f4f6; }
+body.dark .orders-status-badge.status-delivered { background:#354052; border-color:#66758c; color:#f0f3f8; }
