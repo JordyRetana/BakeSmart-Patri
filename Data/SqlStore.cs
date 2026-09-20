@@ -3954,6 +3954,11 @@ public sealed partial class SqlStore
             var total = Convert.ToDecimal(await ScalarInTransactionAsync(connection, transaction,
                 "SELECT Total FROM Pedidos WHERE OrderId=@OrderId FOR UPDATE;", new SqlParameter("@OrderId", orderId)) ?? -1m);
             if (total < 0) throw new InvalidOperationException("El pedido no existe.");
+            var alreadyPaid = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
+                SELECT COUNT(1) FROM Pedidos o INNER JOIN EstadosPago ep ON ep.PaymentStatusId=o.PaymentStatusId
+                WHERE o.OrderId=@OrderId AND LOWER(ep.Name)='pagado';
+                """, new SqlParameter("@OrderId", orderId)) ?? 0) > 0;
+            if (alreadyPaid) throw new InvalidOperationException("El pedido ya se encuentra pagado.");
 
             var noteId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
                 SELECT CreditNoteId FROM NotasCreditoPOS
