@@ -404,6 +404,16 @@
         },
         customers: {
             list() { return cached("customers"); },
+            matchForPos(nameValue, emailValue) {
+                const name = String(nameValue || "").trim().toLowerCase();
+                const email = String(emailValue || "").trim().toLowerCase();
+                if (!name && !email) return null;
+                return this.list().find(customer => {
+                    const matchesName = !name || String(customer.fullName || customer.name || "").trim().toLowerCase() === name;
+                    const matchesEmail = !email || String(customer.email || "").trim().toLowerCase() === email;
+                    return matchesName && matchesEmail;
+                }) || null;
+            },
             search(query) {
                 const q = String(query || "").toLowerCase();
                 return cached("customers").filter(customer =>
@@ -420,6 +430,30 @@
         },
         marketing: {
             promotions() { return cached("promotions"); },
+            posPromotions(customer) {
+                const parts = new Intl.DateTimeFormat("en-US", {
+                    timeZone: "America/Costa_Rica", year: "numeric", month: "2-digit", day: "2-digit"
+                }).formatToParts(new Date());
+                const datePart = name => parts.find(part => part.type === name)?.value || "";
+                const today = `${datePart("year")}-${datePart("month")}-${datePart("day")}`;
+                return this.promotions()
+                    .filter(promotion => promotion.active
+                        && (!promotion.startDate || promotion.startDate <= today)
+                        && (!promotion.endDate || promotion.endDate >= today)
+                        && String(promotion.name || "").trim().toLowerCase() !== "cliente frecuente")
+                    .map(promotion => ({
+                        ...promotion,
+                        eligible: !(promotion.customerIds || []).length
+                            || Boolean(customer && promotion.customerIds.map(Number).includes(Number(customer.id)))
+                    }));
+            },
+            suggestedPosPromotion(customer, promotions) {
+                if (!customer) return "";
+                const assigned = promotions
+                    .filter(promotion => promotion.eligible && (promotion.customerIds || []).length)
+                    .sort((left, right) => Number(right.discount || 0) - Number(left.discount || 0));
+                return assigned.length ? String(assigned[0].id) : customer.frequent ? "frequent" : "";
+            },
             async addPromotion(input = {}) {
                 const result = await request("/api/promotions", {
                     method: "POST",
@@ -600,10 +634,7 @@
                     return sum + Number(combo?.specialPrice || 0) * Number(selection.quantity || 0);
                 }, 0);
                 const subtotal = subtotalProducts + subtotalCombos;
-                const customer = api.customers.list().find(row =>
-                    (input.customerEmail && String(row.email || "").toLowerCase() === String(input.customerEmail).toLowerCase()) ||
-                    (input.customerName && String(row.fullName || "").toLowerCase() === String(input.customerName).toLowerCase())
-                );
+                const customer = api.customers.matchForPos(input.customerName, input.customerEmail);
                 const normalizeDiscountRate = (value) => {
                     const numeric = Number(value || 0);
                     if (!Number.isFinite(numeric) || numeric <= 0) return 0;
