@@ -148,7 +148,7 @@
 
                 <button class="pos-cart-fab" type="button" id="posCartToggle" aria-label="Abrir carrito">
                     <i class="fas fa-cart-shopping"></i>
-                    <span id="posCartFabCount">0</span>
+                    <span id="posCartFabCount" hidden>0</span>
                 </button>
 
                 <!-- Mobile cart backdrop -->
@@ -675,7 +675,9 @@
                 document.getElementById('posCartItemsBadge').textContent = `${cart.length} producto${cart.length === 1 ? '' : 's'}`;
                 const desktopBadge = document.getElementById('posCartItemsBadgeDesktop');
                 if (desktopBadge) desktopBadge.textContent = `${cart.length} producto${cart.length === 1 ? '' : 's'}`;
-                document.getElementById('posCartFabCount').textContent = cart.length;
+                const cartFabCount = document.getElementById('posCartFabCount');
+                cartFabCount.textContent = cart.length;
+                cartFabCount.hidden = cart.length === 0;
 
                 const cartHtml = buildCartHtml();
                 cartContainer.innerHTML = cartHtml;
