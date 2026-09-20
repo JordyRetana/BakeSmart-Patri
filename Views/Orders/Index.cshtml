@@ -318,9 +318,9 @@
                     : order.status === 'Confirmado'
                         ? `<button class="btn btn-primary" onclick="sendOrderToProduction(${order.id}, this)"><i class="fas fa-kitchen-set"></i> Enviar a producción</button>`
                         : order.status === 'Listo'
-                            ? `<button class="btn btn-primary" onclick="advanceDelivery(${order.id})"><i class="fas fa-truck-fast"></i> Enviar a entrega</button>`
+                            ? `<button class="btn btn-primary" onclick="advanceDelivery(${order.id}, this)"><i class="fas fa-truck-fast"></i> Enviar a entrega</button>`
                             : order.status === 'En camino'
-                                ? `<button class="btn btn-primary" onclick="advanceDelivery(${order.id})"><i class="fas fa-circle-check"></i> Marcar entregado</button>`
+                                ? `<button class="btn btn-primary" onclick="advanceDelivery(${order.id}, this)"><i class="fas fa-circle-check"></i> Marcar entregado</button>`
                                 : nextActionLabel(order)
                                     ? `<a class="btn btn-primary" href="/Production" data-full-reload><i class="fas fa-kitchen-set"></i> ${clean(nextActionLabel(order))}</a>`
                                     : ''}
@@ -348,7 +348,17 @@
         renderDetail(rows.find(o => Number(o.id) === Number(activeOrderId)));
     }
 
-    window.advanceDelivery = async id => {
+    const orderActionsInFlight = new Set();
+
+    window.advanceDelivery = async (id, button) => {
+        if (orderActionsInFlight.has(Number(id))) return;
+        orderActionsInFlight.add(Number(id));
+        const originalContent = button?.innerHTML;
+        if (button) {
+            button.disabled = true;
+            button.setAttribute('aria-busy', 'true');
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando…';
+        }
         try {
             let location = {};
             if (navigator.geolocation) {
@@ -370,12 +380,21 @@
             });
             const result = await response.json().catch(() => null);
             if (!response.ok) throw new Error(result?.message || 'No se pudo avanzar la entrega.');
-            await loadOrders();
+            const changed = orders.find(order => Number(order.id) === Number(id));
+            if (changed) changed.status = result.status;
             activeOrderId = id;
             render();
             app.toast.success(result.status === 'Entregado' ? `Pedido #${id} entregado.` : `Pedido #${id} enviado a entrega.`);
+            loadOrders().then(render).catch(() => { });
         } catch (error) {
             app.toast.error(error.message);
+        } finally {
+            orderActionsInFlight.delete(Number(id));
+            if (button?.isConnected) {
+                button.disabled = false;
+                button.removeAttribute('aria-busy');
+                button.innerHTML = originalContent;
+            }
         }
     };
 
@@ -395,10 +414,12 @@
             } catch { }
             throw new Error(message);
         }
-        await loadOrders();
+        const changed = orders.find(order => Number(order.id) === Number(id));
+        if (changed) changed.status = 'Pendiente produccion';
         activeOrderId = id;
         render();
         app.toast.success(`Pedido #${id} enviado a Producción.`);
+        loadOrders().then(render).catch(() => { });
     }
 
     window.selectOrder = (id) => {

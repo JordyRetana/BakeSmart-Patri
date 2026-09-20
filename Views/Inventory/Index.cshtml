@@ -26,8 +26,10 @@
                 <input id="inventorySearch" class="form-control" placeholder="Buscar por código o descripción" />
             </div>
             <select id="inventoryTypeFilter" class="form-control inventory-type-filter">
-                <option value="Materia prima" selected>Solo materia prima</option>
+                <option value="todos" selected>Materia prima y empaques</option>
+                <option value="Materia prima">Solo materia prima</option>
                 <option value="Empaque">Solo empaques</option>
+                <option value="Insumo operativo">Solo insumos operativos</option>
             </select>
             <select id="inventoryCategory" class="form-control inventory-category"></select>
             <select id="inventoryStockFilter" class="form-control inventory-stock-filter">

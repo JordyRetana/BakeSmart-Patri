@@ -118,6 +118,37 @@
     let activeOrderId = null;
     let pageInitialized = false;
     let mapResizeObserver;
+    let layoutResizeObserver;
+
+    function syncDesktopMapHeight() {
+        const mapElement = document.getElementById('deliveryMap');
+        const mapHeader = document.querySelector('.track-map-header');
+        const sideStack = document.querySelector('.track-side-stack');
+        if (!mapElement || !mapHeader || !sideStack) return;
+
+        if (window.matchMedia('(max-width: 1080px)').matches) {
+            mapElement.style.removeProperty('height');
+            mapElement.style.removeProperty('min-height');
+        } else {
+            const sideHeight = Math.ceil(sideStack.getBoundingClientRect().height);
+            const headerHeight = Math.ceil(mapHeader.getBoundingClientRect().height);
+            const targetHeight = Math.max(540, sideHeight - headerHeight);
+            mapElement.style.height = `${targetHeight}px`;
+            mapElement.style.minHeight = `${targetHeight}px`;
+        }
+
+        requestAnimationFrame(() => map?.invalidateSize({ pan: false }));
+    }
+
+    function observeTrackingLayout() {
+        if (layoutResizeObserver) return;
+        const sideStack = document.querySelector('.track-side-stack');
+        if (!sideStack) return;
+        layoutResizeObserver = new ResizeObserver(syncDesktopMapHeight);
+        layoutResizeObserver.observe(sideStack);
+        window.addEventListener('resize', syncDesktopMapHeight, { passive: true });
+        syncDesktopMapHeight();
+    }
 
     function isValidCoordinate(lat, lng) {
         const latitude = Number(lat);
@@ -453,6 +484,7 @@
         renderTimeline(order, safeDestination, hasLiveRoute);
         renderTrackingSummary(order, safeDestination, routeType);
         renderLiveStatus(order, hasLiveRoute);
+        syncDesktopMapHeight();
 
         const startLatLng = [origin.lat, origin.lng];
         if (!destination) {
@@ -509,6 +541,7 @@
 
         renderTimeline(order, destination, hasLiveRoute);
         renderTrackingSummary(order, destination, routeType);
+        syncDesktopMapHeight();
     }
 
     function renderSelector() {
@@ -558,6 +591,7 @@
             await BakeSmartStore.refresh({ keys: ['orders', 'posConfig'] });
             origin = sanitizeLocation(BakeSmartStore.geo.origin(), defaultOrigin);
             renderSelector();
+            observeTrackingLayout();
         } finally {
             requestAnimationFrame(() => {
                 showPage();

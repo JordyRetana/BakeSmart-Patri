@@ -693,7 +693,14 @@
                 return request(`/api/reports/${type}${params.toString() ? `?${params}` : ""}`);
             },
             sales() { return { rows: [], totalIncome: 0, totalTransactions: 0 }; },
-            inventory() { return { rows: cached("inventory"), lowStock: cached("inventory").filter(x => Number(x.stock) <= Number(x.min)).length, negativeStock: 0 }; },
+            inventory() {
+                const rows = cached("inventory");
+                return {
+                    rows,
+                    lowStock: rows.filter(x => Number(x.stock) <= Number(x.minStock ?? x.min ?? 0)).length,
+                    negativeStock: rows.filter(x => Number(x.stock) < 0).length
+                };
+            },
             users() { return { rows: cached("users"), activeUsers: cached("users").filter(x => x.active ?? x.isActive ?? x.activo).length }; },
             promotions() { return { rows: cached("promotions"), activePromotions: cached("promotions").filter(x => x.active).length }; },
             cashClosures() { return { rows: [], totalSales: 0 }; },
