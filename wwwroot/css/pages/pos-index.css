@@ -802,7 +802,7 @@ body[data-page="/pos/cart"] .pos-input-shell {
     position: relative;
 }
 
-body[data-page="/pos/cart"] .pos-input-shell i {
+body[data-page="/pos/cart"] .pos-input-shell > i {
     position: absolute;
     left: .9rem;
     top: 50%;
