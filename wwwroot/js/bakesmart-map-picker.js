@@ -7,6 +7,14 @@
 
     let leafletPromise = null;
 
+    function withTimeout(promise, milliseconds, message) {
+        let timer;
+        return Promise.race([
+            promise,
+            new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), milliseconds); })
+        ]).finally(() => clearTimeout(timer));
+    }
+
     function loadStylesheet(href) {
         if (document.querySelector(`link[href="${href}"]`)) return Promise.resolve();
         return new Promise((resolve, reject) => {
@@ -22,10 +30,10 @@
     function loadScript(src) {
         if (window.L) return Promise.resolve();
         if (document.querySelector(`script[src="${src}"]`)) {
-            return new Promise((resolve) => {
+            return withTimeout(new Promise((resolve) => {
                 const check = () => window.L ? resolve() : setTimeout(check, 40);
                 check();
-            });
+            }), 10000, 'El mapa tardó demasiado en cargar. Recarga la página e inténtalo otra vez.');
         }
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -38,7 +46,9 @@
 
     function ensureLeaflet() {
         if (!leafletPromise) {
-            leafletPromise = loadStylesheet(LEAFLET_CSS).then(() => loadScript(LEAFLET_JS));
+            leafletPromise = withTimeout(loadStylesheet(LEAFLET_CSS).then(() => loadScript(LEAFLET_JS)), 12000,
+                'El mapa tardó demasiado en cargar. Recarga la página e inténtalo otra vez.')
+                .catch(error => { leafletPromise = null; throw error; });
         }
         return leafletPromise;
     }
@@ -62,13 +72,13 @@
     }
 
     async function geoSearch(query) {
-        const response = await fetch(`/api/geo/search?q=${encodeURIComponent(query)}`);
+        const response = await fetch(`/api/geo/search?q=${encodeURIComponent(query)}`, { signal: AbortSignal.timeout(10000) });
         if (!response.ok) throw new Error('No se pudo buscar la direccion.');
         return response.json();
     }
 
     async function geoReverse(lat, lng, signal) {
-        const response = await fetch(`/api/geo/reverse?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`, { signal });
+        const response = await fetch(`/api/geo/reverse?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`, { signal: signal || AbortSignal.timeout(10000) });
         if (!response.ok) throw new Error('No se pudo obtener la direccion del punto seleccionado.');
         return response.json();
     }
@@ -83,10 +93,9 @@
         return 6371000 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
     }
 
-    function getAccuratePosition({ timeout = 18000, targetAccuracy = 60, maximumAcceptedAccuracy = 120 } = {}) {
+    function getAccuratePosition({ timeout = 12000, targetAccuracy = 80 } = {}) {
         return new Promise((resolve, reject) => {
             let bestPosition = null;
-            let bestIsStable = false;
             let previousFreshPosition = null;
             let watchId = null;
             let settled = false;
@@ -101,24 +110,22 @@
 
             const timer = setTimeout(() => {
                 const bestAccuracy = Number(bestPosition?.coords?.accuracy);
-                if (bestPosition && Number.isFinite(bestAccuracy) && bestAccuracy <= maximumAcceptedAccuracy && (bestAccuracy <= targetAccuracy || bestIsStable)) finish(resolve, bestPosition);
-                else finish(reject, { code: 'LOW_ACCURACY', accuracy: bestAccuracy, message: 'El dispositivo solo compartió una ubicación aproximada.' });
+                if (bestPosition && Number.isFinite(bestAccuracy)) finish(resolve, bestPosition);
+                else finish(reject, { code: 3, message: 'El dispositivo no entregó una posición a tiempo.' });
             }, timeout);
 
             watchId = navigator.geolocation.watchPosition(
                 (position) => {
                     const accuracy = Number(position.coords.accuracy);
                     const age = Date.now() - Number(position.timestamp || 0);
-                    if (!Number.isFinite(age) || age > 30000 || !isValidCoordinate(position.coords.latitude, position.coords.longitude)) return;
+                    if (!Number.isFinite(age) || age > 60000 || !Number.isFinite(accuracy) || !isValidCoordinate(position.coords.latitude, position.coords.longitude)) return;
                     const stable = previousFreshPosition && distanceMeters(previousFreshPosition, position) <= Math.max(accuracy, Number(previousFreshPosition.coords.accuracy), 45);
                     const bestAccuracy = Number(bestPosition?.coords?.accuracy);
                     if (!bestPosition || !Number.isFinite(bestAccuracy) || accuracy < bestAccuracy) {
                         bestPosition = position;
-                        bestIsStable = Boolean(stable);
                     }
                     previousFreshPosition = position;
-                    if (Number.isFinite(accuracy) && accuracy <= 30) finish(resolve, position);
-                    else if (Number.isFinite(accuracy) && accuracy <= targetAccuracy && stable) finish(resolve, position);
+                    if (accuracy <= 30 || (accuracy <= targetAccuracy && stable)) finish(resolve, position);
                 },
                 (error) => {
                     if (bestPosition && error?.code !== 1) finish(resolve, bestPosition);
@@ -139,6 +146,8 @@
             this.disabled = false;
             this.reverseRequest = null;
             this.reverseRequestId = 0;
+            this.approximateCircle = null;
+            this.approximatePosition = null;
             this.values = {
                 label: options.label || '',
                 address: options.address || '',
@@ -182,6 +191,7 @@
                     </div>
                     <p class="map-picker__hint">Haz clic en el mapa o arrastra el marcador para ajustar la ubicacion.</p>
                     <p class="map-picker__error"></p>
+                    <button type="button" class="btn btn-outline map-picker-use-approximate" hidden>Usar este punto aproximado</button>
                 </div>
             `;
 
@@ -191,6 +201,7 @@
             this.latInput = this.container.querySelector('.map-picker-lat');
             this.lngInput = this.container.querySelector('.map-picker-lng');
             this.errorBox = this.container.querySelector('.map-picker__error');
+            this.approximateButton = this.container.querySelector('.map-picker-use-approximate');
             this.canvas = this.container.querySelector('.map-picker__canvas');
 
             const center = isValidCoordinate(this.values.lat, this.values.lng)
@@ -221,6 +232,11 @@
 
             this.searchInput.addEventListener('input', debounce(() => this.runSearch()));
             this.container.querySelector('.map-picker-locate-btn').addEventListener('click', () => this.locateUser());
+            this.approximateButton.addEventListener('click', () => {
+                if (!this.approximatePosition || this.disabled) return;
+                this.applyPosition(this.approximatePosition);
+                this.showNotice('Se seleccionó la ubicación aproximada. Arrastra el pin hasta la dirección exacta antes de guardar.');
+            });
             document.addEventListener('click', (event) => {
                 if (!this.container.contains(event.target)) this.closeResults();
             });
@@ -241,6 +257,7 @@
         setDisabled(disabled) {
             this.disabled = !!disabled;
             this.container.classList.toggle('map-picker--disabled', this.disabled);
+            if (this.approximateButton) this.approximateButton.disabled = this.disabled;
             if (this.marker) {
                 if (this.disabled) this.marker.dragging.disable();
                 else this.marker.dragging.enable();
@@ -250,6 +267,7 @@
         setValues({ label, address, lat, lng } = {}) {
             this.reverseRequest?.abort();
             this.reverseRequestId++;
+            this.clearApproximatePosition();
             if (label !== undefined) this.values.label = label;
             if (address !== undefined) this.values.address = address;
             if (lat !== undefined) this.values.lat = lat;
@@ -318,6 +336,7 @@
         }
 
         async handleMarkerMoved(updateAddress = true) {
+            this.clearApproximatePosition();
             const { lat, lng } = this.marker.getLatLng();
             this.values.lat = Number(lat.toFixed(6));
             this.values.lng = Number(lng.toFixed(6));
@@ -330,17 +349,22 @@
 
             if (updateAddress) {
                 this.reverseRequest?.abort();
-                this.reverseRequest = new AbortController();
+                const reverseController = new AbortController();
+                this.reverseRequest = reverseController;
                 const requestId = ++this.reverseRequestId;
+                let timedOut = false;
+                const reverseTimer = setTimeout(() => { timedOut = true; reverseController.abort(); }, 10000);
                 try {
-                    const result = await geoReverse(this.values.lat, this.values.lng, this.reverseRequest.signal);
+                    const result = await geoReverse(this.values.lat, this.values.lng, reverseController.signal);
                     if (requestId !== this.reverseRequestId) return;
                     this.values.address = result.displayName || this.values.address;
                     this.syncInputs();
                 } catch (error) {
-                    if (error?.name !== 'AbortError') {
+                    if (requestId === this.reverseRequestId && (timedOut || error?.name !== 'AbortError')) {
                         this.showError('Se guardaron las coordenadas exactas, pero no fue posible obtener el nombre de la direccion.');
                     }
+                } finally {
+                    clearTimeout(reverseTimer);
                 }
             }
 
@@ -397,6 +421,7 @@
         }
 
         async locateUser() {
+            if (this.disabled) return;
             if (!navigator.geolocation) {
                 const message = 'Este navegador no permite obtener la ubicación actual. Selecciona el punto manualmente en el mapa.';
                 this.showError(message);
@@ -419,22 +444,16 @@
                     const accuracyLabel = accuracy >= 10000
                         ? `${Math.round(accuracy / 1000)} km`
                         : `${Math.round(accuracy)} m`;
-                    const message = `No cambiamos tu dirección porque este dispositivo compartió una ubicación aproximada (${accuracyLabel} de margen). La ubicación guardada se conserva; activa la ubicación precisa o ajusta el marcador en el mapa.`;
+                    this.showApproximatePosition(position);
+                    const message = `El dispositivo compartió una ubicación aproximada (${accuracyLabel} de margen). La dirección guardada no cambió. Ajusta el pin o pulsa “Usar este punto aproximado” si corresponde.`;
                     this.showNotice(message);
                     return;
                 }
-
-                this.values.lat = Number(position.coords.latitude.toFixed(6));
-                this.values.lng = Number(position.coords.longitude.toFixed(6));
-                this.values.address = '';
-                this.setValues(this.values);
-                await this.handleMarkerMoved();
+                await this.applyPosition(position);
                 const accuracyText = Number.isFinite(accuracy) ? ` (precisión aproximada: ${Math.round(accuracy)} m)` : '';
                 window.app?.toast?.success?.(`Ubicación actualizada con la posición de este dispositivo${accuracyText}.`);
             } catch (error) {
-                const message = error?.code === 'LOW_ACCURACY'
-                    ? 'No cambiamos la dirección porque el teléfono solo compartió una ubicación aproximada. Active “ubicación precisa” para este navegador o ajuste el pin manualmente.'
-                    : error?.code === error?.PERMISSION_DENIED || error?.code === 1
+                const message = error?.code === error?.PERMISSION_DENIED || error?.code === 1
                     ? 'No se concedió permiso para usar la ubicación. Selecciona el punto manualmente en el mapa.'
                     : error?.code === error?.TIMEOUT || error?.code === 3
                         ? 'La ubicación tardó demasiado. Intenta de nuevo o selecciona un punto en el mapa.'
@@ -449,8 +468,36 @@
             }
         }
 
+        clearApproximatePosition() {
+            this.approximateCircle?.remove();
+            this.approximateCircle = null;
+            this.approximatePosition = null;
+            if (this.approximateButton) this.approximateButton.hidden = true;
+        }
+
+        showApproximatePosition(position) {
+            this.clearApproximatePosition();
+            this.approximatePosition = position;
+            const point = [position.coords.latitude, position.coords.longitude];
+            this.approximateCircle = L.circle(point, {
+                radius: Math.min(Math.max(position.coords.accuracy, 50), 50000),
+                color: '#7c3aed', fillOpacity: .08, weight: 2
+            }).addTo(this.map);
+            this.map.fitBounds(this.approximateCircle.getBounds(), { padding: [24, 24], maxZoom: 15 });
+            this.approximateButton.hidden = false;
+        }
+
+        async applyPosition(position) {
+            const point = L.latLng(Number(position.coords.latitude.toFixed(6)), Number(position.coords.longitude.toFixed(6)));
+            this.clearApproximatePosition();
+            this.marker.setLatLng(point);
+            this.map.setView(point, Math.max(this.map.getZoom(), 15));
+            await this.handleMarkerMoved();
+        }
+
         destroy() {
             this.reverseRequest?.abort();
+            this.clearApproximatePosition();
             if (this.map) {
                 this.map.remove();
                 this.map = null;

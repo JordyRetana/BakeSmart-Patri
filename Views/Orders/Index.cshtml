@@ -368,7 +368,12 @@
                         timeout: 8000,
                         maximumAge: 30000
                     }));
-                    location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+                    const accuracy = Number(position.coords.accuracy);
+                    if (Number.isFinite(accuracy) && accuracy <= 120) {
+                        location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+                    } else {
+                        app.toast.info('El dispositivo reportó una ubicación aproximada; se avanzará el pedido sin mostrar una posición inexacta.');
+                    }
                 } catch {
                     app.toast.info('Se avanzará el pedido sin ubicación en vivo. Puede habilitar la ubicación precisa para registrar el recorrido.');
                 }

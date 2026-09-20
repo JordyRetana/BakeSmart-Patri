@@ -575,10 +575,10 @@
 
         async function ensureAddressPicker() {
         if (addressPicker) return addressPicker;
-        for (let i = 0; i < 20 && (!window.L || !window.BakeSmartMapPicker); i++) {
+        for (let i = 0; i < 20 && !window.BakeSmartMapPicker; i++) {
         await new Promise(resolve => setTimeout(resolve, 150));
         }
-        if (!window.L || !window.BakeSmartMapPicker) {
+        if (!window.BakeSmartMapPicker) {
         document.getElementById('quickMapPicker').innerHTML = `
         <div class="client-empty-state quick-map-fallback">
         <i class="fas fa-map-location-dot"></i>
@@ -589,14 +589,18 @@
         return null;
         }
         const origin = BakeSmartStore.geo.origin();
-        addressPicker = await BakeSmartMapPicker.create('quickMapPicker', {
+        try { addressPicker = await BakeSmartMapPicker.create('quickMapPicker', {
         lat: currentProfile?.latitude || origin.lat,
         lng: currentProfile?.longitude || origin.lng,
         address: currentProfile?.address || '',
         onChange: values => {
         manualAddressInput.value = values.address || manualAddressInput.value || '';
         }
-        });
+        }); } catch (error) {
+        document.getElementById('quickMapPicker').innerHTML = '<div class="client-empty-state quick-map-fallback">No se pudo cargar el mapa. Cierra y vuelve a abrir esta ventana para intentarlo de nuevo.</div>';
+        window.app?.toast?.warning?.(error.message);
+        return null;
+        }
         return addressPicker;
         }
 
