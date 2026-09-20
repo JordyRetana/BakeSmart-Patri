@@ -109,7 +109,13 @@
     }
 
     function cached(key, fallback = []) {
-        return cache.has(key) ? cache.get(key) : fallback;
+        if (cache.has(key)) return cache.get(key);
+        const persisted = readPersistent(key);
+        if (persisted != null) {
+            cache.set(key, persisted);
+            return persisted;
+        }
+        return fallback;
     }
 
     function isOpenSession(session) {

@@ -698,6 +698,15 @@ public class ApiController : Controller
         return Ok(new { ok = true });
     }
 
+    [HttpPost("orders/{id:int}/credit-note")]
+    [Authorize(Roles = "Cliente")]
+    public async Task<IActionResult> RedeemOrderCreditNote(int id, [FromBody] CreditNotePaymentRequest request)
+    {
+        if (!await _sqlStore.OrderBelongsToAsync(id, CurrentUserEmail)) return Forbid();
+        try { return Ok(await _sqlStore.RedeemCreditNoteForOrderAsync(id, request.Code, CurrentUserEmail)); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
     [HttpPost("users/{id:int}/reset-two-factor")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> ResetUserTwoFactor(int id, [FromBody] ResetTwoFactorRequest request)
@@ -1504,6 +1513,7 @@ public class ApiController : Controller
     public sealed record UpdateOrderStatusRequest(string Status);
     public sealed record DeliveryAdvanceRequest(decimal? Latitude, decimal? Longitude);
     public sealed record MarkPaidRequest(string Method);
+    public sealed record CreditNotePaymentRequest(string Code);
     public sealed record ReviewRecipeRequest(bool Approved);
     public sealed record OpenCashSessionRequest(decimal Amount);
     public sealed record CloseCashSessionRequest(int Id, decimal DeclaredAmount);

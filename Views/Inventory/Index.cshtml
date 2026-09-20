@@ -369,12 +369,13 @@
             }
 
             async function loadInventory() {
-                const [inventoryRows, movementRows] = await Promise.all([
-                    fetch('/api/inventory').then(r => r.json()),
-                    fetch('/api/inventory/movements').then(r => r.json())
-                ]);
-                products = inventoryRows.map(normalizeProduct);
-                movements = movementRows;
+                // Pinta inmediatamente la copia local y actualiza en segundo plano.
+                products = BakeSmartStore.inventory.list().map(normalizeProduct);
+                movements = BakeSmartStore.inventory.history();
+                if (products.length) renderProducts();
+                await BakeSmartStore.refresh({ keys: ['inventory', 'inventoryMovements'] });
+                products = BakeSmartStore.inventory.list().map(normalizeProduct);
+                movements = BakeSmartStore.inventory.history();
             }
 
             function getCategories() {

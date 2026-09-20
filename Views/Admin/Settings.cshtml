@@ -243,7 +243,7 @@
 
     .settings-module-tabs {
         display: grid;
-        grid-template-columns: repeat(6, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: .75rem;
         padding: .75rem;
         border: 1px solid var(--border);
@@ -256,11 +256,12 @@
         min-height: 58px;
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         gap: .55rem;
         border: 1px solid transparent;
         border-radius: 10px;
-        background: transparent;
+        padding: .7rem .85rem;
+        background: var(--bg);
         color: var(--text-muted);
         font-weight: 800;
         cursor: pointer;
@@ -270,7 +271,10 @@
         border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
         background: color-mix(in srgb, var(--primary) 10%, var(--surface));
         color: var(--primary);
+        box-shadow: inset 4px 0 0 var(--primary);
     }
+
+    .settings-module-tab i { width:34px;height:34px;display:grid;place-items:center;flex:0 0 34px;border-radius:10px;background:color-mix(in srgb,var(--primary) 10%,var(--surface)); }
 
     .settings-page-card {
         width: 100%;

@@ -278,7 +278,12 @@
                     <option value="PayPal">PayPal</option>
                     <option>SINPE</option>
                     <option>Efectivo</option>
+                    <option value="Nota de crédito">Nota de crédito</option>
                 </select>
+            </label>
+            <label id="paymentReferenceLabel" hidden>
+                <span>Código de la nota</span>
+                <input class="form-control" id="paymentReferenceInput" name="creditNoteCode" autocomplete="off" placeholder="NC-2026-000001" />
             </label>
             <div class="payment-modal__sinpe" id="paymentSinpeInstructions" hidden>
                 <span>Realiza el SINPE Móvil al número de la empresa</span>
@@ -803,13 +808,17 @@
         function syncPaymentFields() {
         const value = String(paymentMethod.value || '').toLowerCase();
         const sinpe = value.includes('sinpe');
+        const creditNote = value.includes('nota de cr');
         document.getElementById('paymentSinpeInstructions').hidden = !sinpe;
+        paymentReferenceLabel.hidden = !creditNote;
         document.getElementById('paymentGatewayNote').textContent = value.includes('paypal')
         ? 'Serás redirigido a PayPal para autorizar y validar el pago.'
         : sinpe
         ? 'Confirma únicamente después de hacer la transferencia.'
         : value.includes('efectivo')
         ? 'Pagarás en efectivo al retirar o recibir tu pedido. No se registrará como pagado hasta el cobro.'
+        : creditNote
+        ? 'El código se validará y se descontará al confirmar el pago.'
         : 'El pedido se registrará con el método seleccionado y se confirmará según corresponda.';
         }
 
@@ -903,6 +912,21 @@
         if (!pendingPayment || paymentConfirmBtn.dataset.busy === 'true') return;
 
         const data = Object.fromEntries(new FormData(paymentForm).entries());
+        if (String(data.method || '').toLowerCase().includes('nota de cr')) {
+        const code = String(data.creditNoteCode || '').trim();
+        if (!code) { app.toast.error('Ingrese el código de la nota de crédito.'); return; }
+        try {
+        paymentConfirmBtn.dataset.busy = 'true'; paymentConfirmBtn.disabled = true;
+        const response = await fetch(`/api/orders/${pendingPayment.orderId}/credit-note`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ code }) });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.message || 'No se pudo aplicar la nota de crédito.');
+        await BakeSmartStore.refresh({ keys:['orders'], force:true });
+        app.toast.success(`Nota aplicada. Saldo restante: ${money(result.remaining)}.`);
+        closePaymentGateway();
+        } catch (error) { app.toast.error(error.message); }
+        finally { paymentConfirmBtn.dataset.busy='false'; paymentConfirmBtn.disabled=false; paymentConfirmBtn.innerHTML='<i class="fas fa-lock"></i> Confirmar forma de pago'; }
+        return;
+        }
         if (String(data.method || '').toLowerCase().includes('paypal')) {
         try {
         paymentConfirmBtn.dataset.busy = 'true';

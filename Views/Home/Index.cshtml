@@ -260,6 +260,11 @@ else if (isClient)
             <div><a class="btn btn-primary" href="/Catalog">Explorar catálogo</a><a class="btn btn-outline" href="/Client">Mi espacio</a></div>
         </div>
     </section>
+    <nav class="home-role-links container" aria-label="Accesos del cliente">
+        <a href="/Client"><i class="fas fa-bag-shopping"></i><span><strong>Nuevo pedido</strong><small>Configura tu próxima compra</small></span></a>
+        <a href="/Client/Orders"><i class="fas fa-receipt"></i><span><strong>Mis pedidos</strong><small>Pagos, estados y detalles</small></span></a>
+        <a href="/Client/Track"><i class="fas fa-route"></i><span><strong>Seguimiento</strong><small>Consulta la ruta de entrega</small></span></a>
+    </nav>
 }
 else if (isAdmin || isStaff)
 {
@@ -271,6 +276,11 @@ else if (isAdmin || isStaff)
             <div><a class="btn btn-primary" href="/Dashboard">Ir al dashboard</a><a class="btn btn-outline" href="/Orders">Ver pedidos</a></div>
         </div>
     </section>
+    <nav class="home-role-links container" aria-label="Accesos operativos">
+        <a href="/Dashboard"><i class="fas fa-chart-line"></i><span><strong>Resumen</strong><small>Indicadores del negocio</small></span></a>
+        <a href="/Orders"><i class="fas fa-clipboard-list"></i><span><strong>Pedidos</strong><small>Gestiona el flujo operativo</small></span></a>
+        <a href="/Inventory"><i class="fas fa-boxes-stacked"></i><span><strong>Inventario</strong><small>Stock y movimientos</small></span></a>
+    </nav>
 }
 else
 {

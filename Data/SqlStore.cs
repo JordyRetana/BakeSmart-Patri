@@ -22,6 +22,9 @@ public sealed partial class SqlStore
     private static bool _sqlServerInventoryLotsReady;
     private static bool _mySqlProfileCoordinatesReady;
     private static bool _sqlServerProfileCoordinatesReady;
+    private static readonly SemaphoreSlim SettingsCacheLock = new(1, 1);
+    private static IReadOnlyDictionary<string, string>? _settingsCache;
+    private static DateTime _settingsCacheExpiresUtc;
     private readonly IConfiguration _configuration;
 
     public SqlStore(IConfiguration configuration)
@@ -3935,6 +3938,65 @@ public sealed partial class SqlStore
         return id;
     }
 
+    public async Task<object> RedeemCreditNoteForOrderAsync(int orderId, string code, string? userEmail = null)
+    {
+        var normalizedCode = (code ?? string.Empty).Trim().ToUpperInvariant();
+        if (orderId <= 0 || string.IsNullOrWhiteSpace(normalizedCode))
+            throw new InvalidOperationException("Indique un código de nota de crédito válido.");
+        if (!UseMySql)
+            throw new InvalidOperationException("El canje de notas de crédito no está disponible en este entorno.");
+
+        await using var connection = CreateConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        try
+        {
+            var total = Convert.ToDecimal(await ScalarInTransactionAsync(connection, transaction,
+                "SELECT Total FROM Pedidos WHERE OrderId=@OrderId FOR UPDATE;", new SqlParameter("@OrderId", orderId)) ?? -1m);
+            if (total < 0) throw new InvalidOperationException("El pedido no existe.");
+
+            var noteId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
+                SELECT CreditNoteId FROM NotasCreditoPOS
+                WHERE UPPER(Code)=@Code AND COALESCE(RemainingAmount, Amount) > 0
+                LIMIT 1 FOR UPDATE;
+                """, new SqlParameter("@Code", normalizedCode)) ?? 0);
+            if (noteId <= 0) throw new InvalidOperationException("La nota de crédito no existe o ya fue utilizada.");
+            var balance = Convert.ToDecimal(await ScalarInTransactionAsync(connection, transaction,
+                "SELECT COALESCE(RemainingAmount, Amount) FROM NotasCreditoPOS WHERE CreditNoteId=@Id;",
+                new SqlParameter("@Id", noteId)) ?? 0m);
+            if (balance < total)
+                throw new InvalidOperationException($"La nota dispone de ₡{balance:N0} y el pedido requiere ₡{total:N0}.");
+
+            await ExecuteInTransactionAsync(connection, transaction, """
+                INSERT INTO MetodosPago (Name, CommissionRate, IsActive)
+                SELECT 'Nota de crédito',0,1 WHERE NOT EXISTS (SELECT 1 FROM MetodosPago WHERE LOWER(Name)='nota de crédito');
+                UPDATE NotasCreditoPOS
+                SET RemainingAmount=COALESCE(RemainingAmount,Amount)-@Total,
+                    UsedAt=CASE WHEN COALESCE(RemainingAmount,Amount)-@Total<=0 THEN UTC_TIMESTAMP() ELSE UsedAt END,
+                    UsedSaleId=@OrderId
+                WHERE CreditNoteId=@NoteId;
+                UPDATE Pedidos o
+                INNER JOIN EstadosPago ep ON ep.Name='Pagado'
+                INNER JOIN MetodosPago mp ON LOWER(mp.Name)='nota de crédito'
+                LEFT JOIN EstadosPedido currentStatus ON currentStatus.OrderStatusId=o.OrderStatusId
+                LEFT JOIN EstadosPedido confirmed ON confirmed.Name='Confirmado'
+                SET o.PaymentStatusId=ep.PaymentStatusId,
+                    o.PaymentMethodId=mp.PaymentMethodId,
+                    o.OrderStatusId=CASE WHEN currentStatus.Name='Pendiente pago' THEN COALESCE(confirmed.OrderStatusId,o.OrderStatusId) ELSE o.OrderStatusId END
+                WHERE o.OrderId=@OrderId;
+                """, new SqlParameter("@Total", total), new SqlParameter("@NoteId", noteId), new SqlParameter("@OrderId", orderId));
+            await transaction.CommitAsync();
+            var remaining = balance - total;
+            QueueAuditLog("CANJE_NOTA_CREDITO", $"Nota {normalizedCode} aplicada al pedido #{orderId} por {total:N0}", userEmail);
+            return new { ok = true, applied = total, remaining, code = normalizedCode };
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
     private async Task<object> SalesReportAsync(DateTime? start, DateTime? end)
     {
         const string sql = """
@@ -6360,6 +6422,11 @@ public sealed partial class SqlStore
 
     public async Task<IReadOnlyDictionary<string, string>> SettingsDictionaryAsync()
     {
+        if (_settingsCache is not null && _settingsCacheExpiresUtc > DateTime.UtcNow) return _settingsCache;
+        await SettingsCacheLock.WaitAsync();
+        try
+        {
+            if (_settingsCache is not null && _settingsCacheExpiresUtc > DateTime.UtcNow) return _settingsCache;
         const string sql = "SELECT SettingKey, SettingValue FROM dbo.ConfiguracionesAplicacion";
         var rows = await QueryAsync(sql, reader => new
         {
@@ -6367,9 +6434,13 @@ public sealed partial class SqlStore
             value = reader.GetString("SettingValue")
         });
 
-        return rows
+        _settingsCache = rows
             .GroupBy(row => row.key)
             .ToDictionary(group => group.Key, group => group.Last().value);
+        _settingsCacheExpiresUtc = DateTime.UtcNow.AddMinutes(2);
+        return _settingsCache;
+        }
+        finally { SettingsCacheLock.Release(); }
     }
 
     public async Task SaveSettingsAsync(Dictionary<string, string> settings)
@@ -6423,6 +6494,8 @@ public sealed partial class SqlStore
                 new SqlParameter("@Key", kvp.Key.Trim()),
                 new SqlParameter("@Value", kvp.Value.Trim()));
         }
+        _settingsCache = null;
+        _settingsCacheExpiresUtc = DateTime.MinValue;
     }
 
     public sealed record AuthUser(string Email, string Role, string DisplayName);
