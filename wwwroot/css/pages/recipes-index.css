@@ -41,6 +41,12 @@
 .ingredient-stock { display:block; margin-top:.28rem; color:var(--text-muted); font-size:.72rem; }
 .ingredient-remove { width:42px; height:42px; border:0; border-radius:10px; color:#c23854; background:#fff0f2; cursor:pointer; }
 .recipe-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.75rem; margin-top:1.25rem; padding-top:1rem; border-top:1px solid var(--border); }
+.recipe-actions button:disabled { cursor:wait; opacity:.65; }
+.recipe-feedback { margin:.85rem 0 0; padding:.75rem .9rem; border:1px solid #add9c2; border-radius:10px; color:#17643f; background:#ebfff3; font-size:.85rem; font-weight:700; }
+.recipe-feedback[hidden] { display:none!important; }
+.recipe-feedback[data-type="error"] { border-color:#f0b5bf; color:#9c2540; background:#fff1f3; }
+body.dark .recipe-feedback { border-color:#337457; color:#bdf6d5; background:#183729; }
+body.dark .recipe-feedback[data-type="error"] { border-color:#824150; color:#ffd0d9; background:#3c202c; }
 .btn-success { color:#fff; background:#2e9d68; }
 body.dark .recipe-hero { border-color:#3c3650; background:linear-gradient(125deg,#17263a,#272044 52%,#3a2032); }
 body.dark .recipe-summary span { border-color:#453d59; background:rgba(31,28,43,.82); }
