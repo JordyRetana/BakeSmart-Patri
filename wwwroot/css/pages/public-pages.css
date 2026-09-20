@@ -9,3 +9,11 @@ body[data-page="/home/about"] .story-hero-copy{padding:clamp(1.8rem,3.2vw,3rem)}
 body[data-page="/home/about"] .story-hero h1{font-size:clamp(2.45rem,3.7vw,3.8rem);line-height:.96}
 body[data-page="/home/about"] .story-collage{min-height:480px}
 @media(max-width:900px){body[data-page="/home/about"] .story-hero{min-height:auto;grid-template-columns:1fr}body[data-page="/home/about"] .story-collage{min-height:400px}}
+body.app-body.dark[data-page="/home/about"] .story-kicker,
+body.app-body.dark[data-page="/home/contact"] .story-kicker {
+    color:#372810 !important;
+}
+body.app-body.dark[data-page="/home/about"] .story-seal {
+    background:#372840 !important;
+    color:#f6ebff !important;
+}
