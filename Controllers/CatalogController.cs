@@ -39,11 +39,13 @@ namespace BakeSmartPatri.Controllers
             var promotionsTask = _sqlStore.PromotionsAsync();
             await Task.WhenAll(modelTask, promotionsTask);
             var model = await modelTask;
-            var today = DateTime.UtcNow.Date;
+            var today = DateTime.UtcNow.AddHours(-6).Date;
             var discounts = new Dictionary<int, decimal>();
             foreach (var promotion in JsonSerializer.SerializeToElement(await promotionsTask).EnumerateArray())
             {
-                if (!promotion.GetProperty("active").GetBoolean()) continue;
+                if (!promotion.GetProperty("active").GetBoolean()
+                    || promotion.GetProperty("customerIds").GetArrayLength() > 0
+                    || string.Equals(promotion.GetProperty("name").GetString()?.Trim(), "Cliente frecuente", StringComparison.OrdinalIgnoreCase)) continue;
                 if (DateTime.TryParse(promotion.GetProperty("startDate").GetString(), out var start) && start.Date > today) continue;
                 if (DateTime.TryParse(promotion.GetProperty("endDate").GetString(), out var end) && end.Date < today) continue;
                 var rate = promotion.GetProperty("discount").GetDecimal();

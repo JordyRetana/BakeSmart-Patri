@@ -735,14 +735,22 @@
 
         function calculateOrderTotals(items) {
         const taxRate = Number(BakeSmartStore.pos.config().iva || 0);
-        // El servidor aplica el beneficio del cliente frecuente al crear el pedido.
-        // No mostramos promociones generales aquí porque no se guardan en este flujo.
         const frequentRate = currentProfile?.isFrequent ? Number(BakeSmartStore.pos.config().frequentCustomerDiscount || 0) : 0;
+        const today = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        const publicOffers = BakeSmartStore.marketing.promotions().filter(promotion =>
+            promotion.active && !(promotion.customerIds || []).length
+            && String(promotion.name || '').trim().toLowerCase() !== 'cliente frecuente'
+            && (!promotion.startDate || promotion.startDate <= today)
+            && (!promotion.endDate || promotion.endDate >= today));
         // Cada artículo se convierte en un pedido independiente en el servidor.
         // Redondear por línea reproduce exactamente el cálculo persistido y cobrado.
         const lines = items.map(item => {
         const subtotal = roundMoney(Number(item.unitPrice || item.product?.price || 0) * Math.max(1, Number(item.quantity || 1)));
-        const discount = roundMoney(subtotal * frequentRate);
+        const productId = Number(item.product?.id || item.productId || item.id);
+        const offerRate = publicOffers.reduce((best, promotion) =>
+            (promotion.productIds || []).length && !promotion.productIds.map(Number).includes(productId)
+                ? best : Math.max(best, Number(promotion.discount || 0)), 0);
+        const discount = roundMoney(subtotal * Math.max(frequentRate, offerRate));
         const tax = roundMoney(Math.max(0, subtotal - discount) * taxRate);
         return { subtotal, discount, tax, total: roundMoney(subtotal - discount + tax) };
         });
@@ -913,6 +921,7 @@
 
         const data = Object.fromEntries(new FormData(paymentForm).entries());
         if (String(data.method || '').toLowerCase().includes('nota de cr')) {
+        if (pendingPayment.orderIds.length !== 1) { app.toast.error('La nota de crédito se aplica a un pedido por vez desde Mis pedidos.'); return; }
         const code = String(data.creditNoteCode || '').trim();
         if (!code) { app.toast.error('Ingrese el código de la nota de crédito.'); return; }
         try {
@@ -1072,7 +1081,8 @@
 
         await Promise.all([
         loadProducts(),
-        loadProfile()
+        loadProfile(),
+        BakeSmartStore.refresh({ keys:['promotions'] }).catch(() => {})
         ]);
         toggleQuickDelivery();
         renderSummary();

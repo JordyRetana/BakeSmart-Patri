@@ -190,3 +190,11 @@
     }
 }
 .roles-page{width:min(var(--page-shell-max),calc(100% - (var(--page-shell-gutter) * 2)));max-width:none}
+body.dark .role-card > span,
+body.dark .role-card b {
+    background:#3b2b55;
+    border-color:#765596;
+    color:#ebd8ff;
+}
+body.dark .role-card--active,
+body.dark .role-card:hover { background:#30263e; }

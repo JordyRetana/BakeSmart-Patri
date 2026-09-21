@@ -150,6 +150,7 @@ tbody tr:hover { background:#fdf8fb !important; }
 /* Dark mode keeps the same hierarchy instead of inverting random blocks. */
 body.dark { --bs-surface:#211e2b; --bs-ink:#f6f2f8; --bs-muted:#b9b1c1; --bs-line:#3b3547; --bs-soft:#271f2a; background:#17151e !important; color:var(--bs-ink); }
 body.dark .navbar,body.dark .card,body.dark .dropdown-menu,body.dark .user-dropdown,body.dark table,body.dark .table-container,body.dark .table-responsive,body.dark input,body.dark select,body.dark textarea,body.dark .filters,body.dark .filter-bar { background:#211e2b !important; border-color:var(--bs-line) !important; color:var(--bs-ink) !important; }
+body.dark :is(.catalog-toolbar,.inventory-filters,.orders-filters,.report-filters,.marketing-filters) { background:var(--bs-surface) !important; border-color:var(--bs-line) !important; color:var(--bs-ink) !important; }
 body.dark .navbar-menu { background:#282331 !important; border-color:var(--bs-line) !important; }
 body.dark .navbar-link,body.dark .dropdown-toggle,body.dark .user-name,body.dark td,body.dark label { color:var(--bs-ink) !important; }
 body.dark .page-header { border-color:#3f3850 !important; background:linear-gradient(125deg,#222c3a,#2b2237 58%,#34212d) !important; }

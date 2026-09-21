@@ -3959,6 +3959,11 @@ public sealed partial class SqlStore
                 WHERE o.OrderId=@OrderId AND LOWER(ep.Name)='pagado';
                 """, new SqlParameter("@OrderId", orderId)) ?? 0) > 0;
             if (alreadyPaid) throw new InvalidOperationException("El pedido ya se encuentra pagado.");
+            var cancelled = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
+                SELECT COUNT(1) FROM Pedidos o INNER JOIN EstadosPedido os ON os.OrderStatusId=o.OrderStatusId
+                WHERE o.OrderId=@OrderId AND LOWER(os.Name)='cancelado';
+                """, new SqlParameter("@OrderId", orderId)) ?? 0) > 0;
+            if (cancelled) throw new InvalidOperationException("No se puede pagar un pedido cancelado.");
 
             var noteId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
                 SELECT CreditNoteId FROM NotasCreditoPOS
@@ -3966,6 +3971,18 @@ public sealed partial class SqlStore
                 LIMIT 1 FOR UPDATE;
                 """, new SqlParameter("@Code", normalizedCode)) ?? 0);
             if (noteId <= 0) throw new InvalidOperationException("La nota de crédito no existe o ya fue utilizada.");
+            var ownerMatches = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
+                SELECT COUNT(1) FROM NotasCreditoPOS n
+                INNER JOIN Ventas v ON v.SaleId=n.SaleId
+                INNER JOIN Pedidos sourceOrder ON sourceOrder.OrderId=v.OrderId
+                INNER JOIN Clientes sourceCustomer ON sourceCustomer.CustomerId=sourceOrder.CustomerId
+                INNER JOIN Pedidos targetOrder ON targetOrder.OrderId=@OrderId
+                INNER JOIN Clientes targetCustomer ON targetCustomer.CustomerId=targetOrder.CustomerId
+                WHERE n.CreditNoteId=@NoteId AND sourceCustomer.CustomerId=targetCustomer.CustomerId
+                  AND LOWER(targetCustomer.Email)=LOWER(@Email);
+                """, new SqlParameter("@NoteId", noteId), new SqlParameter("@OrderId", orderId),
+                new SqlParameter("@Email", userEmail ?? string.Empty)) ?? 0) > 0;
+            if (!ownerMatches) throw new InvalidOperationException("La nota de crédito no pertenece a esta cuenta.");
             var balance = Convert.ToDecimal(await ScalarInTransactionAsync(connection, transaction,
                 "SELECT COALESCE(RemainingAmount, Amount) FROM NotasCreditoPOS WHERE CreditNoteId=@Id;",
                 new SqlParameter("@Id", noteId)) ?? 0m);
@@ -5329,6 +5346,17 @@ public sealed partial class SqlStore
             IF EXISTS (SELECT 1 FROM dbo.Clientes WHERE CustomerId = @CustomerId AND IsFrequent = 1)
                 SET @EffectiveDiscount = ROUND(@Subtotal * @FrequentDiscountRate, 2);
 
+            DECLARE @PublicOfferRate decimal(18,4) = COALESCE((
+                SELECT MAX(p.DiscountRate) FROM dbo.Promociones p
+                WHERE p.IsActive = 1 AND @Today BETWEEN p.StartDate AND p.EndDate
+                  AND LOWER(LTRIM(RTRIM(p.Name))) <> N'cliente frecuente'
+                  AND NOT EXISTS (SELECT 1 FROM dbo.PromocionesClientes pc WHERE pc.PromotionId = p.PromotionId)
+                  AND (NOT EXISTS (SELECT 1 FROM dbo.ProductosPromocion pp WHERE pp.PromotionId = p.PromotionId)
+                       OR EXISTS (SELECT 1 FROM dbo.ProductosPromocion pp WHERE pp.PromotionId = p.PromotionId AND pp.ProductId = @ProductId))
+            ), 0);
+            SET @EffectiveDiscount = IIF(ROUND(@Subtotal * @PublicOfferRate, 2) > @EffectiveDiscount,
+                ROUND(@Subtotal * @PublicOfferRate, 2), @EffectiveDiscount);
+
             DECLARE @DiscountedSubtotal decimal(18,2) = @Subtotal - @EffectiveDiscount;
             DECLARE @EffectiveTax decimal(18,2) = ROUND(@DiscountedSubtotal * @TaxRate, 2);
             DECLARE @EffectiveTotal decimal(18,2) = @DiscountedSubtotal + @EffectiveTax;
@@ -5370,6 +5398,7 @@ public sealed partial class SqlStore
             new SqlParameter("@Email", input.Email.Trim().ToLowerInvariant()),
             new SqlParameter("@Phone", (object?)input.Phone?.Trim() ?? DBNull.Value),
             new SqlParameter("@ProductId", input.ProductId),
+            new SqlParameter("@Today", DateTime.UtcNow.AddHours(-6).Date),
             new SqlParameter("@Quantity", input.Quantity),
             new SqlParameter("@UnitPrice", input.UnitPrice),
             new SqlParameter("@Subtotal", input.Subtotal),
@@ -5980,6 +6009,15 @@ public sealed partial class SqlStore
                 "SELECT IsFrequent FROM Clientes WHERE CustomerId = @CustomerId;",
                 new SqlParameter("@CustomerId", customerId)) ?? 0) == 1;
             var discount = isFrequent ? Math.Round(subtotal * config.FrequentDiscountRate, 2, MidpointRounding.AwayFromZero) : 0m;
+            var offerRate = Convert.ToDecimal(await ScalarInTransactionAsync(connection, transaction, """
+                SELECT COALESCE(MAX(p.DiscountRate), 0) FROM Promociones p
+                WHERE p.IsActive = 1 AND @Today BETWEEN p.StartDate AND p.EndDate
+                  AND LOWER(TRIM(p.Name)) <> 'cliente frecuente'
+                  AND NOT EXISTS (SELECT 1 FROM PromocionesClientes pc WHERE pc.PromotionId = p.PromotionId)
+                  AND (NOT EXISTS (SELECT 1 FROM ProductosPromocion pp WHERE pp.PromotionId = p.PromotionId)
+                       OR EXISTS (SELECT 1 FROM ProductosPromocion pp WHERE pp.PromotionId = p.PromotionId AND pp.ProductId = @ProductId));
+                """, new SqlParameter("@Today", DateTime.UtcNow.AddHours(-6).Date), new SqlParameter("@ProductId", input.ProductId)) ?? 0m);
+            discount = Math.Max(discount, Math.Round(subtotal * offerRate, 2, MidpointRounding.AwayFromZero));
             var tax = Math.Round((subtotal - discount) * config.IvaRate, 2, MidpointRounding.AwayFromZero);
             var total = Math.Round(subtotal - discount + tax, 2, MidpointRounding.AwayFromZero);
 

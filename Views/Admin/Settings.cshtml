@@ -21,6 +21,7 @@
         <button type="button" class="settings-module-tab" data-settings-tab="benefits"><i class="fas fa-star"></i><span>Beneficios</span></button>
         <button type="button" class="settings-module-tab" data-settings-tab="delivery"><i class="fas fa-truck-fast"></i><span>Entrega</span></button>
         <button type="button" class="settings-module-tab" data-settings-tab="combos"><i class="fas fa-box-open"></i><span>Combos</span></button>
+        <button type="button" class="settings-module-tab" data-settings-tab="offers"><i class="fas fa-tags"></i><span>Ofertas</span></button>
         <button type="button" class="settings-module-tab" data-settings-tab="contact"><i class="fas fa-address-card"></i><span>Contacto</span></button>
     </nav>
 
@@ -71,6 +72,21 @@
             <input type="hidden" name="originLongitude" id="originLongitude" />
             <div id="originMapPicker"></div>
             </div>
+        </section>
+
+        <section class="settings-module-panel" data-settings-panel="offers">
+            <div class="settings-panel-heading"><div><span>Catálogo público</span><h3>Ofertas de productos</h3></div></div>
+            <p class="text-muted">Configure descuentos con fechas y productos específicos. Las ofertas vigentes aparecen en la portada y en Ofertas.</p>
+            <input type="hidden" id="offerId" />
+            <div class="grid grid-2 settings-grid">
+                <div><label for="offerName">Nombre</label><input class="form-control" id="offerName" placeholder="Ej. Semana del queque" /></div>
+                <div><label for="offerDiscount">Descuento (%)</label><input class="form-control" id="offerDiscount" type="number" min="1" max="100" step="0.5" /></div>
+                <div><label for="offerStart">Desde</label><input class="form-control" id="offerStart" type="date" /></div>
+                <div><label for="offerEnd">Hasta</label><input class="form-control" id="offerEnd" type="date" /></div>
+            </div>
+            <div class="settings-subsection"><h3>Productos de la oferta</h3><p class="text-muted">Elija al menos un producto. Las promociones exclusivas para clientes se administran en Marketing.</p><div id="offerProductEditor" class="settings-combo-products"></div></div>
+            <div class="settings-combo-actions"><button type="button" class="btn btn-outline" id="clearOffer">Limpiar</button><button type="button" class="btn btn-primary" id="saveOffer"><i class="fas fa-save"></i> Guardar oferta</button></div>
+            <div class="settings-subsection"><h3>Ofertas configuradas</h3><div id="settingsOfferList" class="settings-combo-list"></div></div>
         </section>
 
         <section class="settings-module-panel" data-settings-panel="home">
@@ -185,7 +201,7 @@
         </section>
 
         <section class="settings-module-panel" data-settings-panel="combos">
-            <div class="settings-panel-heading"><div><span>Ofertas</span><h3>Combos del catálogo y POS</h3></div></div>
+            <div class="settings-panel-heading"><div><span>Paquetes</span><h3>Combos del catálogo y POS</h3></div></div>
             <p class="text-muted">Cree el combo usando productos vendibles existentes. Se conservarán productos, cantidades, imágenes, precio especial y descuento.</p>
             <input type="hidden" id="comboId" />
             <div class="grid grid-3 settings-grid">
@@ -1207,8 +1223,84 @@
                 } catch (error) { app.toast.error(error.message); }
             });
 
-            Promise.all([loadSettings(), BakeSmartStore.refresh({ keys: ['inventory', 'combos'], force: true })])
-                .then(() => { clearComboEditor(); renderComboList(); })
+            function offerProducts() {
+                return BakeSmartStore.inventory.sellable();
+            }
+
+            function renderOfferProducts(selected = []) {
+                const chosen = new Set(selected.map(Number));
+                document.getElementById('offerProductEditor').innerHTML = offerProducts().map(product => `
+                    <label class="settings-combo-product">
+                        <img src="${escapeAttr(product.imageUrl || '/img/products/producto-sin-imagen.svg')}" alt="" loading="lazy" />
+                        <span class="settings-combo-product__name"><span class="settings-combo-product__select">
+                            <input class="settings-combo-checkbox" type="checkbox" data-offer-product="${product.id}" ${chosen.has(Number(product.id)) ? 'checked' : ''} />
+                            <strong>${escapeHtml(product.description || product.item)}</strong></span>
+                            <small>${escapeHtml(product.code || product.sku)} · ${app.utils.formatCurrency(product.price)}</small></span>
+                    </label>`).join('') || '<p class="text-muted">No hay productos vendibles activos.</p>';
+            }
+
+            function clearOfferEditor() {
+                ['offerId', 'offerName', 'offerDiscount', 'offerStart', 'offerEnd'].forEach(id => document.getElementById(id).value = '');
+                renderOfferProducts();
+            }
+
+            function renderOfferList() {
+                const offers = BakeSmartStore.marketing.promotions().filter(item =>
+                    !(item.customerIds || []).length && String(item.name || '').trim().toLowerCase() !== 'cliente frecuente');
+                document.getElementById('settingsOfferList').innerHTML = offers.map(offer => `
+                    <article class="settings-combo-card">
+                        <div><strong>${escapeHtml(offer.name)}</strong><small>${offer.startDate} – ${offer.endDate} · ${Math.round(Number(offer.discount) * 100)}% · ${(offer.productIds || []).length || 'Todos los'} productos</small></div>
+                        <span class="badge ${offer.active ? 'badge-success' : 'badge-warning'}">${offer.active ? 'Activa' : 'Pausada'}</span>
+                        <span class="settings-combo-card__actions">
+                            <button type="button" class="btn btn-outline btn-sm" data-edit-offer="${offer.id}" aria-label="Editar oferta"><i class="fas fa-pen"></i></button>
+                            <button type="button" class="btn btn-ghost btn-sm" data-toggle-offer="${offer.id}">${offer.active ? 'Pausar' : 'Activar'}</button>
+                        </span>
+                    </article>`).join('') || '<p class="text-muted">Todavía no hay ofertas configuradas.</p>';
+            }
+
+            document.getElementById('settingsOfferList').addEventListener('click', async event => {
+                const edit = event.target.closest('[data-edit-offer]');
+                const toggle = event.target.closest('[data-toggle-offer]');
+                if (edit) {
+                    const offer = BakeSmartStore.marketing.promotions().find(item => Number(item.id) === Number(edit.dataset.editOffer));
+                    if (!offer) return;
+                    document.getElementById('offerId').value = offer.id;
+                    document.getElementById('offerName').value = offer.name;
+                    document.getElementById('offerDiscount').value = Number(offer.discount) * 100;
+                    document.getElementById('offerStart').value = offer.startDate;
+                    document.getElementById('offerEnd').value = offer.endDate;
+                    renderOfferProducts(offer.productIds || []);
+                    document.getElementById('offerName').focus();
+                }
+                if (toggle) {
+                    try { await BakeSmartStore.marketing.togglePromotion(Number(toggle.dataset.toggleOffer)); renderOfferList(); }
+                    catch (error) { app.toast.error(error.message); }
+                }
+            });
+            document.getElementById('clearOffer').addEventListener('click', clearOfferEditor);
+            document.getElementById('saveOffer').addEventListener('click', async () => {
+                const button = document.getElementById('saveOffer');
+                if (button.disabled) return;
+                const productIds = [...document.querySelectorAll('[data-offer-product]:checked')].map(input => Number(input.dataset.offerProduct));
+                const name = document.getElementById('offerName').value.trim();
+                const discount = Number(document.getElementById('offerDiscount').value);
+                const startDate = document.getElementById('offerStart').value;
+                const endDate = document.getElementById('offerEnd').value;
+                if (!name || !startDate || !endDate || endDate < startDate || discount <= 0 || discount > 100 || !productIds.length) {
+                    app.toast.error('Complete nombre, fechas válidas, descuento y al menos un producto.'); return;
+                }
+                button.disabled = true;
+                try {
+                    const id = document.getElementById('offerId').value;
+                    const previous = BakeSmartStore.marketing.promotions().find(item => Number(item.id) === Number(id));
+                    await BakeSmartStore.marketing.addPromotion({ id, name, discount, startDate, endDate, productIds, customerIds: [], isActive: previous ? previous.active : true });
+                    clearOfferEditor(); renderOfferList(); app.toast.success('Oferta guardada. Se mostrará durante sus fechas de vigencia.');
+                } catch (error) { app.toast.error(error.message); }
+                finally { button.disabled = false; }
+            });
+
+            Promise.all([loadSettings(), BakeSmartStore.refresh({ keys: ['inventory', 'combos', 'promotions'], force: true })])
+                .then(() => { clearComboEditor(); renderComboList(); clearOfferEditor(); renderOfferList(); })
                 .catch(error => app.toast.error(error.message));
         })();
     </script>

@@ -34,6 +34,21 @@ body[data-page="/home/contact"] .contact-details > div {
     grid-template-columns: 40px minmax(0, 1fr) 24px;
 }
 
+body[data-page="/home/contact"] .contact-form-grid > label,
+body[data-page="/home/contact"] .contact-form-grid input,
+body[data-page="/home/contact"] .contact-form-grid select,
+body[data-page="/home/contact"] .contact-form-grid textarea {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+body[data-page="/home/contact"] .contact-details strong {
+    display: block;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+}
+
 @media (max-width: 1100px) {
     body[data-page="/home/about"] .story-hero,
     body[data-page="/home/contact"] .contact-hero,

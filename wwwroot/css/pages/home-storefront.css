@@ -345,6 +345,27 @@ body.dark[data-page="/"] .storefront-product-body h3,
 body.dark[data-page="/"] .storefront-product-body > strong,
 body.dark[data-page="/"] .storefront-review-grid strong { color:#f6eefb; }
 body.dark[data-page="/"] .storefront-review-grid p { color:#c1b9ca; }
+body.dark[data-page="/"] .home-account-hero {
+    color:#f7f3fc;
+    background:
+        radial-gradient(circle at 18% 25%,rgba(124,58,237,.22),transparent 28rem),
+        radial-gradient(circle at 84% 78%,rgba(200,60,134,.16),transparent 26rem),
+        linear-gradient(135deg,#1b2030,#221c2e 58%,#2a1d32);
+}
+body.dark[data-page="/"] .home-account-hero h1 {
+    color:#fff;
+    background:none;
+    -webkit-text-fill-color:#fff;
+}
+body.dark[data-page="/"] .home-account-hero span { color:#d8baff; }
+body.dark[data-page="/"] .home-account-hero p { color:#d3cddd; }
+body.dark[data-page="/"] .home-role-links > a {
+    background:#24202f;
+    border-color:#4c405d;
+    color:#f7f3fc;
+}
+body.dark[data-page="/"] .home-role-links strong { color:#f7f3fc; }
+body.dark[data-page="/"] .home-role-links small { color:#c7bdd4; }
 
 @media (max-width: 1000px) {
     .storefront-page > section > .container { width:min(100% - 2rem, 900px); }
