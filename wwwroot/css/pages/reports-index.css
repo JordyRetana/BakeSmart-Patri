@@ -25,8 +25,9 @@
 
 .reports-page .table th,
 .reports-page .table td {
-    min-width: 120px;
-    max-width: 320px;
+    min-width: clamp(10.5rem, 15vw, 13.5rem);
+    max-width: 28rem;
+    padding-inline: 1rem;
     white-space: normal;
     overflow-wrap: anywhere;
     vertical-align: top;
@@ -34,6 +35,26 @@
 
 .reports-page .table th {
     white-space: nowrap;
+    line-height: 1.25;
+}
+
+.reports-page .table th:first-child,
+.reports-page .table td:first-child {
+    min-width: 6rem;
+    width: 6rem;
+}
+
+.reports-page .table-container::after {
+    content: "Desliza horizontalmente para consultar todas las columnas";
+    display: block;
+    position: sticky;
+    left: 0;
+    padding: .55rem 1rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    background: var(--surface-muted);
+    font-size: .78rem;
+    font-weight: 700;
 }
 
 .report-print-header { display: none; }
