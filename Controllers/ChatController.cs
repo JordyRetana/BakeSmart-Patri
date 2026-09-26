@@ -182,7 +182,12 @@ public class ChatController : ControllerBase
     }
 
     private static bool HasProductIntent(string message) =>
-        new[] { "producto", "productos", "catalogo", "catálogo", "precio", "que tienen", "que hay", "brownie", "queque", "cupcake", "galleta" }
+        new[]
+        {
+            "producto", "productos", "catalogo", "catálogo", "precio", "que tienen", "que hay",
+            "recomienda", "recomendar", "recomendación", "recomendacion", "sugerencia", "antojo",
+            "postre", "dulce", "brownie", "queque", "cupcake", "galleta"
+        }
             .Any(message.Contains);
 
     private static object? ResolveNavigation(string message)
