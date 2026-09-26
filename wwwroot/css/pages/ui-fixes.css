@@ -29,6 +29,44 @@ body[data-page="/home/contact"] .contact-layout {
     grid-template-columns: minmax(340px, .8fr) minmax(0, 1.2fr);
 }
 
+/* La cabecera de datos no es una fila de contacto. Evita que herede la
+   retícula icono/contenido/acción que comprimía "Estamos cerca". */
+body[data-page="/home/contact"] .contact-details > .story-section-title {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: .45rem;
+    padding: 0 0 1.15rem;
+    border: 0;
+    text-align: left;
+}
+
+body[data-page="/home/contact"] .contact-details > .story-section-title > span {
+    display: block;
+    width: fit-content;
+    color: #c83c86;
+    font-size: .72rem;
+    font-weight: 900;
+    line-height: 1.2;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+body[data-page="/home/contact"] .contact-details > .story-section-title > h2 {
+    max-width: 18ch;
+    margin: 0;
+    color: #17375d;
+    font-size: clamp(1.75rem, 2.5vw, 2.55rem);
+    line-height: 1.05;
+    overflow-wrap: normal;
+}
+
+body.dark[data-page="/home/contact"] .contact-details > .story-section-title > h2 {
+    color: #fff;
+}
+
 body[data-page="/home/contact"] .contact-details > a,
 body[data-page="/home/contact"] .contact-details > div {
     grid-template-columns: 40px minmax(0, 1fr) 24px;
