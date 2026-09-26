@@ -205,13 +205,14 @@
                 <td><strong>${clean(u.firstName)} ${clean(u.lastName)}</strong><small>${clean(u.address || 'Sin dirección')}</small></td>
                 <td><span>${clean(u.email)}</span><small>${clean(u.phone)}</small></td>
                 <td><span class="badge badge-primary">${clean(u.role)}</span></td>
-                <td><span class="badge ${u.active ? 'badge-success' : 'badge-warning'}">${u.active ? 'Activo' : 'Inactivo'}</span>${u.twoFactorResetPending ? '<small class="users-security-pending"><i class="fas fa-clock"></i> Solicitud 2FA</small>' : (u.twoFactorEnabled ? '<small class="users-security-enabled"><i class="fas fa-shield-halved"></i> 2FA activo</small>' : '')}</td>
+                <td><span class="badge ${u.active ? 'badge-success' : 'badge-warning'}">${u.active ? 'Activo' : 'Inactivo'}</span>${!u.emailConfirmed ? '<small class="users-email-pending"><i class="fas fa-envelope-circle-xmark"></i> Correo pendiente</small>' : ''}${u.twoFactorResetPending ? '<small class="users-security-pending"><i class="fas fa-clock"></i> Solicitud 2FA</small>' : (u.twoFactorEnabled ? '<small class="users-security-enabled"><i class="fas fa-shield-halved"></i> 2FA activo</small>' : '')}</td>
                 <td class="users-created-at">${shortDate(u.createdAt)}</td>
                 <td class="text-right">
                     <div class="users-row-actions">
                         <button class="btn btn-outline btn-sm" onclick="editUser(${u.id})"><i class="fas fa-pen"></i></button>
                         <button class="btn btn-outline btn-sm" onclick="toggleUser(${u.id})">${u.active ? 'Desactivar' : 'Activar'}</button>
                     ${u.twoFactorEnabled ? `<button class="btn btn-outline btn-sm users-security-action" onclick="openTwoFactorReset(${u.id})" title="Restablecer verificación en dos pasos" aria-label="Restablecer verificación en dos pasos"><i class="fas fa-shield-virus"></i></button>` : ''}
+                    ${!u.emailConfirmed ? `<button class="btn btn-outline btn-sm users-security-action" onclick="resendConfirmation(${u.id})" title="Reenviar confirmación de correo" aria-label="Reenviar confirmación de correo"><i class="fas fa-envelope-circle-check"></i></button>` : ''}
                     </div>
                 </td>
             </tr>
@@ -221,12 +222,13 @@
             <tr>
                 <td><strong>${clean(u.firstName)} ${clean(u.lastName)}</strong><small>${clean(u.address || 'Sin dirección')}</small></td>
                 <td><span>${clean(u.email)}</span><small>${clean(u.phone)}</small></td>
-                <td><span class="badge ${u.active ? 'badge-success' : 'badge-warning'}">${u.active ? 'Activo' : 'Inactivo'}</span>${u.twoFactorResetPending ? '<small class="users-security-pending"><i class="fas fa-clock"></i> Solicitud 2FA</small>' : (u.twoFactorEnabled ? '<small class="users-security-enabled"><i class="fas fa-shield-halved"></i> 2FA activo</small>' : '')}</td>
+                <td><span class="badge ${u.active ? 'badge-success' : 'badge-warning'}">${u.active ? 'Activo' : 'Inactivo'}</span>${!u.emailConfirmed ? '<small class="users-email-pending"><i class="fas fa-envelope-circle-xmark"></i> Correo pendiente</small>' : ''}${u.twoFactorResetPending ? '<small class="users-security-pending"><i class="fas fa-clock"></i> Solicitud 2FA</small>' : (u.twoFactorEnabled ? '<small class="users-security-enabled"><i class="fas fa-shield-halved"></i> 2FA activo</small>' : '')}</td>
                 <td class="users-created-at">${shortDate(u.createdAt)}</td>
                 <td class="text-right"><div class="users-row-actions">
                     <button class="btn btn-outline btn-sm" onclick="editUser(${u.id})"><i class="fas fa-pen"></i></button>
                     <button class="btn btn-outline btn-sm" onclick="toggleUser(${u.id})">${u.active ? 'Desactivar' : 'Activar'}</button>
                     ${u.twoFactorEnabled ? `<button class="btn btn-outline btn-sm users-security-action" onclick="openTwoFactorReset(${u.id})" title="Restablecer verificación en dos pasos" aria-label="Restablecer verificación en dos pasos"><i class="fas fa-shield-virus"></i></button>` : ''}
+                    ${!u.emailConfirmed ? `<button class="btn btn-outline btn-sm users-security-action" onclick="resendConfirmation(${u.id})" title="Reenviar confirmación de correo" aria-label="Reenviar confirmación de correo"><i class="fas fa-envelope-circle-check"></i></button>` : ''}
                 </div></td>
             </tr>
         `).join('') || `<tr><td colspan="5" class="text-center text-muted">No hay clientes registrados.</td></tr>`;
@@ -242,6 +244,12 @@
         await store.users.toggle(id);
         app.toast.success('Estado actualizado.');
         renderUsers();
+    };
+    window.resendConfirmation = async id => {
+        const user = store.users.list().find(x => Number(x.id) === Number(id));
+        if (!user) return;
+        await store.users.resendConfirmation(id);
+        app.toast.success(`Confirmación enviada a ${user.email}.`);
     };
 
     window.openTwoFactorReset = id => {

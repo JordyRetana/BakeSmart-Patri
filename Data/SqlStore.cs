@@ -1148,7 +1148,7 @@ public sealed partial class SqlStore
     {
         await EnsureAuthenticationTablesAsync();
         const string sql = """
-            SELECT u.UserId, u.FirstName, u.LastName, u.Email, u.Phone, u.AddressLine, u.IsActive, u.CreatedAt, r.RoleName, COALESCE(s.IsTestAccount,0) IsTestAccount, COALESCE(s.TwoFactorEnabled,0) TwoFactorEnabled,
+            SELECT u.UserId, u.FirstName, u.LastName, u.Email, u.Phone, u.AddressLine, u.IsActive, u.CreatedAt, r.RoleName, COALESCE(s.IsTestAccount,0) IsTestAccount, COALESCE(s.EmailConfirmed,0) EmailConfirmed, COALESCE(s.TwoFactorEnabled,0) TwoFactorEnabled,
                    CASE WHEN q.Status='PENDIENTE' THEN 1 ELSE 0 END TwoFactorResetPending
             FROM dbo.Usuarios u
             INNER JOIN dbo.Roles r ON r.RoleId = u.RoleId
@@ -1172,6 +1172,7 @@ public sealed partial class SqlStore
             role = reader.GetString("RoleName"),
             active = reader.GetBoolean("IsActive"),
             isTestAccount = Convert.ToBoolean(reader["IsTestAccount"]),
+            emailConfirmed = Convert.ToBoolean(reader["EmailConfirmed"]),
             twoFactorEnabled = Convert.ToBoolean(reader["TwoFactorEnabled"]),
             twoFactorResetPending = Convert.ToBoolean(reader["TwoFactorResetPending"]),
             createdAt = reader.GetDateTime("CreatedAt").ToString("o")

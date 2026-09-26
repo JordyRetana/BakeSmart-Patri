@@ -698,6 +698,27 @@ public class ApiController : Controller
         return Ok(new { ok = true });
     }
 
+    [HttpPost("users/{id:int}/resend-confirmation")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> ResendUserConfirmation(int id)
+    {
+        var user = (await _sqlStore.UsersAsync()).FirstOrDefault(row =>
+            string.Equals(row.GetType().GetProperty("id")?.GetValue(row)?.ToString(), id.ToString(), StringComparison.Ordinal));
+        if (user is null) return NotFound(new { message = "No se encontró el usuario." });
+
+        var email = user.GetType().GetProperty("email")?.GetValue(user)?.ToString() ?? string.Empty;
+        var confirmed = Convert.ToBoolean(user.GetType().GetProperty("emailConfirmed")?.GetValue(user) ?? false);
+        if (confirmed) return BadRequest(new { message = "Este correo ya está verificado." });
+        if (!await _sqlStore.NeedsEmailConfirmationAsync(email))
+            return BadRequest(new { message = "La cuenta debe estar activa para reenviar la verificación." });
+
+        var token = await _sqlStore.CreateEmailConfirmationTokenAsync(email);
+        var confirmationUrl = Url.Action("ConfirmEmail", "Account", new { token }, Request.Scheme, Request.Host.Value)!;
+        await _emailService.SendAsync(email, email, "Confirma tu cuenta BakeSmart Patri", $"Confirma tu correo durante las próximas 24 horas:\n\n{confirmationUrl}\n\nSi no solicitaste este mensaje, puedes ignorarlo.");
+        await _sqlStore.AddAuditLogAsync("REENVIAR_CONFIRMACION", $"Se reenvió la confirmación de correo a {email}", CurrentUserEmail);
+        return Ok(new { ok = true });
+    }
+
     [HttpPost("orders/{id:int}/credit-note")]
     [Authorize(Roles = "Cliente")]
     public async Task<IActionResult> RedeemOrderCreditNote(int id, [FromBody] CreditNotePaymentRequest request)

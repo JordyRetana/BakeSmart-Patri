@@ -136,6 +136,7 @@
     justify-content: flex-end;
 }
 .users-security-enabled,.users-security-pending { margin-top:.3rem !important; font-weight:800; }
+.users-email-pending { display:block; margin-top:.3rem !important; color:#a44b00 !important; font-weight:800; }
 .users-security-enabled { color:#2f855a !important; }
 .users-security-pending { color:#b66a05 !important; }
 .users-security-action { width:34px; min-width:34px; padding:0 !important; color:#7138df; }
@@ -149,6 +150,7 @@
 .users-security-form-actions { display:flex; justify-content:flex-end; gap:.6rem; margin-top:.25rem; }
 body.dark .users-security-enabled { color:#86efac !important; }
 body.dark .users-security-pending { color:#fcd34d !important; }
+body.dark .users-email-pending { color:#fdba74 !important; }
 body.dark .users-security-action { color:#c4b5fd; border-color:#5b4a78; }
 
 .users-role-list {

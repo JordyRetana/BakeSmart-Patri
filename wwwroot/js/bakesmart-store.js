@@ -554,6 +554,12 @@
                 });
                 await load("users", "/api/users", [], { force: true });
                 return result;
+            },
+            async resendConfirmation(id) {
+                return request(`/api/users/${id}/resend-confirmation`, {
+                    method: "POST",
+                    body: JSON.stringify({})
+                });
             }
         },
         roles: {
