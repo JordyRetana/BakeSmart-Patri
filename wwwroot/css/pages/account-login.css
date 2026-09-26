@@ -283,6 +283,26 @@ body.dark .password-card .login-form { background:#171b2b !important; }
     cursor: pointer;
 }
 
+body[data-page="/account/login"] .password-field .password-toggle {
+    position: absolute !important;
+    top: 9px !important;
+    right: 9px !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+    line-height: 1 !important;
+}
+
+body[data-page="/account/login"] .password-field .password-toggle i {
+    display: block;
+    margin: 0;
+    line-height: 1;
+}
+
 .login-options {
     display: flex;
     align-items: center;
