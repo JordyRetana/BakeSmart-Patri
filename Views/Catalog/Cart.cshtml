@@ -2,6 +2,11 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Carrito";
+    var canUseClientCheckout = User?.IsInRole("Cliente") ?? false;
+    var canUsePos = (User?.IsInRole("Admin") ?? false)
+        || (User?.IsInRole("Staff") ?? false)
+        || (User?.IsInRole("Supervisor") ?? false)
+        || (User?.IsInRole("Cajero") ?? false);
 }
 
 <main class="page-shell catalog-cart-page">
@@ -46,6 +51,8 @@
 (() => {
     const email = (document.body.dataset.userEmail || '').trim().toLowerCase();
     const authenticated = document.body.dataset.userAuthenticated === 'true';
+    const canUseClientCheckout = @(canUseClientCheckout ? "true" : "false");
+    const canUsePos = @(canUsePos ? "true" : "false");
     const products = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Products.Select(p => new { id = p.Id, name = p.Name, price = p.UnitPrice, imageUrl = p.ImageUrl, code = p.Code, stock = p.Stock })));
     const productById = new Map(products.map(product => [Number(product.id), product]));
     const keyFor = identity => `bakesmart:catalog-cart:${(identity || 'guest').trim().toLowerCase()}`;
@@ -92,9 +99,13 @@
         document.getElementById('cartSummaryCount').textContent = `${count} producto${count === 1 ? '' : 's'}`;
         document.getElementById('cartSummaryTotal').textContent = money(total);
         document.getElementById('cartAuthNotice').hidden = authenticated;
-        document.getElementById('cartCheckout').innerHTML = authenticated
-            ? '<i class="fas fa-arrow-right"></i> Continuar al pedido'
-            : '<i class="fas fa-right-to-bracket"></i> Iniciar sesión para continuar';
+        document.getElementById('cartCheckout').innerHTML = !authenticated
+            ? '<i class="fas fa-right-to-bracket"></i> Iniciar sesión para continuar'
+            : canUseClientCheckout
+                ? '<i class="fas fa-arrow-right"></i> Continuar al pedido'
+                : canUsePos
+                    ? '<i class="fas fa-cash-register"></i> Continuar en el POS'
+                    : '<i class="fas fa-bag-shopping"></i> Volver al catálogo';
         lines.innerHTML = valid.map(item => {
             const composition = item.isCombo ? (item.items || []).map(component => `${Number(component.quantity || 1)}× ${clean(component.name || 'Producto')}`).join(' · ') : '';
             const detail = item.isCombo ? `Combo · ${composition}` : clean(item.product.code || 'Producto');
@@ -121,6 +132,10 @@
     document.getElementById('cartCheckout').addEventListener('click', () => {
         if (!items.length) return;
         if (!authenticated) { window.location.href = `/Account/Login?ReturnUrl=${encodeURIComponent('/Catalog/Cart')}`; return; }
+        if (!canUseClientCheckout) {
+            window.location.href = canUsePos ? '/Pos' : '/Catalog';
+            return;
+        }
         const unavailable = items.find(item => !item.isCombo && Number(item.quantity) > Number(productById.get(Number(item.id))?.stock || 0));
         if (unavailable) {
             app.toast.warning('Revisa las cantidades del carrito: una de ellas supera las existencias disponibles.');
