@@ -135,6 +135,7 @@ public class ChatController : ControllerBase
                 ? (object)new { label = "Ver mis pedidos", url = "/Client/Orders" }
                 : new { label = "Iniciar sesión", url = "/Account/Login" }
             : ResolveNavigation(message) ?? (productIntent ? new { label = "Ver catálogo", url = "/Catalog" } : null);
+        var normalizedMessage = message.Trim().ToLowerInvariant();
         var reply = asksForOwnOrders
             ? (User?.Identity?.IsAuthenticated ?? false ? "Puedes ver el estado de tus pedidos desde Mis pedidos." : "Inicia sesión para consultar tus pedidos de forma segura.")
             : products.Count > 0
@@ -143,8 +144,25 @@ public class ChatController : ControllerBase
                 ? "No encontré productos para mostrar aquí. Puedes revisar el catálogo completo y sus existencias actuales."
             : navigation is not null
                 ? "Te dejo el acceso a esa sección. Si necesitas ayuda con un producto, dime cuál buscas."
-                : "Puedo ayudarte a buscar productos, consultar el catálogo o explicarte cómo hacer un pedido. Para una consulta específica, también puedes escribirnos desde Contacto.";
+                : BuildHelpfulFallback(normalizedMessage);
         return Ok(new { reply, products, navigation, cartOffer = (object?)null });
+    }
+
+    private static string BuildHelpfulFallback(string message)
+    {
+        if (System.Text.RegularExpressions.Regex.IsMatch(message, @"\b(gracias|muchas gracias|pura vida)\b"))
+            return "¡Con gusto! 🧁 Si ocupas otra recomendación o ayuda con un pedido, aquí estoy.";
+        if (System.Text.RegularExpressions.Regex.IsMatch(message, @"\b(horario|abren|cierran|abierto)\b"))
+            return "Puedes confirmar el horario actualizado desde Contacto. Así evitamos darte una hora que haya cambiado.";
+        if (System.Text.RegularExpressions.Regex.IsMatch(message, @"\b(direcci[oó]n|ubicaci[oó]n|donde|dónde)\b"))
+            return "La ubicación y los datos vigentes del negocio están en Contacto. También puedo ayudarte a revisar opciones de entrega.";
+        if (System.Text.RegularExpressions.Regex.IsMatch(message, @"\b(pedido|comprar|ordenar|encargar)\b"))
+            return "Elige tus productos en el catálogo, agrégalos al carrito y continúa al pago. Si me dices qué postre buscas, te ayudo a encontrarlo 🍰.";
+        if (System.Text.RegularExpressions.Regex.IsMatch(message, @"\b(pago|pagar|sinpe|tarjeta|paypal|efectivo)\b"))
+            return "Los métodos disponibles se muestran al confirmar el pedido. PayPal se usa en compras de clientes; en el POS se muestran solo los medios habilitados para caja.";
+        if (System.Text.RegularExpressions.Regex.IsMatch(message, @"\b(entrega|env[ií]o|domicilio|retirar|retiro)\b"))
+            return "Puedes elegir entrega o retiro al preparar el pedido. La disponibilidad final depende de la dirección y del pedido seleccionado.";
+        return "No logré completar esa consulta con información segura. Cuéntame si buscas un producto, quieres hacer un pedido, revisar una entrega o conocer los medios de pago.";
     }
 
     private async Task<IReadOnlyList<object>> GetChatProductsAsync(string message)

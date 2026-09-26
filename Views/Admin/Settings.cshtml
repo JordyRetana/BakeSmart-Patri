@@ -351,6 +351,7 @@
     }
 
     .settings-toggle-card {
+        position: relative;
         min-height: 92px;
         display: flex;
         align-items: center;
@@ -360,6 +361,14 @@
         border: 1px solid var(--border);
         border-radius: 10px;
         background: var(--surface);
+        cursor: pointer;
+        transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+    }
+
+    .settings-toggle-card:has(.settings-switch input:checked) {
+        border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+        background: color-mix(in srgb, var(--primary) 9%, var(--surface));
+        box-shadow: inset 4px 0 0 var(--primary);
     }
 
     .settings-toggle-card label {
@@ -374,50 +383,28 @@
     }
 
     .settings-switch {
-        width: 58px;
-        height: 32px;
-        flex: 0 0 auto;
+        position: absolute;
+        inset: 0;
+        width: auto;
+        height: auto;
         margin: 0;
-        position: relative;
         cursor: pointer;
     }
 
     .settings-switch input {
         position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
         opacity: 0;
-        pointer-events: none;
+        cursor: pointer;
     }
 
     .settings-switch span {
-        position: absolute;
-        inset: 0;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: var(--surface-muted);
-        transition: background .18s ease, border-color .18s ease;
+        display: none;
     }
 
-    .settings-switch span::after {
-        content: "";
-        position: absolute;
-        width: 24px;
-        height: 24px;
-        top: 3px;
-        left: 4px;
-        border-radius: 50%;
-        background: #fff;
-        box-shadow: var(--shadow-sm);
-        transition: transform .18s ease;
-    }
-
-    .settings-switch input:checked + span {
-        border-color: var(--primary);
-        background: var(--primary);
-    }
-
-    .settings-switch input:checked + span::after {
-        transform: translateX(25px);
-    }
+    .settings-toggle-card > div { position: relative; z-index: 1; pointer-events: none; }
 
     .settings-hero-editor {
         display: grid;
