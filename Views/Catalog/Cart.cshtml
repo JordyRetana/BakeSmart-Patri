@@ -74,7 +74,11 @@
             const previous = merged.get(id);
             merged.set(id, previous ? { ...normalized, quantity: Number(previous.quantity || 0) + Number(normalized.quantity || 0) } : normalized);
         });
-        const result = [...merged.values()];
+        const result = [...merged.values()].map(item => {
+            if (item.isCombo) return item;
+            const stock = Math.max(0, Math.floor(Number(productById.get(Number(item.id))?.stock || 0)));
+            return { ...item, quantity: Math.min(Math.max(1, Number(item.quantity || 1)), stock) };
+        }).filter(item => item.isCombo || Number(item.quantity) > 0);
         if (email && result.length) {
             localStorage.setItem(userKey, JSON.stringify(result));
             localStorage.removeItem(guestKey);
