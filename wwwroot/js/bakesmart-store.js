@@ -446,11 +446,21 @@
                 }).formatToParts(new Date());
                 const datePart = name => parts.find(part => part.type === name)?.value || "";
                 const today = `${datePart("year")}-${datePart("month")}-${datePart("day")}`;
-                return this.promotions()
+                const normalizeName = value => String(value || "")
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .trim()
+                    .toLowerCase();
+                const unique = new Map();
+                this.promotions().forEach(promotion => {
+                    const key = Number(promotion.id) > 0 ? `id:${Number(promotion.id)}` : `name:${normalizeName(promotion.name)}`;
+                    if (!unique.has(key)) unique.set(key, promotion);
+                });
+                return [...unique.values()]
                     .filter(promotion => promotion.active
                         && (!promotion.startDate || promotion.startDate <= today)
                         && (!promotion.endDate || promotion.endDate >= today)
-                        && String(promotion.name || "").trim().toLowerCase() !== "cliente frecuente")
+                        && !normalizeName(promotion.name).includes("cliente frecuente"))
                     .map(promotion => ({
                         ...promotion,
                         eligible: !(promotion.customerIds || []).length
