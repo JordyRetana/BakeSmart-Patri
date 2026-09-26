@@ -329,6 +329,12 @@
                                     <i class="fas fa-boxes" style="width: 20px; margin-right: 0.5rem;"></i> Inventario
                                 </a>
                             }
+                            @if (isAdmin || isSupervisor || isBaker || isRecipeManager)
+                            {
+                                <a class="dropdown-item" href="/Recipes">
+                                    <i class="fas fa-book-open" style="width: 20px; margin-right: 0.5rem;"></i> Recetas
+                                </a>
+                            }
                             @if (isAdmin || isStaff || isSupervisor || isCashier)
                             {
                                 <a class="dropdown-item" href="/Pos">
