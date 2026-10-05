@@ -32,6 +32,8 @@ public sealed partial class SqlStore
                     "MARKETING" => $"DELETE FROM {prefix}ComunicacionesMarketingDestinatarios WHERE CommunicationId=@Id; DELETE FROM {prefix}ComunicacionesMarketing WHERE CommunicationId=@Id;",
                     "EXPENSE" => $"DELETE FROM {prefix}LineasAsientoContable WHERE AccountingEntryId IN (SELECT AccountingEntryId FROM {prefix}AsientosContables WHERE ReferenceTable='Gastos' AND ReferenceId=@Id); DELETE FROM {prefix}AsientosContables WHERE ReferenceTable='Gastos' AND ReferenceId=@Id; DELETE FROM {prefix}Gastos WHERE ExpenseId=@Id;",
                     "SUPPLIER_PAYMENT" => $"DELETE FROM {prefix}LineasAsientoContable WHERE AccountingEntryId IN (SELECT AccountingEntryId FROM {prefix}AsientosContables WHERE ReferenceTable='PagosProveedor' AND ReferenceId=@Id); DELETE FROM {prefix}AsientosContables WHERE ReferenceTable='PagosProveedor' AND ReferenceId=@Id; DELETE FROM {prefix}PagosProveedor WHERE SupplierPaymentId=@Id;",
+                    "PRODUCT" => $"DELETE FROM {prefix}MovimientosInventario WHERE ProductId=@Id; DELETE FROM {prefix}ExistenciasInventario WHERE ProductId=@Id; DELETE FROM {prefix}LotesInventario WHERE ProductId=@Id; DELETE FROM {prefix}ImagenesProducto WHERE ProductId=@Id; DELETE FROM {prefix}ProductosPromocion WHERE ProductId=@Id; DELETE FROM {prefix}ComboProductos WHERE ProductId=@Id; DELETE FROM {prefix}IngredientesReceta WHERE IngredientProductId=@Id OR RecipeId IN (SELECT RecipeId FROM {prefix}RecetasProducto WHERE ProductId=@Id); DELETE FROM {prefix}RecetasProducto WHERE ProductId=@Id; DELETE FROM {prefix}Productos WHERE ProductId=@Id AND NOT EXISTS(SELECT 1 FROM {prefix}DetallePedido WHERE ProductId=@Id);",
+                    "RECIPE" => $"DELETE FROM {prefix}IngredientesReceta WHERE RecipeId IN (SELECT RecipeId FROM {prefix}RecetasProducto WHERE ProductId=@Id); DELETE FROM {prefix}RecetasProducto WHERE ProductId=@Id;",
                     _ => string.Empty
                 };
                 if (!string.IsNullOrEmpty(sql)) await ExecuteAsync(sql, new SqlParameter("@Id", item.Id));
@@ -39,5 +41,16 @@ public sealed partial class SqlStore
             }
         }
         catch { /* Table may not exist before the first QA artifact is created. */ }
+    }
+
+    public async Task<bool> IsTemporaryQaArtifactAsync(string entityType, int entityId)
+    {
+        var table = UseMySql ? "TemporaryQaArtifacts" : "dbo.TemporaryQaArtifacts";
+        try
+        {
+            var count = await ScalarAsync($"SELECT COUNT(1) FROM {table} WHERE EntityType=@Type AND EntityId=@Id;", new SqlParameter("@Type", entityType), new SqlParameter("@Id", entityId));
+            return Convert.ToInt32(count ?? 0) > 0;
+        }
+        catch { return false; }
     }
 }

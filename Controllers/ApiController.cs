@@ -213,7 +213,15 @@ public class ApiController : Controller
     {
         try
         {
+            var isTest = await _sqlStore.IsTestAccountAsync(CurrentUserEmail ?? string.Empty);
+            if (isTest && !await _sqlStore.IsTemporaryQaArtifactAsync("PRODUCT", request.ProductId))
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Las cuentas de prueba solo pueden crear recetas para productos temporales creados durante la prueba." });
             await _sqlStore.SaveRecipeAsync(request, CurrentUserEmail);
+            if (isTest)
+            {
+                await _sqlStore.ScheduleTemporaryQaArtifactAsync("RECIPE", request.ProductId, CurrentUserEmail!);
+                return Ok(new { ok = true, status = "En revision", temporary = true, expiresInMinutes = 10, message = "Receta de prueba guardada. Se eliminará automáticamente junto con el producto temporal en 10 minutos." });
+            }
             return Ok(new { ok = true, status = "En revision" });
         }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
@@ -225,6 +233,8 @@ public class ApiController : Controller
     {
         try
         {
+            if (await _sqlStore.IsTestAccountAsync(CurrentUserEmail ?? string.Empty) && !await _sqlStore.IsTemporaryQaArtifactAsync("PRODUCT", productId))
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Las cuentas de prueba solo pueden revisar recetas temporales." });
             await _sqlStore.ReviewRecipeAsync(productId, request.Approved, CurrentUserEmail);
             return Ok(new { ok = true, status = request.Approved ? "Aprobada" : "Pendiente" });
         }
@@ -316,7 +326,15 @@ public class ApiController : Controller
 
         try
         {
+            var isTest = await _sqlStore.IsTestAccountAsync(CurrentUserEmail ?? string.Empty);
+            if (isTest && request.Id is > 0 && !await _sqlStore.IsTemporaryQaArtifactAsync("PRODUCT", request.Id.Value))
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Las cuentas de prueba no pueden modificar productos reales. Cree un producto temporal para realizar la prueba." });
             var productId = await _sqlStore.SaveInventoryProductAsync(request, CurrentUserEmail);
+            if (isTest)
+            {
+                await _sqlStore.ScheduleTemporaryQaArtifactAsync("PRODUCT", productId, CurrentUserEmail!);
+                return Ok(new { ok = true, id = productId, temporary = true, expiresInMinutes = 10, message = "Producto de prueba guardado. Se eliminará automáticamente en 10 minutos junto con su inventario asociado." });
+            }
             return Ok(new { ok = true, id = productId });
         }
         catch (InvalidOperationException ex)
@@ -339,6 +357,8 @@ public class ApiController : Controller
     [Authorize(Policy = "StaffOrAdmin")]
     public async Task<IActionResult> ToggleInventoryProduct(int id)
     {
+        if (await _sqlStore.IsTestAccountAsync(CurrentUserEmail ?? string.Empty) && !await _sqlStore.IsTemporaryQaArtifactAsync("PRODUCT", id))
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Las cuentas de prueba solo pueden cambiar productos temporales creados por ellas." });
         await _sqlStore.ToggleInventoryProductAsync(id, CurrentUserEmail);
         return Ok(new { ok = true });
     }
@@ -354,6 +374,8 @@ public class ApiController : Controller
         if (request.ProductId <= 0 || request.Quantity <= 0)
             return BadRequest(new { message = "Debe indicar producto y cantidad valida." });
 
+        if (await _sqlStore.IsTestAccountAsync(CurrentUserEmail ?? string.Empty) && !await _sqlStore.IsTemporaryQaArtifactAsync("PRODUCT", request.ProductId))
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Las cuentas de prueba solo pueden mover inventario de sus productos temporales." });
         await _sqlStore.RegisterInventoryMovementAsync(request, CurrentUserEmail);
         return Ok(new { ok = true });
     }
