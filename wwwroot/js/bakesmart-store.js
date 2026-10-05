@@ -21,6 +21,13 @@
     async function sendRequest(url, options = {}) {
         const method = String(options.method || "GET").toUpperCase();
         const shouldTimeout = method === "GET";
+        const triggerButton = method !== "GET" ? document.activeElement?.closest?.("button") : null;
+        const triggerWasDisabled = Boolean(triggerButton?.disabled);
+        if (triggerButton) {
+            triggerButton.disabled = true;
+            triggerButton.classList.add("is-request-pending");
+            triggerButton.setAttribute("aria-busy", "true");
+        }
         const controller = shouldTimeout ? new AbortController() : null;
         const timeout = controller ? window.setTimeout(() => controller.abort(), 10000) : null;
 
@@ -41,6 +48,11 @@
             throw error;
         } finally {
             if (timeout) window.clearTimeout(timeout);
+            if (triggerButton) {
+                triggerButton.disabled = triggerWasDisabled;
+                triggerButton.classList.remove("is-request-pending");
+                triggerButton.removeAttribute("aria-busy");
+            }
         }
 
         if (!response.ok) {

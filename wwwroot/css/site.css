@@ -794,3 +794,22 @@ body[data-page="/pos"] .table select {
         justify-content: stretch !important;
     }
 }
+button.is-request-pending {
+    cursor: wait !important;
+    opacity: .78;
+}
+
+button.is-request-pending::after {
+    content: "";
+    display: inline-block;
+    width: .85em;
+    height: .85em;
+    margin-left: .55rem;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    vertical-align: -.1em;
+    animation: bakesmart-request-spin .65s linear infinite;
+}
+
+@keyframes bakesmart-request-spin { to { transform: rotate(360deg); } }
