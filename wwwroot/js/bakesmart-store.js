@@ -53,7 +53,12 @@
             throw new Error(message);
         }
 
-        return response.status === 204 ? null : response.json();
+        if (response.status === 204) return null;
+        const payload = await response.json();
+        if (payload?.temporary && payload?.message) {
+            window.app?.toast?.warning?.(payload.message);
+        }
+        return payload;
     }
 
     function persistentKey(key) {
