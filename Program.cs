@@ -127,6 +127,7 @@ builder.Services.AddResponseCompression(options => options.EnableForHttps = true
 builder.Services.AddScoped<SqlStore>();
 builder.Services.AddScoped<ReportExportService>();
 builder.Services.AddScoped<AuditMutationFilter>();
+builder.Services.AddHostedService<TemporaryQaArtifactCleanupService>();
 builder.Services.AddHttpClient<IEmailService, BrevoEmailService>(client =>
 {
     client.BaseAddress = new Uri("https://api.brevo.com/v3/");

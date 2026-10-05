@@ -64,6 +64,13 @@ public sealed class TestAccountRestrictionsMiddleware(RequestDelegate next)
             return true;
 
         var path = context.Request.Path.Value ?? string.Empty;
+        // These operations create isolated QA records that are automatically
+        // removed by TemporaryQaArtifactCleanupService after ten minutes.
+        if (HttpMethods.IsPost(method) && (
+            path.Equals("/api/marketing/campaigns", StringComparison.OrdinalIgnoreCase) ||
+            path.Equals("/api/accounting/expenses", StringComparison.OrdinalIgnoreCase) ||
+            path.Equals("/api/accounting/supplier-payments", StringComparison.OrdinalIgnoreCase)))
+            return false;
         return ProtectedMutationPrefixes.Any(prefix =>
             path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
     }

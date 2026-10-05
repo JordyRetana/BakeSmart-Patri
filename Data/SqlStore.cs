@@ -3722,7 +3722,18 @@ public sealed partial class SqlStore
                     CreatedAt datetime NOT NULL
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
                 """);
-            try { await ExecuteAsync("ALTER TABLE NotasCreditoPOS ADD COLUMN IF NOT EXISTS Code varchar(32) NULL, ADD COLUMN IF NOT EXISTS RemainingAmount decimal(18,2) NULL, ADD COLUMN IF NOT EXISTS UsedAt datetime NULL, ADD COLUMN IF NOT EXISTS UsedSaleId int NULL;"); } catch { }
+            var creditNoteColumns = new (string Name, string Definition)[]
+            {
+                ("Code", "varchar(32) NULL"),
+                ("RemainingAmount", "decimal(18,2) NULL"),
+                ("UsedAt", "datetime NULL"),
+                ("UsedSaleId", "int NULL")
+            };
+            foreach (var column in creditNoteColumns)
+            {
+                var exists = Convert.ToInt32(await ScalarAsync("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='NotasCreditoPOS' AND COLUMN_NAME=@Column;", new SqlParameter("@Column", column.Name)) ?? 0) > 0;
+                if (!exists) await ExecuteAsync($"ALTER TABLE NotasCreditoPOS ADD COLUMN `{column.Name}` {column.Definition};");
+            }
 
             await using var connection = CreateConnection();
             await connection.OpenAsync();
@@ -3941,6 +3952,15 @@ public sealed partial class SqlStore
 
     public async Task<object> RedeemCreditNoteForOrderAsync(int orderId, string code, string? userEmail = null)
     {
+        if (UseMySql)
+        {
+            var required = new (string Name, string Definition)[] { ("Code", "varchar(32) NULL"), ("RemainingAmount", "decimal(18,2) NULL"), ("UsedAt", "datetime NULL"), ("UsedSaleId", "int NULL") };
+            foreach (var column in required)
+            {
+                var exists = Convert.ToInt32(await ScalarAsync("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='NotasCreditoPOS' AND COLUMN_NAME=@Column;", new SqlParameter("@Column", column.Name)) ?? 0) > 0;
+                if (!exists) await ExecuteAsync($"ALTER TABLE NotasCreditoPOS ADD COLUMN `{column.Name}` {column.Definition};");
+            }
+        }
         var normalizedCode = (code ?? string.Empty).Trim().ToUpperInvariant();
         if (orderId <= 0 || string.IsNullOrWhiteSpace(normalizedCode))
             throw new InvalidOperationException("Indique un código de nota de crédito válido.");

@@ -582,6 +582,12 @@ public class ApiController : Controller
             var subject = string.IsNullOrWhiteSpace(request.Subject) ? "Promoción Repostería Patri" : request.Subject;
             var campaign = request with { CustomerIds = recipients.Select(recipient => recipient.CustomerId).ToArray() };
             var id = await _sqlStore.SendMarketingCampaignAsync(campaign, CurrentUserEmail);
+            var isTest = await _sqlStore.IsTestAccountAsync(CurrentUserEmail ?? string.Empty);
+            if (isTest)
+            {
+                await _sqlStore.ScheduleTemporaryQaArtifactAsync("MARKETING", id, CurrentUserEmail!);
+                return Ok(new { ok = true, id, queued = 0, temporary = true, expiresInMinutes = 10, message = "Campaña de prueba registrada. No se enviarán correos reales y se eliminará automáticamente en 10 minutos." });
+            }
             QueueExternalNotification(async () =>
             {
                 foreach (var batch in recipients.Chunk(5))
@@ -1045,6 +1051,11 @@ public class ApiController : Controller
         try
         {
             var id = await _sqlStore.RegisterExpenseAsync(request, CurrentUserEmail);
+            if (await _sqlStore.IsTestAccountAsync(CurrentUserEmail ?? string.Empty))
+            {
+                await _sqlStore.ScheduleTemporaryQaArtifactAsync("EXPENSE", id, CurrentUserEmail!);
+                return Ok(new { ok = true, id, temporary = true, expiresInMinutes = 10, message = "Gasto de prueba registrado. Se eliminará automáticamente en 10 minutos y no permanecerá en la contabilidad." });
+            }
             return Ok(new { ok = true, id });
         }
         catch (InvalidOperationException ex)
@@ -1060,6 +1071,11 @@ public class ApiController : Controller
         try
         {
             var id = await _sqlStore.RegisterSupplierPaymentAsync(request, CurrentUserEmail);
+            if (await _sqlStore.IsTestAccountAsync(CurrentUserEmail ?? string.Empty))
+            {
+                await _sqlStore.ScheduleTemporaryQaArtifactAsync("SUPPLIER_PAYMENT", id, CurrentUserEmail!);
+                return Ok(new { ok = true, id, temporary = true, expiresInMinutes = 10, message = "Pago de proveedor de prueba registrado. Se eliminará automáticamente en 10 minutos." });
+            }
             return Ok(new { ok = true, id });
         }
         catch (InvalidOperationException ex)
