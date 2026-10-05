@@ -46,10 +46,11 @@ public sealed class TestAccountRestrictionsMiddleware(RequestDelegate next)
         if (context.User.Identity?.IsAuthenticated != true)
             return false;
 
-        var isTestAccount = string.Equals(context.User.FindFirstValue(TestAccountClaim), "true", StringComparison.OrdinalIgnoreCase);
+        var email = context.User.FindFirstValue(ClaimTypes.Email) ?? context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var isTestAccount = BakeSmartPatri.Data.SqlStore.IsReservedTestAccountEmail(email)
+            || string.Equals(context.User.FindFirstValue(TestAccountClaim), "true", StringComparison.OrdinalIgnoreCase);
         if (!isTestAccount)
         {
-            var email = context.User.FindFirstValue(ClaimTypes.Email) ?? context.User.FindFirstValue(ClaimTypes.NameIdentifier);
             isTestAccount = !string.IsNullOrWhiteSpace(email) && await store.IsTestAccountAsync(email);
         }
         if (!isTestAccount) return false;

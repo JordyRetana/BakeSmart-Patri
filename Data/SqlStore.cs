@@ -1171,7 +1171,7 @@ public sealed partial class SqlStore
             address = reader.GetNullableString("AddressLine") ?? "",
             role = reader.GetString("RoleName"),
             active = reader.GetBoolean("IsActive"),
-            isTestAccount = Convert.ToBoolean(reader["IsTestAccount"]),
+            isTestAccount = Convert.ToBoolean(reader["IsTestAccount"]) || IsReservedTestAccountEmail(reader.GetString("Email")),
             emailConfirmed = Convert.ToBoolean(reader["EmailConfirmed"]),
             twoFactorEnabled = Convert.ToBoolean(reader["TwoFactorEnabled"]),
             twoFactorResetPending = Convert.ToBoolean(reader["TwoFactorResetPending"]),

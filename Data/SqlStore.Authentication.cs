@@ -9,6 +9,14 @@ public sealed partial class SqlStore
     private static readonly SemaphoreSlim AuthenticationSchemaLock = new(1, 1);
     private static volatile bool _authenticationSchemaReady;
 
+    public static bool IsReservedTestAccountEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return false;
+        var normalized = email.Trim().ToLowerInvariant();
+        return normalized.StartsWith("qa.", StringComparison.Ordinal)
+            && normalized.EndsWith("@bakesmart.test", StringComparison.Ordinal);
+    }
+
     public async Task<SecureAuthResult> AuthenticateSecureAsync(string email, string password)
     {
         await EnsureAuthenticationTablesAsync();
@@ -59,14 +67,21 @@ public sealed partial class SqlStore
     {
         await EnsureAuthenticationTablesAsync();
         var table = UseMySql ? "SeguridadUsuarios" : "dbo.SeguridadUsuarios";
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var now = UseMySql ? "UTC_TIMESTAMP()" : "SYSUTCDATETIME()";
+        var ensureRowSql = UseMySql
+            ? $"INSERT INTO {table}(Email,EmailConfirmed,UpdatedAt) VALUES(@Email,1,{now}) ON DUPLICATE KEY UPDATE Email=VALUES(Email);"
+            : $"IF NOT EXISTS(SELECT 1 FROM {table} WHERE LOWER(Email)=LOWER(@Email)) INSERT INTO {table}(Email,EmailConfirmed,UpdatedAt) VALUES(@Email,1,{now});";
+        await ExecuteAsync(ensureRowSql, new SqlParameter("@Email", normalizedEmail));
         // Changing the protection mode invalidates existing cookies immediately. This
         // prevents an already logged-in account from retaining unrestricted claims.
         await ExecuteAsync($"UPDATE {table} SET SessionVersion=SessionVersion + CASE WHEN IsTestAccount<>@Enabled THEN 1 ELSE 0 END, IsTestAccount=@Enabled WHERE LOWER(Email)=LOWER(@Email);",
-            new SqlParameter("@Enabled", enabled), new SqlParameter("@Email", email.Trim().ToLowerInvariant()));
+            new SqlParameter("@Enabled", enabled || IsReservedTestAccountEmail(normalizedEmail)), new SqlParameter("@Email", normalizedEmail));
     }
 
     public async Task<bool> IsTestAccountAsync(string email)
     {
+        if (IsReservedTestAccountEmail(email)) return true;
         await EnsureAuthenticationTablesAsync();
         var table = UseMySql ? "SeguridadUsuarios" : "dbo.SeguridadUsuarios";
         var value = await ScalarAsync($"SELECT IsTestAccount FROM {table} WHERE LOWER(Email)=LOWER(@Email);",
@@ -301,6 +316,10 @@ public sealed partial class SqlStore
             }
             else
                 await ExecuteAsync("IF COL_LENGTH('dbo.SeguridadUsuarios','IsTestAccount') IS NULL ALTER TABLE dbo.SeguridadUsuarios ADD IsTestAccount bit NOT NULL DEFAULT 0;");
+
+            // Accounts under the reserved QA namespace are always protected. This
+            // also repairs accounts created before the IsTestAccount flag existed.
+            await ExecuteAsync($"UPDATE {(UseMySql ? "SeguridadUsuarios" : "dbo.SeguridadUsuarios")} SET IsTestAccount=1 WHERE LOWER(Email) LIKE 'qa.%@bakesmart.test';");
             _authenticationSchemaReady = true;
         }
         finally

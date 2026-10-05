@@ -3,7 +3,9 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Usuarios";
-    var isTestAccount = string.Equals(User.FindFirstValue(TestAccountRestrictionsMiddleware.TestAccountClaim), "true", StringComparison.OrdinalIgnoreCase);
+    var currentEmail = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var isTestAccount = BakeSmartPatri.Data.SqlStore.IsReservedTestAccountEmail(currentEmail)
+        || string.Equals(User.FindFirstValue(TestAccountRestrictionsMiddleware.TestAccountClaim), "true", StringComparison.OrdinalIgnoreCase);
 }
 
 @section Styles {
