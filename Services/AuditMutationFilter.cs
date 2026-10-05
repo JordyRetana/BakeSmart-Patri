@@ -22,7 +22,10 @@ public sealed class AuditMutationFilter(SqlStore sqlStore) : IAsyncActionFilter
         if (string.IsNullOrWhiteSpace(email)) return;
 
         var path = request.Path.Value ?? "/api";
-        await sqlStore.AddAuditLogAsync("OPERACION_API", DescribeOperation(request.Method, path), email);
+        var testPrefix = string.Equals(
+            context.HttpContext.User.FindFirstValue(TestAccountRestrictionsMiddleware.TestAccountClaim),
+            "true", StringComparison.OrdinalIgnoreCase) ? "PRUEBA_" : string.Empty;
+        await sqlStore.AddAuditLogAsync($"{testPrefix}OPERACION_API", DescribeOperation(request.Method, path), email);
     }
 
     private static string DescribeOperation(string method, string path)

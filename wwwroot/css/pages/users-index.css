@@ -529,3 +529,10 @@ body.dark .users-row-actions .btn:hover { background:#49305f !important; border-
     .users-role-list { grid-template-columns: 1fr; }
     .users-client-group { margin-top: .75rem; }
 }
+.users-test-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    margin-left: .5rem;
+    vertical-align: middle;
+}

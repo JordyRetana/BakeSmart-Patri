@@ -88,7 +88,7 @@
         <div><label>Contraseña</label><input class="form-control" name="password" type="text" placeholder="Mínimo 8 caracteres" /></div>
         <div><label>Rol</label><select class="form-control" name="role" id="userRole" required></select></div>
         <div class="users-form-full"><label>Direccion</label><input class="form-control" name="address" /></div>
-        <div class="users-form-full"><label class="users-test-account"><input type="checkbox" name="isTestAccount" /><span>Cuenta de prueba<small>Permitir acceso sin confirmar el correo</small></span></label></div>
+        <div class="users-form-full"><label class="users-test-account"><input type="checkbox" name="isTestAccount" /><span>Cuenta protegida para pruebas<small>Conserva los accesos del rol, identifica sus acciones y bloquea usuarios, seguridad, configuración, pagos, contabilidad y eliminaciones.</small></span></label></div>
         <div class="users-form-actions users-form-full">
             <button class="btn btn-outline" type="button" id="clearUserForm">Limpiar</button>
             <button class="btn btn-primary" type="submit"><i class="fas fa-save"></i> Guardar usuario</button>
@@ -202,7 +202,7 @@
 
         body.innerHTML = users.map(u => `
             <tr>
-                <td><strong>${clean(u.firstName)} ${clean(u.lastName)}</strong><small>${clean(u.address || 'Sin dirección')}</small></td>
+                <td><strong>${clean(u.firstName)} ${clean(u.lastName)}</strong>${u.isTestAccount ? '<span class="badge badge-info users-test-badge"><i class="fas fa-flask"></i> Pruebas</span>' : ''}<small>${clean(u.address || 'Sin dirección')}</small></td>
                 <td><span>${clean(u.email)}</span><small>${clean(u.phone)}</small></td>
                 <td><span class="badge badge-primary">${clean(u.role)}</span></td>
                 <td><span class="badge ${u.active ? 'badge-success' : 'badge-warning'}">${u.active ? 'Activo' : 'Inactivo'}</span>${!u.emailConfirmed ? '<small class="users-email-pending"><i class="fas fa-envelope-circle-xmark"></i> Correo pendiente</small>' : ''}${u.twoFactorResetPending ? '<small class="users-security-pending"><i class="fas fa-clock"></i> Solicitud 2FA</small>' : (u.twoFactorEnabled ? '<small class="users-security-enabled"><i class="fas fa-shield-halved"></i> 2FA activo</small>' : '')}</td>
@@ -220,7 +220,7 @@
 
         clientsBody.innerHTML = clients.map(u => `
             <tr>
-                <td><strong>${clean(u.firstName)} ${clean(u.lastName)}</strong><small>${clean(u.address || 'Sin dirección')}</small></td>
+                <td><strong>${clean(u.firstName)} ${clean(u.lastName)}</strong>${u.isTestAccount ? '<span class="badge badge-info users-test-badge"><i class="fas fa-flask"></i> Pruebas</span>' : ''}<small>${clean(u.address || 'Sin dirección')}</small></td>
                 <td><span>${clean(u.email)}</span><small>${clean(u.phone)}</small></td>
                 <td><span class="badge ${u.active ? 'badge-success' : 'badge-warning'}">${u.active ? 'Activo' : 'Inactivo'}</span>${!u.emailConfirmed ? '<small class="users-email-pending"><i class="fas fa-envelope-circle-xmark"></i> Correo pendiente</small>' : ''}${u.twoFactorResetPending ? '<small class="users-security-pending"><i class="fas fa-clock"></i> Solicitud 2FA</small>' : (u.twoFactorEnabled ? '<small class="users-security-enabled"><i class="fas fa-shield-halved"></i> 2FA activo</small>' : '')}</td>
                 <td class="users-created-at">${shortDate(u.createdAt)}</td>

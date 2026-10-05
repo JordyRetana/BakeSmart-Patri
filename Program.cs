@@ -294,6 +294,7 @@ app.Use(async (context, next) =>
 
 app.UseRateLimiter();
 app.UseAuthentication();
+app.UseMiddleware<TestAccountRestrictionsMiddleware>();
 app.Use(async (context, next) =>
 {
     if (context.User.Identity?.IsAuthenticated == true &&

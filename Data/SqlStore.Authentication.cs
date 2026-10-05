@@ -59,8 +59,19 @@ public sealed partial class SqlStore
     {
         await EnsureAuthenticationTablesAsync();
         var table = UseMySql ? "SeguridadUsuarios" : "dbo.SeguridadUsuarios";
-        await ExecuteAsync($"UPDATE {table} SET IsTestAccount=@Enabled WHERE LOWER(Email)=LOWER(@Email);",
+        // Changing the protection mode invalidates existing cookies immediately. This
+        // prevents an already logged-in account from retaining unrestricted claims.
+        await ExecuteAsync($"UPDATE {table} SET SessionVersion=SessionVersion + CASE WHEN IsTestAccount<>@Enabled THEN 1 ELSE 0 END, IsTestAccount=@Enabled WHERE LOWER(Email)=LOWER(@Email);",
             new SqlParameter("@Enabled", enabled), new SqlParameter("@Email", email.Trim().ToLowerInvariant()));
+    }
+
+    public async Task<bool> IsTestAccountAsync(string email)
+    {
+        await EnsureAuthenticationTablesAsync();
+        var table = UseMySql ? "SeguridadUsuarios" : "dbo.SeguridadUsuarios";
+        var value = await ScalarAsync($"SELECT IsTestAccount FROM {table} WHERE LOWER(Email)=LOWER(@Email);",
+            new SqlParameter("@Email", email.Trim().ToLowerInvariant()));
+        return Convert.ToInt32(value ?? 0) == 1;
     }
 
     public async Task<bool> NeedsEmailConfirmationAsync(string email)

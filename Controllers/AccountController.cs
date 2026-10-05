@@ -583,12 +583,14 @@ namespace BakeSmartPatri.Controllers
         private async Task SignInUserAsync(SqlStore.AuthUser user, SqlStore.UserSecurityState? knownSecurity = null)
         {
             var security = knownSecurity ?? await _sqlStore.GetUserSecurityAsync(user.Email);
+            var isTestAccount = await _sqlStore.IsTestAccountAsync(user.Email);
             var claims = new List<Claim>
             {
                 new(ClaimTypes.NameIdentifier, user.Email),
                 new(ClaimTypes.Name, user.DisplayName),
                 new(ClaimTypes.Email, user.Email),
                 new(ClaimTypes.Role, user.Role),
+                new(TestAccountRestrictionsMiddleware.TestAccountClaim, isTestAccount ? "true" : "false"),
                 new("bakesmart:2fa", security.TwoFactorEnabled ? "enabled" : "disabled"),
                 new("bakesmart:password-setup", security.PasswordSetupRequired ? "required" : "complete"),
                 new("bakesmart:session-version", (await _sqlStore.GetSessionVersionAsync(user.Email)).ToString(CultureInfo.InvariantCulture)),
