@@ -74,6 +74,15 @@ public sealed partial class SqlStore
         return Convert.ToInt32(value ?? 0) == 1;
     }
 
+    public async Task PrepareTestAccountAsync(string email)
+    {
+        await EnsureAuthenticationTablesAsync();
+        var table = UseMySql ? "SeguridadUsuarios" : "dbo.SeguridadUsuarios";
+        var now = UseMySql ? "UTC_TIMESTAMP()" : "SYSUTCDATETIME()";
+        await ExecuteAsync($"UPDATE {table} SET IsTestAccount=1, TwoFactorEnabled=0, TotpSecret=NULL, FailedLoginAttempts=0, LockoutEnd=NULL, SessionVersion=SessionVersion+1, UpdatedAt={now} WHERE LOWER(Email)=LOWER(@Email);",
+            new SqlParameter("@Email", email.Trim().ToLowerInvariant()));
+    }
+
     public async Task<bool> NeedsEmailConfirmationAsync(string email)
     {
         await EnsureAuthenticationTablesAsync();

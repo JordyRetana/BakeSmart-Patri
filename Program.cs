@@ -45,6 +45,17 @@ builder.Configuration
     .AddJsonFile("appsettings.Azure.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
+if (args.Contains("--seed-test-users", StringComparer.OrdinalIgnoreCase))
+{
+    var outputArgument = args.FirstOrDefault(value => value.StartsWith("--output=", StringComparison.OrdinalIgnoreCase));
+    var outputPath = outputArgument?["--output=".Length..];
+    if (string.IsNullOrWhiteSpace(outputPath))
+        throw new InvalidOperationException("Indique --output=<ruta segura> para guardar las credenciales generadas.");
+
+    Environment.ExitCode = await QaTestAccountSeeder.RunAsync(builder.Configuration, outputPath);
+    return;
+}
+
 var port = Environment.GetEnvironmentVariable("PORT");
 if (!string.IsNullOrWhiteSpace(port))
 {
