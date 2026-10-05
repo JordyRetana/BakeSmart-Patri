@@ -3,7 +3,13 @@
     ViewData["Title"] = "Configuración del sitio";
 }
 
-<div class="page-shell settings-admin-page">
+@using System.Security.Claims
+@using BakeSmartPatri.Data
+@{
+    var settingsUserEmail = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var isProtectedTestAccount = SqlStore.IsReservedTestAccountEmail(settingsUserEmail);
+}
+<div class="page-shell settings-admin-page" data-protected-test-account="@(isProtectedTestAccount ? "true" : "false")">
     <div class="page-header settings-admin-header">
         <div>
             <h1 class="settings-admin-title">
@@ -24,6 +30,10 @@
         <button type="button" class="settings-module-tab" data-settings-tab="offers"><i class="fas fa-tags"></i><span>Ofertas</span></button>
         <button type="button" class="settings-module-tab" data-settings-tab="contact"><i class="fas fa-address-card"></i><span>Contacto</span></button>
     </nav>
+    @if (isProtectedTestAccount)
+    {
+        <div class="alert alert-info"><i class="fas fa-lock"></i> Cuenta de pruebas: puede consultar la información del negocio, pero los datos generales, ubicación y contacto están protegidos. Los combos y ofertas que cree serán temporales.</div>
+    }
 
     <form id="settingsForm" class="card settings-page-card">
         <section class="settings-module-panel active" data-settings-panel="general">
@@ -696,6 +706,7 @@
     <script>
         (() => {
             const form = document.getElementById('settingsForm');
+            const protectedTestAccount = document.querySelector('.settings-admin-page')?.dataset.protectedTestAccount === 'true';
             const fields = [
                 'iva','frequentCustomerDiscount','originName','originAddress','originLatitude','originLongitude',
                 'siteHeroEyebrow','siteHeroTitle','siteHeroDescription','siteHeroCode','siteHeroButtonText',
@@ -1284,8 +1295,20 @@
                 finally { button.disabled = false; }
             });
 
+            function applyProtectedBusinessFields() {
+                if (!protectedTestAccount) return;
+                document.querySelectorAll('[data-settings-panel="general"], [data-settings-panel="home"], [data-settings-panel="benefits"], [data-settings-panel="delivery"], [data-settings-panel="contact"]').forEach(panel => {
+                    panel.classList.add('settings-protected-panel');
+                    panel.querySelectorAll('input, textarea, select, button').forEach(control => {
+                        control.disabled = true;
+                        control.setAttribute('title', 'Información protegida del negocio. Use una cuenta administrativa real para modificarla.');
+                    });
+                });
+                document.querySelectorAll('.settings-save-bar button').forEach(button => button.disabled = true);
+            }
+
             Promise.all([loadSettings(), BakeSmartStore.refresh({ keys: ['inventory', 'combos', 'promotions'], force: true })])
-                .then(() => { clearComboEditor(); renderComboList(); clearOfferEditor(); renderOfferList(); })
+                .then(() => { clearComboEditor(); renderComboList(); clearOfferEditor(); renderOfferList(); applyProtectedBusinessFields(); })
                 .catch(error => app.toast.error(error.message));
         })();
     </script>

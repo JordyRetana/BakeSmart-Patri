@@ -509,7 +509,15 @@ public class ApiController : Controller
     {
         try
         {
+            var isTest = await _sqlStore.IsTestAccountAsync(CurrentUserEmail ?? string.Empty);
+            if (isTest && request.Id is > 0 && !await _sqlStore.IsTemporaryQaArtifactAsync("PROMOTION", request.Id.Value))
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Las cuentas de prueba no pueden modificar ofertas reales." });
             var id = await _sqlStore.SavePromotionAsync(request, CurrentUserEmail);
+            if (isTest)
+            {
+                await _sqlStore.ScheduleTemporaryQaArtifactAsync("PROMOTION", id, CurrentUserEmail!);
+                return Ok(new { ok = true, id, temporary = true, expiresInMinutes = 10, message = "Oferta de prueba guardada. Se eliminará automáticamente en 10 minutos." });
+            }
             return Ok(new { ok = true, id });
         }
         catch (InvalidOperationException ex)
@@ -528,6 +536,8 @@ public class ApiController : Controller
     {
         try
         {
+            if (await _sqlStore.IsTestAccountAsync(CurrentUserEmail ?? string.Empty) && !await _sqlStore.IsTemporaryQaArtifactAsync("PROMOTION", id))
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Las cuentas de prueba solo pueden cambiar ofertas temporales." });
             await _sqlStore.TogglePromotionAsync(id, CurrentUserEmail);
             return Ok(new { ok = true });
         }
@@ -546,7 +556,19 @@ public class ApiController : Controller
     public async Task<IActionResult> SaveCombo([FromBody] SqlStore.ComboInput? request)
     {
         if (request is null) return BadRequest(new { message = "No se recibió la información del combo." });
-        try { return Ok(new { ok = true, id = await _sqlStore.SaveComboAsync(request, CurrentUserEmail) }); }
+        try
+        {
+            var isTest = await _sqlStore.IsTestAccountAsync(CurrentUserEmail ?? string.Empty);
+            if (isTest && request.Id is > 0 && !await _sqlStore.IsTemporaryQaArtifactAsync("COMBO", request.Id.Value))
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Las cuentas de prueba no pueden modificar combos reales." });
+            var id = await _sqlStore.SaveComboAsync(request, CurrentUserEmail);
+            if (isTest)
+            {
+                await _sqlStore.ScheduleTemporaryQaArtifactAsync("COMBO", id, CurrentUserEmail!);
+                return Ok(new { ok = true, id, temporary = true, expiresInMinutes = 10, message = "Combo de prueba guardado. Se eliminará automáticamente en 10 minutos." });
+            }
+            return Ok(new { ok = true, id });
+        }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
@@ -554,6 +576,8 @@ public class ApiController : Controller
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> ToggleCombo(int id)
     {
+        if (await _sqlStore.IsTestAccountAsync(CurrentUserEmail ?? string.Empty) && !await _sqlStore.IsTemporaryQaArtifactAsync("COMBO", id))
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Las cuentas de prueba solo pueden cambiar combos temporales." });
         await _sqlStore.ToggleComboAsync(id, CurrentUserEmail);
         return Ok(new { ok = true });
     }
