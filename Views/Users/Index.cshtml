@@ -119,6 +119,54 @@
     const rolePreview = document.getElementById('rolePreview');
     const shortDate = value => new Intl.DateTimeFormat('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value));
 
+    const protectionPopover = document.createElement('div');
+    protectionPopover.className = 'users-protection-popover';
+    protectionPopover.setAttribute('role', 'tooltip');
+    document.body.appendChild(protectionPopover);
+
+    function showProtectionMessage(target) {
+        const message = target?.dataset?.protectionMessage;
+        if (!message) return;
+        protectionPopover.textContent = message;
+        protectionPopover.classList.add('is-visible');
+        const targetRect = target.getBoundingClientRect();
+        const popoverRect = protectionPopover.getBoundingClientRect();
+        const margin = 10;
+        const left = Math.min(
+            window.innerWidth - popoverRect.width - margin,
+            Math.max(margin, targetRect.left + (targetRect.width - popoverRect.width) / 2)
+        );
+        const fitsAbove = targetRect.top >= popoverRect.height + 18;
+        const top = fitsAbove
+            ? targetRect.top - popoverRect.height - 10
+            : targetRect.bottom + 10;
+        protectionPopover.style.left = `${left}px`;
+        protectionPopover.style.top = `${Math.max(margin, top)}px`;
+        protectionPopover.classList.toggle('is-below', !fitsAbove);
+    }
+
+    function hideProtectionMessage() {
+        protectionPopover.classList.remove('is-visible', 'is-below');
+    }
+
+    document.addEventListener('pointerover', event => {
+        const target = event.target.closest('.users-protection-tooltip');
+        if (target) showProtectionMessage(target);
+    });
+    document.addEventListener('pointerout', event => {
+        const target = event.target.closest('.users-protection-tooltip');
+        if (target && !target.contains(event.relatedTarget)) hideProtectionMessage();
+    });
+    document.addEventListener('focusin', event => {
+        const target = event.target.closest('.users-protection-tooltip');
+        if (target) showProtectionMessage(target);
+    });
+    document.addEventListener('focusout', event => {
+        if (event.target.closest('.users-protection-tooltip')) hideProtectionMessage();
+    });
+    window.addEventListener('scroll', hideProtectionMessage, true);
+    window.addEventListener('resize', hideProtectionMessage);
+
     const clean = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 
     function displayDescription(value) {
