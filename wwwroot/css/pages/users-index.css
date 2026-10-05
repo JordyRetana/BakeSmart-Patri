@@ -536,3 +536,11 @@ body.dark .users-row-actions .btn:hover { background:#49305f !important; border-
     margin-left: .5rem;
     vertical-align: middle;
 }
+.users-protected-action {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    min-height: 2rem;
+    padding: 0 .65rem;
+    white-space: nowrap;
+}

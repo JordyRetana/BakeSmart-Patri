@@ -1,6 +1,9 @@
+@using BakeSmartPatri.Services
+@using System.Security.Claims
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Usuarios";
+    var isTestAccount = string.Equals(User.FindFirstValue(TestAccountRestrictionsMiddleware.TestAccountClaim), "true", StringComparison.OrdinalIgnoreCase);
 }
 
 @section Styles {
@@ -16,8 +19,15 @@
         </div>
         <div class="users-hero-actions">
             <input id="userSearch" class="form-control" placeholder="Buscar nombre, correo o teléfono" />
-            <button type="button" id="openUserQuickActions" class="btn btn-primary"><i class="fas fa-user-plus"></i> Nuevo usuario</button>
-            <a class="btn btn-outline" href="/Roles"><i class="fas fa-shield-halved"></i> Roles</a>
+            @if (!isTestAccount)
+            {
+                <button type="button" id="openUserQuickActions" class="btn btn-primary"><i class="fas fa-user-plus"></i> Nuevo usuario</button>
+                <a class="btn btn-outline" href="/Roles"><i class="fas fa-shield-halved"></i> Roles</a>
+            }
+            else
+            {
+                <span class="badge badge-info"><i class="fas fa-flask"></i> Vista protegida de pruebas</span>
+            }
         </div>
     </header>
 
@@ -99,6 +109,7 @@
 @section Scripts {
 <script>
 (() => {
+    const isTestAccount = @Json.Serialize(isTestAccount);
     const store = window.BakeSmartStore;
     const body = document.getElementById('usersTableBody');
     const clientsBody = document.getElementById('clientsTableBody');
@@ -209,10 +220,7 @@
                 <td class="users-created-at">${shortDate(u.createdAt)}</td>
                 <td class="text-right">
                     <div class="users-row-actions">
-                        <button class="btn btn-outline btn-sm" onclick="editUser(${u.id})"><i class="fas fa-pen"></i></button>
-                        <button class="btn btn-outline btn-sm" onclick="toggleUser(${u.id})">${u.active ? 'Desactivar' : 'Activar'}</button>
-                    ${u.twoFactorEnabled ? `<button class="btn btn-outline btn-sm users-security-action" onclick="openTwoFactorReset(${u.id})" title="Restablecer verificación en dos pasos" aria-label="Restablecer verificación en dos pasos"><i class="fas fa-shield-virus"></i></button>` : ''}
-                    ${!u.emailConfirmed ? `<button class="btn btn-outline btn-sm users-security-action" onclick="resendConfirmation(${u.id})" title="Reenviar confirmación de correo" aria-label="Reenviar confirmación de correo"><i class="fas fa-envelope-circle-check"></i></button>` : ''}
+                        ${isTestAccount ? '<span class="text-muted users-protected-action"><i class="fas fa-lock"></i> Protegido</span>' : `<button class="btn btn-outline btn-sm" onclick="editUser(${u.id})"><i class="fas fa-pen"></i></button><button class="btn btn-outline btn-sm" onclick="toggleUser(${u.id})">${u.active ? 'Desactivar' : 'Activar'}</button>${u.twoFactorEnabled ? `<button class="btn btn-outline btn-sm users-security-action" onclick="openTwoFactorReset(${u.id})" title="Restablecer verificación en dos pasos" aria-label="Restablecer verificación en dos pasos"><i class="fas fa-shield-virus"></i></button>` : ''}${!u.emailConfirmed ? `<button class="btn btn-outline btn-sm users-security-action" onclick="resendConfirmation(${u.id})" title="Reenviar confirmación de correo" aria-label="Reenviar confirmación de correo"><i class="fas fa-envelope-circle-check"></i></button>` : ''}`}
                     </div>
                 </td>
             </tr>
@@ -225,10 +233,7 @@
                 <td><span class="badge ${u.active ? 'badge-success' : 'badge-warning'}">${u.active ? 'Activo' : 'Inactivo'}</span>${!u.emailConfirmed ? '<small class="users-email-pending"><i class="fas fa-envelope-circle-xmark"></i> Correo pendiente</small>' : ''}${u.twoFactorResetPending ? '<small class="users-security-pending"><i class="fas fa-clock"></i> Solicitud 2FA</small>' : (u.twoFactorEnabled ? '<small class="users-security-enabled"><i class="fas fa-shield-halved"></i> 2FA activo</small>' : '')}</td>
                 <td class="users-created-at">${shortDate(u.createdAt)}</td>
                 <td class="text-right"><div class="users-row-actions">
-                    <button class="btn btn-outline btn-sm" onclick="editUser(${u.id})"><i class="fas fa-pen"></i></button>
-                    <button class="btn btn-outline btn-sm" onclick="toggleUser(${u.id})">${u.active ? 'Desactivar' : 'Activar'}</button>
-                    ${u.twoFactorEnabled ? `<button class="btn btn-outline btn-sm users-security-action" onclick="openTwoFactorReset(${u.id})" title="Restablecer verificación en dos pasos" aria-label="Restablecer verificación en dos pasos"><i class="fas fa-shield-virus"></i></button>` : ''}
-                    ${!u.emailConfirmed ? `<button class="btn btn-outline btn-sm users-security-action" onclick="resendConfirmation(${u.id})" title="Reenviar confirmación de correo" aria-label="Reenviar confirmación de correo"><i class="fas fa-envelope-circle-check"></i></button>` : ''}
+                    ${isTestAccount ? '<span class="text-muted users-protected-action"><i class="fas fa-lock"></i> Protegido</span>' : `<button class="btn btn-outline btn-sm" onclick="editUser(${u.id})"><i class="fas fa-pen"></i></button><button class="btn btn-outline btn-sm" onclick="toggleUser(${u.id})">${u.active ? 'Desactivar' : 'Activar'}</button>${u.twoFactorEnabled ? `<button class="btn btn-outline btn-sm users-security-action" onclick="openTwoFactorReset(${u.id})" title="Restablecer verificación en dos pasos" aria-label="Restablecer verificación en dos pasos"><i class="fas fa-shield-virus"></i></button>` : ''}${!u.emailConfirmed ? `<button class="btn btn-outline btn-sm users-security-action" onclick="resendConfirmation(${u.id})" title="Reenviar confirmación de correo" aria-label="Reenviar confirmación de correo"><i class="fas fa-envelope-circle-check"></i></button>` : ''}`}
                 </div></td>
             </tr>
         `).join('') || `<tr><td colspan="5" class="text-center text-muted">No hay clientes registrados.</td></tr>`;
@@ -272,7 +277,7 @@
         });
     };
 
-    document.getElementById('openUserQuickActions').addEventListener('click', () => openUserModal());
+    document.getElementById('openUserQuickActions')?.addEventListener('click', () => openUserModal());
     search.addEventListener('input', renderUsers);
     store.refresh().then(() => { renderRoles(); renderUsers(); }).catch(error => app.toast.error(error.message));
 })();

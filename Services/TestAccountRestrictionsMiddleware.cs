@@ -25,9 +25,9 @@ public sealed class TestAccountRestrictionsMiddleware(RequestDelegate next)
         "/admin/save"
     };
 
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(HttpContext context, BakeSmartPatri.Data.SqlStore store)
     {
-        if (IsBlockedMutation(context))
+        if (await IsBlockedMutationAsync(context, store))
         {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             context.Response.ContentType = "application/json; charset=utf-8";
@@ -41,11 +41,18 @@ public sealed class TestAccountRestrictionsMiddleware(RequestDelegate next)
         await next(context);
     }
 
-    internal static bool IsBlockedMutation(HttpContext context)
+    internal static async Task<bool> IsBlockedMutationAsync(HttpContext context, BakeSmartPatri.Data.SqlStore store)
     {
-        if (context.User.Identity?.IsAuthenticated != true ||
-            !string.Equals(context.User.FindFirstValue(TestAccountClaim), "true", StringComparison.OrdinalIgnoreCase))
+        if (context.User.Identity?.IsAuthenticated != true)
             return false;
+
+        var isTestAccount = string.Equals(context.User.FindFirstValue(TestAccountClaim), "true", StringComparison.OrdinalIgnoreCase);
+        if (!isTestAccount)
+        {
+            var email = context.User.FindFirstValue(ClaimTypes.Email) ?? context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            isTestAccount = !string.IsNullOrWhiteSpace(email) && await store.IsTestAccountAsync(email);
+        }
+        if (!isTestAccount) return false;
 
         var method = context.Request.Method;
         if (HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method))
