@@ -3717,10 +3717,12 @@ public sealed partial class SqlStore
         if (UseMySql)
         {
             var incomeAccountTask = EnsureAccountAsync("4-01", "Ingresos por ventas", "INGRESO");
-            var refundAccountTask = EnsureAccountAsync("1-02", "Banco / SINPE / PayPal", "ACTIVO");
-            await Task.WhenAll(incomeAccountTask, refundAccountTask);
+            var cashAccountTask = EnsureAccountAsync("1-01", "Caja", "ACTIVO");
+            var bankAccountTask = EnsureAccountAsync("1-02", "Banco / SINPE / PayPal", "ACTIVO");
+            await Task.WhenAll(incomeAccountTask, cashAccountTask, bankAccountTask);
             var incomeAccountId = await incomeAccountTask;
-            var refundAccountId = await refundAccountTask;
+            var cashAccountId = await cashAccountTask;
+            var bankAccountId = await bankAccountTask;
             await ExecuteAsync("""
                 CREATE TABLE IF NOT EXISTS NotasCreditoPOS
                 (
@@ -3772,6 +3774,15 @@ public sealed partial class SqlStore
                 var amount = Convert.ToDecimal(await ScalarInTransactionAsync(connection, transaction,
                     "SELECT Total FROM Ventas WHERE SaleId = @SaleId;",
                     new SqlParameter("@SaleId", saleId)) ?? 0m);
+                var paymentMethod = Convert.ToString(await ScalarInTransactionAsync(connection, transaction, """
+                    SELECT pm.Name
+                    FROM Ventas v
+                    INNER JOIN MetodosPago pm ON pm.PaymentMethodId = v.PaymentMethodId
+                    WHERE v.SaleId = @SaleId;
+                    """, new SqlParameter("@SaleId", saleId))) ?? string.Empty;
+                var refundAccountId = RemoveDiacritics(paymentMethod).Contains("efectivo", StringComparison.OrdinalIgnoreCase)
+                    ? cashAccountId
+                    : bankAccountId;
                 var orderId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
                     "SELECT OrderId FROM Ventas WHERE SaleId = @SaleId;",
                     new SqlParameter("@SaleId", saleId)) ?? 0);
@@ -3783,6 +3794,8 @@ public sealed partial class SqlStore
                     """);
                 var cancelledStatusId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
                     "SELECT OrderStatusId FROM EstadosPedido WHERE Name = 'Cancelado' LIMIT 1;") ?? 0);
+                var annulledPaymentStatusId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
+                    "SELECT PaymentStatusId FROM EstadosPago WHERE Name = 'Anulado' LIMIT 1;") ?? 0);
 
                 creditNoteId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
                     INSERT INTO NotasCreditoPOS (SaleId, Reason, Amount, CreatedAt)
@@ -3807,12 +3820,22 @@ public sealed partial class SqlStore
                 if (orderId > 0)
                 {
                     await ExecuteInTransactionAsync(connection, transaction, """
-                        UPDATE Pedidos SET OrderStatusId = @CancelledStatusId WHERE OrderId = @OrderId;
+                        UPDATE Clientes c
+                        INNER JOIN Pedidos p ON p.CustomerId = c.CustomerId
+                        SET c.TotalSpent = GREATEST(0, c.TotalSpent - @Amount)
+                        WHERE p.OrderId = @OrderId;
+
+                        UPDATE Pedidos
+                        SET OrderStatusId = @CancelledStatusId,
+                            PaymentStatusId = CASE WHEN @AnnulledPaymentStatusId > 0 THEN @AnnulledPaymentStatusId ELSE PaymentStatusId END
+                        WHERE OrderId = @OrderId;
                         INSERT INTO EventosSeguimientoPedido (OrderId, OrderStatusId, Detail, CreatedAt)
                         VALUES (@OrderId, @CancelledStatusId, CONCAT('Venta reversada por nota de credito: ', @Reason), UTC_TIMESTAMP());
                         """,
                         new SqlParameter("@OrderId", orderId),
                         new SqlParameter("@CancelledStatusId", cancelledStatusId),
+                        new SqlParameter("@AnnulledPaymentStatusId", annulledPaymentStatusId),
+                        new SqlParameter("@Amount", amount),
                         new SqlParameter("@Reason", input.Reason.Trim()));
 
                     await ExecuteInTransactionAsync(connection, transaction, """
@@ -3897,12 +3920,16 @@ public sealed partial class SqlStore
             IF COL_LENGTH('dbo.NotasCreditoPOS','UsedAt') IS NULL ALTER TABLE dbo.NotasCreditoPOS ADD UsedAt datetime2 NULL;
             IF COL_LENGTH('dbo.NotasCreditoPOS','UsedSaleId') IS NULL ALTER TABLE dbo.NotasCreditoPOS ADD UsedSaleId int NULL;
 
+            IF EXISTS (SELECT 1 FROM dbo.NotasCreditoPOS WHERE SaleId = @ResolvedSaleId)
+                THROW 50151, 'La venta ya tiene una nota de crédito registrada.', 1;
+
             DECLARE @Amount decimal(18,2) = (SELECT Total FROM dbo.Ventas WHERE SaleId = @ResolvedSaleId);
             DECLARE @OrderId int = (SELECT OrderId FROM dbo.Ventas WHERE SaleId = @ResolvedSaleId);
             IF NOT EXISTS (SELECT 1 FROM dbo.EstadosPedido WHERE Name = N'Cancelado')
                 INSERT INTO dbo.EstadosPedido (Name, SortOrder)
                 SELECT N'Cancelado', COALESCE(MAX(SortOrder), 0) + 1 FROM dbo.EstadosPedido;
             DECLARE @CancelledStatusId int = (SELECT OrderStatusId FROM dbo.EstadosPedido WHERE Name = N'Cancelado');
+            DECLARE @AnnulledPaymentStatusId int = (SELECT PaymentStatusId FROM dbo.EstadosPago WHERE Name = N'Anulado');
 
             INSERT INTO dbo.NotasCreditoPOS (SaleId, Reason, Amount, CreatedAt)
             VALUES (@ResolvedSaleId, @Reason, @Amount, SYSUTCDATETIME());
@@ -3916,7 +3943,16 @@ public sealed partial class SqlStore
             UPDATE dbo.Ventas SET Subtotal = 0, Tax = 0, Total = 0 WHERE SaleId = @ResolvedSaleId;
             IF @CancelledStatusId IS NOT NULL
             BEGIN
-                UPDATE dbo.Pedidos SET OrderStatusId = @CancelledStatusId WHERE OrderId = @OrderId;
+                UPDATE c
+                SET TotalSpent = CASE WHEN c.TotalSpent > @Amount THEN c.TotalSpent - @Amount ELSE 0 END
+                FROM dbo.Clientes c
+                INNER JOIN dbo.Pedidos p ON p.CustomerId = c.CustomerId
+                WHERE p.OrderId = @OrderId;
+
+                UPDATE dbo.Pedidos
+                SET OrderStatusId = @CancelledStatusId,
+                    PaymentStatusId = COALESCE(@AnnulledPaymentStatusId, PaymentStatusId)
+                WHERE OrderId = @OrderId;
 
                 INSERT INTO dbo.EventosSeguimientoPedido (OrderId, OrderStatusId, Detail, CreatedAt)
                 VALUES (@OrderId, @CancelledStatusId, CONCAT(N'Venta reversada por nota de credito: ', @Reason), SYSUTCDATETIME());
@@ -3945,14 +3981,32 @@ public sealed partial class SqlStore
               AND Note IN (CONCAT(N'Pedido web #', @OrderId), CONCAT(N'Venta POS #', @OrderId))
             GROUP BY ProductId, InventoryLocationId;
 
-            DECLARE @AccountId int = (SELECT TOP 1 AccountId FROM dbo.CatalogoCuentas ORDER BY AccountId);
+            DECLARE @PaymentMethodName nvarchar(120) = (
+                SELECT pm.Name FROM dbo.Ventas v
+                INNER JOIN dbo.MetodosPago pm ON pm.PaymentMethodId = v.PaymentMethodId
+                WHERE v.SaleId = @ResolvedSaleId
+            );
+            DECLARE @IncomeAccountId int = (SELECT AccountId FROM dbo.CatalogoCuentas WHERE AccountCode = N'4-01');
+            IF @IncomeAccountId IS NULL
+            BEGIN
+                INSERT INTO dbo.CatalogoCuentas (AccountCode, AccountName, AccountType)
+                VALUES (N'4-01', N'Ingresos por ventas', N'INGRESO');
+                SET @IncomeAccountId = SCOPE_IDENTITY();
+            END;
+            DECLARE @RefundAccountCode nvarchar(20) = CASE WHEN LOWER(COALESCE(@PaymentMethodName,N'')) LIKE N'%efectivo%' THEN N'1-01' ELSE N'1-02' END;
+            DECLARE @RefundAccountId int = (SELECT AccountId FROM dbo.CatalogoCuentas WHERE AccountCode = @RefundAccountCode);
+            IF @RefundAccountId IS NULL
+            BEGIN
+                INSERT INTO dbo.CatalogoCuentas (AccountCode, AccountName, AccountType)
+                VALUES (@RefundAccountCode, CASE WHEN @RefundAccountCode=N'1-01' THEN N'Caja' ELSE N'Banco / SINPE / PayPal' END, N'ACTIVO');
+                SET @RefundAccountId = SCOPE_IDENTITY();
+            END;
             INSERT INTO dbo.AsientosContables (EntryType, ReferenceTable, ReferenceId, Note, CreatedAt)
             VALUES (N'NOTA_CREDITO', N'NotasCreditoPOS', @CreditNoteId, @Reason, SYSUTCDATETIME());
             DECLARE @EntryId int = SCOPE_IDENTITY();
 
-            IF @AccountId IS NOT NULL
-                INSERT INTO dbo.LineasAsientoContable (AccountingEntryId, AccountId, Debit, Credit)
-                VALUES (@EntryId, @AccountId, @Amount, 0), (@EntryId, @AccountId, 0, @Amount);
+            INSERT INTO dbo.LineasAsientoContable (AccountingEntryId, AccountId, Debit, Credit)
+            VALUES (@EntryId, @IncomeAccountId, @Amount, 0), (@EntryId, @RefundAccountId, 0, @Amount);
 
             COMMIT TRAN;
             SELECT @CreditNoteId;
@@ -5967,6 +6021,10 @@ public sealed partial class SqlStore
                 INSERT INTO dbo.LineasAsientoContable (AccountingEntryId, AccountId, Debit, Credit)
                 VALUES (@EntryId, @CashAccountId, @EffectiveTotal, 0), (@EntryId, @IncomeAccountId, 0, @EffectiveTotal);
             END;
+
+            UPDATE dbo.Clientes
+            SET TotalSpent = TotalSpent + @EffectiveTotal
+            WHERE CustomerId = @CustomerId;
 
             COMMIT TRAN;
             SELECT @OrderId;
