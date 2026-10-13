@@ -18,10 +18,13 @@ public sealed partial class SqlStore
     private const int MaxTransientAttempts = 3;
     private static readonly SemaphoreSlim InventoryLotsSchemaLock = new(1, 1);
     private static readonly SemaphoreSlim ProfileCoordinatesSchemaLock = new(1, 1);
+    private static readonly SemaphoreSlim CommerceSchemaLock = new(1, 1);
     private static bool _mySqlInventoryLotsReady;
     private static bool _sqlServerInventoryLotsReady;
     private static bool _mySqlProfileCoordinatesReady;
     private static bool _sqlServerProfileCoordinatesReady;
+    private static bool _mySqlCommerceSchemaReady;
+    private static bool _sqlServerCommerceSchemaReady;
     private static readonly SemaphoreSlim SettingsCacheLock = new(1, 1);
     private static IReadOnlyDictionary<string, string>? _settingsCache;
     private static DateTime _settingsCacheExpiresUtc;
@@ -993,9 +996,14 @@ public sealed partial class SqlStore
 
     private async Task EnsureCommerceSchemaAsync()
     {
-        if (UseMySql)
+        if (UseMySql ? _mySqlCommerceSchemaReady : _sqlServerCommerceSchemaReady) return;
+        await CommerceSchemaLock.WaitAsync();
+        try
         {
-            await ExecuteAsync("""
+            if (UseMySql ? _mySqlCommerceSchemaReady : _sqlServerCommerceSchemaReady) return;
+            if (UseMySql)
+            {
+                await ExecuteAsync("""
                 CREATE TABLE IF NOT EXISTS PromocionesClientes (
                     PromotionId int NOT NULL,
                     CustomerId int NOT NULL,
@@ -1025,10 +1033,11 @@ public sealed partial class SqlStore
                     DiscountAmount decimal(18,2) NOT NULL DEFAULT 0
                 );
                 """);
-            return;
-        }
+                _mySqlCommerceSchemaReady = true;
+                return;
+            }
 
-        await ExecuteAsync("""
+            await ExecuteAsync("""
             IF OBJECT_ID(N'dbo.PromocionesClientes', N'U') IS NULL
                 CREATE TABLE dbo.PromocionesClientes (PromotionId int NOT NULL, CustomerId int NOT NULL, CONSTRAINT PK_PromocionesClientes PRIMARY KEY (PromotionId, CustomerId));
             IF OBJECT_ID(N'dbo.Combos', N'U') IS NULL
@@ -1038,6 +1047,12 @@ public sealed partial class SqlStore
             IF OBJECT_ID(N'dbo.VentaCombos', N'U') IS NULL
                 CREATE TABLE dbo.VentaCombos (SaleComboId int IDENTITY(1,1) PRIMARY KEY, SaleId int NOT NULL, ComboId int NOT NULL, Quantity decimal(18,2) NOT NULL, UnitPrice decimal(18,2) NOT NULL, DiscountAmount decimal(18,2) NOT NULL DEFAULT 0);
             """);
+            _sqlServerCommerceSchemaReady = true;
+        }
+        finally
+        {
+            CommerceSchemaLock.Release();
+        }
     }
 
     public async Task<IReadOnlyList<ComboData>> CombosAsync(bool activeOnly = false)
