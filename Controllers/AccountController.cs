@@ -591,6 +591,7 @@ namespace BakeSmartPatri.Controllers
                 new(ClaimTypes.Email, user.Email),
                 new(ClaimTypes.Role, user.Role),
                 new(TestAccountRestrictionsMiddleware.TestAccountClaim, isTestAccount ? "true" : "false"),
+                new("bakesmart:test-login-id", isTestAccount ? Guid.NewGuid().ToString("N") : string.Empty),
                 new("bakesmart:2fa", security.TwoFactorEnabled ? "enabled" : "disabled"),
                 new("bakesmart:password-setup", security.PasswordSetupRequired ? "required" : "complete"),
                 new("bakesmart:session-version", (await _sqlStore.GetSessionVersionAsync(user.Email)).ToString(CultureInfo.InvariantCulture)),

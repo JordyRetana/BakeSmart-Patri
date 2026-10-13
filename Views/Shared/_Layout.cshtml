@@ -14,6 +14,9 @@
     var userEmail = User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
         ?? User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
         ?? string.Empty;
+    var isTestAccount = BakeSmartPatri.Data.SqlStore.IsReservedTestAccountEmail(userEmail)
+        || string.Equals(User?.FindFirst(BakeSmartPatri.Services.TestAccountRestrictionsMiddleware.TestAccountClaim)?.Value, "true", StringComparison.OrdinalIgnoreCase);
+    var testLoginId = User?.FindFirst("bakesmart:test-login-id")?.Value ?? userEmail;
 
     string userInitials = "U";
     string userName = "Usuario";
@@ -146,7 +149,7 @@
         }
     </style>
 </head>
-<body class="app-body page-ready @(isOperational ? "operational-shell" : "public-shell")" data-page="@currentPath" data-user-email="@userEmail" data-user-authenticated="@isAuth.ToString().ToLowerInvariant()">
+<body class="app-body page-ready @(isOperational ? "operational-shell" : "public-shell")" data-page="@currentPath" data-user-email="@userEmail" data-user-authenticated="@isAuth.ToString().ToLowerInvariant()" data-test-account="@isTestAccount.ToString().ToLowerInvariant()" data-test-login-id="@testLoginId" data-user-role="@userRoleLabel">
     @if (enablePageLoader)
     {
         <div id="pageLoader" class="page-loader" aria-hidden="true">
@@ -537,6 +540,47 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/bakesmart-store.js" asp-append-version="true"></script>
     <script src="~/js/smart-tables.js" asp-append-version="true"></script>
+    @if (isTestAccount)
+    {
+        <script>
+            (() => {
+                const role = document.body.dataset.userRole || 'Usuario';
+                const loginId = document.body.dataset.testLoginId || 'qa';
+                const roleSteps = {
+                    'Administrador': ['Puede descargar reportes en PDF y Excel.', 'Para probar recetas: cree primero un producto temporal y después registre su receta.', 'Puede crear combos, ofertas, campañas y registros contables temporales; se eliminan después de 10 minutos.', 'Puede recorrer y supervisar pedidos creados por clientes QA.'],
+                    'Supervisor': ['Puede consultar y descargar reportes.', 'Puede revisar pedidos y continuar su flujo operativo.', 'Para revisar recetas de prueba, use una receta asociada con un producto temporal.'],
+                    'Staff': ['Puede registrar productos temporales y movimientos sobre esos productos.', 'Puede atender y continuar pedidos de clientes QA.', 'Los datos institucionales del negocio permanecen visibles, pero protegidos.'],
+                    'Cajero': ['Puede abrir caja, atender pedidos y completar ventas de prueba.', 'Puede procesar pedidos creados por clientes QA.', 'PayPal no se utiliza en el POS; seleccione un método permitido para mostrador.'],
+                    'Repostero': ['Puede trabajar con pedidos enviados a producción.', 'Las recetas de prueba deben pertenecer a productos temporales.', 'Coordine primero la creación del producto temporal con una cuenta QA autorizada.'],
+                    'Encargado de recetas': ['Puede crear y revisar recetas de prueba.', 'Antes debe existir un producto temporal creado por una cuenta QA autorizada.', 'No puede alterar recetas ni productos reales del negocio.'],
+                    'Cliente': ['Puede navegar, crear pedidos y completar el recorrido de compra.', 'El pedido puede continuarse después desde una cuenta QA de Cajero, Staff o producción.', 'Los pagos externos reales y los cambios administrativos permanecen protegidos.']
+                };
+                const general = [
+                    'Usuarios, roles, seguridad, nombre, ubicación, contacto y configuración global no se pueden modificar.',
+                    'Los registros temporales muestran un aviso y se eliminan automáticamente después de 10 minutos.',
+                    'Una cuenta QA nunca puede editar datos reales: debe crear un registro temporal nuevo para probar.'
+                ];
+                const escapeHtml = value => String(value || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+                const content = (message = '') => `
+                    <div class="qa-guide">
+                        ${message ? `<div class="qa-guide__notice"><i class="fas fa-circle-info"></i><p>${escapeHtml(message)}</p></div>` : ''}
+                        <p>Está usando una cuenta protegida de <strong>${escapeHtml(role)}</strong>. Puede completar pruebas funcionales sin alterar la configuración real del negocio.</p>
+                        <div class="qa-guide__grid">
+                            <section><h4><i class="fas fa-route"></i> Flujo recomendado</h4><ol>${(roleSteps[role] || roleSteps.Staff).map(step => `<li>${step}</li>`).join('')}</ol></section>
+                            <section><h4><i class="fas fa-shield-halved"></i> Reglas de protección</h4><ul>${general.map(step => `<li>${step}</li>`).join('')}</ul></section>
+                        </div>
+                        <div class="qa-guide__footer"><button type="button" class="btn btn-primary" onclick="app.modal.close()"><i class="fas fa-check"></i> Entendido, continuar</button></div>
+                    </div>`;
+                const show = (message = '', title = 'Guía de cuenta de pruebas') => app.modal.open({ title, content: content(message), maxWidth: '900px', closeOnBackdrop: false });
+                window.BakeSmartQa = { showAction: message => show(message, 'Cómo completar esta prueba') };
+                const key = `bakesmart:qa-guide:${loginId}`;
+                if (!sessionStorage.getItem(key)) {
+                    sessionStorage.setItem(key, 'shown');
+                    window.setTimeout(() => show(), 180);
+                }
+            })();
+        </script>
+    }
     <script>
         (() => {
             const sidebar = document.getElementById('globalCategoriesSidebar');

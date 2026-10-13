@@ -813,3 +813,15 @@ button.is-request-pending::after {
 }
 
 @keyframes bakesmart-request-spin { to { transform: rotate(360deg); } }
+
+.qa-guide { display:grid; gap:1.1rem; }
+.qa-guide > p { margin:0; color:var(--text-muted); line-height:1.55; }
+.qa-guide__notice { display:flex; gap:.8rem; align-items:flex-start; padding:.9rem 1rem; border:1px solid color-mix(in srgb,var(--primary) 28%,var(--border)); border-radius:14px; background:color-mix(in srgb,var(--primary) 8%,var(--surface)); }
+.qa-guide__notice i { color:var(--primary); margin-top:.18rem; }
+.qa-guide__notice p { margin:0; line-height:1.5; font-weight:650; }
+.qa-guide__grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+.qa-guide__grid section { padding:1rem; border:1px solid var(--border); border-radius:16px; background:var(--bg); }
+.qa-guide__grid h4 { display:flex; align-items:center; gap:.5rem; margin:0 0 .75rem; }
+.qa-guide__grid :is(ol,ul) { display:grid; gap:.62rem; margin:0; padding-left:1.25rem; color:var(--text-muted); line-height:1.45; }
+.qa-guide__footer { display:flex; justify-content:flex-end; padding-top:.25rem; }
+@media (max-width:720px) { .qa-guide__grid { grid-template-columns:1fr; } }

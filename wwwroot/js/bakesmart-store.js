@@ -62,13 +62,16 @@
                 const payload = JSON.parse(text);
                 message = payload.message || payload.title || message;
             } catch { }
+            if (response.status === 403 && document.body?.dataset?.testAccount === "true") {
+                window.BakeSmartQa?.showAction?.(message);
+            }
             throw new Error(message);
         }
 
         if (response.status === 204) return null;
         const payload = await response.json();
         if (payload?.temporary && payload?.message) {
-            window.app?.toast?.warning?.(payload.message);
+            window.app?.toast?.warning?.(payload.message, { duration: 12000, title: "Dato temporal de prueba" });
         }
         return payload;
     }
