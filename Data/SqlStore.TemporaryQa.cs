@@ -4,13 +4,35 @@ namespace BakeSmartPatri.Data;
 
 public sealed partial class SqlStore
 {
+    private static readonly SemaphoreSlim TemporaryQaSchemaLock = new(1, 1);
+    private static volatile bool _temporaryQaSchemaReady;
+
+    private async Task EnsureTemporaryQaSchemaAsync()
+    {
+        if (_temporaryQaSchemaReady) return;
+
+        await TemporaryQaSchemaLock.WaitAsync();
+        try
+        {
+            if (_temporaryQaSchemaReady) return;
+
+            if (UseMySql)
+                await ExecuteAsync("CREATE TABLE IF NOT EXISTS TemporaryQaArtifacts (ArtifactId int NOT NULL AUTO_INCREMENT PRIMARY KEY, EntityType varchar(40) NOT NULL, EntityId int NOT NULL, CreatedBy varchar(254) NOT NULL, DeleteAfter datetime NOT NULL, UNIQUE KEY UX_TemporaryQaArtifact(EntityType,EntityId)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+            else
+                await ExecuteAsync("IF OBJECT_ID(N'dbo.TemporaryQaArtifacts',N'U') IS NULL CREATE TABLE dbo.TemporaryQaArtifacts(ArtifactId int IDENTITY PRIMARY KEY,EntityType nvarchar(40) NOT NULL,EntityId int NOT NULL,CreatedBy nvarchar(254) NOT NULL,DeleteAfter datetime2 NOT NULL,CONSTRAINT UX_TemporaryQaArtifact UNIQUE(EntityType,EntityId));");
+
+            _temporaryQaSchemaReady = true;
+        }
+        finally
+        {
+            TemporaryQaSchemaLock.Release();
+        }
+    }
+
     public async Task ScheduleTemporaryQaArtifactAsync(string entityType, int entityId, string createdBy)
     {
+        await EnsureTemporaryQaSchemaAsync();
         var table = UseMySql ? "TemporaryQaArtifacts" : "dbo.TemporaryQaArtifacts";
-        if (UseMySql)
-            await ExecuteAsync("CREATE TABLE IF NOT EXISTS TemporaryQaArtifacts (ArtifactId int NOT NULL AUTO_INCREMENT PRIMARY KEY, EntityType varchar(40) NOT NULL, EntityId int NOT NULL, CreatedBy varchar(254) NOT NULL, DeleteAfter datetime NOT NULL, UNIQUE KEY UX_TemporaryQaArtifact(EntityType,EntityId)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-        else
-            await ExecuteAsync("IF OBJECT_ID(N'dbo.TemporaryQaArtifacts',N'U') IS NULL CREATE TABLE dbo.TemporaryQaArtifacts(ArtifactId int IDENTITY PRIMARY KEY,EntityType nvarchar(40) NOT NULL,EntityId int NOT NULL,CreatedBy nvarchar(254) NOT NULL,DeleteAfter datetime2 NOT NULL,CONSTRAINT UX_TemporaryQaArtifact UNIQUE(EntityType,EntityId));");
         var sql = UseMySql
             ? $"INSERT INTO {table}(EntityType,EntityId,CreatedBy,DeleteAfter) VALUES(@Type,@Id,@By,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 10 MINUTE)) ON DUPLICATE KEY UPDATE DeleteAfter=VALUES(DeleteAfter),CreatedBy=VALUES(CreatedBy);"
             : $"IF EXISTS(SELECT 1 FROM {table} WHERE EntityType=@Type AND EntityId=@Id) UPDATE {table} SET DeleteAfter=DATEADD(minute,10,SYSUTCDATETIME()),CreatedBy=@By WHERE EntityType=@Type AND EntityId=@Id; ELSE INSERT INTO {table}(EntityType,EntityId,CreatedBy,DeleteAfter) VALUES(@Type,@Id,@By,DATEADD(minute,10,SYSUTCDATETIME()));";
@@ -19,6 +41,7 @@ public sealed partial class SqlStore
 
     public async Task CleanupExpiredQaArtifactsAsync()
     {
+        await EnsureTemporaryQaSchemaAsync();
         var table = UseMySql ? "TemporaryQaArtifacts" : "dbo.TemporaryQaArtifacts";
         try
         {
@@ -47,6 +70,7 @@ public sealed partial class SqlStore
 
     public async Task<bool> IsTemporaryQaArtifactAsync(string entityType, int entityId)
     {
+        await EnsureTemporaryQaSchemaAsync();
         var table = UseMySql ? "TemporaryQaArtifacts" : "dbo.TemporaryQaArtifacts";
         try
         {
