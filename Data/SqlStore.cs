@@ -3716,11 +3716,9 @@ public sealed partial class SqlStore
 
         if (UseMySql)
         {
-            var inventoryLocationTask = EnsureInventoryLocationAsync();
             var incomeAccountTask = EnsureAccountAsync("4-01", "Ingresos por ventas", "INGRESO");
             var refundAccountTask = EnsureAccountAsync("1-02", "Banco / SINPE / PayPal", "ACTIVO");
-            await Task.WhenAll(inventoryLocationTask, incomeAccountTask, refundAccountTask);
-            var inventoryLocationId = await inventoryLocationTask;
+            await Task.WhenAll(incomeAccountTask, refundAccountTask);
             var incomeAccountId = await incomeAccountTask;
             var refundAccountId = await refundAccountTask;
             await ExecuteAsync("""
@@ -3813,23 +3811,24 @@ public sealed partial class SqlStore
 
                     await ExecuteInTransactionAsync(connection, transaction, """
                         INSERT INTO ExistenciasInventario (ProductId, InventoryLocationId, Quantity, UpdatedAt)
-                        SELECT ProductId, @InventoryLocationId, SUM(Quantity), UTC_TIMESTAMP()
-                        FROM DetallePedido
-                        WHERE OrderId = @OrderId
-                        GROUP BY ProductId
+                        SELECT ProductId, InventoryLocationId, SUM(Quantity), UTC_TIMESTAMP()
+                        FROM MovimientosInventario
+                        WHERE MovementType = 'SALIDA'
+                          AND Note IN (CONCAT('Pedido web #', @OrderId), CONCAT('Venta POS #', @OrderId))
+                        GROUP BY ProductId, InventoryLocationId
                         ON DUPLICATE KEY UPDATE
                             Quantity = ExistenciasInventario.Quantity + VALUES(Quantity),
                             UpdatedAt = UTC_TIMESTAMP();
 
                         INSERT INTO MovimientosInventario (ProductId, InventoryLocationId, MovementType, Quantity, Note, CreatedAt)
-                        SELECT ProductId, @InventoryLocationId, 'ENTRADA', SUM(Quantity), CONCAT('Reversion nota credito venta #', @SaleId), UTC_TIMESTAMP()
-                        FROM DetallePedido
-                        WHERE OrderId = @OrderId
-                        GROUP BY ProductId;
+                        SELECT ProductId, InventoryLocationId, 'ENTRADA', SUM(Quantity), CONCAT('Reversion nota credito venta #', @SaleId), UTC_TIMESTAMP()
+                        FROM MovimientosInventario
+                        WHERE MovementType = 'SALIDA'
+                          AND Note IN (CONCAT('Pedido web #', @OrderId), CONCAT('Venta POS #', @OrderId))
+                        GROUP BY ProductId, InventoryLocationId;
                         """,
                         new SqlParameter("@OrderId", orderId),
-                        new SqlParameter("@SaleId", saleId),
-                        new SqlParameter("@InventoryLocationId", inventoryLocationId));
+                        new SqlParameter("@SaleId", saleId));
                 }
 
                 var entryId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction, """
@@ -3914,35 +3913,28 @@ public sealed partial class SqlStore
                 VALUES (@OrderId, @CancelledStatusId, CONCAT(N'Venta reversada por nota de credito: ', @Reason), SYSUTCDATETIME());
             END;
 
-            DECLARE @InventoryLocationId int;
-            IF NOT EXISTS (SELECT 1 FROM dbo.UbicacionesInventario WHERE Name = N'Bodega principal')
-                INSERT INTO dbo.UbicacionesInventario (Name, Description)
-                VALUES (N'Bodega principal', N'Ubicacion principal de BakeSmart Patri');
-
-            SELECT @InventoryLocationId = InventoryLocationId
-            FROM dbo.UbicacionesInventario
-            WHERE Name = N'Bodega principal';
-
             ;WITH Items AS (
-                SELECT ProductId, SUM(Quantity) AS Quantity
-                FROM dbo.DetallePedido
-                WHERE OrderId = @OrderId
-                GROUP BY ProductId
+                SELECT ProductId, InventoryLocationId, SUM(Quantity) AS Quantity
+                FROM dbo.MovimientosInventario
+                WHERE MovementType = N'SALIDA'
+                  AND Note IN (CONCAT(N'Pedido web #', @OrderId), CONCAT(N'Venta POS #', @OrderId))
+                GROUP BY ProductId, InventoryLocationId
             )
             MERGE dbo.ExistenciasInventario AS target
             USING Items AS source
-            ON target.ProductId = source.ProductId AND target.InventoryLocationId = @InventoryLocationId
+            ON target.ProductId = source.ProductId AND target.InventoryLocationId = source.InventoryLocationId
             WHEN MATCHED THEN
                 UPDATE SET Quantity = target.Quantity + source.Quantity, UpdatedAt = SYSUTCDATETIME()
             WHEN NOT MATCHED THEN
                 INSERT (ProductId, InventoryLocationId, Quantity)
-                VALUES (source.ProductId, @InventoryLocationId, source.Quantity);
+                VALUES (source.ProductId, source.InventoryLocationId, source.Quantity);
 
             INSERT INTO dbo.MovimientosInventario (ProductId, InventoryLocationId, MovementType, Quantity, Note, CreatedAt)
-            SELECT ProductId, @InventoryLocationId, N'ENTRADA', SUM(Quantity), CONCAT(N'Reversion nota credito venta #', @ResolvedSaleId), SYSUTCDATETIME()
-            FROM dbo.DetallePedido
-            WHERE OrderId = @OrderId
-            GROUP BY ProductId;
+            SELECT ProductId, InventoryLocationId, N'ENTRADA', SUM(Quantity), CONCAT(N'Reversion nota credito venta #', @ResolvedSaleId), SYSUTCDATETIME()
+            FROM dbo.MovimientosInventario
+            WHERE MovementType = N'SALIDA'
+              AND Note IN (CONCAT(N'Pedido web #', @OrderId), CONCAT(N'Venta POS #', @OrderId))
+            GROUP BY ProductId, InventoryLocationId;
 
             DECLARE @AccountId int = (SELECT TOP 1 AccountId FROM dbo.CatalogoCuentas ORDER BY AccountId);
             INSERT INTO dbo.AsientosContables (EntryType, ReferenceTable, ReferenceId, Note, CreatedAt)
