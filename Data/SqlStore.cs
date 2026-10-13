@@ -3775,6 +3775,12 @@ public sealed partial class SqlStore
                 var orderId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
                     "SELECT OrderId FROM Ventas WHERE SaleId = @SaleId;",
                     new SqlParameter("@SaleId", saleId)) ?? 0);
+                await ExecuteInTransactionAsync(connection, transaction, """
+                    INSERT INTO EstadosPedido (Name, SortOrder)
+                    SELECT 'Cancelado', next_status.SortOrder
+                    FROM (SELECT COALESCE(MAX(SortOrder), 0) + 1 AS SortOrder FROM EstadosPedido) next_status
+                    WHERE NOT EXISTS (SELECT 1 FROM EstadosPedido WHERE Name = 'Cancelado');
+                    """);
                 var cancelledStatusId = Convert.ToInt32(await ScalarInTransactionAsync(connection, transaction,
                     "SELECT OrderStatusId FROM EstadosPedido WHERE Name = 'Cancelado' LIMIT 1;") ?? 0);
 
@@ -3798,7 +3804,7 @@ public sealed partial class SqlStore
                     UPDATE Ventas SET Subtotal = 0, Tax = 0, Total = 0 WHERE SaleId = @SaleId;
                     """, new SqlParameter("@SaleId", saleId));
 
-                if (orderId > 0 && cancelledStatusId > 0)
+                if (orderId > 0)
                 {
                     await ExecuteInTransactionAsync(connection, transaction, """
                         UPDATE Pedidos SET OrderStatusId = @CancelledStatusId WHERE OrderId = @OrderId;
@@ -3893,6 +3899,9 @@ public sealed partial class SqlStore
 
             DECLARE @Amount decimal(18,2) = (SELECT Total FROM dbo.Ventas WHERE SaleId = @ResolvedSaleId);
             DECLARE @OrderId int = (SELECT OrderId FROM dbo.Ventas WHERE SaleId = @ResolvedSaleId);
+            IF NOT EXISTS (SELECT 1 FROM dbo.EstadosPedido WHERE Name = N'Cancelado')
+                INSERT INTO dbo.EstadosPedido (Name, SortOrder)
+                SELECT N'Cancelado', COALESCE(MAX(SortOrder), 0) + 1 FROM dbo.EstadosPedido;
             DECLARE @CancelledStatusId int = (SELECT OrderStatusId FROM dbo.EstadosPedido WHERE Name = N'Cancelado');
 
             INSERT INTO dbo.NotasCreditoPOS (SaleId, Reason, Amount, CreatedAt)
