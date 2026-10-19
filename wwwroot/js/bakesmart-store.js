@@ -62,7 +62,7 @@
                 const payload = JSON.parse(text);
                 message = payload.message || payload.title || message;
             } catch { }
-            if (response.status === 403 && document.body?.dataset?.testAccount === "true") {
+            if (response.status === 403 && method !== "GET" && document.body?.dataset?.testAccount === "true") {
                 window.BakeSmartQa?.showAction?.(message);
             }
             throw new Error(message);
@@ -219,7 +219,8 @@
         if (page.startsWith("/roles")) keys.add("roles");
         if (page.startsWith("/accounting")) keys.add("accounting");
         if (page.startsWith("/audit")) keys.add("logs");
-        if (page.startsWith("/reports")) ["customers", "inventoryMovements", "accounting", "users"].forEach(key => keys.add(key));
+        // Los reportes consultan sus propios endpoints autorizados. Precargar usuarios,
+        // contabilidad o clientes provoca 403 secundarios para el rol Supervisor.
         if (page.startsWith("/admin")) ["customers", "promotions", "combos", "users", "roles", "accounting"].forEach(key => keys.add(key));
 
         return [...keys];
@@ -357,6 +358,20 @@
                     return index >= 0 ? index : 0;
         };
 
+                const orderItems = order => {
+                    if (Array.isArray(order.items) && order.items.length) return order.items;
+                    const parts = String(order.producto || "Pedido").split(",").map(value => value.trim()).filter(Boolean);
+                    return parts.map((part, index) => {
+                        const match = /^(\d+(?:[.,]\d+)?)\s*x\s*(.+)$/i.exec(part);
+                        return {
+                            productId: index === 0 ? Number(order.productId || 0) : 0,
+                            name: match ? match[2].trim() : part,
+                            quantity: match ? Number(match[1].replace(",", ".")) : (index === 0 ? Number(order.quantity || 1) : 1),
+                            unitPrice: index === 0 ? Number(order.unitPrice || 0) : 0
+                        };
+                    });
+                };
+
                 return cached("orders").map(order => ({
                     ...order,
                     customerName: order.customerName || order.cliente,
@@ -368,12 +383,7 @@
                     productId: Number(order.productId || 0),
                     quantity: Number(order.quantity || 1),
                     unitPrice: Number(order.unitPrice || 0),
-                    items: order.items || [{
-                        productId: Number(order.productId || 0),
-                        name: order.producto || "Pedido",
-                        quantity: Number(order.quantity || 1),
-                        unitPrice: Number(order.unitPrice || 0)
-                    }],
+                    items: orderItems(order),
                     tracking: order.tracking || {
                         destinationLat: Number(order.destinationLat || order.destinationLatitude || 0),
                         destinationLng: Number(order.destinationLng || order.destinationLongitude || 0),
