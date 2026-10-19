@@ -691,6 +691,9 @@ public sealed partial class SqlStore
             LEFT JOIN dbo.CategoriasProducto parent ON parent.ProductCategoryId = pc.ParentCategoryId
             WHERE p.IsActive = 1
               AND pt.Name IN (N'Producto terminado', N'Producto vendible')
+              AND UPPER(p.Code) NOT LIKE N'PAY-TEST-%'
+              AND UPPER(p.Code) NOT LIKE N'PT-QA%'
+              AND LOWER(COALESCE(parent.Name, pc.Name)) <> N'pruebas'
             ORDER BY CategoryName;
             """;
 
@@ -735,6 +738,9 @@ public sealed partial class SqlStore
             ) img ON img.ProductId = p.ProductId
             WHERE p.IsActive = 1
               AND pt.Name IN ('Producto terminado', 'Producto vendible')
+              AND UPPER(p.Code) NOT LIKE 'PAY-TEST-%'
+              AND UPPER(p.Code) NOT LIKE 'PT-QA%'
+              AND LOWER(COALESCE(parent.Name, pc.Name)) <> 'pruebas'
             GROUP BY p.ProductId, p.Code, p.Name, p.Description, parent.Name, pc.Name,
                      p.UnitPrice, um.Code, img.ImageUrl, img.AltText, p.IsActive
             ORDER BY COALESCE(parent.Name, pc.Name), p.Name;
@@ -767,6 +773,9 @@ public sealed partial class SqlStore
             ) img
             WHERE p.IsActive = 1
               AND pt.Name IN (N'Producto terminado', N'Producto vendible')
+              AND UPPER(p.Code) NOT LIKE N'PAY-TEST-%'
+              AND UPPER(p.Code) NOT LIKE N'PT-QA%'
+              AND LOWER(COALESCE(parent.Name, pc.Name)) <> N'pruebas'
             GROUP BY p.ProductId, p.Code, p.Name, p.Description, parent.Name, pc.Name,
                      p.UnitPrice, um.Code, img.ImageUrl, img.AltText, p.IsActive
             ORDER BY COALESCE(parent.Name, pc.Name), p.Name;
