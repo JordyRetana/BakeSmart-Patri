@@ -565,7 +565,7 @@ public class ApiController : Controller
             if (isTest)
             {
                 await _sqlStore.ScheduleTemporaryQaArtifactAsync("COMBO", id, CurrentUserEmail!);
-                return Ok(new { ok = true, id, temporary = true, expiresInMinutes = 10, message = "Combo de prueba guardado. Se eliminará automáticamente en 10 minutos." });
+                return Ok(new { ok = true, id, temporary = true, expiresInMinutes = 10, message = "Combo de prueba guardado. En 10 minutos se eliminará; si ya pertenece a una venta, se desactivará y ocultará para conservar el historial." });
             }
             return Ok(new { ok = true, id });
         }
