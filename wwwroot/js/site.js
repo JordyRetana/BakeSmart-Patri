@@ -1415,11 +1415,19 @@
         },
 
         formatDate(date) {
+            const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date || '').trim());
+            const value = match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : new Date(date);
             return new Intl.DateTimeFormat('es-ES', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
-            }).format(new Date(date));
+            }).format(value);
+        },
+
+        formatDateOnly(date) {
+            const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(date || '').trim());
+            if (!match) return date ? new Date(date).toLocaleDateString('es-CR') : '—';
+            return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).toLocaleDateString('es-CR');
         },
 
         formatDateTime(date) {

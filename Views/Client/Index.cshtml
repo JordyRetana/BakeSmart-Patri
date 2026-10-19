@@ -707,8 +707,7 @@
         }
 
         function formatMiniOrderDate(value) {
-        const date = new Date(value);
-        return Number.isNaN(date.getTime()) ? 'Fecha pendiente' : date.toLocaleDateString('es-CR', { day: '2-digit', month: 'short', year: 'numeric' });
+        return value ? app.utils.formatDateOnly(value) : 'Fecha pendiente';
         }
 
         function decorateMiniOrders(orders) {
@@ -1031,7 +1030,7 @@
         }));
 
         const result = createdOrders[0];
-        await BakeSmartStore.refresh({ force: true });
+        await BakeSmartStore.refreshClient();
         const storedOrders = BakeSmartStore.orders.byClient(userEmail)
         .filter(order => createdOrders.some(created => Number(created.id) === Number(order.id)));
         const total = storedOrders.length === createdOrders.length

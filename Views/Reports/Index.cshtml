@@ -100,10 +100,14 @@
     }
 
     async function renderKpis() {
-        await BakeSmartStore.refresh();
-        document.getElementById('reportInventoryKpi').textContent = BakeSmartStore.inventory.list().length;
-        document.getElementById('reportUsersKpi').textContent = BakeSmartStore.reports.users().activeUsers;
-        document.getElementById('reportOrdersKpi').textContent = BakeSmartStore.orders.list().length;
+        const [inventory, users, orders] = await Promise.all([
+            BakeSmartStore.reports.load('inventory'),
+            BakeSmartStore.reports.load('users'),
+            BakeSmartStore.reports.load('orders')
+        ]);
+        document.getElementById('reportInventoryKpi').textContent = inventory.rows?.length || 0;
+        document.getElementById('reportUsersKpi').textContent = users.activeUsers || 0;
+        document.getElementById('reportOrdersKpi').textContent = orders.totalOrders || 0;
     }
 
     function isActiveRow(row) {
@@ -142,6 +146,7 @@
         const formatCell = (header, value) => {
             if (value == null) return '';
             if (moneyFields.test(header) && Number.isFinite(Number(value))) return app.utils.formatCurrency(Number(value));
+            if (dateFields.test(header) && /^\d{4}-\d{2}-\d{2}$/.test(String(value))) return app.utils.formatDateOnly(value);
             if (dateFields.test(header) && !Number.isNaN(Date.parse(value))) return new Date(value).toLocaleString('es-CR');
             return value;
         };

@@ -224,7 +224,7 @@
                     ${o.isCustomOrder ? '<span class="orders-custom-tag"><i class="fas fa-wand-magic-sparkles"></i> Personalizado</span>' : ''}
                     <span class="orders-list-meta">
                         <small>${clean(o.channel)}</small>
-                        <small>${new Date(o.deliveryDate).toLocaleDateString('es-CR')}</small>
+                        <small>${app.utils.formatDateOnly(o.deliveryDate)}</small>
                         <small>${clean(o.paymentStatus)}</small>
                     </span>
                 </span>
@@ -295,7 +295,7 @@
 
             <div class="orders-detail-grid">
                 <div><span>Canal</span><strong>${clean(order.channel)}</strong></div>
-                <div><span>Entrega</span><strong>${new Date(order.deliveryDate).toLocaleDateString('es-CR')}</strong></div>
+                <div><span>Entrega</span><strong>${app.utils.formatDateOnly(order.deliveryDate)}</strong></div>
                 <div><span>Total</span><strong>${app.utils.formatCurrency(order.total)}</strong></div>
                 <div><span>Pago</span><strong>${clean(order.paymentStatus)}${order.paymentMethod ? ` / ${clean(order.paymentMethod)}` : ''}</strong></div>
             </div>

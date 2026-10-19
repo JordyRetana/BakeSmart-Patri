@@ -2748,6 +2748,14 @@ public sealed partial class SqlStore
 
     public async Task MarkOrderPaidAsync(int orderId, string method, string? userEmail = null)
     {
+        var workflowState = await OrderWorkflowStateAsync(orderId);
+        if (workflowState is null)
+            throw new InvalidOperationException("El pedido no existe.");
+        var normalizedOrderStatus = RemoveDiacritics(workflowState.Value.OrderStatus).ToUpperInvariant();
+        var normalizedPaymentStatus = RemoveDiacritics(workflowState.Value.PaymentStatus).ToUpperInvariant();
+        if (normalizedOrderStatus.Contains("CANCEL") || normalizedPaymentStatus.Contains("ANUL"))
+            throw new InvalidOperationException("Un pedido cancelado o anulado no puede recibir pagos.");
+
         if (UseMySql)
         {
             // La confirmacion financiera es la fuente de verdad y debe persistir
@@ -4139,7 +4147,14 @@ public sealed partial class SqlStore
     private async Task<object> InventoryReportAsync()
     {
         var rows = await InventoryAsync();
-        return new { rows, lowStock = rows.Count(), negativeStock = 0 };
+        static bool IsActive(object row) =>
+            row.GetType().GetProperty("active")?.GetValue(row) is true;
+        static decimal Number(object row, string property) =>
+            Convert.ToDecimal(row.GetType().GetProperty(property)?.GetValue(row) ?? 0m, CultureInfo.InvariantCulture);
+
+        var lowStock = rows.Count(row => IsActive(row) && Number(row, "stock") <= Number(row, "min"));
+        var negativeStock = rows.Count(row => Number(row, "stock") < 0);
+        return new { rows, lowStock, negativeStock };
     }
 
     private async Task<object> UsersReportAsync()

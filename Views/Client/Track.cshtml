@@ -370,7 +370,7 @@
             <div class="summary-row"><span>Cliente</span><strong>${escapeHtml(order.customerName)}</strong></div>
             <div class="summary-row"><span>Dirección</span><strong>${escapeHtml(order.address)}</strong></div>
             <div class="summary-row"><span>Modalidad</span><strong>${escapeHtml(routeType)}</strong></div>
-            <div class="summary-row"><span>Entrega</span><strong>${new Date(order.deliveryDate).toLocaleDateString('es-CR')}</strong></div>
+            <div class="summary-row"><span>Entrega</span><strong>${app.utils.formatDateOnly(order.deliveryDate)}</strong></div>
             <div class="summary-row"><span>Productos</span><strong>${escapeHtml((order.items || []).map(i => `${i.quantity} x ${i.name}`).join(', ') || 'Sin detalle')}</strong></div>
             <div class="summary-row"><span>Pago</span><strong>${escapeHtml(order.paymentStatus)} (${escapeHtml(order.paymentMethod || 'Pendiente')})</strong></div>
         `;
@@ -545,8 +545,10 @@
         orderSelect.innerHTML = orders.map(o =>
             `<option value="${Number(o.id)}">#${Number(o.id)} - ${escapeHtml(o.customerName)} - ${escapeHtml(o.status)}</option>`
         ).join('');
-
-        renderOrder(orders[0]?.id);
+        const requestedId = Number(new URLSearchParams(window.location.search).get('id'));
+        const selected = orders.find(order => Number(order.id) === requestedId) || orders[0];
+        orderSelect.value = String(selected.id);
+        renderOrder(selected.id);
     }
 
     orderSelect.addEventListener('change', () => renderOrder(orderSelect.value));

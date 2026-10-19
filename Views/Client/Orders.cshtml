@@ -215,7 +215,7 @@
                             <strong>${item.title}</strong>
                             <small>${item.message}</small>
                         </span>
-                        <a class="btn btn-outline btn-sm" href="/Client/Track">Ver</a>
+                        <a class="btn btn-outline btn-sm" href="/Client/Track?id=${order.id}">Ver</a>
                     </article>
                 `).join('') || `
                     <div class="client-empty-state client-empty-state--compact">
@@ -240,7 +240,7 @@
                     .reduce((acc, order) => acc + order.total, 0);
 
                 document.getElementById('clientOrdersCount').textContent = allOrders.length;
-                document.getElementById('clientOrdersActive').textContent = allOrders.filter(order => order.status !== 'Entregado').length;
+                document.getElementById('clientOrdersActive').textContent = allOrders.filter(order => !/entregado|cancelado/i.test(String(order.status || ''))).length;
                 document.getElementById('clientOrdersPending').textContent = app.utils.formatCurrency(pendingTotal);
                 document.getElementById('clientOrdersTotal').textContent = app.utils.formatCurrency(allOrders.reduce((acc, order) => acc + order.total, 0));
                 renderNotifications(allOrders);
@@ -265,7 +265,7 @@
                             </div>
                             <div class="client-order-field">
                                 <span>Entrega</span>
-                                <strong>${new Date(order.deliveryDate).toLocaleDateString('es-CR')}</strong>
+                                <strong>${app.utils.formatDateOnly(order.deliveryDate)}</strong>
                             </div>
                             <div class="client-order-field">
                                 <span>Método</span>
@@ -280,10 +280,10 @@
                         <div class="client-order-bottom">
                             <div class="text-muted">${order.address}</div>
                             <div class="client-order-buttons">
-                                ${order.paymentStatus !== 'Pagado' ? `<button class="btn btn-primary btn-sm" onclick="payClientOrder(${order.id})"><i class="fas fa-credit-card"></i> Pagar</button>` : ''}
+                                ${order.paymentStatus !== 'Pagado' && !/cancelado|anulado/i.test(`${order.status} ${order.paymentStatus}`) ? `<button class="btn btn-primary btn-sm" onclick="payClientOrder(${order.id})"><i class="fas fa-credit-card"></i> Pagar</button>` : ''}
                                 <a class="btn btn-outline btn-sm" href="/Orders/Details/${order.id}"><i class="fas fa-eye"></i> Detalles</a>
                                 ${customerCanModify(order) ? `<a class="btn btn-outline btn-sm" href="/Orders/Edit/${order.id}"><i class="fas fa-pen"></i> Editar</a><button class="btn btn-outline btn-sm orders-danger" onclick="deleteClientOrder(${order.id})"><i class="fas fa-trash"></i> Eliminar</button>` : ''}
-                                <a class="btn btn-outline btn-sm" href="/Client/Track"><i class="fas fa-route"></i> Ver seguimiento</a>
+                                <a class="btn btn-outline btn-sm" href="/Client/Track?id=${order.id}"><i class="fas fa-route"></i> Ver seguimiento</a>
                             </div>
                         </div>
                     </article>

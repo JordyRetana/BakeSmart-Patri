@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Mail;
 using System.Net.Http.Headers;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Security.Claims;
 using System.Text;
@@ -257,8 +258,15 @@ public class ApiController : Controller
             !string.Equals(method, "SINPE", StringComparison.OrdinalIgnoreCase))
             return BadRequest(new { message = "La forma de pago seleccionada no está disponible." });
 
-        await _sqlStore.MarkOrderPaidAsync(id, method, CurrentUserEmail);
-        return Ok(new { ok = true });
+        try
+        {
+            await _sqlStore.MarkOrderPaidAsync(id, method, CurrentUserEmail);
+            return Ok(new { ok = true });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpDelete("orders/{id:int}")]
@@ -1207,6 +1215,7 @@ public class ApiController : Controller
         var selected = rawOrders.EnumerateArray()
             .Where(order => order.TryGetProperty("id", out var id) && ids.Contains(id.GetInt32()))
             .Where(order => !order.TryGetProperty("paymentStatus", out var status) || !string.Equals(status.GetString(), "Pagado", StringComparison.OrdinalIgnoreCase))
+            .Where(order => !order.TryGetProperty("estado", out var status) || !IsCancelledOrderStatus(status.GetString()))
             .ToArray();
         if (selected.Length != ids.Length) return BadRequest(new { message = "Uno de los pedidos no existe, no pertenece al usuario o ya fue pagado." });
 
@@ -1311,6 +1320,7 @@ public class ApiController : Controller
         var selected = rawOrders.EnumerateArray()
             .Where(order => order.TryGetProperty("id", out var id) && ids.Contains(id.GetInt32()))
             .Where(order => !order.TryGetProperty("paymentStatus", out var status) || !string.Equals(status.GetString(), "Pagado", StringComparison.OrdinalIgnoreCase))
+            .Where(order => !order.TryGetProperty("estado", out var status) || !IsCancelledOrderStatus(status.GetString()))
             .ToArray();
         if (selected.Length != ids.Length) return BadRequest(new { message = "Uno de los pedidos no existe, no pertenece al usuario o ya fue pagado." });
 
@@ -1814,6 +1824,15 @@ public class ApiController : Controller
         {
             return false;
         }
+    }
+
+    private static bool IsCancelledOrderStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return false;
+        var normalized = string.Concat(status.Normalize(NormalizationForm.FormD)
+            .Where(character => CharUnicodeInfo.GetUnicodeCategory(character) != UnicodeCategory.NonSpacingMark))
+            .ToUpperInvariant();
+        return normalized.Contains("CANCEL") || normalized.Contains("ANUL");
     }
 
     private static bool IsAllowedImageExtension(string extension)
