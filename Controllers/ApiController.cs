@@ -333,7 +333,7 @@ public class ApiController : Controller
             if (isTest)
             {
                 await _sqlStore.ScheduleTemporaryQaArtifactAsync("PRODUCT", productId, CurrentUserEmail!);
-                return Ok(new { ok = true, id = productId, temporary = true, expiresInMinutes = 10, message = "Producto de prueba guardado. Se eliminará automáticamente en 10 minutos junto con su inventario asociado." });
+                return Ok(new { ok = true, id = productId, temporary = true, expiresInMinutes = 10, message = "Producto de prueba guardado. En 10 minutos se eliminará automáticamente; si ya pertenece a una venta, se desactivará y ocultará para conservar el historial." });
             }
             return Ok(new { ok = true, id = productId });
         }

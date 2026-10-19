@@ -43,11 +43,39 @@ public sealed partial class SqlStore
     {
         await EnsureTemporaryQaSchemaAsync();
         var table = UseMySql ? "TemporaryQaArtifacts" : "dbo.TemporaryQaArtifacts";
-        try
+        var recoverUntrackedProducts = UseMySql
+            ? $"""
+              INSERT INTO {table}(EntityType,EntityId,CreatedBy,DeleteAfter)
+              SELECT 'PRODUCT',p.ProductId,'system:legacy-qa-recovery',UTC_TIMESTAMP()
+              FROM Productos p
+              LEFT JOIN {table} tracked
+                ON tracked.EntityType='PRODUCT' AND tracked.EntityId=p.ProductId
+              WHERE p.IsActive=1
+                AND p.Code LIKE 'PT-QA%'
+                AND p.CreatedAt<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 10 MINUTE)
+                AND tracked.ArtifactId IS NULL
+              ON DUPLICATE KEY UPDATE DeleteAfter=VALUES(DeleteAfter);
+              """
+            : $"""
+              INSERT INTO {table}(EntityType,EntityId,CreatedBy,DeleteAfter)
+              SELECT N'PRODUCT',p.ProductId,N'system:legacy-qa-recovery',SYSUTCDATETIME()
+              FROM dbo.Productos p
+              WHERE p.IsActive=1
+                AND p.Code LIKE N'PT-QA%'
+                AND p.CreatedAt<=DATEADD(minute,-10,SYSUTCDATETIME())
+                AND NOT EXISTS(
+                    SELECT 1 FROM {table} tracked
+                    WHERE tracked.EntityType=N'PRODUCT' AND tracked.EntityId=p.ProductId
+                );
+              """;
+        await ExecuteAsync(recoverUntrackedProducts);
+
+        var now = UseMySql ? "UTC_TIMESTAMP()" : "SYSUTCDATETIME()";
+        var expired = await QueryAsync($"SELECT ArtifactId,EntityType,EntityId FROM {table} WHERE DeleteAfter<={now};", r => new { ArtifactId=r.GetInt32("ArtifactId"), Type=r.GetString("EntityType"), Id=r.GetInt32("EntityId") });
+        var failures = new List<Exception>();
+        foreach (var item in expired)
         {
-            var now = UseMySql ? "UTC_TIMESTAMP()" : "SYSUTCDATETIME()";
-            var expired = await QueryAsync($"SELECT ArtifactId,EntityType,EntityId FROM {table} WHERE DeleteAfter<={now};", r => new { ArtifactId=r.GetInt32("ArtifactId"), Type=r.GetString("EntityType"), Id=r.GetInt32("EntityId") });
-            foreach (var item in expired)
+            try
             {
                 var prefix = UseMySql ? "" : "dbo.";
                 var sql = item.Type switch
@@ -55,7 +83,7 @@ public sealed partial class SqlStore
                     "MARKETING" => $"DELETE FROM {prefix}ComunicacionesMarketingDestinatarios WHERE CommunicationId=@Id; DELETE FROM {prefix}ComunicacionesMarketing WHERE CommunicationId=@Id;",
                     "EXPENSE" => $"DELETE FROM {prefix}LineasAsientoContable WHERE AccountingEntryId IN (SELECT AccountingEntryId FROM {prefix}AsientosContables WHERE ReferenceTable='Gastos' AND ReferenceId=@Id); DELETE FROM {prefix}AsientosContables WHERE ReferenceTable='Gastos' AND ReferenceId=@Id; DELETE FROM {prefix}Gastos WHERE ExpenseId=@Id;",
                     "SUPPLIER_PAYMENT" => $"DELETE FROM {prefix}LineasAsientoContable WHERE AccountingEntryId IN (SELECT AccountingEntryId FROM {prefix}AsientosContables WHERE ReferenceTable='PagosProveedor' AND ReferenceId=@Id); DELETE FROM {prefix}AsientosContables WHERE ReferenceTable='PagosProveedor' AND ReferenceId=@Id; DELETE FROM {prefix}PagosProveedor WHERE SupplierPaymentId=@Id;",
-                    "PRODUCT" => $"DELETE FROM {prefix}MovimientosInventario WHERE ProductId=@Id; DELETE FROM {prefix}ExistenciasInventario WHERE ProductId=@Id; DELETE FROM {prefix}LotesInventario WHERE ProductId=@Id; DELETE FROM {prefix}ImagenesProducto WHERE ProductId=@Id; DELETE FROM {prefix}ProductosPromocion WHERE ProductId=@Id; DELETE FROM {prefix}ComboProductos WHERE ProductId=@Id; DELETE FROM {prefix}IngredientesReceta WHERE IngredientProductId=@Id OR RecipeId IN (SELECT RecipeId FROM {prefix}RecetasProducto WHERE ProductId=@Id); DELETE FROM {prefix}RecetasProducto WHERE ProductId=@Id; DELETE FROM {prefix}Productos WHERE ProductId=@Id AND NOT EXISTS(SELECT 1 FROM {prefix}DetallePedido WHERE ProductId=@Id);",
+                    "PRODUCT" => $"UPDATE {prefix}Productos SET IsActive=0 WHERE ProductId=@Id; DELETE FROM {prefix}MovimientosInventario WHERE ProductId=@Id; DELETE FROM {prefix}ExistenciasInventario WHERE ProductId=@Id; DELETE FROM {prefix}LotesInventario WHERE ProductId=@Id; DELETE FROM {prefix}ImagenesProducto WHERE ProductId=@Id; DELETE FROM {prefix}ProductosPromocion WHERE ProductId=@Id; DELETE FROM {prefix}ComboProductos WHERE ProductId=@Id; DELETE FROM {prefix}IngredientesReceta WHERE IngredientProductId=@Id OR RecipeId IN (SELECT RecipeId FROM {prefix}RecetasProducto WHERE ProductId=@Id); DELETE FROM {prefix}RecetasProducto WHERE ProductId=@Id; DELETE FROM {prefix}Productos WHERE ProductId=@Id AND NOT EXISTS(SELECT 1 FROM {prefix}DetallePedido WHERE ProductId=@Id);",
                     "RECIPE" => $"DELETE FROM {prefix}IngredientesReceta WHERE RecipeId IN (SELECT RecipeId FROM {prefix}RecetasProducto WHERE ProductId=@Id); DELETE FROM {prefix}RecetasProducto WHERE ProductId=@Id;",
                     "COMBO" => $"DELETE FROM {prefix}ComboProductos WHERE ComboId=@Id; DELETE FROM {prefix}Combos WHERE ComboId=@Id;",
                     "PROMOTION" => $"DELETE FROM {prefix}ProductosPromocion WHERE PromotionId=@Id; DELETE FROM {prefix}PromocionesClientes WHERE PromotionId=@Id; DELETE FROM {prefix}Promociones WHERE PromotionId=@Id;",
@@ -64,8 +92,14 @@ public sealed partial class SqlStore
                 if (!string.IsNullOrEmpty(sql)) await ExecuteAsync(sql, new SqlParameter("@Id", item.Id));
                 await ExecuteAsync($"DELETE FROM {table} WHERE ArtifactId=@ArtifactId;", new SqlParameter("@ArtifactId", item.ArtifactId));
             }
+            catch (Exception ex)
+            {
+                failures.Add(new InvalidOperationException($"No se pudo limpiar el artefacto QA {item.Type} #{item.Id}.", ex));
+            }
         }
-        catch { /* Table may not exist before the first QA artifact is created. */ }
+
+        if (failures.Count > 0)
+            throw new AggregateException(failures);
     }
 
     public async Task<bool> IsTemporaryQaArtifactAsync(string entityType, int entityId)

@@ -452,8 +452,12 @@
                     };
 
                     try {
-                        await postJson('/api/inventory', payload);
-                        app.toast.success('Inventario guardado en SQL.');
+                        const result = await postJson('/api/inventory', payload);
+                        if (result?.temporary && result?.message) {
+                            app.toast.warning(result.message, { duration: 12000, title: 'Inventario temporal de prueba' });
+                        } else {
+                            app.toast.success('Inventario guardado en SQL.');
+                        }
                         app.modal.close();
                         await refreshAll();
                     } catch (error) {

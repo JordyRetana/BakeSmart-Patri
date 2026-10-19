@@ -224,7 +224,7 @@
                     }
                     imageUrlInput.value = (await uploadResponse.json()).url;
                 }
-                await postJson('/api/inventory', {
+                const result = await postJson('/api/inventory', {
                     id: data.id ? Number(data.id) : null,
                     code: data.code,
                     description: data.description,
@@ -240,7 +240,11 @@
                     expirationDate: data.expirationDate || null
                 });
                 app.modal.close();
-                app.toast.success('Producto guardado correctamente.');
+                if (result?.temporary && result?.message) {
+                    app.toast.warning(result.message, { duration: 12000, title: 'Producto temporal de prueba' });
+                } else {
+                    app.toast.success('Producto guardado correctamente.');
+                }
                 await loadProducts();
                 render();
             } catch (error) {

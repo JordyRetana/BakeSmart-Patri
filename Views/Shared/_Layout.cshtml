@@ -547,7 +547,7 @@
                 const role = document.body.dataset.userRole || 'Usuario';
                 const loginId = document.body.dataset.testLoginId || 'qa';
                 const roleSteps = {
-                    'Administrador': ['Puede descargar reportes en PDF y Excel.', 'Para probar recetas: cree primero un producto temporal y después registre su receta.', 'Puede crear combos, ofertas, campañas y registros contables temporales; se eliminan después de 10 minutos.', 'Puede recorrer y supervisar pedidos creados por clientes QA.'],
+                    'Administrador': ['Puede descargar reportes en PDF y Excel.', 'Para probar recetas: cree primero un producto temporal y después registre su receta.', 'Puede crear productos, recetas, combos, ofertas, campañas y registros contables temporales; se limpian después de 10 minutos.', 'Puede recorrer y supervisar pedidos creados por clientes QA.'],
                     'Supervisor': ['Puede consultar y descargar reportes.', 'Puede revisar pedidos y continuar su flujo operativo.', 'Para revisar recetas de prueba, use una receta asociada con un producto temporal.'],
                     'Staff': ['Puede registrar productos temporales y movimientos sobre esos productos.', 'Puede atender y continuar pedidos de clientes QA.', 'Los datos institucionales del negocio permanecen visibles, pero protegidos.'],
                     'Cajero': ['Puede abrir caja, atender pedidos y completar ventas de prueba.', 'Puede procesar pedidos creados por clientes QA.', 'PayPal no se utiliza en el POS; seleccione un método permitido para mostrador.'],
@@ -557,7 +557,8 @@
                 };
                 const general = [
                     'Usuarios, roles, seguridad, nombre, ubicación, contacto y configuración global no se pueden modificar.',
-                    'Los registros temporales muestran un aviso y se eliminan automáticamente después de 10 minutos.',
+                    'Los registros temporales muestran un aviso y se limpian automáticamente después de 10 minutos.',
+                    'Si un producto temporal ya forma parte de una venta, se desactiva y desaparece del catálogo, pero se conserva internamente para no romper el historial.',
                     'Una cuenta QA nunca puede editar datos reales: debe crear un registro temporal nuevo para probar.'
                 ];
                 const escapeHtml = value => String(value || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
