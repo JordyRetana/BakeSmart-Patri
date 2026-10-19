@@ -198,6 +198,7 @@
                 const notifications = allOrders.slice(0, 8).map(order => {
                     const paid = order.paymentStatus === 'Pagado';
                     return {
+                        id: order.id,
                         icon: paid ? 'fa-bell' : 'fa-credit-card',
                         title: paid ? `Pedido #${order.id}: ${order.status}` : `Pedido #${order.id}: pago pendiente`,
                         message: paid
@@ -215,7 +216,7 @@
                             <strong>${item.title}</strong>
                             <small>${item.message}</small>
                         </span>
-                        <a class="btn btn-outline btn-sm" href="/Client/Track?id=${order.id}">Ver</a>
+                        <a class="btn btn-outline btn-sm" href="/Client/Track?id=${item.id}">Ver</a>
                     </article>
                 `).join('') || `
                     <div class="client-empty-state client-empty-state--compact">
