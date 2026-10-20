@@ -77,6 +77,12 @@ public sealed partial class SqlStore
         {
             try
             {
+                if (item.Type == "ORDER")
+                {
+                    await DeleteOrderAsync(item.Id, "system:qa-cleanup");
+                    await ExecuteAsync($"DELETE FROM {table} WHERE ArtifactId=@ArtifactId;", new SqlParameter("@ArtifactId", item.ArtifactId));
+                    continue;
+                }
                 var prefix = UseMySql ? "" : "dbo.";
                 var sql = item.Type switch
                 {
@@ -112,5 +118,13 @@ public sealed partial class SqlStore
             return Convert.ToInt32(count ?? 0) > 0;
         }
         catch { return false; }
+    }
+
+    public async Task RemoveTemporaryQaArtifactAsync(string entityType, int entityId)
+    {
+        await EnsureTemporaryQaSchemaAsync();
+        var table = UseMySql ? "TemporaryQaArtifacts" : "dbo.TemporaryQaArtifacts";
+        await ExecuteAsync($"DELETE FROM {table} WHERE EntityType=@Type AND EntityId=@Id;",
+            new SqlParameter("@Type", entityType), new SqlParameter("@Id", entityId));
     }
 }

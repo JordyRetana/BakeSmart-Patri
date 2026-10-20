@@ -353,6 +353,7 @@
         let addressPicker = null;
         let submitAfterAddress = false;
         let cartCheckoutItems = [];
+        let catalogCheckoutActive = false;
 
         const cartStorageKeyFor = identity => `bakesmart:catalog-cart:${(identity || 'guest').trim().toLowerCase()}`;
         const cartStorageKey = () => cartStorageKeyFor(userEmail || 'guest');
@@ -478,7 +479,7 @@
         selectedProduct = [...selectedProducts.values()].at(-1)?.product || null;
         } else {
         const existing = selectedProducts.get(Number(product.id));
-        selectedProducts.set(Number(product.id), { product, quantity: existing?.quantity || 1 });
+        selectedProducts.set(Number(product.id), { product, quantity: existing?.quantity || 1, unitPrice: existing?.unitPrice });
         selectedProduct = product;
         }
 
@@ -665,11 +666,19 @@
         if (!cartCheckoutItems.length) return;
 
         const first = cartCheckoutItems[0];
+        catalogCheckoutActive = true;
         selectedProducts.clear();
-        selectProduct(first.id, 'replace');
+        cartCheckoutItems.forEach(item => selectedProducts.set(Number(item.product.id), {
+        product: item.product,
+        quantity: item.quantity,
+        unitPrice: Number(item.price || item.product.price)
+        }));
+        selectedProduct = first.product;
+        productInput.value = [...selectedProducts.keys()].join(',');
         quantityInput.value = first.quantity;
+        renderProducts();
         updateSummary();
-        submitBtn.innerHTML = `<i class="fas fa-receipt"></i> Registrar ${cartCheckoutItems.length} producto${cartCheckoutItems.length === 1 ? '' : 's'} del carrito`;
+        submitBtn.innerHTML = `<i class="fas fa-receipt"></i> Registrar ${selectedProducts.size} producto${selectedProducts.size === 1 ? '' : 's'} del carrito`;
         app.toast.success('Carrito cargado. Completa entrega y pago para crear un pedido nuevo.');
         }
 
@@ -762,9 +771,7 @@
         }
 
         function updateSummary() {
-        const orderItems = cartCheckoutItems.length
-        ? cartCheckoutItems.map(item => ({ product: item.product, quantity: item.quantity, unitPrice: item.price }))
-        : [...selectedProducts.values()];
+        const orderItems = [...selectedProducts.values()];
         const { subtotal, discount, tax, total } = calculateOrderTotals(orderItems);
 
         document.getElementById('quickSummaryProduct').textContent = orderItems.length === 1
@@ -844,9 +851,11 @@
         productSort.addEventListener('change', renderProducts);
         quantityInput.addEventListener('input', () => {
         if (selectedProduct && selectedProducts.has(Number(selectedProduct.id))) {
+        const current = selectedProducts.get(Number(selectedProduct.id));
         selectedProducts.set(Number(selectedProduct.id), {
         product: selectedProduct,
-        quantity: Math.max(1, Number(quantityInput.value || 1))
+        quantity: Math.max(1, Number(quantityInput.value || 1)),
+        unitPrice: current?.unitPrice
         });
         }
         updateSummary();
@@ -977,9 +986,11 @@
         const isPickup = data.deliveryMethod === 'retiro';
         const quantity = Math.max(1, Number(data.quantity || 1));
         const product = selectedProduct || products.find(item => Number(item.id) === Number(data.productId));
-        const orderItems = cartCheckoutItems.length
-        ? cartCheckoutItems.map(item => ({ product: item.product, quantity: item.quantity, unitPrice: item.price }))
-        : [...selectedProducts.values()].map(item => ({ product: item.product, quantity: item.quantity || quantity }));
+        const orderItems = [...selectedProducts.values()].map(item => ({
+        product: item.product,
+        quantity: item.quantity || quantity,
+        unitPrice: item.unitPrice
+        }));
 
         if (!orderItems.length || orderItems.some(item => !item.product)) {
         app.toast.error('Seleccione al menos un producto disponible.');
@@ -1030,6 +1041,7 @@
         }));
 
         const result = createdOrders[0];
+        const temporaryMessage = createdOrders.find(order => order.temporary)?.message;
         await BakeSmartStore.refreshClient();
         const storedOrders = BakeSmartStore.orders.byClient(userEmail)
         .filter(order => createdOrders.some(created => Number(created.id) === Number(order.id)));
@@ -1042,14 +1054,14 @@
         renderProducts();
         renderSummary();
         updateSummary();
-        if (cartCheckoutItems.length) {
+        if (catalogCheckoutActive) {
         clearCatalogCart();
         cartCheckoutItems = [];
-        } else {
+        catalogCheckoutActive = false;
+        }
         selectedProducts.clear();
         selectedProduct = null;
         productInput.value = '';
-        }
         const selectedPayment = String(data.paymentMethod || '').toLowerCase();
         if (selectedPayment.includes('paypal')) {
         await startPayPalCheckout(createdOrders.map(order => Number(order.id)));
@@ -1058,7 +1070,7 @@
         if (shouldOpenGateway(data.paymentMethod)) {
         openPaymentGateway(result.id, total, data.paymentMethod, 'full', createdOrders.map(order => Number(order.id)));
         } else {
-        app.toast.warning(createdOrders.length > 1 ? 'Pedidos registrados desde el carrito. Puedes pagar cada abono desde Mis pedidos.' : 'Pedido registrado. Para iniciar producción se requiere un abono anticipado o pago en tienda.');
+        app.toast.warning(temporaryMessage || (createdOrders.length > 1 ? 'Pedidos registrados desde el carrito. Puedes pagar cada abono desde Mis pedidos.' : 'Pedido registrado. Para iniciar producción se requiere un abono anticipado o pago en tienda.'), { duration: temporaryMessage ? 12000 : undefined });
         }
         form.quantity.value = 1;
         form.notes.value = '';

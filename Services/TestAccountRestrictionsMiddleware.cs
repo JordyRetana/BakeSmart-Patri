@@ -56,17 +56,26 @@ public sealed class TestAccountRestrictionsMiddleware(RequestDelegate next)
         if (!isTestAccount) return false;
 
         var method = context.Request.Method;
+        var path = context.Request.Path.Value ?? string.Empty;
         if (HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method))
             return false;
 
-        // QA users may exercise normal operational flows, but never permanent deletion.
+        // A QA order is isolated and scheduled for cleanup, so it can be deleted
+        // explicitly to exercise the complete administration flow.
         if (HttpMethods.IsDelete(method))
+        {
+            const string orderPrefix = "/api/orders/";
+            if (path.StartsWith(orderPrefix, StringComparison.OrdinalIgnoreCase) &&
+                int.TryParse(path[orderPrefix.Length..].Trim('/'), out var orderId) &&
+                await store.IsTemporaryQaArtifactAsync("ORDER", orderId))
+                return false;
             return true;
+        }
 
-        var path = context.Request.Path.Value ?? string.Empty;
         // These operations create isolated QA records that are automatically
         // removed by TemporaryQaArtifactCleanupService after ten minutes.
         if (HttpMethods.IsPost(method) && (
+            path.Equals("/api/assets/site-images", StringComparison.OrdinalIgnoreCase) ||
             path.Equals("/api/marketing/campaigns", StringComparison.OrdinalIgnoreCase) ||
             path.Equals("/api/accounting/expenses", StringComparison.OrdinalIgnoreCase) ||
             path.Equals("/api/accounting/supplier-payments", StringComparison.OrdinalIgnoreCase)))

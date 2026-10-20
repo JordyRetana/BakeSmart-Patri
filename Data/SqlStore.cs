@@ -139,6 +139,7 @@ public sealed partial class SqlStore
 
     public async Task<IReadOnlyList<object>> OrdersAsync(string? customerEmail = null)
     {
+        await EnsureTemporaryQaSchemaAsync();
         static int StepForStatus(string? status)
         {
             var normalized = RemoveDiacritics(status ?? "").ToUpperInvariant();
@@ -172,6 +173,10 @@ public sealed partial class SqlStore
                 o.CurrentLatitude,
                 o.CurrentLongitude,
                 o.TrackingStep,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM dbo.TemporaryQaArtifacts qa
+                    WHERE qa.EntityType = 'ORDER' AND qa.EntityId = o.OrderId
+                ) THEN 1 ELSE 0 END AS IsTemporaryQa,
                 MIN(oi.ProductId) AS FirstProductId,
                 MIN(oi.Quantity) AS FirstQuantity,
                 MIN(oi.UnitPrice) AS FirstUnitPrice,
@@ -221,6 +226,7 @@ public sealed partial class SqlStore
             paymentStatus = reader.GetString("PaymentStatus"),
             paymentMethod = reader.GetString("PaymentMethod"),
             notes,
+            isTemporary = reader.GetBoolean("IsTemporaryQa"),
             isCustomOrder = !string.IsNullOrWhiteSpace(notes) && notes.Contains("Tipo de encargo", StringComparison.OrdinalIgnoreCase),
             address = reader.GetString("Address"),
             routeMode = reader.GetNullableString("RouteMode") ?? "ground",

@@ -208,6 +208,11 @@ public class ApiController : Controller
         catch (InvalidOperationException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    [HttpGet("qa/products/{productId:int}/temporary")]
+    [Authorize(Roles = "Admin,Repostero,Supervisor,EncargadoRecetas,Staff")]
+    public async Task<IActionResult> IsTemporaryQaProduct(int productId) =>
+        Json(new { temporary = await _sqlStore.IsTemporaryQaArtifactAsync("PRODUCT", productId) });
+
     [HttpPost("recipes")]
     [Authorize(Roles = "Admin,Repostero,Supervisor,EncargadoRecetas")]
     public async Task<IActionResult> SaveRecipe([FromBody] SqlStore.RecipeInput request)
@@ -277,7 +282,11 @@ public class ApiController : Controller
             return Forbid();
         try
         {
+            var isTest = await _sqlStore.IsTestAccountAsync(CurrentUserEmail ?? string.Empty);
+            if (isTest && !await _sqlStore.IsTemporaryQaArtifactAsync("ORDER", id))
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Este pedido es real y está protegido. Para probar la eliminación, cree primero un pedido con una cuenta Cliente de pruebas." });
             await _sqlStore.DeleteOrderAsync(id, CurrentUserEmail);
+            if (isTest) await _sqlStore.RemoveTemporaryQaArtifactAsync("ORDER", id);
             return Ok(new { ok = true });
         }
         catch (InvalidOperationException exception)
@@ -337,6 +346,8 @@ public class ApiController : Controller
             var isTest = await _sqlStore.IsTestAccountAsync(CurrentUserEmail ?? string.Empty);
             if (isTest && request.Id is > 0 && !await _sqlStore.IsTemporaryQaArtifactAsync("PRODUCT", request.Id.Value))
                 return StatusCode(StatusCodes.Status403Forbidden, new { message = "Las cuentas de prueba no pueden modificar productos reales. Cree un producto temporal para realizar la prueba." });
+            if (isTest && request.Id is null)
+                request = request with { Code = $"PT-QA-{Guid.NewGuid():N}"[..14].ToUpperInvariant() };
             var productId = await _sqlStore.SaveInventoryProductAsync(request, CurrentUserEmail);
             if (isTest)
             {
@@ -496,7 +507,9 @@ public class ApiController : Controller
         if (file.Length > 8 * 1024 * 1024)
             return BadRequest(new { message = "La imagen no puede superar 8 MB." });
 
-        var uploadFolder = Path.Combine(_environment.WebRootPath, "img", "uploads", "site");
+        var isTest = await _sqlStore.IsTestAccountAsync(CurrentUserEmail ?? string.Empty);
+        var uploadArea = isTest ? "qa" : "site";
+        var uploadFolder = Path.Combine(_environment.WebRootPath, "img", "uploads", uploadArea);
         Directory.CreateDirectory(uploadFolder);
 
         var fileName = $"{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}{extension}";
@@ -506,7 +519,7 @@ public class ApiController : Controller
             await file.CopyToAsync(stream);
         }
 
-        var url = $"/img/uploads/site/{fileName}";
+        var url = $"/img/uploads/{uploadArea}/{fileName}";
         await _sqlStore.AddAuditLogAsync("SUBIR_IMAGEN_SITIO", $"Imagen del sitio cargada: {url}", CurrentUserEmail);
         return Ok(new { ok = true, url });
     }
@@ -883,6 +896,12 @@ public class ApiController : Controller
         try
         {
             var orderId = await _sqlStore.CreateOrderAsync(request, CurrentUserEmail);
+            var isTest = await _sqlStore.IsTestAccountAsync(CurrentUserEmail ?? string.Empty);
+            if (isTest)
+            {
+                await _sqlStore.ScheduleTemporaryQaArtifactAsync("ORDER", orderId, CurrentUserEmail!);
+                return Ok(new { ok = true, id = orderId, temporary = true, expiresInMinutes = 10, message = "Pedido de prueba registrado. Puede recorrer su flujo o eliminarlo; se limpiará automáticamente después de 10 minutos." });
+            }
             return Ok(new { ok = true, id = orderId });
         }
         catch (Exception ex)

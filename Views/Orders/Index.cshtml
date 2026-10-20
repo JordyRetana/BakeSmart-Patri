@@ -98,6 +98,7 @@
     let orders = [];
     let activeOrderId = null;
     let pageInitialized = false;
+    const isTestAccount = document.body.dataset.testAccount === 'true';
 
     function clean(value) {
         return String(value ?? '')
@@ -168,6 +169,7 @@
             unitPrice: Number(o.unitPrice || 0),
             producto: o.producto || '',
             notes: o.notes || '',
+            isTemporary: Boolean(o.isTemporary),
             isCustomOrder: Boolean(o.isCustomOrder || String(o.notes || '').includes('Tipo de encargo')),
             address: o.address || '',
             createdAt: o.createdAt || o.entrega || new Date().toISOString()
@@ -324,9 +326,9 @@
                                 : nextActionLabel(order)
                                     ? `<a class="btn btn-primary" href="/Production" data-full-reload><i class="fas fa-kitchen-set"></i> ${clean(nextActionLabel(order))}</a>`
                                     : ''}
-                <button class="btn btn-ghost orders-danger" onclick="deleteOrder(${order.id}, this)">
-                    <i class="fas fa-trash-can"></i> Eliminar pedido
-                </button>
+                ${isTestAccount && !order.isTemporary
+                    ? '<span class="btn btn-ghost" title="Pedido real protegido. Cree un pedido con una cuenta Cliente de pruebas para validar la eliminación."><i class="fas fa-lock"></i> Protegido</span>'
+                    : `<button class="btn btn-ghost orders-danger" onclick="deleteOrder(${order.id}, this)"><i class="fas fa-trash-can"></i> Eliminar pedido</button>`}
             </div>
         `;
         requestAnimationFrame(() => app.selects?.enhanceAll?.());
@@ -462,7 +464,10 @@
             onConfirm: async () => {
                 try {
                     const response = await fetch(`/api/orders/${id}`, { method: 'DELETE' });
-                    if (!response.ok) throw new Error(await response.text());
+                    if (!response.ok) {
+                        const payload = await response.json().catch(() => ({}));
+                        throw new Error(payload.message || 'No se pudo eliminar el pedido.');
+                    }
                     await loadOrders();
                     app.toast.success(`Pedido #${id} eliminado.`);
                     render();
