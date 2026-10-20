@@ -336,7 +336,7 @@ body[data-page="/client"] .quick-product__body strong {
 }
 
 .quick-product__body small,
-.quick-product__meta small {
+body[data-page="/client"] .client-dashboard-page .quick-products .quick-product .quick-product__meta small {
     color: var(--text-light);
     font-size: .76rem;
 }
@@ -358,9 +358,9 @@ body[data-page="/client"] .quick-product__meta {
 .quick-product__meta small {
     padding: .22rem .48rem;
     border-radius: 999px;
-    background: #dcfce7 !important;
-    color: #166534 !important;
-    border: 1px solid #86efac;
+    background: #166534 !important;
+    color: #ffffff !important;
+    border: 1px solid #4ade80;
     font-weight: 850;
     white-space: nowrap;
 }
