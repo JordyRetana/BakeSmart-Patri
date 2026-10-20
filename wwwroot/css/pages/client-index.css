@@ -358,8 +358,9 @@ body[data-page="/client"] .quick-product__meta {
 .quick-product__meta small {
     padding: .22rem .48rem;
     border-radius: 999px;
-    background: color-mix(in srgb, #22c55e 12%, white);
-    color: #2d7244;
+    background: #dcfce7 !important;
+    color: #166534 !important;
+    border: 1px solid #86efac;
     font-weight: 850;
     white-space: nowrap;
 }
