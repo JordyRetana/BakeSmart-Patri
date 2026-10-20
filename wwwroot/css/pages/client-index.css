@@ -250,7 +250,7 @@
 
 .quick-products {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 285px), 1fr));
     gap: .75rem;
     max-height: 500px;
     overflow: auto;
@@ -260,7 +260,7 @@
 .quick-product {
     position: relative;
     display: grid;
-    grid-template-columns: 82px minmax(0, 1fr);
+    grid-template-columns: 76px minmax(0, 1fr) auto;
     gap: .85rem;
     align-items: stretch;
     width: 100%;
@@ -304,7 +304,7 @@
 
 .quick-product__image {
     grid-row: span 2;
-    width: 82px;
+    width: 76px;
     height: 100%;
     min-height: 94px;
     overflow: hidden;
@@ -331,6 +331,7 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     line-height: 1.2;
+    overflow-wrap: anywhere;
 }
 
 .quick-product__body small,
@@ -340,11 +341,12 @@
 }
 
 .quick-product__meta {
-    grid-column: 2;
-    grid-template-columns: 1fr auto;
-    align-items: end;
-    justify-items: start;
-    white-space: nowrap;
+    grid-column: 2 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .6rem;
+    min-width: 0;
 }
 
 .quick-product__meta strong {
@@ -358,6 +360,7 @@
     background: color-mix(in srgb, #22c55e 12%, white);
     color: #2d7244;
     font-weight: 850;
+    white-space: nowrap;
 }
 
 .quick-products-empty {
@@ -858,6 +861,12 @@ html.dark-start .payment-modal__close {
     .profile-source a {
         grid-column: 2;
         justify-items: start;
+    }
+
+    .quick-product__meta {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
     }
 
     .payment-form__grid {

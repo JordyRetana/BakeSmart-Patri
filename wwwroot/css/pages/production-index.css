@@ -213,6 +213,52 @@
         border-color: rgba(16, 185, 129, 0.3) !important;
     }
 
+    .dark .production-ticket,
+    html.dark-start .production-ticket {
+        color: #f8fafc;
+        background: #182236;
+        border-color: #3b4961;
+    }
+
+    .dark .production-ticket .text-muted,
+    html.dark-start .production-ticket .text-muted {
+        color: #cbd5e1 !important;
+    }
+
+    .dark .production-material-state.is-loading,
+    html.dark-start .production-material-state.is-loading {
+        color: #cbd5e1;
+        border-color: #475569;
+        background: #111827;
+    }
+
+    .dark .production-material-state.is-ready,
+    html.dark-start .production-material-state.is-ready {
+        color: #bbf7d0;
+        border-color: #23875b;
+        background: #103529;
+    }
+
+    .dark .production-material-state.is-warning,
+    html.dark-start .production-material-state.is-warning {
+        color: #fde68a;
+        border-color: #a66b14;
+        background: #3d2b0d;
+    }
+
+    .dark .production-material-state.is-danger,
+    html.dark-start .production-material-state.is-danger {
+        color: #fecdd3;
+        border-color: #be4567;
+        background: #451827;
+    }
+
+    .dark .production-ticket .progress,
+    html.dark-start .production-ticket .progress {
+        background: #334155;
+        border: 1px solid #475569;
+    }
+
 @media (max-width: 520px) {
     .production-date-chip,
     .production-date-chip .badge,
