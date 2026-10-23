@@ -365,6 +365,13 @@ body[data-page="/client"] .quick-product__meta {
     white-space: nowrap;
 }
 
+body[data-page="/client"] .client-dashboard-page .quick-products .quick-product .quick-product__meta small {
+    background: #166534 !important;
+    color: #ffffff !important;
+    border-color: #4ade80 !important;
+    text-shadow: none !important;
+}
+
 .quick-products-empty {
     margin: 0;
     padding: .8rem;
