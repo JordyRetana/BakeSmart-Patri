@@ -318,7 +318,13 @@
             try { sessionStorage.setItem('bakesmart:client-workspace', selected); } catch (_) { }
         };
         document.querySelectorAll('[data-client-tab]').forEach(button => button.addEventListener('click', () => selectClientWorkspace(button.dataset.clientTab)));
-        try { selectClientWorkspace(sessionStorage.getItem('bakesmart:client-workspace') || 'overview'); } catch (_) { selectClientWorkspace('overview'); }
+        const pageParameters = new URLSearchParams(window.location.search);
+        const requestedWorkspace = pageParameters.get('cart') === 'checkout' ? 'quick-order' : null;
+        try {
+            selectClientWorkspace(requestedWorkspace || sessionStorage.getItem('bakesmart:client-workspace') || 'overview');
+        } catch (_) {
+            selectClientWorkspace(requestedWorkspace || 'overview');
+        }
 
         const form = document.getElementById('quickOrderForm');
         const productInput = document.getElementById('quickOrderProduct');
@@ -647,8 +653,7 @@
 
 
         function applyCatalogCartCheckout() {
-        const parameters = new URLSearchParams(window.location.search);
-        if (parameters.get('cart') !== 'checkout') return;
+        if (pageParameters.get('cart') !== 'checkout') return;
 
         const availableIds = new Set(availableProducts().map(product => Number(product.id)));
         cartCheckoutItems = expandCatalogCartForOrder(readCatalogCart())
@@ -663,9 +668,14 @@
         })
         .filter(item => item.product && item.quantity > 0);
 
-        if (!cartCheckoutItems.length) return;
+        if (!cartCheckoutItems.length) {
+        selectClientWorkspace('quick-order');
+        app.toast.warning('No fue posible cargar productos disponibles del carrito. Revise el stock o vuelva al catálogo.');
+        return;
+        }
 
         const first = cartCheckoutItems[0];
+        selectClientWorkspace('quick-order');
         catalogCheckoutActive = true;
         selectedProducts.clear();
         cartCheckoutItems.forEach(item => selectedProducts.set(Number(item.product.id), {
